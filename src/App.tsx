@@ -7,6 +7,9 @@ import Index from "./pages/Index";
 import ComingSoon from "./pages/ComingSoon";
 import Communities from "./pages/Communities";
 import CommunityDetail from "./pages/CommunityDetail";
+import UserManagement from "./pages/UserManagement";
+import Associations from "./pages/Associations";
+import AssociationDetail from "./pages/AssociationDetail";
 import SystemSettings from "./pages/SystemSettings";
 import AuditLogs from "./pages/AuditLogs";
 import RolesPermissions from "./pages/RolesPermissions";
@@ -22,11 +25,13 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Index />} />
-          <Route path="/users" element={<ComingSoon title="User Management" />} />
+          <Route path="/users" element={<UserManagement />} />
           <Route path="/escrow" element={<ComingSoon title="Escrow Management" />} />
           <Route path="/disputes" element={<ComingSoon title="Disputes & Resolution" />} />
           <Route path="/communities" element={<Communities />} />
           <Route path="/communities/:id" element={<CommunityDetail />} />
+          <Route path="/associations" element={<Associations />} />
+          <Route path="/associations/:id" element={<AssociationDetail />} />
           <Route path="/reports" element={<ComingSoon title="Reports & Analytics" />} />
           <Route path="/settings" element={<SystemSettings />} />
           <Route path="/notifications" element={<ComingSoon title="Notifications & Broadcasts" />} />
