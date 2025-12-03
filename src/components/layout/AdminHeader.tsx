@@ -40,10 +40,10 @@ export function AdminHeader() {
             </DropdownMenuContent>
           </DropdownMenu>
 
-          {/* Quick Create User */}
+          {/* Quick Create Community */}
           <Button size="sm" className="gap-2 bg-primary text-primary-foreground hover:bg-primary/90">
             <UserPlus className="w-4 h-4" />
-            <span className="hidden sm:inline">Create User</span>
+            <span className="hidden sm:inline">Create Community</span>
           </Button>
 
           {/* Notifications */}
