@@ -12,6 +12,7 @@ import Associations from "./pages/Associations";
 import AssociationDetail from "./pages/AssociationDetail";
 import VendorManagement from "./pages/VendorManagement";
 import SupportTicketing from "./pages/SupportTicketing";
+import SystemHealth from "./pages/SystemHealth";
 import SystemSettings from "./pages/SystemSettings";
 import AuditLogs from "./pages/AuditLogs";
 import RolesPermissions from "./pages/RolesPermissions";
@@ -42,7 +43,7 @@ const App = () => (
           <Route path="/moderation" element={<ComingSoon title="Content Moderation" />} />
           <Route path="/vendors" element={<VendorManagement />} />
           <Route path="/roles" element={<RolesPermissions />} />
-          <Route path="/health" element={<ComingSoon title="System Health" />} />
+          <Route path="/health" element={<SystemHealth />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
