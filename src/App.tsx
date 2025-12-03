@@ -7,6 +7,7 @@ import Index from "./pages/Index";
 import ComingSoon from "./pages/ComingSoon";
 import Communities from "./pages/Communities";
 import SystemSettings from "./pages/SystemSettings";
+import AuditLogs from "./pages/AuditLogs";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -26,7 +27,7 @@ const App = () => (
           <Route path="/reports" element={<ComingSoon title="Reports & Analytics" />} />
           <Route path="/settings" element={<SystemSettings />} />
           <Route path="/notifications" element={<ComingSoon title="Notifications & Broadcasts" />} />
-          <Route path="/audit" element={<ComingSoon title="Audit Logs" />} />
+          <Route path="/audit" element={<AuditLogs />} />
           <Route path="/support" element={<ComingSoon title="Support & Ticketing" />} />
           <Route path="/moderation" element={<ComingSoon title="Content Moderation" />} />
           <Route path="/vendors" element={<ComingSoon title="Vendor Management" />} />
