@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import ComingSoon from "./pages/ComingSoon";
 import Communities from "./pages/Communities";
+import SystemSettings from "./pages/SystemSettings";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -23,7 +24,7 @@ const App = () => (
           <Route path="/disputes" element={<ComingSoon title="Disputes & Resolution" />} />
           <Route path="/communities" element={<Communities />} />
           <Route path="/reports" element={<ComingSoon title="Reports & Analytics" />} />
-          <Route path="/settings" element={<ComingSoon title="System Settings" />} />
+          <Route path="/settings" element={<SystemSettings />} />
           <Route path="/notifications" element={<ComingSoon title="Notifications & Broadcasts" />} />
           <Route path="/audit" element={<ComingSoon title="Audit Logs" />} />
           <Route path="/support" element={<ComingSoon title="Support & Ticketing" />} />
