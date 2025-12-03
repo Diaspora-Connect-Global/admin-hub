@@ -14,6 +14,7 @@ import VendorManagement from "./pages/VendorManagement";
 import SupportTicketing from "./pages/SupportTicketing";
 import SystemHealth from "./pages/SystemHealth";
 import ContentModeration from "./pages/ContentModeration";
+import DisputesResolution from "./pages/DisputesResolution";
 import SystemSettings from "./pages/SystemSettings";
 import AuditLogs from "./pages/AuditLogs";
 import RolesPermissions from "./pages/RolesPermissions";
@@ -31,7 +32,7 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/users" element={<UserManagement />} />
           <Route path="/escrow" element={<ComingSoon title="Escrow Management" />} />
-          <Route path="/disputes" element={<ComingSoon title="Disputes & Resolution" />} />
+          <Route path="/disputes" element={<DisputesResolution />} />
           <Route path="/communities" element={<Communities />} />
           <Route path="/communities/:id" element={<CommunityDetail />} />
           <Route path="/associations" element={<Associations />} />
