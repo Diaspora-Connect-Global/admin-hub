@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import ComingSoon from "./pages/ComingSoon";
 import Communities from "./pages/Communities";
+import CommunityDetail from "./pages/CommunityDetail";
 import SystemSettings from "./pages/SystemSettings";
 import AuditLogs from "./pages/AuditLogs";
 import RolesPermissions from "./pages/RolesPermissions";
@@ -25,6 +26,7 @@ const App = () => (
           <Route path="/escrow" element={<ComingSoon title="Escrow Management" />} />
           <Route path="/disputes" element={<ComingSoon title="Disputes & Resolution" />} />
           <Route path="/communities" element={<Communities />} />
+          <Route path="/communities/:id" element={<CommunityDetail />} />
           <Route path="/reports" element={<ComingSoon title="Reports & Analytics" />} />
           <Route path="/settings" element={<SystemSettings />} />
           <Route path="/notifications" element={<ComingSoon title="Notifications & Broadcasts" />} />
