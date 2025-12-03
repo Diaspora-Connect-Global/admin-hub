@@ -19,6 +19,7 @@ import DisputesResolution from "./pages/DisputesResolution";
 import SystemSettings from "./pages/SystemSettings";
 import AuditLogs from "./pages/AuditLogs";
 import RolesPermissions from "./pages/RolesPermissions";
+import Reports from "./pages/Reports";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -38,7 +39,7 @@ const App = () => (
           <Route path="/communities/:id" element={<CommunityDetail />} />
           <Route path="/associations" element={<Associations />} />
           <Route path="/associations/:id" element={<AssociationDetail />} />
-          <Route path="/reports" element={<ComingSoon title="Reports & Analytics" />} />
+          <Route path="/reports" element={<Reports />} />
           <Route path="/settings" element={<SystemSettings />} />
           <Route path="/notifications" element={<ComingSoon title="Notifications & Broadcasts" />} />
           <Route path="/audit" element={<AuditLogs />} />
