@@ -8,6 +8,7 @@ import ComingSoon from "./pages/ComingSoon";
 import Communities from "./pages/Communities";
 import SystemSettings from "./pages/SystemSettings";
 import AuditLogs from "./pages/AuditLogs";
+import RolesPermissions from "./pages/RolesPermissions";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -31,7 +32,7 @@ const App = () => (
           <Route path="/support" element={<ComingSoon title="Support & Ticketing" />} />
           <Route path="/moderation" element={<ComingSoon title="Content Moderation" />} />
           <Route path="/vendors" element={<ComingSoon title="Vendor Management" />} />
-          <Route path="/roles" element={<ComingSoon title="Roles & Permissions" />} />
+          <Route path="/roles" element={<RolesPermissions />} />
           <Route path="/health" element={<ComingSoon title="System Health" />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
