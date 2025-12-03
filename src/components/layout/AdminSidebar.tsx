@@ -26,7 +26,7 @@ const navItems = [
   { id: "user_management", title: "User Management", icon: Users, path: "/users" },
   { id: "escrow_management", title: "Escrow Management", icon: Wallet, path: "/escrow" },
   { id: "disputes", title: "Disputes", icon: AlertTriangle, path: "/disputes" },
-  { id: "approvals", title: "Approvals", icon: CheckSquare, path: "/approvals" },
+  { id: "communities", title: "Communities", icon: Users, path: "/communities" },
   { id: "reports_analytics", title: "Reports & Analytics", icon: BarChart3, path: "/reports" },
   { id: "system_settings", title: "System Settings", icon: Settings, path: "/settings" },
   { id: "notifications", title: "Notifications", icon: Bell, path: "/notifications" },
