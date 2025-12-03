@@ -1,519 +1,384 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import {
-  Search,
-  Plus,
-  MoreHorizontal,
-  Eye,
-  Edit,
-  Archive,
-  Check,
-  X,
-  Store,
-} from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Search, Plus, MoreHorizontal, Eye, Edit, Link2, Pause, ChevronDown, Download, FileJson, Store, X } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useNavigate } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
 
-// Sample data matching the spec columns
 const communitiesData = [
-  {
-    id: "COM-001",
-    name: "Ghana Belgium Community",
-    countries: ["Ghana", "Belgium"],
-    associationCount: 12,
-    userCount: 1245,
-    postCount: 342,
-    vendorEnabled: true,
-    status: "active",
-    createdAt: "2024-01-15",
-  },
-  {
-    id: "COM-002",
-    name: "Nigeria UK Diaspora",
-    countries: ["Nigeria", "United Kingdom"],
-    associationCount: 8,
-    userCount: 2103,
-    postCount: 567,
-    vendorEnabled: true,
-    status: "active",
-    createdAt: "2023-11-20",
-  },
-  {
-    id: "COM-003",
-    name: "Kenya Germany Network",
-    countries: ["Kenya", "Germany"],
-    associationCount: 5,
-    userCount: 432,
-    postCount: 89,
-    vendorEnabled: false,
-    status: "inactive",
-    createdAt: "2024-02-01",
-  },
-  {
-    id: "COM-004",
-    name: "South Africa Netherlands",
-    countries: ["South Africa", "Netherlands"],
-    associationCount: 15,
-    userCount: 1876,
-    postCount: 421,
-    vendorEnabled: true,
-    status: "active",
-    createdAt: "2023-09-10",
-  },
-  {
-    id: "COM-005",
-    name: "Uganda France Community",
-    countries: ["Uganda", "France"],
-    associationCount: 3,
-    userCount: 287,
-    postCount: 45,
-    vendorEnabled: false,
-    status: "archived",
-    createdAt: "2023-06-15",
-  },
+  { id: "COM-001", name: "Ghana Belgium Community", country: "Belgium", associationsCount: 12, membersCount: 1245, postsCount: 342, opportunitiesCount: 28, vendorEnabled: true, status: "Active", createdAt: "2024-01-15" },
+  { id: "COM-002", name: "Nigeria UK Diaspora", country: "United Kingdom", associationsCount: 8, membersCount: 2103, postsCount: 567, opportunitiesCount: 45, vendorEnabled: true, status: "Active", createdAt: "2023-11-20" },
+  { id: "COM-003", name: "Kenya Germany Network", country: "Germany", associationsCount: 5, membersCount: 432, postsCount: 89, opportunitiesCount: 12, vendorEnabled: false, status: "Inactive", createdAt: "2024-02-01" },
+  { id: "COM-004", name: "South Africa Netherlands", country: "Netherlands", associationsCount: 15, membersCount: 1876, postsCount: 421, opportunitiesCount: 67, vendorEnabled: true, status: "Active", createdAt: "2023-09-10" },
+  { id: "COM-005", name: "Uganda France Community", country: "France", associationsCount: 3, membersCount: 287, postsCount: 45, opportunitiesCount: 8, vendorEnabled: false, status: "Suspended", createdAt: "2023-06-15" },
 ];
 
-const countryOptions = [
-  "Ghana",
-  "Nigeria",
-  "Kenya",
-  "South Africa",
-  "Uganda",
-  "Tanzania",
-  "Belgium",
-  "United Kingdom",
-  "Germany",
-  "Netherlands",
-  "France",
-  "USA",
+const countryOptions = ["Ghana", "Nigeria", "Kenya", "South Africa", "Uganda", "Belgium", "United Kingdom", "Germany", "Netherlands", "France", "USA"];
+
+const associationOptions = [
+  { id: "ASC-001", name: "Ghana Nurses Association" },
+  { id: "ASC-002", name: "Nigerian Engineers Association" },
+  { id: "ASC-003", name: "African Professionals Network" },
 ];
 
 const getStatusBadge = (status: string) => {
   const styles: Record<string, string> = {
-    active: "bg-success/20 text-success border-success/30",
-    inactive: "bg-warning/20 text-warning border-warning/30",
-    archived: "bg-muted text-muted-foreground border-border",
+    "Active": "badge-status badge-success",
+    "Inactive": "badge-status badge-warning",
+    "Suspended": "badge-status badge-destructive",
   };
-  return styles[status] || styles.active;
+  return <span className={styles[status] || "badge-status badge-muted"}>{status}</span>;
 };
 
 export default function Communities() {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
-  const [countryFilter, setCountryFilter] = useState<string>("all");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [countryFilter, setCountryFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [selectedCommunities, setSelectedCommunities] = useState<string[]>([]);
+  
+  // Modals
   const [createModalOpen, setCreateModalOpen] = useState(false);
-  const [archiveDialogOpen, setArchiveDialogOpen] = useState(false);
-  const [selectedCommunity, setSelectedCommunity] = useState<any>(null);
+  const [linkAssociationOpen, setLinkAssociationOpen] = useState(false);
+  const [suspendModalOpen, setSuspendModalOpen] = useState(false);
+  const [selectedCommunity, setSelectedCommunity] = useState<typeof communitiesData[0] | null>(null);
 
-  // Create form state
+  // Form state
   const [formData, setFormData] = useState({
     name: "",
     description: "",
-    countries: [] as string[],
-    enablePosting: true,
-    enableVendorMode: false,
+    country: "",
+    vendorEnabled: false,
   });
 
-  // Filter communities
   const filteredCommunities = communitiesData.filter((community) => {
-    const matchesSearch =
-      community.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      community.countries.some((c) =>
-        c.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-    const matchesCountry =
-      countryFilter === "all" ||
-      community.countries.includes(countryFilter);
-    const matchesStatus =
-      statusFilter === "all" || community.status === statusFilter;
+    const matchesSearch = community.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      community.country.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      community.id.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesCountry = countryFilter === "all" || community.country === countryFilter;
+    const matchesStatus = statusFilter === "all" || community.status === statusFilter;
     return matchesSearch && matchesCountry && matchesStatus;
   });
 
-  const handleCreateCommunity = () => {
-    if (!formData.name || formData.countries.length === 0) {
-      toast({
-        title: "Validation Error",
-        description: "Please fill in all required fields.",
-        variant: "destructive",
-      });
-      return;
-    }
-    toast({
-      title: "Community created successfully!",
-      description: `${formData.name} has been created.`,
-    });
-    setCreateModalOpen(false);
-    setFormData({
-      name: "",
-      description: "",
-      countries: [],
-      enablePosting: true,
-      enableVendorMode: false,
-    });
+  const handleSelectAll = (checked: boolean) => {
+    setSelectedCommunities(checked ? communitiesData.map(c => c.id) : []);
   };
 
-  const handleArchive = () => {
-    if (selectedCommunity) {
-      toast({
-        title: "Community archived",
-        description: `${selectedCommunity.name} has been archived.`,
-      });
+  const handleSelectCommunity = (id: string, checked: boolean) => {
+    setSelectedCommunities(prev => checked ? [...prev, id] : prev.filter(cid => cid !== id));
+  };
+
+  const handleCreateCommunity = () => {
+    if (!formData.name || !formData.country) {
+      toast({ title: "Validation Error", description: "Please fill in all required fields.", variant: "destructive" });
+      return;
     }
-    setArchiveDialogOpen(false);
+    toast({ title: "Community created successfully!", description: `${formData.name} has been created.` });
+    setCreateModalOpen(false);
+    setFormData({ name: "", description: "", country: "", vendorEnabled: false });
+  };
+
+  const handleSuspend = () => {
+    toast({ title: "Community suspended", description: `${selectedCommunity?.name} has been suspended.` });
+    setSuspendModalOpen(false);
     setSelectedCommunity(null);
   };
 
-  const openArchiveDialog = (community: any, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setSelectedCommunity(community);
-    setArchiveDialogOpen(true);
+  const handleLinkAssociation = () => {
+    toast({ title: "Association linked", description: "Association has been linked to the community." });
+    setLinkAssociationOpen(false);
+    setSelectedCommunity(null);
   };
 
   return (
     <AdminLayout>
-      <div className="p-6 space-y-6">
-        {/* Page Header */}
-        <div className="flex items-center justify-between">
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
             <h1 className="text-2xl font-semibold text-foreground">Communities</h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              Manage global diaspora communities across countries.
-            </p>
+            <p className="text-muted-foreground">Manage communities and link them to associations and countries.</p>
           </div>
-          <Button
-            className="gap-2 bg-primary text-primary-foreground hover:bg-primary/90"
-            onClick={() => setCreateModalOpen(true)}
-          >
-            <Plus className="w-4 h-4" />
-            Create Community
-          </Button>
-        </div>
-
-        {/* Top Actions Bar */}
-        <div className="flex items-center gap-3 flex-wrap">
-          <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input
-              placeholder="Search by name, country, or association..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 bg-secondary border-border"
-            />
+          <div className="flex items-center gap-3">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" disabled={selectedCommunities.length === 0}>
+                  Bulk Actions <ChevronDown className="ml-2 h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="bg-popover border-border">
+                <DropdownMenuItem className="text-destructive"><Pause className="mr-2 h-4 w-4" /> Bulk Suspend</DropdownMenuItem>
+                <DropdownMenuItem><Link2 className="mr-2 h-4 w-4" /> Bulk Link Associations</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <Button onClick={() => setCreateModalOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" /> Create Community
+            </Button>
           </div>
-          <Select value={countryFilter} onValueChange={setCountryFilter}>
-            <SelectTrigger className="w-[180px] bg-secondary border-border">
-              <SelectValue placeholder="Country" />
-            </SelectTrigger>
-            <SelectContent className="bg-popover border-border">
-              <SelectItem value="all">All Countries</SelectItem>
-              {countryOptions.map((country) => (
-                <SelectItem key={country} value={country}>
-                  {country}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-[140px] bg-secondary border-border">
-              <SelectValue placeholder="Status" />
-            </SelectTrigger>
-            <SelectContent className="bg-popover border-border">
-              <SelectItem value="all">All</SelectItem>
-              <SelectItem value="active">Active</SelectItem>
-              <SelectItem value="inactive">Inactive</SelectItem>
-              <SelectItem value="archived">Archived</SelectItem>
-            </SelectContent>
-          </Select>
         </div>
 
-        {/* Communities Table */}
-        <div className="rounded-lg border border-border bg-card">
-          <Table>
-            <TableHeader>
-              <TableRow className="border-border hover:bg-transparent">
-                <TableHead className="text-muted-foreground">Community Name</TableHead>
-                <TableHead className="text-muted-foreground">Country(ies)</TableHead>
-                <TableHead className="text-muted-foreground">Associations (#)</TableHead>
-                <TableHead className="text-muted-foreground">Users (#)</TableHead>
-                <TableHead className="text-muted-foreground">Posts (#)</TableHead>
-                <TableHead className="text-muted-foreground">Vendor Mode</TableHead>
-                <TableHead className="text-muted-foreground">Status</TableHead>
-                <TableHead className="text-muted-foreground">Created At</TableHead>
-                <TableHead className="text-muted-foreground text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredCommunities.map((community) => (
-                <TableRow
-                  key={community.id}
-                  className="border-border hover:bg-secondary/50"
-                >
-                  <TableCell className="font-medium">{community.name}</TableCell>
-                  <TableCell>
-                    <div className="flex flex-wrap gap-1">
-                      {community.countries.map((country) => (
-                        <Badge
-                          key={country}
-                          variant="outline"
-                          className="text-xs bg-secondary"
-                        >
-                          {country}
-                        </Badge>
-                      ))}
-                    </div>
-                  </TableCell>
-                  <TableCell>{community.associationCount}</TableCell>
-                  <TableCell>{community.userCount.toLocaleString()}</TableCell>
-                  <TableCell>{community.postCount}</TableCell>
-                  <TableCell>
-                    {community.vendorEnabled ? (
-                      <Badge className="bg-success/20 text-success border-success/30 gap-1">
-                        <Store className="w-3 h-3" />
-                        Enabled
-                      </Badge>
-                    ) : (
-                      <Badge variant="outline" className="text-muted-foreground gap-1">
-                        <X className="w-3 h-3" />
-                        Disabled
-                      </Badge>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <Badge
-                      variant="outline"
-                      className={cn("text-xs capitalize", getStatusBadge(community.status))}
-                    >
-                      {community.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {community.createdAt}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                          <MoreHorizontal className="w-4 h-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="bg-popover border-border">
-                        <DropdownMenuItem
-                          className="gap-2"
-                          onClick={() => navigate(`/communities/${community.id}`)}
-                        >
-                          <Eye className="w-4 h-4" /> View
-                        </DropdownMenuItem>
-                        <DropdownMenuItem className="gap-2">
-                          <Edit className="w-4 h-4" /> Edit
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          className="gap-2 text-destructive"
-                          onClick={(e) => openArchiveDialog(community, e)}
-                        >
-                          <Archive className="w-4 h-4" /> Archive
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-
-        {/* Create Community Modal */}
-        <Dialog open={createModalOpen} onOpenChange={setCreateModalOpen}>
-          <DialogContent className="sm:max-w-[500px] bg-card border-border">
-            <DialogHeader>
-              <DialogTitle>Create Community</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">
-                  Community Name <span className="text-destructive">*</span>
-                </Label>
+        {/* Filters */}
+        <Card className="glass">
+          <CardContent className="p-4">
+            <div className="flex flex-wrap items-center gap-4">
+              <div className="relative flex-1 min-w-[250px]">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
-                  id="name"
-                  placeholder="e.g. Ghana Belgium Community"
-                  value={formData.name}
-                  onChange={(e) =>
-                    setFormData({ ...formData, name: e.target.value })
-                  }
-                  className="bg-secondary border-border"
+                  placeholder="Name, country, community ID"
+                  className="pl-10"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="description">Description</Label>
-                <Textarea
-                  id="description"
-                  placeholder="Short description of the community"
-                  value={formData.description}
-                  onChange={(e) =>
-                    setFormData({ ...formData, description: e.target.value })
-                  }
-                  className="bg-secondary border-border"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>
-                  Linked Countries <span className="text-destructive">*</span>
-                </Label>
-                <Select
-                  onValueChange={(value) => {
-                    if (!formData.countries.includes(value)) {
-                      setFormData({
-                        ...formData,
-                        countries: [...formData.countries, value],
-                      });
-                    }
-                  }}
-                >
-                  <SelectTrigger className="bg-secondary border-border">
-                    <SelectValue placeholder="Select one or more countries" />
-                  </SelectTrigger>
+              <Select value={countryFilter} onValueChange={setCountryFilter}>
+                <SelectTrigger className="w-[150px]"><SelectValue placeholder="Country" /></SelectTrigger>
+                <SelectContent className="bg-popover border-border">
+                  <SelectItem value="all">All Countries</SelectItem>
+                  {countryOptions.map((country) => (
+                    <SelectItem key={country} value={country}>{country}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-[150px]"><SelectValue placeholder="Status" /></SelectTrigger>
+                <SelectContent className="bg-popover border-border">
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="Active">Active</SelectItem>
+                  <SelectItem value="Inactive">Inactive</SelectItem>
+                  <SelectItem value="Suspended">Suspended</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button variant="outline" size="sm">
+                <Download className="mr-2 h-4 w-4" /> Export
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Table */}
+        <Card className="glass">
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow className="border-border/50 hover:bg-transparent">
+                    <TableHead className="w-12">
+                      <Checkbox 
+                        checked={selectedCommunities.length === communitiesData.length}
+                        onCheckedChange={handleSelectAll}
+                      />
+                    </TableHead>
+                    <TableHead>Community Name</TableHead>
+                    <TableHead>Country</TableHead>
+                    <TableHead>Associations Linked</TableHead>
+                    <TableHead>Members</TableHead>
+                    <TableHead>Posts</TableHead>
+                    <TableHead>Opportunities</TableHead>
+                    <TableHead>Vendor Enabled</TableHead>
+                    <TableHead>Created At</TableHead>
+                    <TableHead className="w-28">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredCommunities.map((community) => (
+                    <TableRow key={community.id} className="border-border/50">
+                      <TableCell>
+                        <Checkbox 
+                          checked={selectedCommunities.includes(community.id)}
+                          onCheckedChange={(checked) => handleSelectCommunity(community.id, checked as boolean)}
+                        />
+                      </TableCell>
+                      <TableCell className="font-medium">{community.name}</TableCell>
+                      <TableCell><Badge variant="outline">{community.country}</Badge></TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="cursor-pointer hover:bg-secondary">
+                          {community.associationsCount}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>{community.membersCount.toLocaleString()}</TableCell>
+                      <TableCell>{community.postsCount}</TableCell>
+                      <TableCell>{community.opportunitiesCount}</TableCell>
+                      <TableCell>
+                        {community.vendorEnabled ? (
+                          <Badge className="badge-status badge-success gap-1"><Store className="w-3 h-3" /> Enabled</Badge>
+                        ) : (
+                          <Badge className="badge-status badge-muted gap-1"><X className="w-3 h-3" /> Disabled</Badge>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">{community.createdAt}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1">
+                          <Button variant="ghost" size="icon" onClick={() => navigate(`/communities/${community.id}`)}>
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon" onClick={() => { setSelectedCommunity(community); setLinkAssociationOpen(true); }}>
+                            <Link2 className="h-4 w-4" />
+                          </Button>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="bg-popover border-border">
+                              <DropdownMenuItem onClick={() => navigate(`/communities/${community.id}`)}>
+                                <Eye className="mr-2 h-4 w-4" /> View
+                              </DropdownMenuItem>
+                              <DropdownMenuItem><Edit className="mr-2 h-4 w-4" /> Edit</DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => { setSelectedCommunity(community); setLinkAssociationOpen(true); }}>
+                                <Link2 className="mr-2 h-4 w-4" /> Link Association
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem className="text-destructive" onClick={() => { setSelectedCommunity(community); setSuspendModalOpen(true); }}>
+                                <Pause className="mr-2 h-4 w-4" /> Suspend
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem><FileJson className="mr-2 h-4 w-4" /> Export Data</DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+            <div className="flex items-center justify-between border-t border-border/50 px-4 py-3">
+              <p className="text-sm text-muted-foreground">Showing 1-{filteredCommunities.length} of {filteredCommunities.length} communities</p>
+              <div className="flex items-center gap-2">
+                <Select defaultValue="10">
+                  <SelectTrigger className="w-[80px]"><SelectValue /></SelectTrigger>
                   <SelectContent className="bg-popover border-border">
-                    {countryOptions.map((country) => (
-                      <SelectItem key={country} value={country}>
-                        {country}
-                      </SelectItem>
-                    ))}
+                    <SelectItem value="10">10</SelectItem>
+                    <SelectItem value="25">25</SelectItem>
+                    <SelectItem value="50">50</SelectItem>
+                    <SelectItem value="100">100</SelectItem>
                   </SelectContent>
                 </Select>
-                {formData.countries.length > 0 && (
-                  <div className="flex flex-wrap gap-2 mt-2">
-                    {formData.countries.map((country) => (
-                      <Badge
-                        key={country}
-                        variant="secondary"
-                        className="gap-1 cursor-pointer"
-                        onClick={() =>
-                          setFormData({
-                            ...formData,
-                            countries: formData.countries.filter(
-                              (c) => c !== country
-                            ),
-                          })
-                        }
-                      >
-                        {country}
-                        <X className="w-3 h-3" />
-                      </Badge>
-                    ))}
-                  </div>
-                )}
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label>Enable Posting</Label>
-                  <p className="text-xs text-muted-foreground">
-                    Determines whether community can post.
-                  </p>
-                </div>
-                <Switch
-                  checked={formData.enablePosting}
-                  onCheckedChange={(checked) =>
-                    setFormData({ ...formData, enablePosting: checked })
-                  }
-                />
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label>Enable Vendor Mode</Label>
-                  <p className="text-xs text-muted-foreground">
-                    Allows community to sell products & services.
-                  </p>
-                </div>
-                <Switch
-                  checked={formData.enableVendorMode}
-                  onCheckedChange={(checked) =>
-                    setFormData({ ...formData, enableVendorMode: checked })
-                  }
-                />
+                <Button variant="outline" size="sm" disabled>Previous</Button>
+                <Button variant="outline" size="sm" disabled>Next</Button>
               </div>
             </div>
-            <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => setCreateModalOpen(false)}
-              >
-                Cancel
-              </Button>
-              <Button onClick={handleCreateCommunity}>Create Community</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-
-        {/* Archive Confirmation Dialog */}
-        <AlertDialog open={archiveDialogOpen} onOpenChange={setArchiveDialogOpen}>
-          <AlertDialogContent className="bg-card border-border">
-            <AlertDialogHeader>
-              <AlertDialogTitle>Archive Community</AlertDialogTitle>
-              <AlertDialogDescription>
-                Are you sure you want to archive{" "}
-                <span className="font-semibold text-foreground">
-                  {selectedCommunity?.name}
-                </span>
-                ? This action can be reversed later.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={handleArchive}
-                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              >
-                Archive
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+          </CardContent>
+        </Card>
       </div>
+
+      {/* Create Community Modal */}
+      <Dialog open={createModalOpen} onOpenChange={setCreateModalOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Create Community</DialogTitle>
+            <DialogDescription>Create a new community for the platform.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Community Name <span className="text-destructive">*</span></Label>
+              <Input placeholder="e.g. Belgian Ghanaians Network" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} />
+            </div>
+            <div className="space-y-2">
+              <Label>Country <span className="text-destructive">*</span></Label>
+              <Select value={formData.country} onValueChange={(value) => setFormData({ ...formData, country: value })}>
+                <SelectTrigger><SelectValue placeholder="Select country" /></SelectTrigger>
+                <SelectContent className="bg-popover border-border">
+                  {countryOptions.map((country) => (
+                    <SelectItem key={country} value={country}>{country}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Description</Label>
+              <Textarea placeholder="Description of the community..." value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} />
+            </div>
+            <div className="flex items-center justify-between">
+              <div>
+                <Label>Enable Vendor Mode</Label>
+                <p className="text-xs text-muted-foreground">Allow the community to sell products/services</p>
+              </div>
+              <Switch checked={formData.vendorEnabled} onCheckedChange={(checked) => setFormData({ ...formData, vendorEnabled: checked })} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCreateModalOpen(false)}>Cancel</Button>
+            <Button onClick={handleCreateCommunity}>Create Community</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Link Association Modal */}
+      <Dialog open={linkAssociationOpen} onOpenChange={setLinkAssociationOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Link Association to Community</DialogTitle>
+            <DialogDescription>Link {selectedCommunity?.name} to one or more associations.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Community</Label>
+              <Input value={selectedCommunity?.name || ""} disabled />
+            </div>
+            <div className="space-y-2">
+              <Label>Select Associations <span className="text-destructive">*</span></Label>
+              <Select>
+                <SelectTrigger><SelectValue placeholder="Search associations..." /></SelectTrigger>
+                <SelectContent className="bg-popover border-border">
+                  {associationOptions.map((assoc) => (
+                    <SelectItem key={assoc.id} value={assoc.id}>{assoc.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">You can select multiple associations</p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setLinkAssociationOpen(false)}>Cancel</Button>
+            <Button onClick={handleLinkAssociation}>Link</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Suspend Community Modal */}
+      <Dialog open={suspendModalOpen} onOpenChange={setSuspendModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Suspend Community</DialogTitle>
+            <DialogDescription>Suspend {selectedCommunity?.name}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Reason <span className="text-destructive">*</span></Label>
+              <Textarea placeholder="Enter reason for suspension..." />
+            </div>
+            <div className="space-y-2">
+              <Label>Duration</Label>
+              <Select defaultValue="indefinite">
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent className="bg-popover border-border">
+                  <SelectItem value="indefinite">Indefinite</SelectItem>
+                  <SelectItem value="1day">1 day</SelectItem>
+                  <SelectItem value="7days">7 days</SelectItem>
+                  <SelectItem value="30days">30 days</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <p className="text-xs text-muted-foreground">Suspending will block all posting and vendor activity for this community.</p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSuspendModalOpen(false)}>Cancel</Button>
+            <Button variant="destructive" onClick={handleSuspend}>Suspend</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AdminLayout>
   );
 }
