@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import ComingSoon from "./pages/ComingSoon";
+import EscrowManagement from "./pages/EscrowManagement";
 import Communities from "./pages/Communities";
 import CommunityDetail from "./pages/CommunityDetail";
 import UserManagement from "./pages/UserManagement";
@@ -31,7 +32,7 @@ const App = () => (
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/users" element={<UserManagement />} />
-          <Route path="/escrow" element={<ComingSoon title="Escrow Management" />} />
+          <Route path="/escrow" element={<EscrowManagement />} />
           <Route path="/disputes" element={<DisputesResolution />} />
           <Route path="/communities" element={<Communities />} />
           <Route path="/communities/:id" element={<CommunityDetail />} />
