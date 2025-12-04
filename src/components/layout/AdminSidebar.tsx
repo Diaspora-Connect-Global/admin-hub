@@ -18,6 +18,7 @@ import {
   ChevronLeft,
   ChevronRight,
   LogOut,
+  MessageSquare,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import logo from "@/assets/logo.svg";
@@ -25,6 +26,7 @@ import logo from "@/assets/logo.svg";
 const navItems = [
   { id: "dashboard", title: "Dashboard", icon: LayoutDashboard, path: "/" },
   { id: "user_management", title: "User Management", icon: Users, path: "/users" },
+  { id: "chat_management", title: "Chat Management", icon: MessageSquare, path: "/chats" },
   { id: "escrow_management", title: "Escrow Management", icon: Wallet, path: "/escrow" },
   { id: "disputes", title: "Disputes", icon: AlertTriangle, path: "/disputes" },
   { id: "communities", title: "Communities", icon: Users, path: "/communities" },
