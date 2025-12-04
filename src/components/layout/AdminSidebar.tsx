@@ -61,12 +61,12 @@ export function AdminSidebar() {
       <div className="h-16 flex items-center justify-between px-4 border-b border-sidebar-border">
         {!collapsed && (
           <div className="flex items-center gap-2">
-            <img src={logo} alt="Diaspo Plug" className="w-8 h-8" />
-            <span className="font-semibold text-foreground">Diaspo Plug</span>
+            <img src={logo} alt="S Admin" className="w-10 h-10" />
+            <span className="font-semibold text-foreground">S Admin</span>
           </div>
         )}
         {collapsed && (
-          <img src={logo} alt="Diaspo Plug" className="w-8 h-8 mx-auto" />
+          <img src={logo} alt="S Admin" className="w-10 h-10 mx-auto" />
         )}
         <button
           onClick={() => setCollapsed(!collapsed)}
