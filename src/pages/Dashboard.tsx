@@ -15,6 +15,7 @@ import {
   Eye,
   TrendingUp,
   TrendingDown,
+  MessageSquare,
 } from "lucide-react";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import { Button } from "@/components/ui/button";
@@ -69,6 +70,16 @@ const postsReactionsData = [
   { date: "Jan 20", posts: 72, reactions: 580 },
   { date: "Jan 25", posts: 68, reactions: 610 },
   { date: "Jan 30", posts: 85, reactions: 720 },
+];
+
+const chatActivityData = [
+  { date: "Jan 1", dm: 1200, group: 450 },
+  { date: "Jan 5", dm: 1350, group: 520 },
+  { date: "Jan 10", dm: 1280, group: 480 },
+  { date: "Jan 15", dm: 1520, group: 610 },
+  { date: "Jan 20", dm: 1680, group: 720 },
+  { date: "Jan 25", dm: 1590, group: 680 },
+  { date: "Jan 30", dm: 1850, group: 790 },
 ];
 
 const systemHealthData = [
@@ -211,7 +222,7 @@ export default function Dashboard() {
         </div>
 
         {/* Metric Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8 gap-4">
           <MetricCard
             title="Total Users"
             value="12,847"
@@ -241,6 +252,13 @@ export default function Dashboard() {
             onClick={() => navigate("/moderation")}
           />
           <MetricCard
+            title="Active Chats"
+            value="3,421"
+            trend={{ label: "DM + Groups", value: "+12.8%", direction: "up" }}
+            icon={<MessageSquare className="w-5 h-5" />}
+            onClick={() => navigate("/chats")}
+          />
+          <MetricCard
             title="Vendors"
             value="89"
             trend={{ label: "New Registrations", value: "+18.2%", direction: "up" }}
@@ -264,7 +282,31 @@ export default function Dashboard() {
         </div>
 
         {/* Charts Row */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+          {/* Chat Activity Trend */}
+          <div className="glass rounded-xl p-5 lg:col-span-1">
+            <h3 className="font-semibold text-foreground mb-1">Chat Activity</h3>
+            <p className="text-sm text-muted-foreground mb-4">DM vs Group Messages</p>
+            <div className="h-[220px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={chatActivityData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(222, 30%, 18%)" />
+                  <XAxis dataKey="date" tick={{ fill: "hsl(215, 20%, 55%)", fontSize: 11 }} />
+                  <YAxis tick={{ fill: "hsl(215, 20%, 55%)", fontSize: 11 }} />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: "hsl(222, 47%, 10%)",
+                      border: "1px solid hsl(222, 30%, 18%)",
+                      borderRadius: "8px",
+                    }}
+                  />
+                  <Line type="monotone" dataKey="dm" stroke="hsl(262, 83%, 58%)" strokeWidth={2} dot={false} name="Direct Messages" />
+                  <Line type="monotone" dataKey="group" stroke="hsl(38, 92%, 50%)" strokeWidth={2} dot={false} name="Group Chats" />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
           {/* User Activity Trend */}
           <div className="glass rounded-xl p-5 lg:col-span-1">
             <h3 className="font-semibold text-foreground mb-1">User Activity Trend</h3>
