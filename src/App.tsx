@@ -20,6 +20,7 @@ import SystemSettings from "./pages/SystemSettings";
 import AuditLogs from "./pages/AuditLogs";
 import RolesPermissions from "./pages/RolesPermissions";
 import Reports from "./pages/Reports";
+import ChatManagement from "./pages/ChatManagement";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -33,6 +34,7 @@ const App = () => (
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/users" element={<UserManagement />} />
+          <Route path="/chats" element={<ChatManagement />} />
           <Route path="/escrow" element={<EscrowManagement />} />
           <Route path="/disputes" element={<DisputesResolution />} />
           <Route path="/communities" element={<Communities />} />
