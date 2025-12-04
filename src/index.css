@@ -299,7 +299,9 @@
 
 @layer utilities {
   .glass {
-    @apply bg-card/80 backdrop-blur-xl border border-border/50;
+    background-color: color-mix(in oklch, var(--card) 80%, transparent);
+    @apply backdrop-blur-xl border;
+    border-color: color-mix(in oklch, var(--border) 50%, transparent);
   }
 
   .glow-primary {
@@ -452,7 +454,11 @@
 
 @layer components {
   .metric-card {
-    @apply glass rounded-xl p-5 transition-all duration-300 hover:border-primary/30;
+    @apply glass rounded-xl p-5 transition-all duration-300;
+  }
+
+  .metric-card:hover {
+    border-color: color-mix(in oklch, var(--primary) 30%, transparent);
   }
 
   .table-container {
@@ -464,11 +470,17 @@
   }
 
   .sidebar-item-active {
-    @apply bg-primary/10 text-primary border-l-2 border-primary;
+    background-color: color-mix(in oklch, var(--primary) 10%, transparent);
+    color: var(--primary);
+    border-left: 2px solid var(--primary);
   }
 
   .sidebar-item-inactive {
-    @apply text-muted-foreground hover:text-foreground hover:bg-accent;
+    @apply text-muted-foreground;
+  }
+
+  .sidebar-item-inactive:hover {
+    @apply text-foreground bg-accent;
   }
 
   .badge-status {
@@ -476,19 +488,23 @@
   }
 
   .badge-success {
-    @apply surface-success text-success-custom;
+    background-color: var(--surface-success);
+    color: var(--text-success);
   }
 
   .badge-warning {
-    @apply surface-warning text-warning-custom;
+    background-color: var(--surface-warning);
+    color: var(--text-warning);
   }
 
   .badge-destructive {
-    @apply surface-danger text-danger;
+    background-color: var(--surface-danger);
+    color: var(--text-danger);
   }
 
   .badge-info {
-    @apply surface-info text-info-custom;
+    background-color: var(--surface-info);
+    color: var(--text-info);
   }
 
   .badge-muted {
