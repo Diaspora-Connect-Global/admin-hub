@@ -4,8 +4,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
-import ComingSoon from "./pages/ComingSoon";
 import EscrowManagement from "./pages/EscrowManagement";
+import NotificationsBroadcasts from "./pages/NotificationsBroadcasts";
 import Communities from "./pages/Communities";
 import CommunityDetail from "./pages/CommunityDetail";
 import UserManagement from "./pages/UserManagement";
@@ -43,7 +43,7 @@ const App = () => (
           <Route path="/associations/:id" element={<AssociationDetail />} />
           <Route path="/reports" element={<Reports />} />
           <Route path="/settings" element={<SystemSettings />} />
-          <Route path="/notifications" element={<ComingSoon title="Notifications & Broadcasts" />} />
+          <Route path="/notifications" element={<NotificationsBroadcasts />} />
           <Route path="/audit" element={<AuditLogs />} />
           <Route path="/support" element={<SupportTicketing />} />
           <Route path="/moderation" element={<ContentModeration />} />
