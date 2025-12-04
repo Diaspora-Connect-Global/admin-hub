@@ -41,6 +41,7 @@ import {
   FileText,
   FileSpreadsheet,
   File,
+  MessageSquare,
 } from "lucide-react";
 import {
   LineChart,
@@ -106,6 +107,30 @@ const systemHealthData = [
   { name: "Healthy", value: 85, color: "hsl(142, 72%, 42%)" },
   { name: "Warning", value: 10, color: "hsl(38, 92%, 50%)" },
   { name: "Critical", value: 5, color: "hsl(var(--destructive))" },
+];
+
+// Chat Analytics Data
+const chatVolumeData = [
+  { date: "Jan 1", dm: 4500, group: 2800 },
+  { date: "Jan 8", dm: 5200, group: 3100 },
+  { date: "Jan 15", dm: 4800, group: 2900 },
+  { date: "Jan 22", dm: 6100, group: 3500 },
+  { date: "Jan 29", dm: 5800, group: 3200 },
+  { date: "Feb 5", dm: 6400, group: 3800 },
+  { date: "Feb 12", dm: 7100, group: 4200 },
+];
+
+const chatTypeDistribution = [
+  { name: "Direct Messages", value: 68, color: "hsl(var(--primary))" },
+  { name: "Group Chats", value: 32, color: "hsl(262, 83%, 58%)" },
+];
+
+const topActiveChats = [
+  { id: "GRP-001", name: "NYC Diaspora Community", type: "Group", members: 156, messages: 4521, lastActive: "2024-01-15" },
+  { id: "GRP-002", name: "Tech Professionals", type: "Group", members: 89, messages: 1247, lastActive: "2024-01-15" },
+  { id: "DM-001", name: "John Smith ↔ Jane Doe", type: "DM", members: 2, messages: 512, lastActive: "2024-01-15" },
+  { id: "GRP-003", name: "Cultural Exchange", type: "Group", members: 234, messages: 8956, lastActive: "2024-01-14" },
+  { id: "DM-002", name: "Mike Johnson ↔ Sarah Wilson", type: "DM", members: 2, messages: 289, lastActive: "2024-01-14" },
 ];
 
 // Mock table data
@@ -286,6 +311,10 @@ export default function Reports() {
             <TabsTrigger value="system" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <Activity className="h-4 w-4" />
               System Health
+            </TabsTrigger>
+            <TabsTrigger value="chats" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              <MessageSquare className="h-4 w-4" />
+              Chat Analytics
             </TabsTrigger>
           </TabsList>
 
@@ -783,6 +812,114 @@ export default function Reports() {
                       </TableCell>
                       <TableCell className="text-muted-foreground">{event.timestamp}</TableCell>
                       <TableCell className="text-muted-foreground">{event.notes}</TableCell>
+                      <TableCell>
+                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </TabsContent>
+
+          {/* Chat Analytics Tab */}
+          <TabsContent value="chats" className="space-y-6">
+            <div className="grid gap-6 lg:grid-cols-2">
+              <div className="glass rounded-xl p-5">
+                <div className="mb-4">
+                  <h3 className="font-semibold text-foreground">Message Volume Over Time</h3>
+                  <p className="text-sm text-muted-foreground">DM vs Group chat message throughput (metadata counts)</p>
+                </div>
+                <div className="h-[300px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={chatVolumeData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
+                      <XAxis dataKey="date" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} />
+                      <YAxis tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: "hsl(var(--card))",
+                          border: "1px solid hsl(var(--border))",
+                          borderRadius: "8px",
+                        }}
+                      />
+                      <Legend />
+                      <Bar dataKey="dm" fill="hsl(var(--primary))" name="Direct Messages" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="group" fill="hsl(262, 83%, 58%)" name="Group Chats" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+
+              <div className="glass rounded-xl p-5">
+                <div className="mb-4">
+                  <h3 className="font-semibold text-foreground">Chat Type Distribution</h3>
+                  <p className="text-sm text-muted-foreground">Proportion of DM vs Group conversations</p>
+                </div>
+                <div className="h-[300px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={chatTypeDistribution}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={60}
+                        outerRadius={100}
+                        paddingAngle={2}
+                        dataKey="value"
+                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                        labelLine={false}
+                      >
+                        {chatTypeDistribution.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: "hsl(var(--card))",
+                          border: "1px solid hsl(var(--border))",
+                          borderRadius: "8px",
+                        }}
+                        formatter={(value) => [`${value}%`, ""]}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            </div>
+
+            <div className="glass rounded-xl p-5">
+              <div className="mb-4">
+                <h3 className="font-semibold text-foreground">Most Active Chats</h3>
+                <p className="text-sm text-muted-foreground">Chats with highest message activity (E2E encrypted - metadata only)</p>
+              </div>
+              <Table>
+                <TableHeader>
+                  <TableRow className="border-border/50 hover:bg-transparent">
+                    <TableHead>Chat ID</TableHead>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead>Members</TableHead>
+                    <TableHead>Messages</TableHead>
+                    <TableHead>Last Active</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {topActiveChats.map((chat) => (
+                    <TableRow key={chat.id} className="border-border/50">
+                      <TableCell className="font-mono text-sm">{chat.id}</TableCell>
+                      <TableCell className="font-medium">{chat.name}</TableCell>
+                      <TableCell>
+                        <Badge variant={chat.type === "DM" ? "secondary" : "outline"}>
+                          {chat.type}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>{chat.members}</TableCell>
+                      <TableCell>{chat.messages.toLocaleString()}</TableCell>
+                      <TableCell className="text-muted-foreground">{chat.lastActive}</TableCell>
                       <TableCell>
                         <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
                           <Eye className="h-4 w-4" />
