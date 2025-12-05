@@ -188,6 +188,7 @@
       "namePlaceholder": "Entrez le nom de la communauté",
       "descriptionPlaceholder": "Entrez une brève description de la communauté",
       "selectType": "Sélectionnez le type de communauté",
+      "selectCountries": "Sélectionnez un ou plusieurs pays",
       "logoBanner": "Logo / Image bannière",
       "uploadImage": "Cliquez pour télécharger",
       "acceptedFormats": "JPG, PNG (max 1 fichier)",

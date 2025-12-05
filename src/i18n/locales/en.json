@@ -188,6 +188,7 @@
       "namePlaceholder": "Enter community name",
       "descriptionPlaceholder": "Enter a brief description of the community",
       "selectType": "Select community type",
+      "selectCountries": "Select one or more countries",
       "logoBanner": "Logo / Banner Image",
       "uploadImage": "Click to upload image",
       "acceptedFormats": "JPG, PNG (max 1 file)",
