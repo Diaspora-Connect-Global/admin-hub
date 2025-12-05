@@ -26,8 +26,21 @@ import {
   CreditCard,
   Bell,
   FileText,
+  Globe,
+  Sun,
+  Moon,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useTheme } from "next-themes";
+
+// Language options
+const languages = [
+  { value: "en", label: "English" },
+  { value: "de", label: "German" },
+  { value: "fr", label: "French" },
+  { value: "nl", label: "Dutch" },
+  { value: "es", label: "Spanish" },
+];
 
 // Country options
 const countries = [
@@ -46,11 +59,14 @@ export default function SystemSettings() {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("general");
   
+  const { theme, setTheme } = useTheme();
+  
   // General settings state
   const [generalSettings, setGeneralSettings] = useState({
     platformName: "DiaspoPlug",
     defaultCountry: "Nigeria",
     timezone: "Africa/Lagos",
+    language: "en",
   });
 
   // Security settings state
@@ -190,6 +206,48 @@ export default function SystemSettings() {
                       </SelectContent>
                     </Select>
                     <p className="text-xs text-muted-foreground">Affects timestamps across the system.</p>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label className="flex items-center gap-2">
+                      <Globe className="w-4 h-4" />
+                      Language
+                    </Label>
+                    <Select 
+                      value={generalSettings.language}
+                      onValueChange={(value) => setGeneralSettings(prev => ({ ...prev, language: value }))}
+                    >
+                      <SelectTrigger className="bg-secondary border-border">
+                        <SelectValue placeholder="Select language" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-popover border-border">
+                        {languages.map((lang) => (
+                          <SelectItem key={lang.value} value={lang.value}>{lang.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">Sets the platform display language.</p>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label className="flex items-center gap-2">
+                      {theme === "dark" ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
+                      Theme Mode
+                    </Label>
+                    <Select 
+                      value={theme}
+                      onValueChange={(value) => setTheme(value)}
+                    >
+                      <SelectTrigger className="bg-secondary border-border">
+                        <SelectValue placeholder="Select theme" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-popover border-border">
+                        <SelectItem value="light">Light Mode</SelectItem>
+                        <SelectItem value="dark">Dark Mode</SelectItem>
+                        <SelectItem value="system">System Default</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">Choose light or dark appearance.</p>
                   </div>
                 </div>
                 
