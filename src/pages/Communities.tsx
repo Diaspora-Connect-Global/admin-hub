@@ -79,13 +79,14 @@ interface CreateFormData {
   groupCreationPermission: string;
   postModeration: boolean;
   communityAdmins: string[];
-  // Embassy fields
+  // Contact fields (for all types)
+  address: string;
+  contactEmail: string;
+  contactPhone: string;
+  website: string;
+  // Embassy-specific fields
   embassyCountry: string;
   locationCountry: string;
-  embassyAddress: string;
-  embassyEmail: string;
-  embassyPhone: string;
-  embassyWebsite: string;
 }
 
 const initialFormData: CreateFormData = {
@@ -100,12 +101,12 @@ const initialFormData: CreateFormData = {
   groupCreationPermission: "Admins Only",
   postModeration: true,
   communityAdmins: [],
+  address: "",
+  contactEmail: "",
+  contactPhone: "",
+  website: "",
   embassyCountry: "",
   locationCountry: "",
-  embassyAddress: "",
-  embassyEmail: "",
-  embassyPhone: "",
-  embassyWebsite: "",
 };
 
 export default function Communities() {
@@ -189,13 +190,13 @@ export default function Communities() {
     }
 
     // Email validation
-    if (formData.embassyEmail && !validateEmail(formData.embassyEmail)) {
+    if (formData.contactEmail && !validateEmail(formData.contactEmail)) {
       toast({ title: t('communities.validationError'), description: t('communities.invalidEmail'), variant: "destructive" });
       return;
     }
 
     // URL validation
-    if (formData.embassyWebsite && !validateUrl(formData.embassyWebsite)) {
+    if (formData.website && !validateUrl(formData.website)) {
       toast({ title: t('communities.validationError'), description: t('communities.invalidWebsite'), variant: "destructive" });
       return;
     }
@@ -636,6 +637,54 @@ export default function Communities() {
                 </div>
               </div>
 
+              {/* Contact Information Section - For All Types */}
+              {formData.communityType && (
+                <div className="space-y-4">
+                  <h3 className="text-sm font-semibold text-foreground border-b border-border pb-2">
+                    {t('communities.form.contactInfo')}
+                  </h3>
+
+                  <div className="space-y-2">
+                    <Label>{t('communities.form.address')}</Label>
+                    <Input 
+                      placeholder={t('communities.form.addressPlaceholder')} 
+                      value={formData.address} 
+                      onChange={(e) => setFormData({ ...formData, address: e.target.value })} 
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>{t('communities.form.contactEmail')}</Label>
+                      <Input 
+                        type="email"
+                        placeholder={t('communities.form.contactEmailPlaceholder')} 
+                        value={formData.contactEmail} 
+                        onChange={(e) => setFormData({ ...formData, contactEmail: e.target.value })} 
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>{t('communities.form.contactPhone')}</Label>
+                      <Input 
+                        placeholder={t('communities.form.contactPhonePlaceholder')} 
+                        value={formData.contactPhone} 
+                        onChange={(e) => setFormData({ ...formData, contactPhone: e.target.value })} 
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>{t('communities.form.website')}</Label>
+                    <Input 
+                      placeholder={t('communities.form.websitePlaceholder')} 
+                      value={formData.website} 
+                      onChange={(e) => setFormData({ ...formData, website: e.target.value })} 
+                    />
+                  </div>
+                </div>
+              )}
+
               {/* Embassy Information Section - Conditional */}
               {formData.communityType === "Embassy" && (
                 <div className="space-y-4">
@@ -668,45 +717,6 @@ export default function Communities() {
                         </SelectContent>
                       </Select>
                     </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>{t('communities.form.embassyAddress')}</Label>
-                    <Input 
-                      placeholder={t('communities.form.embassyAddressPlaceholder')} 
-                      value={formData.embassyAddress} 
-                      onChange={(e) => setFormData({ ...formData, embassyAddress: e.target.value })} 
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>{t('communities.form.embassyEmail')}</Label>
-                      <Input 
-                        type="email"
-                        placeholder={t('communities.form.embassyEmailPlaceholder')} 
-                        value={formData.embassyEmail} 
-                        onChange={(e) => setFormData({ ...formData, embassyEmail: e.target.value })} 
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label>{t('communities.form.embassyPhone')}</Label>
-                      <Input 
-                        placeholder={t('communities.form.embassyPhonePlaceholder')} 
-                        value={formData.embassyPhone} 
-                        onChange={(e) => setFormData({ ...formData, embassyPhone: e.target.value })} 
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>{t('communities.form.embassyWebsite')}</Label>
-                    <Input 
-                      placeholder={t('communities.form.embassyWebsitePlaceholder')} 
-                      value={formData.embassyWebsite} 
-                      onChange={(e) => setFormData({ ...formData, embassyWebsite: e.target.value })} 
-                    />
                   </div>
                 </div>
               )}
