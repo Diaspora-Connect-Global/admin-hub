@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -157,6 +158,7 @@ const mockAuditLogs = [
 
 export default function VendorManagement() {
   const { toast } = useToast();
+  const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [categoryFilter, setCategoryFilter] = useState("all");
@@ -275,9 +277,9 @@ export default function VendorManagement() {
       <div className="space-y-6">
         {/* Header */}
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Vendor Management</h1>
+          <h1 className="text-3xl font-bold tracking-tight">{t('vendors.title')}</h1>
           <p className="text-muted-foreground">
-            Track, approve, and manage all vendors and their offerings across the platform.
+            {t('vendors.searchPlaceholder')}
           </p>
         </div>
 

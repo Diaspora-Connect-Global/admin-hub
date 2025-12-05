@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -129,6 +130,7 @@ const chartConfig = {
 };
 
 export default function ChatManagement() {
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState("dashboard");
   const [dmMetadataModal, setDmMetadataModal] = useState<typeof dmConversations[0] | null>(null);
   const [groupDetailModal, setGroupDetailModal] = useState<typeof groupChats[0] | null>(null);
@@ -139,7 +141,7 @@ export default function ChatManagement() {
       <div className="space-y-6">
         {/* Header */}
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Chat Management</h1>
+          <h1 className="text-2xl font-bold text-foreground">{t('chat.title')}</h1>
           <p className="text-muted-foreground mt-1">
             Manage encrypted chat metadata. E2E encryption ensures message content is never accessible.
           </p>

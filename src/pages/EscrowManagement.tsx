@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -148,6 +149,7 @@ const mockAttachments = [
 
 export default function EscrowManagement() {
   const { toast } = useToast();
+  const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
@@ -280,8 +282,8 @@ export default function EscrowManagement() {
       <div className="space-y-6 animate-fade-in">
         {/* Header */}
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Escrow Management</h1>
-          <p className="text-muted-foreground">Track and manage all escrow transactions created by users or organizations.</p>
+          <h1 className="text-2xl font-bold text-foreground">{t('escrow.title')}</h1>
+          <p className="text-muted-foreground">{t('escrow.searchPlaceholder')}</p>
         </div>
 
         {/* Top Bar */}

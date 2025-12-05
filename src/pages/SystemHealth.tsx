@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -140,6 +141,7 @@ const performanceData = [
 
 export default function SystemHealth() {
   const { toast } = useToast();
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -202,9 +204,9 @@ export default function SystemHealth() {
       <div className="space-y-6">
         {/* Header */}
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">System Health Dashboard</h1>
+          <h1 className="text-3xl font-bold tracking-tight">{t('systemHealth.title')}</h1>
           <p className="text-muted-foreground">
-            Monitor platform infrastructure, services, and performance metrics in real-time.
+            {t('systemHealth.serverStatus')}
           </p>
         </div>
 

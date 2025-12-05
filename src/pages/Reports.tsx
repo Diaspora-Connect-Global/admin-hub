@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -204,6 +205,7 @@ const priorityConfig: Record<string, { label: string; className: string }> = {
 };
 
 export default function Reports() {
+  const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState("");
   const [reportType, setReportType] = useState("all");
   const [activeTab, setActiveTab] = useState("users");
@@ -214,7 +216,7 @@ export default function Reports() {
         {/* Header */}
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-foreground">Reports & Analytics</h1>
+            <h1 className="text-2xl font-bold text-foreground">{t('reports.title')}</h1>
             <p className="text-muted-foreground">
               Generate, view, and export detailed reports on platform activity and performance.
             </p>

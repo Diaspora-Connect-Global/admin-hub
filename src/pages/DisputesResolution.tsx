@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -187,6 +188,7 @@ const admins = ["Admin Sarah", "Admin Mike", "Admin John", "Admin Lisa", "System
 
 export default function DisputesResolution() {
   const { toast } = useToast();
+  const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [priorityFilter, setPriorityFilter] = useState("all");
@@ -328,9 +330,9 @@ export default function DisputesResolution() {
       <div className="space-y-6">
         {/* Header */}
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Disputes & Resolution</h1>
+          <h1 className="text-3xl font-bold tracking-tight">{t('disputes.title')}</h1>
           <p className="text-muted-foreground">
-            Monitor, review, and resolve disputes across the platform.
+            {t('disputes.searchPlaceholder')}
           </p>
         </div>
 

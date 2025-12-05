@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { format } from "date-fns";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import { Button } from "@/components/ui/button";
@@ -267,6 +268,7 @@ const getActionBadge = (action: string) => {
 };
 
 export default function AuditLogs() {
+  const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState("");
   const [dateRange, setDateRange] = useState<string>("all");
   const [selectedDate, setSelectedDate] = useState<Date>();
@@ -310,7 +312,7 @@ export default function AuditLogs() {
       <div className="p-6 space-y-6">
         {/* Header */}
         <div>
-          <h1 className="text-2xl font-semibold text-foreground">Audit Logs</h1>
+          <h1 className="text-2xl font-semibold text-foreground">{t('audit.title')}</h1>
           <p className="text-sm text-muted-foreground mt-1">
             Monitor platform activity and admin actions.
           </p>

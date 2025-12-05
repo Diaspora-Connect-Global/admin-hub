@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -168,6 +169,7 @@ const mockInteractions = [
 
 export default function ContentModeration() {
   const { toast } = useToast();
+  const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState("");
   const [contentTypeFilter, setContentTypeFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -264,9 +266,9 @@ export default function ContentModeration() {
       <div className="space-y-6">
         {/* Header */}
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Content Moderation</h1>
+          <h1 className="text-3xl font-bold tracking-tight">{t('content.title')}</h1>
           <p className="text-muted-foreground">
-            Review and manage user-generated content for compliance and quality.
+            {t('content.searchPlaceholder')}
           </p>
         </div>
 
