@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -87,6 +88,7 @@ const getTrustScoreBadge = (score: number) => {
 
 export default function UserManagement() {
   const { toast } = useToast();
+  const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
   const [selectedUser, setSelectedUser] = useState<typeof sampleUsers[0] | null>(null);
@@ -133,8 +135,8 @@ export default function UserManagement() {
         {/* Header */}
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
-            <h1 className="text-2xl font-semibold text-foreground">User Management</h1>
-            <p className="text-muted-foreground">View and manage all platform users, their activities, and history.</p>
+            <h1 className="text-2xl font-semibold text-foreground">{t('users.title')}</h1>
+            <p className="text-muted-foreground">{t('users.searchPlaceholder')}</p>
           </div>
           <div className="flex items-center gap-3">
             <DropdownMenu>

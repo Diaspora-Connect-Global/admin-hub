@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -145,6 +146,7 @@ const chartConfig = {
 };
 
 export default function NotificationsBroadcasts() {
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState("dashboard");
   const [searchQuery, setSearchQuery] = useState("");
   const [createBroadcastModal, setCreateBroadcastModal] = useState(false);
@@ -191,7 +193,7 @@ export default function NotificationsBroadcasts() {
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-foreground">Notifications & Broadcasts</h1>
+            <h1 className="text-2xl font-bold text-foreground">{t('notifications.title')}</h1>
             <p className="text-muted-foreground mt-1">
               Manage push notifications, in-app alerts, and system-wide broadcasts.
             </p>

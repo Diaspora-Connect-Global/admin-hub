@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -44,6 +45,7 @@ const getStatusBadge = (status: string) => {
 
 export default function Communities() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState("");
   const [countryFilter, setCountryFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -108,8 +110,8 @@ export default function Communities() {
         {/* Header */}
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
-            <h1 className="text-2xl font-semibold text-foreground">Communities</h1>
-            <p className="text-muted-foreground">Manage communities and link them to associations and countries.</p>
+            <h1 className="text-2xl font-semibold text-foreground">{t('communities.title')}</h1>
+            <p className="text-muted-foreground">{t('communities.searchPlaceholder')}</p>
           </div>
           <div className="flex items-center gap-3">
             <DropdownMenu>

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -95,6 +96,7 @@ const getStatusBadge = (status: string) => {
 export default function Associations() {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedAssociations, setSelectedAssociations] = useState<string[]>([]);
   const [createModalOpen, setCreateModalOpen] = useState(false);
@@ -138,8 +140,8 @@ export default function Associations() {
         {/* Header */}
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
-            <h1 className="text-2xl font-semibold text-foreground">Associations</h1>
-            <p className="text-muted-foreground">Create and manage associations; link them to one or many communities and countries.</p>
+            <h1 className="text-2xl font-semibold text-foreground">{t('associations.title')}</h1>
+            <p className="text-muted-foreground">{t('associations.searchPlaceholder')}</p>
           </div>
           <div className="flex items-center gap-3">
             <DropdownMenu>

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -103,6 +104,7 @@ const rolePermissionsMap: Record<string, Record<string, Record<string, boolean>>
 
 export default function RolesPermissions() {
   const { toast } = useToast();
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState("roles");
   const [selectedRole, setSelectedRole] = useState<typeof rolesData[0] | null>(null);
   const [permissions, setPermissions] = useState<Record<string, Record<string, boolean>>>(systemAdminPermissions);
@@ -162,7 +164,7 @@ export default function RolesPermissions() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-semibold text-foreground">Roles & Permissions</h1>
+            <h1 className="text-2xl font-semibold text-foreground">{t('roles.title')}</h1>
             <p className="text-sm text-muted-foreground mt-1">
               Define and manage access control for all admin types
             </p>
