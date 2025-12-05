@@ -14,25 +14,74 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Card, CardContent } from "@/components/ui/card";
-import { Search, Plus, MoreHorizontal, Eye, Edit, Link2, Pause, ChevronDown, Download, FileJson, Store, X, BarChart3, Trash2 } from "lucide-react";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Search, Plus, MoreHorizontal, Eye, Edit, Link2, Pause, ChevronDown, Download, FileJson, Store, X, BarChart3, Trash2, Upload, Globe } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
 const communitiesData = [
-  { id: "COM-001", name: "Ghana Belgium Community", type: "Association", country: "Belgium", associationsCount: 12, membersCount: 1245, postsCount: 342, eventsCount: 28, vendorEnabled: true, status: "Active", createdAt: "2024-01-15" },
-  { id: "COM-002", name: "Nigeria UK Diaspora", type: "NGO", country: "United Kingdom", associationsCount: 8, membersCount: 2103, postsCount: 567, eventsCount: 45, vendorEnabled: true, status: "Active", createdAt: "2023-11-20" },
-  { id: "COM-003", name: "Kenya Germany Network", type: "Club", country: "Germany", associationsCount: 5, membersCount: 432, postsCount: 89, eventsCount: 12, vendorEnabled: false, status: "Inactive", createdAt: "2024-02-01" },
-  { id: "COM-004", name: "South Africa Netherlands", type: "Embassy", country: "Netherlands", associationsCount: 15, membersCount: 1876, postsCount: 421, eventsCount: 67, vendorEnabled: true, status: "Active", createdAt: "2023-09-10" },
-  { id: "COM-005", name: "Uganda France Community", type: "Church", country: "France", associationsCount: 3, membersCount: 287, postsCount: 45, eventsCount: 8, vendorEnabled: false, status: "Suspended", createdAt: "2023-06-15" },
+  { id: "COM-001", name: "Ghana Belgium Community", type: "Association", countriesServed: ["Belgium", "Ghana"], embassyCountry: null, locationCountry: null, associationsCount: 12, membersCount: 1245, postsCount: 342, eventsCount: 28, vendorEnabled: true, status: "Active", createdAt: "2024-01-15" },
+  { id: "COM-002", name: "Nigeria UK Diaspora", type: "NGO", countriesServed: ["United Kingdom", "Nigeria"], embassyCountry: null, locationCountry: null, associationsCount: 8, membersCount: 2103, postsCount: 567, eventsCount: 45, vendorEnabled: true, status: "Active", createdAt: "2023-11-20" },
+  { id: "COM-003", name: "Kenya Germany Network", type: "Club", countriesServed: ["Germany", "Kenya"], embassyCountry: null, locationCountry: null, associationsCount: 5, membersCount: 432, postsCount: 89, eventsCount: 12, vendorEnabled: false, status: "Inactive", createdAt: "2024-02-01" },
+  { id: "COM-004", name: "South Africa Embassy Netherlands", type: "Embassy", countriesServed: ["Netherlands"], embassyCountry: "South Africa", locationCountry: "Netherlands", associationsCount: 15, membersCount: 1876, postsCount: 421, eventsCount: 67, vendorEnabled: true, status: "Active", createdAt: "2023-09-10" },
+  { id: "COM-005", name: "Uganda France Community", type: "Church", countriesServed: ["France", "Uganda"], embassyCountry: null, locationCountry: null, associationsCount: 3, membersCount: 287, postsCount: 45, eventsCount: 8, vendorEnabled: false, status: "Suspended", createdAt: "2023-06-15" },
 ];
 
-const countryOptions = ["Ghana", "Nigeria", "Kenya", "South Africa", "Uganda", "Belgium", "United Kingdom", "Germany", "Netherlands", "France", "USA"];
+const countryOptions = ["Ghana", "Nigeria", "Kenya", "South Africa", "Uganda", "Belgium", "United Kingdom", "Germany", "Netherlands", "France", "USA", "Canada", "Australia", "Spain", "Italy", "Portugal"];
 const typeOptions = ["Embassy", "NGO", "Church", "Association", "Club", "Other"];
+
+const mockAdmins = [
+  { id: "USR-001", name: "John Doe", email: "john@example.com" },
+  { id: "USR-002", name: "Jane Smith", email: "jane@example.com" },
+  { id: "USR-003", name: "Michael Brown", email: "michael@example.com" },
+  { id: "USR-004", name: "Sarah Wilson", email: "sarah@example.com" },
+];
 
 const associationOptions = [
   { id: "ASC-001", name: "Ghana Nurses Association" },
   { id: "ASC-002", name: "Nigerian Engineers Association" },
   { id: "ASC-003", name: "African Professionals Network" },
 ];
+
+interface CreateFormData {
+  communityName: string;
+  description: string;
+  communityType: string;
+  countriesServed: string[];
+  logoBanner: File | null;
+  rules: string;
+  joinPolicy: string;
+  whoCanPost: string;
+  groupCreationPermission: string;
+  postModeration: boolean;
+  communityAdmins: string[];
+  // Embassy fields
+  embassyCountry: string;
+  locationCountry: string;
+  embassyAddress: string;
+  embassyEmail: string;
+  embassyPhone: string;
+  embassyWebsite: string;
+}
+
+const initialFormData: CreateFormData = {
+  communityName: "",
+  description: "",
+  communityType: "",
+  countriesServed: [],
+  logoBanner: null,
+  rules: "",
+  joinPolicy: "Approval Required",
+  whoCanPost: "Admins Only",
+  groupCreationPermission: "Admins Only",
+  postModeration: true,
+  communityAdmins: [],
+  embassyCountry: "",
+  locationCountry: "",
+  embassyAddress: "",
+  embassyEmail: "",
+  embassyPhone: "",
+  embassyWebsite: "",
+};
 
 export default function Communities() {
   const navigate = useNavigate();
@@ -51,21 +100,19 @@ export default function Communities() {
   const [selectedCommunity, setSelectedCommunity] = useState<typeof communitiesData[0] | null>(null);
 
   // Form state
-  const [formData, setFormData] = useState({
-    name: "",
-    description: "",
-    country: "",
-    type: "",
-    vendorEnabled: false,
-  });
+  const [formData, setFormData] = useState<CreateFormData>(initialFormData);
 
   const filteredCommunities = communitiesData
     .filter((community) => {
-      const matchesSearch = community.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        community.country.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        community.type.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        community.id.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesCountry = countryFilter === "all" || community.country === countryFilter;
+      const searchLower = searchQuery.toLowerCase();
+      const matchesSearch = 
+        community.name.toLowerCase().includes(searchLower) ||
+        community.countriesServed.some(c => c.toLowerCase().includes(searchLower)) ||
+        community.type.toLowerCase().includes(searchLower) ||
+        community.id.toLowerCase().includes(searchLower) ||
+        (community.embassyCountry && community.embassyCountry.toLowerCase().includes(searchLower)) ||
+        (community.locationCountry && community.locationCountry.toLowerCase().includes(searchLower));
+      const matchesCountry = countryFilter === "all" || community.countriesServed.includes(countryFilter);
       const matchesType = typeFilter === "all" || community.type === typeFilter;
       const matchesStatus = statusFilter === "all" || community.status === statusFilter;
       return matchesSearch && matchesCountry && matchesType && matchesStatus;
@@ -88,14 +135,49 @@ export default function Communities() {
     setSelectedCommunities(prev => checked ? [...prev, id] : prev.filter(cid => cid !== id));
   };
 
+  const validateEmail = (email: string) => {
+    if (!email) return true;
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  };
+
+  const validateUrl = (url: string) => {
+    if (!url) return true;
+    try {
+      new URL(url.startsWith('http') ? url : `https://${url}`);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
   const handleCreateCommunity = () => {
-    if (!formData.name || !formData.country) {
+    // Validate required fields
+    if (!formData.communityName || !formData.communityType || formData.countriesServed.length === 0 || formData.communityAdmins.length === 0) {
       toast({ title: t('communities.validationError'), description: t('communities.fillRequired'), variant: "destructive" });
       return;
     }
-    toast({ title: t('communities.communityCreated'), description: t('communities.communityCreatedDesc', { name: formData.name }) });
+
+    // Embassy-specific validation
+    if (formData.communityType === "Embassy" && (!formData.embassyCountry || !formData.locationCountry)) {
+      toast({ title: t('communities.validationError'), description: t('communities.embassyFieldsRequired'), variant: "destructive" });
+      return;
+    }
+
+    // Email validation
+    if (formData.embassyEmail && !validateEmail(formData.embassyEmail)) {
+      toast({ title: t('communities.validationError'), description: t('communities.invalidEmail'), variant: "destructive" });
+      return;
+    }
+
+    // URL validation
+    if (formData.embassyWebsite && !validateUrl(formData.embassyWebsite)) {
+      toast({ title: t('communities.validationError'), description: t('communities.invalidWebsite'), variant: "destructive" });
+      return;
+    }
+
+    toast({ title: t('communities.communityCreated'), description: t('communities.communityCreatedDesc', { name: formData.communityName }) });
     setCreateModalOpen(false);
-    setFormData({ name: "", description: "", country: "", type: "", vendorEnabled: false });
+    setFormData(initialFormData);
   };
 
   const handleSuspend = () => {
@@ -108,6 +190,36 @@ export default function Communities() {
     toast({ title: t('communities.associationLinked'), description: t('communities.associationLinkedDesc') });
     setLinkAssociationOpen(false);
     setSelectedCommunity(null);
+  };
+
+  const handleCountryToggle = (country: string) => {
+    setFormData(prev => ({
+      ...prev,
+      countriesServed: prev.countriesServed.includes(country)
+        ? prev.countriesServed.filter(c => c !== country)
+        : [...prev.countriesServed, country]
+    }));
+  };
+
+  const handleAdminToggle = (adminId: string) => {
+    setFormData(prev => ({
+      ...prev,
+      communityAdmins: prev.communityAdmins.includes(adminId)
+        ? prev.communityAdmins.filter(id => id !== adminId)
+        : [...prev.communityAdmins, adminId]
+    }));
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const validTypes = ['image/jpeg', 'image/png'];
+      if (!validTypes.includes(file.type)) {
+        toast({ title: t('communities.validationError'), description: t('communities.invalidFileType'), variant: "destructive" });
+        return;
+      }
+      setFormData(prev => ({ ...prev, logoBanner: file }));
+    }
   };
 
   const getStatusBadge = (status: string) => {
@@ -223,6 +335,7 @@ export default function Communities() {
                     <TableHead>{t('communities.communityName')}</TableHead>
                     <TableHead>{t('communities.communityType')}</TableHead>
                     <TableHead>{t('communities.countriesServed')}</TableHead>
+                    <TableHead>{t('communities.embassyInfo')}</TableHead>
                     <TableHead>{t('communities.associationsLinked')}</TableHead>
                     <TableHead>{t('communities.members')}</TableHead>
                     <TableHead>{t('communities.posts')}</TableHead>
@@ -247,7 +360,23 @@ export default function Communities() {
                           {community.type}
                         </Badge>
                       </TableCell>
-                      <TableCell><Badge variant="outline">{community.country}</Badge></TableCell>
+                      <TableCell>
+                        <div className="flex flex-wrap gap-1">
+                          {community.countriesServed.map((country) => (
+                            <Badge key={country} variant="outline" className="text-xs">{country}</Badge>
+                          ))}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {community.type === "Embassy" && community.embassyCountry && community.locationCountry ? (
+                          <div className="flex items-center gap-1 text-xs">
+                            <Globe className="h-3 w-3 text-blue-500" />
+                            <span>{community.embassyCountry} → {community.locationCountry}</span>
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground">-</span>
+                        )}
+                      </TableCell>
                       <TableCell>
                         <Badge variant="outline" className="cursor-pointer hover:bg-secondary">
                           {community.associationsCount}
@@ -325,52 +454,266 @@ export default function Communities() {
 
       {/* Create Community Modal */}
       <Dialog open={createModalOpen} onOpenChange={setCreateModalOpen}>
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="sm:max-w-2xl max-h-[90vh]">
           <DialogHeader>
             <DialogTitle>{t('communities.createCommunity')}</DialogTitle>
             <DialogDescription>{t('communities.createCommunityDesc')}</DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>{t('communities.communityName')} <span className="text-destructive">*</span></Label>
-              <Input placeholder="e.g. Belgian Ghanaians Network" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} />
-            </div>
-            <div className="space-y-2">
-              <Label>{t('communities.communityType')} <span className="text-destructive">*</span></Label>
-              <Select value={formData.type} onValueChange={(value) => setFormData({ ...formData, type: value })}>
-                <SelectTrigger><SelectValue placeholder={t('communities.allTypes')} /></SelectTrigger>
-                <SelectContent className="bg-popover border-border">
-                  {typeOptions.map((type) => (
-                    <SelectItem key={type} value={type}>{type}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>{t('communities.countriesServed')} <span className="text-destructive">*</span></Label>
-              <Select value={formData.country} onValueChange={(value) => setFormData({ ...formData, country: value })}>
-                <SelectTrigger><SelectValue placeholder={t('communities.selectCountry')} /></SelectTrigger>
-                <SelectContent className="bg-popover border-border">
-                  {countryOptions.map((country) => (
-                    <SelectItem key={country} value={country}>{country}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>{t('common.description')}</Label>
-              <Textarea placeholder={t('common.description') + "..."} value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} />
-            </div>
-            <div className="flex items-center justify-between">
-              <div>
-                <Label>{t('communities.enableVendorMode')}</Label>
-                <p className="text-xs text-muted-foreground">{t('communities.vendorModeDesc')}</p>
+          <ScrollArea className="max-h-[65vh] pr-4">
+            <div className="space-y-6 py-4">
+              {/* Basic Information Section */}
+              <div className="space-y-4">
+                <h3 className="text-sm font-semibold text-foreground border-b border-border pb-2">{t('communities.form.basicInfo')}</h3>
+                
+                <div className="space-y-2">
+                  <Label>{t('communities.communityName')} <span className="text-destructive">*</span></Label>
+                  <Input 
+                    placeholder={t('communities.form.namePlaceholder')} 
+                    value={formData.communityName} 
+                    onChange={(e) => setFormData({ ...formData, communityName: e.target.value })} 
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>{t('common.description')}</Label>
+                  <Textarea 
+                    placeholder={t('communities.form.descriptionPlaceholder')} 
+                    value={formData.description} 
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })} 
+                    rows={3}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>{t('communities.communityType')} <span className="text-destructive">*</span></Label>
+                  <Select value={formData.communityType} onValueChange={(value) => setFormData({ ...formData, communityType: value })}>
+                    <SelectTrigger><SelectValue placeholder={t('communities.form.selectType')} /></SelectTrigger>
+                    <SelectContent className="bg-popover border-border">
+                      {typeOptions.map((type) => (
+                        <SelectItem key={type} value={type}>{type}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>{t('communities.countriesServed')} <span className="text-destructive">*</span></Label>
+                  <div className="border border-border rounded-md p-3 max-h-32 overflow-y-auto bg-background">
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                      {countryOptions.map((country) => (
+                        <div key={country} className="flex items-center space-x-2">
+                          <Checkbox 
+                            id={`country-${country}`}
+                            checked={formData.countriesServed.includes(country)}
+                            onCheckedChange={() => handleCountryToggle(country)}
+                          />
+                          <label htmlFor={`country-${country}`} className="text-sm cursor-pointer">{country}</label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  {formData.countriesServed.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-2">
+                      {formData.countriesServed.map((country) => (
+                        <Badge key={country} variant="secondary" className="gap-1">
+                          {country}
+                          <X className="h-3 w-3 cursor-pointer" onClick={() => handleCountryToggle(country)} />
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label>{t('communities.form.logoBanner')}</Label>
+                  <div className="border-2 border-dashed border-border rounded-md p-4 text-center hover:border-primary/50 transition-colors">
+                    <input
+                      type="file"
+                      accept=".jpg,.jpeg,.png"
+                      onChange={handleFileUpload}
+                      className="hidden"
+                      id="logo-upload"
+                    />
+                    <label htmlFor="logo-upload" className="cursor-pointer flex flex-col items-center gap-2">
+                      <Upload className="h-8 w-8 text-muted-foreground" />
+                      <span className="text-sm text-muted-foreground">{t('communities.form.uploadImage')}</span>
+                      <span className="text-xs text-muted-foreground">{t('communities.form.acceptedFormats')}</span>
+                    </label>
+                    {formData.logoBanner && (
+                      <div className="mt-2 flex items-center justify-center gap-2">
+                        <Badge variant="secondary">{formData.logoBanner.name}</Badge>
+                        <X className="h-4 w-4 cursor-pointer text-muted-foreground hover:text-destructive" onClick={() => setFormData({ ...formData, logoBanner: null })} />
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>{t('communities.form.rulesGuidelines')}</Label>
+                  <Textarea 
+                    placeholder={t('communities.form.rulesPlaceholder')} 
+                    value={formData.rules} 
+                    onChange={(e) => setFormData({ ...formData, rules: e.target.value })} 
+                    rows={4}
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>{t('communities.form.joinPolicy')} <span className="text-destructive">*</span></Label>
+                    <Select value={formData.joinPolicy} onValueChange={(value) => setFormData({ ...formData, joinPolicy: value })}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent className="bg-popover border-border">
+                        <SelectItem value="Open">{t('communities.form.joinOpen')}</SelectItem>
+                        <SelectItem value="Approval Required">{t('communities.form.joinApproval')}</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>{t('communities.form.whoCanPost')} <span className="text-destructive">*</span></Label>
+                    <Select value={formData.whoCanPost} onValueChange={(value) => setFormData({ ...formData, whoCanPost: value })}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent className="bg-popover border-border">
+                        <SelectItem value="Admins Only">{t('communities.form.adminsOnly')}</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>{t('communities.form.groupCreation')} <span className="text-destructive">*</span></Label>
+                    <Select value={formData.groupCreationPermission} onValueChange={(value) => setFormData({ ...formData, groupCreationPermission: value })}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent className="bg-popover border-border">
+                        <SelectItem value="Admins Only">{t('communities.form.adminsOnly')}</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="flex items-center justify-between p-3 border border-border rounded-md">
+                    <div>
+                      <Label>{t('communities.form.postModeration')}</Label>
+                      <p className="text-xs text-muted-foreground">{t('communities.form.postModerationDesc')}</p>
+                    </div>
+                    <Switch 
+                      checked={formData.postModeration} 
+                      onCheckedChange={(checked) => setFormData({ ...formData, postModeration: checked })} 
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>{t('communities.form.communityAdmins')} <span className="text-destructive">*</span></Label>
+                  <div className="border border-border rounded-md p-3 max-h-32 overflow-y-auto bg-background">
+                    {mockAdmins.map((admin) => (
+                      <div key={admin.id} className="flex items-center space-x-2 py-1">
+                        <Checkbox 
+                          id={`admin-${admin.id}`}
+                          checked={formData.communityAdmins.includes(admin.id)}
+                          onCheckedChange={() => handleAdminToggle(admin.id)}
+                        />
+                        <label htmlFor={`admin-${admin.id}`} className="text-sm cursor-pointer flex-1">
+                          {admin.name} <span className="text-muted-foreground">({admin.email})</span>
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                  {formData.communityAdmins.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-2">
+                      {formData.communityAdmins.map((adminId) => {
+                        const admin = mockAdmins.find(a => a.id === adminId);
+                        return admin ? (
+                          <Badge key={adminId} variant="secondary" className="gap-1">
+                            {admin.name}
+                            <X className="h-3 w-3 cursor-pointer" onClick={() => handleAdminToggle(adminId)} />
+                          </Badge>
+                        ) : null;
+                      })}
+                    </div>
+                  )}
+                </div>
               </div>
-              <Switch checked={formData.vendorEnabled} onCheckedChange={(checked) => setFormData({ ...formData, vendorEnabled: checked })} />
+
+              {/* Embassy Information Section - Conditional */}
+              {formData.communityType === "Embassy" && (
+                <div className="space-y-4">
+                  <h3 className="text-sm font-semibold text-foreground border-b border-border pb-2 flex items-center gap-2">
+                    <Globe className="h-4 w-4 text-blue-500" />
+                    {t('communities.form.embassyInfo')}
+                  </h3>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>{t('communities.form.embassyCountry')} <span className="text-destructive">*</span></Label>
+                      <Select value={formData.embassyCountry} onValueChange={(value) => setFormData({ ...formData, embassyCountry: value })}>
+                        <SelectTrigger><SelectValue placeholder={t('communities.form.embassyCountryPlaceholder')} /></SelectTrigger>
+                        <SelectContent className="bg-popover border-border">
+                          {countryOptions.map((country) => (
+                            <SelectItem key={country} value={country}>{country}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>{t('communities.form.locationCountry')} <span className="text-destructive">*</span></Label>
+                      <Select value={formData.locationCountry} onValueChange={(value) => setFormData({ ...formData, locationCountry: value })}>
+                        <SelectTrigger><SelectValue placeholder={t('communities.form.locationCountryPlaceholder')} /></SelectTrigger>
+                        <SelectContent className="bg-popover border-border">
+                          {countryOptions.map((country) => (
+                            <SelectItem key={country} value={country}>{country}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>{t('communities.form.embassyAddress')}</Label>
+                    <Input 
+                      placeholder={t('communities.form.embassyAddressPlaceholder')} 
+                      value={formData.embassyAddress} 
+                      onChange={(e) => setFormData({ ...formData, embassyAddress: e.target.value })} 
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>{t('communities.form.embassyEmail')}</Label>
+                      <Input 
+                        type="email"
+                        placeholder={t('communities.form.embassyEmailPlaceholder')} 
+                        value={formData.embassyEmail} 
+                        onChange={(e) => setFormData({ ...formData, embassyEmail: e.target.value })} 
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>{t('communities.form.embassyPhone')}</Label>
+                      <Input 
+                        placeholder={t('communities.form.embassyPhonePlaceholder')} 
+                        value={formData.embassyPhone} 
+                        onChange={(e) => setFormData({ ...formData, embassyPhone: e.target.value })} 
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>{t('communities.form.embassyWebsite')}</Label>
+                    <Input 
+                      placeholder={t('communities.form.embassyWebsitePlaceholder')} 
+                      value={formData.embassyWebsite} 
+                      onChange={(e) => setFormData({ ...formData, embassyWebsite: e.target.value })} 
+                    />
+                  </div>
+                </div>
+              )}
             </div>
-          </div>
+          </ScrollArea>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setCreateModalOpen(false)}>{t('common.cancel')}</Button>
+            <Button variant="outline" onClick={() => { setCreateModalOpen(false); setFormData(initialFormData); }}>{t('common.cancel')}</Button>
             <Button onClick={handleCreateCommunity}>{t('communities.createCommunity')}</Button>
           </DialogFooter>
         </DialogContent>
