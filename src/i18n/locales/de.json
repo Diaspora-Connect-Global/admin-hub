@@ -188,6 +188,7 @@
       "namePlaceholder": "Gemeinschaftsnamen eingeben",
       "descriptionPlaceholder": "Kurze Beschreibung der Gemeinschaft eingeben",
       "selectType": "Gemeinschaftstyp auswählen",
+      "selectCountries": "Wählen Sie ein oder mehrere Länder",
       "logoBanner": "Logo / Bannerbild",
       "uploadImage": "Klicken zum Hochladen",
       "acceptedFormats": "JPG, PNG (max. 1 Datei)",

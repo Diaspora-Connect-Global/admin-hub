@@ -15,6 +15,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Card, CardContent } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { MultiSelect } from "@/components/ui/multi-select";
 import { Search, Plus, MoreHorizontal, Eye, Edit, Link2, Pause, ChevronDown, Download, FileJson, Store, X, BarChart3, Trash2, Upload, Globe } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
@@ -26,7 +27,31 @@ const communitiesData = [
   { id: "COM-005", name: "Uganda France Community", type: "Church", countriesServed: ["France", "Uganda"], embassyCountry: null, locationCountry: null, associationsCount: 3, membersCount: 287, postsCount: 45, eventsCount: 8, vendorEnabled: false, status: "Suspended", createdAt: "2023-06-15" },
 ];
 
-const countryOptions = ["Ghana", "Nigeria", "Kenya", "South Africa", "Uganda", "Belgium", "United Kingdom", "Germany", "Netherlands", "France", "USA", "Canada", "Australia", "Spain", "Italy", "Portugal"];
+// Complete list of all countries
+const allCountries = [
+  "Afghanistan", "Albania", "Algeria", "Andorra", "Angola", "Antigua and Barbuda", "Argentina", "Armenia", "Australia", "Austria",
+  "Azerbaijan", "Bahamas", "Bahrain", "Bangladesh", "Barbados", "Belarus", "Belgium", "Belize", "Benin", "Bhutan",
+  "Bolivia", "Bosnia and Herzegovina", "Botswana", "Brazil", "Brunei", "Bulgaria", "Burkina Faso", "Burundi", "Cabo Verde", "Cambodia",
+  "Cameroon", "Canada", "Central African Republic", "Chad", "Chile", "China", "Colombia", "Comoros", "Congo (Brazzaville)", "Congo (Kinshasa)",
+  "Costa Rica", "Croatia", "Cuba", "Cyprus", "Czech Republic", "Denmark", "Djibouti", "Dominica", "Dominican Republic", "Ecuador",
+  "Egypt", "El Salvador", "Equatorial Guinea", "Eritrea", "Estonia", "Eswatini", "Ethiopia", "Fiji", "Finland", "France",
+  "Gabon", "Gambia", "Georgia", "Germany", "Ghana", "Greece", "Grenada", "Guatemala", "Guinea", "Guinea-Bissau",
+  "Guyana", "Haiti", "Honduras", "Hungary", "Iceland", "India", "Indonesia", "Iran", "Iraq", "Ireland",
+  "Israel", "Italy", "Ivory Coast", "Jamaica", "Japan", "Jordan", "Kazakhstan", "Kenya", "Kiribati", "Kosovo",
+  "Kuwait", "Kyrgyzstan", "Laos", "Latvia", "Lebanon", "Lesotho", "Liberia", "Libya", "Liechtenstein", "Lithuania",
+  "Luxembourg", "Madagascar", "Malawi", "Malaysia", "Maldives", "Mali", "Malta", "Marshall Islands", "Mauritania", "Mauritius",
+  "Mexico", "Micronesia", "Moldova", "Monaco", "Mongolia", "Montenegro", "Morocco", "Mozambique", "Myanmar", "Namibia",
+  "Nauru", "Nepal", "Netherlands", "New Zealand", "Nicaragua", "Niger", "Nigeria", "North Korea", "North Macedonia", "Norway",
+  "Oman", "Pakistan", "Palau", "Palestine", "Panama", "Papua New Guinea", "Paraguay", "Peru", "Philippines", "Poland",
+  "Portugal", "Qatar", "Romania", "Russia", "Rwanda", "Saint Kitts and Nevis", "Saint Lucia", "Saint Vincent and the Grenadines", "Samoa", "San Marino",
+  "Sao Tome and Principe", "Saudi Arabia", "Senegal", "Serbia", "Seychelles", "Sierra Leone", "Singapore", "Slovakia", "Slovenia", "Solomon Islands",
+  "Somalia", "South Africa", "South Korea", "South Sudan", "Spain", "Sri Lanka", "Sudan", "Suriname", "Sweden", "Switzerland",
+  "Syria", "Taiwan", "Tajikistan", "Tanzania", "Thailand", "Timor-Leste", "Togo", "Tonga", "Trinidad and Tobago", "Tunisia",
+  "Turkey", "Turkmenistan", "Tuvalu", "Uganda", "Ukraine", "United Arab Emirates", "United Kingdom", "United States", "Uruguay", "Uzbekistan",
+  "Vanuatu", "Vatican City", "Venezuela", "Vietnam", "Yemen", "Zambia", "Zimbabwe"
+];
+
+const countryOptions = allCountries.map(country => ({ label: country, value: country }));
 const typeOptions = ["Embassy", "NGO", "Church", "Association", "Club", "Other"];
 
 const mockAdmins = [
@@ -192,15 +217,6 @@ export default function Communities() {
     setSelectedCommunity(null);
   };
 
-  const handleCountryToggle = (country: string) => {
-    setFormData(prev => ({
-      ...prev,
-      countriesServed: prev.countriesServed.includes(country)
-        ? prev.countriesServed.filter(c => c !== country)
-        : [...prev.countriesServed, country]
-    }));
-  };
-
   const handleAdminToggle = (adminId: string) => {
     setFormData(prev => ({
       ...prev,
@@ -290,9 +306,9 @@ export default function Communities() {
               </Select>
               <Select value={countryFilter} onValueChange={setCountryFilter}>
                 <SelectTrigger className="w-[150px]"><SelectValue placeholder={t('communities.countriesServed')} /></SelectTrigger>
-                <SelectContent className="bg-popover border-border">
+                <SelectContent className="bg-popover border-border max-h-64">
                   <SelectItem value="all">{t('communities.allCountries')}</SelectItem>
-                  {countryOptions.map((country) => (
+                  {allCountries.map((country) => (
                     <SelectItem key={country} value={country}>{country}</SelectItem>
                   ))}
                 </SelectContent>
@@ -498,30 +514,14 @@ export default function Communities() {
 
                 <div className="space-y-2">
                   <Label>{t('communities.countriesServed')} <span className="text-destructive">*</span></Label>
-                  <div className="border border-border rounded-md p-3 max-h-32 overflow-y-auto bg-background">
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                      {countryOptions.map((country) => (
-                        <div key={country} className="flex items-center space-x-2">
-                          <Checkbox 
-                            id={`country-${country}`}
-                            checked={formData.countriesServed.includes(country)}
-                            onCheckedChange={() => handleCountryToggle(country)}
-                          />
-                          <label htmlFor={`country-${country}`} className="text-sm cursor-pointer">{country}</label>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                  {formData.countriesServed.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mt-2">
-                      {formData.countriesServed.map((country) => (
-                        <Badge key={country} variant="secondary" className="gap-1">
-                          {country}
-                          <X className="h-3 w-3 cursor-pointer" onClick={() => handleCountryToggle(country)} />
-                        </Badge>
-                      ))}
-                    </div>
-                  )}
+                  <MultiSelect
+                    options={countryOptions}
+                    selected={formData.countriesServed}
+                    onChange={(selected) => setFormData({ ...formData, countriesServed: selected })}
+                    placeholder={t('communities.form.selectCountries')}
+                    searchPlaceholder={t('common.search')}
+                    maxDisplay={3}
+                  />
                 </div>
 
                 <div className="space-y-2">
@@ -649,8 +649,8 @@ export default function Communities() {
                       <Label>{t('communities.form.embassyCountry')} <span className="text-destructive">*</span></Label>
                       <Select value={formData.embassyCountry} onValueChange={(value) => setFormData({ ...formData, embassyCountry: value })}>
                         <SelectTrigger><SelectValue placeholder={t('communities.form.embassyCountryPlaceholder')} /></SelectTrigger>
-                        <SelectContent className="bg-popover border-border">
-                          {countryOptions.map((country) => (
+                        <SelectContent className="bg-popover border-border max-h-64">
+                          {allCountries.map((country) => (
                             <SelectItem key={country} value={country}>{country}</SelectItem>
                           ))}
                         </SelectContent>
@@ -661,8 +661,8 @@ export default function Communities() {
                       <Label>{t('communities.form.locationCountry')} <span className="text-destructive">*</span></Label>
                       <Select value={formData.locationCountry} onValueChange={(value) => setFormData({ ...formData, locationCountry: value })}>
                         <SelectTrigger><SelectValue placeholder={t('communities.form.locationCountryPlaceholder')} /></SelectTrigger>
-                        <SelectContent className="bg-popover border-border">
-                          {countryOptions.map((country) => (
+                        <SelectContent className="bg-popover border-border max-h-64">
+                          {allCountries.map((country) => (
                             <SelectItem key={country} value={country}>{country}</SelectItem>
                           ))}
                         </SelectContent>
