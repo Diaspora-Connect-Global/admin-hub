@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -32,6 +32,7 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useTheme } from "next-themes";
+import { useTranslation } from "react-i18next";
 
 // Language options
 const languages = [
@@ -58,16 +59,25 @@ const timezones = [
 export default function SystemSettings() {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("general");
-  
+  const { t, i18n } = useTranslation();
   const { theme, setTheme } = useTheme();
   
-  // General settings state
-  const [generalSettings, setGeneralSettings] = useState({
-    platformName: "DiaspoPlug",
-    defaultCountry: "Nigeria",
-    timezone: "Africa/Lagos",
-    language: "en",
+  // General settings state - initialize from localStorage
+  const [generalSettings, setGeneralSettings] = useState(() => {
+    const savedLanguage = localStorage.getItem('app-language') || 'en';
+    return {
+      platformName: "DiaspoPlug",
+      defaultCountry: "Nigeria",
+      timezone: "Africa/Lagos",
+      language: savedLanguage,
+    };
   });
+
+  // Sync language changes with i18n and localStorage
+  useEffect(() => {
+    i18n.changeLanguage(generalSettings.language);
+    localStorage.setItem('app-language', generalSettings.language);
+  }, [generalSettings.language, i18n]);
 
   // Security settings state
   const [securitySettings, setSecuritySettings] = useState({
@@ -211,7 +221,7 @@ export default function SystemSettings() {
                   <div className="space-y-2">
                     <Label className="flex items-center gap-2">
                       <Globe className="w-4 h-4" />
-                      Language
+                      {t('settings.language')}
                     </Label>
                     <Select 
                       value={generalSettings.language}
@@ -232,7 +242,7 @@ export default function SystemSettings() {
                   <div className="space-y-2">
                     <Label className="flex items-center gap-2">
                       {theme === "dark" ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
-                      Theme Mode
+                      {t('settings.themeMode')}
                     </Label>
                     <Select 
                       value={theme}
@@ -242,9 +252,9 @@ export default function SystemSettings() {
                         <SelectValue placeholder="Select theme" />
                       </SelectTrigger>
                       <SelectContent className="bg-popover border-border">
-                        <SelectItem value="light">Light Mode</SelectItem>
-                        <SelectItem value="dark">Dark Mode</SelectItem>
-                        <SelectItem value="system">System Default</SelectItem>
+                        <SelectItem value="light">{t('settings.lightMode')}</SelectItem>
+                        <SelectItem value="dark">{t('settings.darkMode')}</SelectItem>
+                        <SelectItem value="system">{t('settings.systemDefault')}</SelectItem>
                       </SelectContent>
                     </Select>
                     <p className="text-xs text-muted-foreground">Choose light or dark appearance.</p>

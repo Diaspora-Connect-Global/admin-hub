@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import {
   Users,
   Layers,
@@ -143,6 +144,7 @@ function MetricCard({ title, value, trend, icon, onClick }: MetricCardProps) {
 export default function Dashboard() {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { t } = useTranslation();
   const [dateRange, setDateRange] = useState("30");
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -188,8 +190,8 @@ export default function Dashboard() {
         {/* Header */}
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-foreground">System Admin Dashboard</h1>
-            <p className="text-muted-foreground">Monitor key metrics and platform activity at a glance.</p>
+            <h1 className="text-2xl font-bold text-foreground">{t('dashboard.title')}</h1>
+            <p className="text-muted-foreground">{t('dashboard.overview')}</p>
           </div>
           <div className="flex items-center gap-3">
             <Select value={dateRange} onValueChange={setDateRange}>
@@ -214,7 +216,7 @@ export default function Dashboard() {
         <div className="relative max-w-xl">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
-            placeholder="Search users, communities, associations, posts, vendors..."
+            placeholder={t('common.search') + "..."}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-10 bg-card border-border"
@@ -224,21 +226,21 @@ export default function Dashboard() {
         {/* Metric Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8 gap-4">
           <MetricCard
-            title="Total Users"
+            title={t('dashboard.totalUsers')}
             value="12,847"
             trend={{ label: "New Users", value: "+8.5%", direction: "up" }}
             icon={<Users className="w-5 h-5" />}
             onClick={() => navigate("/users")}
           />
           <MetricCard
-            title="Total Communities"
+            title={t('nav.communities')}
             value="48"
             trend={{ label: "New Communities", value: "+12.3%", direction: "up" }}
             icon={<Layers className="w-5 h-5" />}
             onClick={() => navigate("/communities")}
           />
           <MetricCard
-            title="Total Associations"
+            title={t('nav.associations')}
             value="156"
             trend={{ label: "New Associations", value: "+5.7%", direction: "up" }}
             icon={<Briefcase className="w-5 h-5" />}
@@ -252,28 +254,28 @@ export default function Dashboard() {
             onClick={() => navigate("/moderation")}
           />
           <MetricCard
-            title="Active Chats"
+            title={t('dashboard.activeChats')}
             value="3,421"
             trend={{ label: "DM + Groups", value: "+12.8%", direction: "up" }}
             icon={<MessageSquare className="w-5 h-5" />}
             onClick={() => navigate("/chats")}
           />
           <MetricCard
-            title="Vendors"
+            title={t('nav.vendors')}
             value="89"
             trend={{ label: "New Registrations", value: "+18.2%", direction: "up" }}
             icon={<ShoppingCart className="w-5 h-5" />}
             onClick={() => navigate("/vendors")}
           />
           <MetricCard
-            title="Escrow Transactions"
+            title={t('dashboard.escrowBalance')}
             value="$2.4M"
             trend={{ label: "Active Escrow", value: "$580K", direction: "up" }}
             icon={<Wallet className="w-5 h-5" />}
             onClick={() => navigate("/escrow")}
           />
           <MetricCard
-            title="Disputes"
+            title={t('dashboard.activeDisputes')}
             value="23"
             trend={{ label: "Open / In-Review", value: "12", direction: "down" }}
             icon={<AlertTriangle className="w-5 h-5" />}

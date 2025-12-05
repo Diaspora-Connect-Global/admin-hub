@@ -1,4 +1,5 @@
 import { Search, Bell, UserPlus, ChevronDown } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -9,6 +10,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 export function AdminHeader() {
+  const { t } = useTranslation();
+  
   return (
     <header className="h-16 border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-30">
       <div className="h-full px-6 flex items-center justify-between gap-4">
@@ -16,7 +19,7 @@ export function AdminHeader() {
         <div className="relative flex-1 max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
-            placeholder="Search users, escrows, disputes..."
+            placeholder={t('common.search') + "..."}
             className="pl-10 bg-secondary border-border focus:border-primary"
           />
         </div>
@@ -43,7 +46,7 @@ export function AdminHeader() {
           {/* Quick Create Community */}
           <Button size="sm" className="gap-2 bg-primary text-primary-foreground hover:bg-primary/90">
             <UserPlus className="w-4 h-4" />
-            <span className="hidden sm:inline">Create Community</span>
+            <span className="hidden sm:inline">{t('communities.createCommunity')}</span>
           </Button>
 
           {/* Notifications */}
