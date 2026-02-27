@@ -241,6 +241,15 @@ export const GET_AUDIT_LOGS = gql`
 
 // --- Mutations ---
 
+/** Admin login. No auth header required; returns session token for subsequent requests. */
+export const LOGIN = gql`
+  mutation Login($input: LoginInput!) {
+    login(input: $input) {
+      sessionId
+    }
+  }
+`;
+
 export const ASSIGN_ADMIN_ROLE = gql`
   mutation AssignAdminRole($input: AssignAdminRoleInput!) {
     assignAdminRole(input: $input) {

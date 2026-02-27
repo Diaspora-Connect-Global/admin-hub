@@ -46,6 +46,9 @@ import {
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { logger } from "@/lib/logger";
+
+const log = logger.child("AuditLogs");
 
 // Sample data matching new spec
 const auditLogs = [
@@ -291,7 +294,7 @@ export default function AuditLogs() {
 
   const exportCsv = () => {
     // Implementation for CSV export
-    console.log("Exporting CSV...");
+    log.info("Exporting CSV");
   };
 
   const filteredLogs = auditLogs.filter(log => {

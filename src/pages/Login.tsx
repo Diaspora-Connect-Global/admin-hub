@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,9 +14,24 @@ import {
 } from "@/components/ui/dialog";
 import { Mail, Lock, Eye, EyeOff, Loader2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { login as authLogin } from "@/services/networks/graphql/admin";
+import { setSessionId, setUserEmail } from "@/stores/session";
+import { logLogin } from "@/services/core/audit";
+import { useSessionStore } from "@/stores/sessionStore";
+import { useEffect } from "react";
 
 export default function Login() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const sessionId = useSessionStore((s) => s.sessionId);
+
+  // If already authenticated, redirect to intended page or home
+  useEffect(() => {
+    if (sessionId) {
+      const from = (location.state as { from?: { pathname: string } })?.from?.pathname;
+      navigate(from ?? "/", { replace: true });
+    }
+  }, [sessionId, location.state, navigate]);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -53,16 +68,44 @@ export default function Login() {
     
     setIsLoading(true);
     
-    // Simulate login
-    setTimeout(() => {
+    const result = await authLogin(email, password);
+    
+    if (result.ok) {
+      setSessionId(result.data.session_id);
+      setUserEmail(result.data.email ?? email);
+      logLogin({
+        actorId: result.data.email ?? email,
+        actorLabel: result.data.email ?? email,
+        success: true,
+        metadata: { rememberMe },
+      });
       setIsLoading(false);
       toast({
         title: "Login Successful",
         description: "Welcome back! Redirecting to dashboard...",
       });
-      navigate("/");
-    }, 1500);
+      const from = (location.state as { from?: { pathname: string } })?.from?.pathname;
+      navigate(from ?? "/", { replace: true });
+    } else {
+      const err = (result as { ok: false; error: { message: string } }).error;
+      logLogin({
+        actorId: email,
+        actorLabel: email,
+        success: false,
+        reason: err.message,
+      });
+      setIsLoading(false);
+      toast({
+        title: "Login Failed",
+        description: err.message,
+        variant: "destructive",
+      });
+    }
   };
+
+  if (sessionId) {
+    return null;
+  }
 
   const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();

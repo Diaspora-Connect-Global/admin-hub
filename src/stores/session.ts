@@ -1,7 +1,6 @@
 /**
- * Session storage for Admin Service authentication.
- * Backed by Zustand store with localStorage persistence.
- * After login via Auth Service, set the session_id so GraphQL requests send it as Bearer token.
+ * Session API for admin auth. Backed by the session store (Zustand).
+ * Use this for get/set/clear session so the admin client and login flow stay in sync.
  */
 
 import {
@@ -20,6 +19,11 @@ export function getSessionId(): string | null {
 /** Set the session ID after successful login. */
 export function setSessionId(sessionId: string): void {
   useSessionStore.getState().setSessionId(sessionId);
+}
+
+/** Set the current user email (for display and audit). */
+export function setUserEmail(email: string | null): void {
+  useSessionStore.getState().setUserEmail(email);
 }
 
 /** Clear the session (e.g. on logout). */
