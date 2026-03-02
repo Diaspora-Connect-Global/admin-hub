@@ -1,4 +1,5 @@
 /**
- * GraphQL network services (admin, user, community, etc.).
+ * GraphQL network services (admin, opportunity, etc.).
  */
 export * from "./admin";
+export * from "./opportunity";
