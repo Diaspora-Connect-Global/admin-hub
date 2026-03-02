@@ -17,7 +17,7 @@ import {
   GET_COMMUNITY_STATS,
   GET_ASSOCIATION_STATS,
   GET_AUDIT_LOGS,
-  LOGIN,
+  ADMIN_LOGIN,
   ASSIGN_ADMIN_ROLE,
   REVOKE_ADMIN_ROLE,
   CREATE_REPORT,
@@ -79,7 +79,7 @@ export function useUpdateReportStatus() {
 }
 
 export function useLoginMutation() {
-  return useMutation(LOGIN);
+  return useMutation(ADMIN_LOGIN);
 }
 
 export function useGetAdminRoles(variables: {

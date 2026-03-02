@@ -8,6 +8,7 @@ export {
 export {
   getSessionId,
   setSessionId,
+  setRefreshToken,
   setUserEmail,
   clearSession,
   getDevUserId,

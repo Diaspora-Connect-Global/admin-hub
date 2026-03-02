@@ -15,7 +15,7 @@ import {
 import { Mail, Lock, Eye, EyeOff, Loader2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { login as authLogin } from "@/services/networks/graphql/admin";
-import { setSessionId, setUserEmail } from "@/stores/session";
+import { setSessionId, setRefreshToken, setUserEmail } from "@/stores/session";
 import { logLogin } from "@/services/core/audit";
 import { useSessionStore } from "@/stores/sessionStore";
 import { useEffect } from "react";
@@ -71,7 +71,8 @@ export default function Login() {
     const result = await authLogin(email, password);
     
     if (result.ok) {
-      setSessionId(result.data.session_id);
+      setSessionId(result.data.accessToken);
+      setRefreshToken(result.data.refreshToken);
       setUserEmail(result.data.email ?? email);
       logLogin({
         actorId: result.data.email ?? email,

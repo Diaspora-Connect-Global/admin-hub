@@ -16,9 +16,14 @@ export function getSessionId(): string | null {
   return getSessionIdFromStore();
 }
 
-/** Set the session ID after successful login. */
+/** Set the access token (Bearer) after successful login. */
 export function setSessionId(sessionId: string): void {
   useSessionStore.getState().setSessionId(sessionId);
+}
+
+/** Set the refresh token after successful login. */
+export function setRefreshToken(refreshToken: string | null): void {
+  useSessionStore.getState().setRefreshToken(refreshToken);
 }
 
 /** Set the current user email (for display and audit). */

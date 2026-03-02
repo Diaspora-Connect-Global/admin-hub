@@ -241,11 +241,29 @@ export const GET_AUDIT_LOGS = gql`
 
 // --- Mutations ---
 
-/** Admin login. No auth header required; returns session token for subsequent requests. */
-export const LOGIN = gql`
-  mutation Login($input: LoginInput!) {
-    login(input: $input) {
-      sessionId
+/** Admin login. No auth header required; returns accessToken (Bearer) and refreshToken. */
+export const ADMIN_LOGIN = gql`
+  mutation AdminLogin($input: AdminLoginInput!) {
+    adminLogin(input: $input) {
+      success
+      message
+      error
+      accessToken
+      refreshToken
+      admin {
+        id
+        userId
+        scopeType
+        scopeId
+        isActive
+        role {
+          id
+          name
+          scopeType
+          permissions
+          description
+        }
+      }
     }
   }
 `;
