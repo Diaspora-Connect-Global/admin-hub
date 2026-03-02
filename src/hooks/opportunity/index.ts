@@ -1,5 +1,6 @@
 /**
  * Opportunity Service hooks for system admin. Uses shared admin client (Bearer).
+ * For super-admin-only hooks (e.g. set priority), use @/hooks/opportunity/superAdmin.
  */
 
 import { useQuery, useMutation } from "@apollo/client/react";
@@ -13,7 +14,6 @@ import {
   PUBLISH_OPPORTUNITY,
   CLOSE_OPPORTUNITY,
   DELETE_OPPORTUNITY,
-  SET_OPPORTUNITY_PRIORITY,
   ACCEPT_APPLICATION,
   REJECT_APPLICATION,
   REVIEW_APPLICATION,
@@ -91,10 +91,8 @@ export function useDeleteOpportunity() {
   return useMutation(DELETE_OPPORTUNITY);
 }
 
-/** System admin only: set priority HIGH | NORMAL | LOW */
-export function useSetOpportunityPriority() {
-  return useMutation(SET_OPPORTUNITY_PRIORITY);
-}
+/** Re-export super-admin-only hook; prefer importing from @/hooks/opportunity/superAdmin for clarity. */
+export { useSetOpportunityPriority } from "./superAdmin";
 
 export function useAcceptApplication() {
   return useMutation(ACCEPT_APPLICATION);

@@ -198,13 +198,6 @@ export const DELETE_OPPORTUNITY = gql`
   }
 `;
 
-/** Set priority (system admin only). priority: HIGH | NORMAL | LOW */
-export const SET_OPPORTUNITY_PRIORITY = gql`
-  mutation SetOpportunityPriority($input: SetOpportunityPriorityInput!) {
-    setOpportunityPriority(input: $input)
-  }
-`;
-
 /** Accept an application. */
 export const ACCEPT_APPLICATION = gql`
   mutation AcceptApplication($id: String!) {
