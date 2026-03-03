@@ -198,7 +198,7 @@ export function useUnboostContent() {
 }
 
 export function useGetCommunity(id: string | null) {
-  return useQuery(GET_COMMUNITY, {
+  return useQuery<import("@/services/networks/graphql/admin").GetCommunityQueryResult>(GET_COMMUNITY, {
     variables: { id: id ?? "" },
     skip: !id,
   });

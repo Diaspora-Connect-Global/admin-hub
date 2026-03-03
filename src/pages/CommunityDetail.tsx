@@ -15,26 +15,12 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
 import { toast } from "@/hooks/use-toast";
-import { 
-  ArrowLeft, Edit, Link2, UserPlus, Pause, Eye, Check, X, Trash2, 
+import { useGetCommunity } from "@/hooks/admin";
+import {
+  ArrowLeft, Edit, Link2, UserPlus, Pause, Eye, Check, X, Trash2,
   MoreHorizontal, Download, Store, Unlink, Globe, Calendar, Users,
-  FileText, Briefcase, History, Shield, Building2
+  FileText, Briefcase, History, Shield, Building2, Loader2
 } from "lucide-react";
-
-const communityData = {
-  id: "COM-001",
-  name: "Ghana Belgium Community",
-  country: "Belgium",
-  description: "A vibrant community connecting Ghanaians living in Belgium with their homeland.",
-  membersCount: 1245,
-  postsCount: 342,
-  opportunitiesCount: 28,
-  vendorEnabled: true,
-  postingEnabled: true,
-  status: "Active",
-  riskScore: 15,
-  createdAt: "2024-01-15",
-};
 
 const linkedAssociations = [
   { id: "ASC-001", name: "Accra Alumni Belgium", country: "Belgium" },
@@ -86,18 +72,14 @@ const getStatusBadge = (status: string) => {
   return <span className={styles[status] || "badge-status badge-muted"}>{status}</span>;
 };
 
-const getRiskBadge = (score: number) => {
-  if (score <= 30) return <Badge className="badge-status badge-success">Low Risk ({score})</Badge>;
-  if (score <= 60) return <Badge className="badge-status badge-warning">Medium Risk ({score})</Badge>;
-  return <Badge className="badge-status badge-destructive">High Risk ({score})</Badge>;
-};
-
 export default function CommunityDetail() {
-  const { id } = useParams();
+  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  
-  const [vendorEnabled, setVendorEnabled] = useState(communityData.vendorEnabled);
-  const [postingEnabled, setPostingEnabled] = useState(communityData.postingEnabled);
+  const { data, loading, error } = useGetCommunity(id ?? null);
+  const community = data?.getCommunity;
+
+  const [vendorEnabled, setVendorEnabled] = useState(false);
+  const [postingEnabled, setPostingEnabled] = useState(true);
   const [linkAssociationOpen, setLinkAssociationOpen] = useState(false);
   const [assignAdminOpen, setAssignAdminOpen] = useState(false);
   const [suspendOpen, setSuspendOpen] = useState(false);
@@ -113,6 +95,51 @@ export default function CommunityDetail() {
     toast({ title: checked ? "Vendor mode enabled" : "Vendor mode disabled" });
   };
 
+  if (loading) {
+    return (
+      <AdminLayout>
+        <div className="flex flex-col items-center justify-center py-16 gap-4">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          <p className="text-muted-foreground">Loading community...</p>
+          <Button variant="outline" onClick={() => navigate("/communities")}>
+            <ArrowLeft className="mr-2 h-4 w-4" /> Back to Communities
+          </Button>
+        </div>
+      </AdminLayout>
+    );
+  }
+
+  if (error) {
+    return (
+      <AdminLayout>
+        <div className="flex flex-col items-center justify-center py-16 gap-4">
+          <p className="text-destructive">{error.message}</p>
+          <Button variant="outline" onClick={() => navigate("/communities")}>
+            <ArrowLeft className="mr-2 h-4 w-4" /> Back to Communities
+          </Button>
+        </div>
+      </AdminLayout>
+    );
+  }
+
+  if (!community) {
+    return (
+      <AdminLayout>
+        <div className="flex flex-col items-center justify-center py-16 gap-4">
+          <p className="text-muted-foreground">Community not found.</p>
+          <Button variant="outline" onClick={() => navigate("/communities")}>
+            <ArrowLeft className="mr-2 h-4 w-4" /> Back to Communities
+          </Button>
+        </div>
+      </AdminLayout>
+    );
+  }
+
+  const countryLabel = community.countriesServed?.length
+    ? community.countriesServed.join(", ")
+    : community.embassyCountry ?? community.locationCountry ?? "—";
+  const status = community.membershipStatus ?? "Active";
+
   return (
     <AdminLayout>
       <div className="space-y-6">
@@ -123,7 +150,7 @@ export default function CommunityDetail() {
             <BreadcrumbSeparator />
             <BreadcrumbItem><BreadcrumbLink href="/communities">Communities</BreadcrumbLink></BreadcrumbItem>
             <BreadcrumbSeparator />
-            <BreadcrumbItem><BreadcrumbPage>{communityData.name}</BreadcrumbPage></BreadcrumbItem>
+            <BreadcrumbItem><BreadcrumbPage>{community.name}</BreadcrumbPage></BreadcrumbItem>
           </BreadcrumbList>
         </Breadcrumb>
 
@@ -135,11 +162,17 @@ export default function CommunityDetail() {
             </Button>
             <div>
               <div className="flex items-center gap-3">
-                <h1 className="text-2xl font-semibold text-foreground">{communityData.name}</h1>
-                {getStatusBadge(communityData.status)}
-                {getRiskBadge(communityData.riskScore)}
+                <h1 className="text-2xl font-semibold text-foreground">{community.name}</h1>
+                {getStatusBadge(status)}
+                {community.communityType && (
+                  <Badge variant="outline" className={community.communityType.isEmbassy ? "border-blue-500 text-blue-500" : ""}>
+                    {community.communityType.name}
+                  </Badge>
+                )}
               </div>
-              <p className="text-sm text-muted-foreground mt-1">{communityData.country}</p>
+              <p className="text-sm text-muted-foreground mt-1 flex items-center gap-1">
+                <Globe className="h-3 w-3" /> {countryLabel}
+              </p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -172,28 +205,63 @@ export default function CommunityDetail() {
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
                       <p className="text-muted-foreground text-xs">Name</p>
-                      <p className="font-medium">{communityData.name}</p>
+                      <p className="font-medium">{community.name}</p>
                     </div>
                     <div>
-                      <p className="text-muted-foreground text-xs">Country</p>
-                      <div className="flex items-center gap-2"><Globe className="h-3 w-3 text-muted-foreground" /><p>{communityData.country}</p></div>
+                      <p className="text-muted-foreground text-xs">Visibility</p>
+                      <p>{community.visibility}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground text-xs">Join policy</p>
+                      <p>{community.joinPolicy}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground text-xs">Type</p>
+                      <p>{community.communityType?.name ?? community.communityTypeId ?? "—"}</p>
                     </div>
                     <div className="col-span-2">
+                      <p className="text-muted-foreground text-xs">Countries served</p>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <Globe className="h-3 w-3 text-muted-foreground shrink-0" />
+                        <p>{community.countriesServed?.length ? community.countriesServed.join(", ") : "—"}</p>
+                      </div>
+                    </div>
+                    {community.embassyCountry && community.locationCountry && (
+                      <div className="col-span-2">
+                        <p className="text-muted-foreground text-xs">Embassy</p>
+                        <p>{community.embassyCountry} → {community.locationCountry}</p>
+                      </div>
+                    )}
+                    <div className="col-span-2">
                       <p className="text-muted-foreground text-xs">Description</p>
-                      <p>{communityData.description}</p>
+                      <p>{community.description ?? "—"}</p>
                     </div>
                     <div>
                       <p className="text-muted-foreground text-xs">Status</p>
-                      {getStatusBadge(communityData.status)}
+                      {getStatusBadge(status)}
                     </div>
                     <div>
-                      <p className="text-muted-foreground text-xs">Risk Score</p>
-                      {getRiskBadge(communityData.riskScore)}
+                      <p className="text-muted-foreground text-xs">Members</p>
+                      <p>{community.memberCount ?? 0}</p>
                     </div>
                     <div>
                       <p className="text-muted-foreground text-xs">Created</p>
-                      <div className="flex items-center gap-2"><Calendar className="h-3 w-3 text-muted-foreground" /><p>{communityData.createdAt}</p></div>
+                      <div className="flex items-center gap-2"><Calendar className="h-3 w-3 text-muted-foreground" /><p>{community.createdAt}</p></div>
                     </div>
+                    <div>
+                      <p className="text-muted-foreground text-xs">Updated</p>
+                      <p>{community.updatedAt ?? "—"}</p>
+                    </div>
+                    {(community.contactEmail || community.contactPhone || community.website) && (
+                      <div className="col-span-2 space-y-1">
+                        <p className="text-muted-foreground text-xs">Contact</p>
+                        <p className="text-sm">
+                          {community.contactEmail && <span>{community.contactEmail}</span>}
+                          {community.contactPhone && <span className="ml-2">{community.contactPhone}</span>}
+                          {community.website && <span className="ml-2">{community.website}</span>}
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -503,7 +571,7 @@ export default function CommunityDetail() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Link Association to Community</DialogTitle>
-            <DialogDescription>Link one or more associations to {communityData.name}.</DialogDescription>
+            <DialogDescription>Link one or more associations to {community.name}.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">

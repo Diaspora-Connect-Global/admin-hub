@@ -31,7 +31,7 @@ This document lists all **queries** and **mutations** implemented in the admin h
 | **GetReport** | `reportId!` | Single report by ID. |
 | **GetModerationActions** | `adminId`, `actionType`, `targetType`, `targetId`, `limit`, `offset` | List moderation actions. |
 | **GetContentPriorities** | `priorityLevel`, `scopeType`, `scopeId` | Content priority/boost list. |
-| **GetCommunity** | `id: String!` | Community by ID (Community Service). Returns `id`, `name`, `description`, `visibility`, `memberCount`, `isJoined`. |
+| **GetCommunity** | `id: ID!` | Community by ID. `getCommunity(id: ID!): Community!` — returns full Community (name, description, visibility, joinPolicy, communityType, address, contact, countriesServed, memberCount, etc.). |
 | **ListCommunities** | `limit`, `offset`, `searchTerm`, `visibility` | List communities. Returns `communities`, `total` (CommunityListResponse). |
 | **GetCommunityStats** | `communityId!` | Stats for a community. |
 | **GetAssociationStats** | `associationId!` | Stats for an association. |

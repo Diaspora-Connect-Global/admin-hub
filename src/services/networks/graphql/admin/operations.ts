@@ -377,7 +377,7 @@ export interface CommunityType {
   isEmbassy: boolean;
 }
 
-/** Community (listCommunities / community(id) response). */
+/** Community (listCommunities / getCommunity(id) response). */
 export interface Community {
   id: string;
   name: string;
@@ -458,16 +458,45 @@ export interface CreateCommunityInput {
   priceCurrency?: string;
 }
 
-/** Get community by id. */
+/** getCommunity(id: ID!): Community! */
+export interface GetCommunityQueryResult {
+  getCommunity: Community;
+}
+
 export const GET_COMMUNITY = gql`
-  query GetCommunity($id: String!) {
-    community(id: $id) {
+  query GetCommunity($id: ID!) {
+    getCommunity(id: $id) {
       id
       name
       description
       visibility
+      joinPolicy
+      communityTypeId
+      communityType {
+        id
+        name
+        description
+        isEmbassy
+      }
+      address
+      assignedAdminIds
+      avatarUrl
+      communityRules
+      contactEmail
+      contactPhone
+      countriesServed
+      createdAt
+      defaultGroupId
+      embassyCountry
+      groupCreationPermission
+      locationCountry
       memberCount
-      isJoined
+      membershipStatus
+      priceAmount
+      priceCurrency
+      updatedAt
+      website
+      whoCanPost
     }
   }
 `;
