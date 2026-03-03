@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { AdminLayout } from "@/components/layout/AdminLayout";
+import { useGetUsers } from "@/hooks/user";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -22,13 +23,52 @@ import {
   Key, FileJson, Mail, Phone, Calendar, MapPin, Building2, Users
 } from "lucide-react";
 
-const sampleUsers = [
-  { id: "USR-001", name: "Kwame Asante", email: "kwame@example.com", phone: "+32 471 234 567", role: "Individual", communitiesCount: 2, associationsCount: 1, postsCount: 12, reactionsCount: 45, groupsCount: 3, opportunitiesApplied: 2, trustScore: 85, status: "Active", createdAt: "2024-01-10" },
-  { id: "USR-002", name: "Ama Owusu", email: "ama@example.com", phone: "+32 472 345 678", role: "Community Admin", communitiesCount: 3, associationsCount: 2, postsCount: 45, reactionsCount: 120, groupsCount: 5, opportunitiesApplied: 0, trustScore: 92, status: "Active", createdAt: "2024-01-08" },
-  { id: "USR-003", name: "Kofi Mensah", email: "kofi@example.com", phone: "+32 473 456 789", role: "Association Admin", communitiesCount: 1, associationsCount: 3, postsCount: 8, reactionsCount: 30, groupsCount: 2, opportunitiesApplied: 5, trustScore: 78, status: "Inactive", createdAt: "2024-01-05" },
-  { id: "USR-004", name: "Akua Boateng", email: "akua@example.com", phone: "+32 474 567 890", role: "Individual", communitiesCount: 2, associationsCount: 1, postsCount: 23, reactionsCount: 67, groupsCount: 4, opportunitiesApplied: 3, trustScore: 88, status: "Active", createdAt: "2024-01-12" },
-  { id: "USR-005", name: "Yaw Darko", email: "yaw@example.com", phone: "+32 475 678 901", role: "Individual", communitiesCount: 1, associationsCount: 0, postsCount: 3, reactionsCount: 15, groupsCount: 1, opportunitiesApplied: 8, trustScore: 45, status: "Suspended", createdAt: "2024-01-03" },
-];
+/** Table row shape for the users table (API data mapped + defaults for missing fields). */
+export type UserTableRow = {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  role: string;
+  communitiesCount: number;
+  associationsCount: number;
+  postsCount: number;
+  reactionsCount: number;
+  groupsCount: number;
+  opportunitiesApplied: number;
+  trustScore: number;
+  status: string;
+  createdAt: string;
+};
+
+function mapApiUserToRow(item: {
+  id?: string;
+  userId?: string;
+  email?: string;
+  firstName?: string;
+  lastName?: string;
+  phone?: string;
+  createdAt?: string;
+}): UserTableRow {
+  const id = item.id ?? item.userId ?? "";
+  const name = [item.firstName, item.lastName].filter(Boolean).join(" ") || "—";
+  return {
+    id,
+    name,
+    email: item.email ?? "",
+    phone: item.phone ?? "—",
+    role: "Individual",
+    communitiesCount: 0,
+    associationsCount: 0,
+    postsCount: 0,
+    reactionsCount: 0,
+    groupsCount: 0,
+    opportunitiesApplied: 0,
+    trustScore: 0,
+    status: "Active",
+    createdAt: item.createdAt ?? "",
+  };
+}
 
 const userCommunities = [
   { id: "COM-001", name: "Ghana Belgium Community", country: "Belgium" },
@@ -91,21 +131,37 @@ export default function UserManagement() {
   const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
-  const [selectedUser, setSelectedUser] = useState<typeof sampleUsers[0] | null>(null);
+  const [selectedUser, setSelectedUser] = useState<UserTableRow | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
-  
+  const [pageOffset, setPageOffset] = useState(0);
+  const pageLimit = 20;
+
+  const { data, loading, error } = useGetUsers({
+    limit: pageLimit,
+    offset: pageOffset,
+    search: searchQuery || undefined,
+  });
+
+  const users: UserTableRow[] = useMemo(() => {
+    const items = data?.getUsers?.items;
+    if (!items || !Array.isArray(items)) return [];
+    return items.map((item) => mapApiUserToRow(item));
+  }, [data]);
+
+  const totalUsers = data?.getUsers?.total ?? 0;
+
   // Modals
   const [inviteUserOpen, setInviteUserOpen] = useState(false);
   const [editUserOpen, setEditUserOpen] = useState(false);
   const [suspendUserOpen, setSuspendUserOpen] = useState(false);
   const [resetPasswordOpen, setResetPasswordOpen] = useState(false);
-  
+
   // Filters
   const [roleFilter, setRoleFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [trustScoreRange, setTrustScoreRange] = useState([0, 100]);
 
-  const filteredUsers = sampleUsers.filter((user) => {
+  const filteredUsers = users.filter((user) => {
     const matchesSearch = user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
       user.phone.includes(searchQuery) ||
@@ -117,14 +173,14 @@ export default function UserManagement() {
   });
 
   const handleSelectAll = (checked: boolean) => {
-    setSelectedUsers(checked ? sampleUsers.map(u => u.id) : []);
+    setSelectedUsers(checked ? users.map(u => u.id) : []);
   };
 
   const handleSelectUser = (userId: string, checked: boolean) => {
     setSelectedUsers(prev => checked ? [...prev, userId] : prev.filter(id => id !== userId));
   };
 
-  const openUserDrawer = (user: typeof sampleUsers[0]) => {
+  const openUserDrawer = (user: UserTableRow) => {
     setSelectedUser(user);
     setDrawerOpen(true);
   };
@@ -238,7 +294,7 @@ export default function UserManagement() {
                   <Table>
                     <TableHeader>
                       <TableRow className="border-border/50 hover:bg-transparent">
-                        <TableHead className="w-12"><Checkbox checked={selectedUsers.length === sampleUsers.length} onCheckedChange={handleSelectAll} /></TableHead>
+                        <TableHead className="w-12"><Checkbox checked={users.length > 0 && selectedUsers.length === users.length} onCheckedChange={handleSelectAll} /></TableHead>
                         <TableHead>Name</TableHead>
                         <TableHead>Email</TableHead>
                         <TableHead>Phone</TableHead>
@@ -256,7 +312,12 @@ export default function UserManagement() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {filteredUsers.map((user) => (
+                      {loading ? (
+                        <TableRow><TableCell colSpan={15} className="text-center text-muted-foreground py-8">Loading users...</TableCell></TableRow>
+                      ) : error ? (
+                        <TableRow><TableCell colSpan={15} className="text-center text-destructive py-8">Failed to load users.</TableCell></TableRow>
+                      ) : (
+                      filteredUsers.map((user) => (
                         <TableRow key={user.id} className="border-border/50">
                           <TableCell><Checkbox checked={selectedUsers.includes(user.id)} onCheckedChange={(checked) => handleSelectUser(user.id, checked as boolean)} /></TableCell>
                           <TableCell className="font-medium">{user.name}</TableCell>
@@ -289,12 +350,12 @@ export default function UserManagement() {
                             </div>
                           </TableCell>
                         </TableRow>
-                      ))}
+                      )))}
                     </TableBody>
                   </Table>
                 </div>
                 <div className="flex items-center justify-between border-t border-border/50 px-4 py-3">
-                  <p className="text-sm text-muted-foreground">Showing 1-{filteredUsers.length} of {filteredUsers.length} users</p>
+                  <p className="text-sm text-muted-foreground">Showing {users.length ? pageOffset + 1 : 0}-{pageOffset + filteredUsers.length} of {totalUsers} users</p>
                   <div className="flex items-center gap-2">
                     <Select defaultValue="10">
                       <SelectTrigger className="w-[80px]"><SelectValue /></SelectTrigger>
