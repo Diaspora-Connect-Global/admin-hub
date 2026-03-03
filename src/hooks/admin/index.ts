@@ -26,8 +26,12 @@ import {
   DELETE_POST,
   BOOST_CONTENT,
   UNBOOST_CONTENT,
+  GET_COMMUNITY,
+  LIST_COMMUNITIES,
+  DISCOVER_ASSOCIATIONS,
   CREATE_COMMUNITY,
   CREATE_ASSOCIATION,
+  REQUEST_MEMBERSHIP,
   ASSIGN_MEMBER_ROLE,
 } from "@/services/networks/graphql/admin";
 
@@ -192,8 +196,51 @@ export function useBoostContent() {
 export function useUnboostContent() {
   return useMutation(UNBOOST_CONTENT);
 }
+
+export function useGetCommunity(id: string | null) {
+  return useQuery(GET_COMMUNITY, {
+    variables: { id: id ?? "" },
+    skip: !id,
+  });
+}
+
+export function useListCommunities(options: {
+  limit?: number;
+  offset?: number;
+  searchTerm?: string;
+  visibility?: string;
+}) {
+  const { limit = 20, offset = 0, searchTerm, visibility } = options;
+  return useQuery<import("@/services/networks/graphql/admin").ListCommunitiesQueryResult>(LIST_COMMUNITIES, {
+    variables: {
+      limit,
+      offset,
+      searchTerm: searchTerm || undefined,
+      visibility: visibility || undefined,
+    },
+  });
+}
+
+export function useDiscoverAssociations(options: {
+  limit?: number;
+  offset?: number;
+  searchTerm?: string;
+}) {
+  return useQuery(DISCOVER_ASSOCIATIONS, {
+    variables: {
+      limit: options.limit ?? 20,
+      offset: options.offset ?? 0,
+      searchTerm: options.searchTerm ?? undefined,
+    },
+  });
+}
+
+export function useRequestMembership() {
+  return useMutation(REQUEST_MEMBERSHIP);
+}
+
 export function useCreateCommunity() {
-  return useMutation(CREATE_COMMUNITY);
+  return useMutation<import("@/services/networks/graphql/admin").CreateCommunityMutationResult>(CREATE_COMMUNITY);
 }
 export function useCreateAssociation() {
   return useMutation(CREATE_ASSOCIATION);

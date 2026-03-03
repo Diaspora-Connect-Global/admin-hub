@@ -369,22 +369,167 @@ export const UNBOOST_CONTENT = gql`
   }
 `;
 
-export const CREATE_COMMUNITY = gql`
-  mutation CreateCommunity(
-    $name: String!
-    $description: String!
-    $visibility: String!
-    $joinPolicy: String!
-    $ownerId: ID
-  ) {
-    createCommunity(
-      name: $name
-      description: $description
-      visibility: $visibility
-      joinPolicy: $joinPolicy
-      ownerId: $ownerId
-    ) {
+/** CommunityType (list communities response). */
+export interface CommunityType {
+  id: string;
+  name: string;
+  description?: string;
+  isEmbassy: boolean;
+}
+
+/** Community (listCommunities / community(id) response). */
+export interface Community {
+  id: string;
+  name: string;
+  description?: string;
+  visibility: string;
+  joinPolicy: string;
+  address?: string;
+  assignedAdminIds?: string[];
+  avatarUrl?: string;
+  communityRules?: string;
+  communityType?: CommunityType;
+  communityTypeId?: string;
+  contactEmail?: string;
+  contactPhone?: string;
+  countriesServed?: string[];
+  createdAt: string;
+  defaultGroupId?: string;
+  embassyCountry?: string;
+  groupCreationPermission?: string;
+  locationCountry?: string;
+  memberCount?: number;
+  membershipStatus?: string;
+  priceAmount?: number;
+  priceCurrency?: string;
+  updatedAt?: string;
+  website?: string;
+  whoCanPost?: string;
+}
+
+/** CommunityListResponse (listCommunities). */
+export interface CommunityListResponse {
+  communities: Community[];
+  total: number;
+}
+
+/** Result of listCommunities query. */
+export interface ListCommunitiesQueryResult {
+  listCommunities: CommunityListResponse;
+}
+
+/** listCommunities(limit, offset, searchTerm, visibility). */
+export const LIST_COMMUNITIES = gql`
+  query ListCommunities($limit: Int, $offset: Int, $searchTerm: String, $visibility: String) {
+    listCommunities(limit: $limit, offset: $offset, searchTerm: $searchTerm, visibility: $visibility) {
+      communities {
+        id
+        name
+        description
+        visibility
+        joinPolicy
+        communityTypeId
+        communityType {
+          id
+          name
+          isEmbassy
+        }
+        countriesServed
+        embassyCountry
+        locationCountry
+        memberCount
+        membershipStatus
+        createdAt
+      }
+      total
+    }
+  }
+`;
+
+/** createCommunity input (Community Service API). */
+export interface CreateCommunityInput {
+  name: string;
+  description: string;
+  visibility: "PUBLIC" | "PRIVATE";
+  joinPolicy: "FREE" | "PAID";
+  paymentType: "NONE" | "ONE_TIME" | "SUBSCRIPTION";
+  communityTypeId: string;
+  priceAmount?: number;
+  priceCurrency?: string;
+}
+
+/** Get community by id. */
+export const GET_COMMUNITY = gql`
+  query GetCommunity($id: String!) {
+    community(id: $id) {
       id
+      name
+      description
+      visibility
+      memberCount
+      isJoined
+    }
+  }
+`;
+
+/** createCommunity mutation result. */
+export interface CreateCommunityMutationResult {
+  createCommunity: { id: string; name: string; createdAt: string };
+}
+
+/** createCommunity(input: CreateCommunityInput!): Community! */
+export const CREATE_COMMUNITY = gql`
+  mutation CreateCommunity($input: CreateCommunityInput!) {
+    createCommunity(input: $input) {
+      id
+      name
+      createdAt
+    }
+  }
+`;
+
+/** Association (Community Service). */
+export interface Association {
+  id: string;
+  name: string;
+  description: string;
+  visibility: "PUBLIC" | "PRIVATE";
+  joinPolicy: "FREE" | "PAID";
+  paymentType: "NONE" | "ONE_TIME" | "SUBSCRIPTION";
+  contactEmail?: string;
+  contactPhone?: string;
+  website?: string;
+  address?: string;
+  countriesServed?: string[];
+}
+
+/** discoverAssociations(limit, offset, searchTerm). */
+export const DISCOVER_ASSOCIATIONS = gql`
+  query DiscoverAssociations($limit: Int, $offset: Int, $searchTerm: String) {
+    discoverAssociations(limit: $limit, offset: $offset, searchTerm: $searchTerm) {
+      associations {
+        id
+        name
+        description
+        avatarUrl
+      }
+      total
+    }
+  }
+`;
+
+/** RequestMembershipInput (entityId, entityType per EntityType enum). */
+export interface RequestMembershipInput {
+  entityId: string;
+  entityType: "COMMUNITY" | "ASSOCIATION";
+}
+
+/** requestMembership(input: RequestMembershipInput!). */
+export const REQUEST_MEMBERSHIP = gql`
+  mutation RequestMembership($input: RequestMembershipInput!) {
+    requestMembership(input: $input) {
+      isMember
+      status
     }
   }
 `;

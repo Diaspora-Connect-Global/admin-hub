@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { AdminLayout } from "@/components/layout/AdminLayout";
@@ -16,16 +16,45 @@ import { Switch } from "@/components/ui/switch";
 import { Card, CardContent } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { MultiSelect } from "@/components/ui/multi-select";
-import { Search, Plus, MoreHorizontal, Eye, Edit, Link2, Pause, ChevronDown, Download, FileJson, Store, X, BarChart3, Trash2, Upload, Globe } from "lucide-react";
+import { Search, Plus, MoreHorizontal, Eye, Edit, Link2, Pause, ChevronDown, Download, FileJson, Store, X, BarChart3, Trash2, Upload, Globe, Loader2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { useCreateCommunity, useListCommunities } from "@/hooks/admin";
+import type { CreateCommunityInput, Community } from "@/services/networks/graphql/admin";
 
-const communitiesData = [
-  { id: "COM-001", name: "Ghana Belgium Community", type: "Association", countriesServed: ["Belgium", "Ghana"], embassyCountry: null, locationCountry: null, associationsCount: 12, membersCount: 1245, postsCount: 342, eventsCount: 28, vendorEnabled: true, status: "Active", createdAt: "2024-01-15" },
-  { id: "COM-002", name: "Nigeria UK Diaspora", type: "NGO", countriesServed: ["United Kingdom", "Nigeria"], embassyCountry: null, locationCountry: null, associationsCount: 8, membersCount: 2103, postsCount: 567, eventsCount: 45, vendorEnabled: true, status: "Active", createdAt: "2023-11-20" },
-  { id: "COM-003", name: "Kenya Germany Network", type: "Club", countriesServed: ["Germany", "Kenya"], embassyCountry: null, locationCountry: null, associationsCount: 5, membersCount: 432, postsCount: 89, eventsCount: 12, vendorEnabled: false, status: "Inactive", createdAt: "2024-02-01" },
-  { id: "COM-004", name: "South Africa Embassy Netherlands", type: "Embassy", countriesServed: ["Netherlands"], embassyCountry: "South Africa", locationCountry: "Netherlands", associationsCount: 15, membersCount: 1876, postsCount: 421, eventsCount: 67, vendorEnabled: true, status: "Active", createdAt: "2023-09-10" },
-  { id: "COM-005", name: "Uganda France Community", type: "Church", countriesServed: ["France", "Uganda"], embassyCountry: null, locationCountry: null, associationsCount: 3, membersCount: 287, postsCount: 45, eventsCount: 8, vendorEnabled: false, status: "Suspended", createdAt: "2023-06-15" },
-];
+/** Table row shape for the communities list (mapped from API Community). */
+interface CommunityRow {
+  id: string;
+  name: string;
+  type: string;
+  countriesServed: string[];
+  embassyCountry: string | null;
+  locationCountry: string | null;
+  associationsCount: number;
+  membersCount: number;
+  postsCount: number;
+  eventsCount: number;
+  vendorEnabled: boolean;
+  status: string;
+  createdAt: string;
+}
+
+function mapCommunityToRow(c: Community): CommunityRow {
+  return {
+    id: c.id,
+    name: c.name,
+    type: c.communityType?.name ?? c.communityTypeId ?? "—",
+    countriesServed: c.countriesServed ?? [],
+    embassyCountry: c.embassyCountry ?? null,
+    locationCountry: c.locationCountry ?? null,
+    associationsCount: 0,
+    membersCount: c.memberCount ?? 0,
+    postsCount: 0,
+    eventsCount: 0,
+    vendorEnabled: false,
+    status: c.membershipStatus ?? "Active",
+    createdAt: c.createdAt ?? "",
+  };
+}
 
 // Complete list of all countries
 const allCountries = [
@@ -67,24 +96,28 @@ const associationOptions = [
   { id: "ASC-003", name: "African Professionals Network" },
 ];
 
+/** API-aligned create community form (Community Service CreateCommunityInput). */
 interface CreateFormData {
   communityName: string;
   description: string;
-  communityType: string;
+  communityType: string; // -> communityTypeId
+  visibility: "PUBLIC" | "PRIVATE";
+  joinPolicy: "FREE" | "PAID";
+  paymentType: "NONE" | "ONE_TIME" | "SUBSCRIPTION";
+  priceAmount: string;
+  priceCurrency: string;
+  // Legacy form fields (kept for future / not sent to createCommunity)
   countriesServed: string[];
   logoBanner: File | null;
   rules: string;
-  joinPolicy: string;
   whoCanPost: string;
   groupCreationPermission: string;
   postModeration: boolean;
   communityAdmins: string[];
-  // Contact fields (for all types)
   address: string;
   contactEmail: string;
   contactPhone: string;
   website: string;
-  // Embassy-specific fields
   embassyCountry: string;
   locationCountry: string;
 }
@@ -93,10 +126,14 @@ const initialFormData: CreateFormData = {
   communityName: "",
   description: "",
   communityType: "",
+  visibility: "PUBLIC",
+  joinPolicy: "FREE",
+  paymentType: "NONE",
+  priceAmount: "",
+  priceCurrency: "EUR",
   countriesServed: [],
   logoBanner: null,
   rules: "",
-  joinPolicy: "Approval Required",
   whoCanPost: "Admins Only",
   groupCreationPermission: "Admins Only",
   postModeration: true,
@@ -109,39 +146,49 @@ const initialFormData: CreateFormData = {
   locationCountry: "",
 };
 
+const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
+
 export default function Communities() {
   const navigate = useNavigate();
   const { t } = useTranslation();
+  const [createCommunityMutation, { loading: creating }] = useCreateCommunity();
   const [searchQuery, setSearchQuery] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
   const [countryFilter, setCountryFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [visibilityFilter, setVisibilityFilter] = useState("all");
   const [sortBy, setSortBy] = useState("name-az");
+  const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = useState(20);
   const [selectedCommunities, setSelectedCommunities] = useState<string[]>([]);
-  
-  // Modals
-  const [createModalOpen, setCreateModalOpen] = useState(false);
-  const [linkAssociationOpen, setLinkAssociationOpen] = useState(false);
-  const [suspendModalOpen, setSuspendModalOpen] = useState(false);
-  const [selectedCommunity, setSelectedCommunity] = useState<typeof communitiesData[0] | null>(null);
 
-  // Form state
-  const [formData, setFormData] = useState<CreateFormData>(initialFormData);
+  useEffect(() => {
+    const t = setTimeout(() => setSearchTerm(searchQuery.trim()), 300);
+    return () => clearTimeout(t);
+  }, [searchQuery]);
 
-  const filteredCommunities = communitiesData
+  useEffect(() => {
+    setPage(0);
+  }, [searchTerm, visibilityFilter]);
+
+  const { data: listData, loading: listLoading, error: listError, refetch: refetchCommunities } = useListCommunities({
+    limit: pageSize,
+    offset: page * pageSize,
+    searchTerm: searchTerm || undefined,
+    visibility: visibilityFilter === "all" ? undefined : visibilityFilter,
+  });
+
+  const apiCommunities = listData?.listCommunities?.communities ?? [];
+  const totalCount = listData?.listCommunities?.total ?? 0;
+  const rows = apiCommunities.map(mapCommunityToRow);
+
+  const filteredCommunities = rows
     .filter((community) => {
-      const searchLower = searchQuery.toLowerCase();
-      const matchesSearch = 
-        community.name.toLowerCase().includes(searchLower) ||
-        community.countriesServed.some(c => c.toLowerCase().includes(searchLower)) ||
-        community.type.toLowerCase().includes(searchLower) ||
-        community.id.toLowerCase().includes(searchLower) ||
-        (community.embassyCountry && community.embassyCountry.toLowerCase().includes(searchLower)) ||
-        (community.locationCountry && community.locationCountry.toLowerCase().includes(searchLower));
       const matchesCountry = countryFilter === "all" || community.countriesServed.includes(countryFilter);
       const matchesType = typeFilter === "all" || community.type === typeFilter;
       const matchesStatus = statusFilter === "all" || community.status === statusFilter;
-      return matchesSearch && matchesCountry && matchesType && matchesStatus;
+      return matchesCountry && matchesType && matchesStatus;
     })
     .sort((a, b) => {
       switch (sortBy) {
@@ -153,8 +200,21 @@ export default function Communities() {
       }
     });
 
+  // Modals
+  const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [linkAssociationOpen, setLinkAssociationOpen] = useState(false);
+  const [suspendModalOpen, setSuspendModalOpen] = useState(false);
+  const [selectedCommunity, setSelectedCommunity] = useState<CommunityRow | null>(null);
+
+  // Form state
+  const [formData, setFormData] = useState<CreateFormData>(initialFormData);
+
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+  const canPrevious = page > 0;
+  const canNext = page < totalPages - 1;
+
   const handleSelectAll = (checked: boolean) => {
-    setSelectedCommunities(checked ? communitiesData.map(c => c.id) : []);
+    setSelectedCommunities(checked ? filteredCommunities.map(c => c.id) : []);
   };
 
   const handleSelectCommunity = (id: string, checked: boolean) => {
@@ -176,34 +236,53 @@ export default function Communities() {
     }
   };
 
-  const handleCreateCommunity = () => {
-    // Validate required fields
-    if (!formData.communityName || !formData.communityType || formData.countriesServed.length === 0 || formData.communityAdmins.length === 0) {
+  const handleCreateCommunity = async () => {
+    if (!formData.communityName.trim()) {
       toast({ title: t('communities.validationError'), description: t('communities.fillRequired'), variant: "destructive" });
       return;
     }
-
-    // Embassy-specific validation
-    if (formData.communityType === "Embassy" && (!formData.embassyCountry || !formData.locationCountry)) {
-      toast({ title: t('communities.validationError'), description: t('communities.embassyFieldsRequired'), variant: "destructive" });
+    if (!formData.communityType) {
+      toast({ title: t('communities.validationError'), description: t('communities.form.selectType'), variant: "destructive" });
+      return;
+    }
+    const needsPrice = formData.joinPolicy === "PAID" || (formData.paymentType !== "NONE");
+    if (needsPrice && (!formData.priceAmount.trim() || !formData.priceCurrency.trim())) {
+      toast({ title: t('communities.validationError'), description: "Price amount and currency required when join is paid or payment type is set.", variant: "destructive" });
       return;
     }
 
-    // Email validation
-    if (formData.contactEmail && !validateEmail(formData.contactEmail)) {
-      toast({ title: t('communities.validationError'), description: t('communities.invalidEmail'), variant: "destructive" });
-      return;
+    const input: CreateCommunityInput = {
+      name: formData.communityName.trim(),
+      description: formData.description.trim() || "",
+      visibility: formData.visibility,
+      joinPolicy: formData.joinPolicy,
+      paymentType: formData.paymentType,
+      communityTypeId: formData.communityType,
+    };
+    if (needsPrice && formData.priceAmount) {
+      const amount = Number(formData.priceAmount);
+      if (!Number.isFinite(amount) || amount < 0) {
+        toast({ title: t('communities.validationError'), description: "Invalid price amount.", variant: "destructive" });
+        return;
+      }
+      input.priceAmount = amount;
+      input.priceCurrency = formData.priceCurrency;
     }
 
-    // URL validation
-    if (formData.website && !validateUrl(formData.website)) {
-      toast({ title: t('communities.validationError'), description: t('communities.invalidWebsite'), variant: "destructive" });
-      return;
+    try {
+      const result = await createCommunityMutation({ variables: { input } });
+      if (result.data?.createCommunity) {
+        toast({ title: t('communities.communityCreated'), description: t('communities.communityCreatedDesc', { name: formData.communityName }) });
+        setCreateModalOpen(false);
+        setFormData(initialFormData);
+        refetchCommunities();
+      } else if (result.error) {
+        toast({ title: t('communities.validationError'), description: result.error.message, variant: "destructive" });
+      }
+    } catch (e) {
+      const message = e instanceof Error ? e.message : "Failed to create community";
+      toast({ title: t('communities.validationError'), description: message, variant: "destructive" });
     }
-
-    toast({ title: t('communities.communityCreated'), description: t('communities.communityCreatedDesc', { name: formData.communityName }) });
-    setCreateModalOpen(false);
-    setFormData(initialFormData);
   };
 
   const handleSuspend = () => {
@@ -323,6 +402,14 @@ export default function Communities() {
                   <SelectItem value="Suspended">{t('communities.suspended')}</SelectItem>
                 </SelectContent>
               </Select>
+              <Select value={visibilityFilter} onValueChange={setVisibilityFilter}>
+                <SelectTrigger className="w-[130px]"><SelectValue placeholder="Visibility" /></SelectTrigger>
+                <SelectContent className="bg-popover border-border">
+                  <SelectItem value="all">All</SelectItem>
+                  <SelectItem value="PUBLIC">Public</SelectItem>
+                  <SelectItem value="PRIVATE">Private</SelectItem>
+                </SelectContent>
+              </Select>
               <Select value={sortBy} onValueChange={setSortBy}>
                 <SelectTrigger className="w-[180px]"><SelectValue placeholder={t('communities.sortBy')} /></SelectTrigger>
                 <SelectContent className="bg-popover border-border">
@@ -344,8 +431,8 @@ export default function Communities() {
                 <TableHeader>
                   <TableRow className="border-border/50 hover:bg-transparent">
                     <TableHead className="w-12">
-                      <Checkbox 
-                        checked={selectedCommunities.length === communitiesData.length}
+                      <Checkbox
+                        checked={filteredCommunities.length > 0 && selectedCommunities.length === filteredCommunities.length}
                         onCheckedChange={handleSelectAll}
                       />
                     </TableHead>
@@ -363,7 +450,27 @@ export default function Communities() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredCommunities.map((community) => (
+                  {listLoading ? (
+                    <TableRow>
+                      <TableCell colSpan={11} className="text-center py-8 text-muted-foreground">
+                        <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2" />
+                        {t('common.loading') || "Loading..."}
+                      </TableCell>
+                    </TableRow>
+                  ) : listError ? (
+                    <TableRow>
+                      <TableCell colSpan={11} className="text-center py-8 text-destructive">
+                        {listError.message}
+                      </TableCell>
+                    </TableRow>
+                  ) : filteredCommunities.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={11} className="text-center py-8 text-muted-foreground">
+                        {t('communities.noCommunities') || "No communities found."}
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                  filteredCommunities.map((community) => (
                     <TableRow key={community.id} className="border-border/50">
                       <TableCell>
                         <Checkbox 
@@ -445,24 +552,26 @@ export default function Communities() {
                         </div>
                       </TableCell>
                     </TableRow>
-                  ))}
+                  ))
+                  )}
                 </TableBody>
               </Table>
             </div>
             <div className="flex items-center justify-between border-t border-border/50 px-4 py-3">
-              <p className="text-sm text-muted-foreground">{t('communities.showing')} 1-{filteredCommunities.length} {t('communities.of')} {filteredCommunities.length} {t('communities.title').toLowerCase()}</p>
+              <p className="text-sm text-muted-foreground">
+                {t('communities.showing')} {listLoading ? "…" : `${page * pageSize + 1}-${Math.min((page + 1) * pageSize, totalCount)}`} {t('communities.of')} {totalCount} {t('communities.title').toLowerCase()}
+              </p>
               <div className="flex items-center gap-2">
-                <Select defaultValue="20">
+                <Select value={String(pageSize)} onValueChange={(v) => { setPageSize(Number(v)); setPage(0); }}>
                   <SelectTrigger className="w-[80px]"><SelectValue /></SelectTrigger>
                   <SelectContent className="bg-popover border-border">
-                    <SelectItem value="10">10</SelectItem>
-                    <SelectItem value="20">20</SelectItem>
-                    <SelectItem value="50">50</SelectItem>
-                    <SelectItem value="100">100</SelectItem>
+                    {PAGE_SIZE_OPTIONS.map((n) => (
+                      <SelectItem key={n} value={String(n)}>{n}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
-                <Button variant="outline" size="sm" disabled>{t('common.previous')}</Button>
-                <Button variant="outline" size="sm" disabled>{t('common.next')}</Button>
+                <Button variant="outline" size="sm" disabled={!canPrevious || listLoading} onClick={() => setPage((p) => p - 1)}>{t('common.previous')}</Button>
+                <Button variant="outline" size="sm" disabled={!canNext || listLoading} onClick={() => setPage((p) => p + 1)}>{t('common.next')}</Button>
               </div>
             </div>
           </CardContent>
@@ -513,8 +622,70 @@ export default function Communities() {
                   </Select>
                 </div>
 
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Visibility <span className="text-destructive">*</span></Label>
+                    <Select value={formData.visibility} onValueChange={(v: "PUBLIC" | "PRIVATE") => setFormData({ ...formData, visibility: v })}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent className="bg-popover border-border">
+                        <SelectItem value="PUBLIC">Public</SelectItem>
+                        <SelectItem value="PRIVATE">Private</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Join policy <span className="text-destructive">*</span></Label>
+                    <Select value={formData.joinPolicy} onValueChange={(v: "FREE" | "PAID") => setFormData({ ...formData, joinPolicy: v })}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent className="bg-popover border-border">
+                        <SelectItem value="FREE">Free</SelectItem>
+                        <SelectItem value="PAID">Paid</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
                 <div className="space-y-2">
-                  <Label>{t('communities.countriesServed')} <span className="text-destructive">*</span></Label>
+                  <Label>Payment type <span className="text-destructive">*</span></Label>
+                  <Select value={formData.paymentType} onValueChange={(v: "NONE" | "ONE_TIME" | "SUBSCRIPTION") => setFormData({ ...formData, paymentType: v })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent className="bg-popover border-border">
+                      <SelectItem value="NONE">None</SelectItem>
+                      <SelectItem value="ONE_TIME">One-time</SelectItem>
+                      <SelectItem value="SUBSCRIPTION">Subscription</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {(formData.joinPolicy === "PAID" || formData.paymentType !== "NONE") && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Price amount</Label>
+                      <Input
+                        type="number"
+                        min={0}
+                        step="any"
+                        placeholder="0.00"
+                        value={formData.priceAmount}
+                        onChange={(e) => setFormData({ ...formData, priceAmount: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Currency</Label>
+                      <Select value={formData.priceCurrency} onValueChange={(v) => setFormData({ ...formData, priceCurrency: v })}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent className="bg-popover border-border">
+                          <SelectItem value="EUR">EUR</SelectItem>
+                          <SelectItem value="USD">USD</SelectItem>
+                          <SelectItem value="GBP">GBP</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                )}
+
+                <div className="space-y-2">
+                  <Label>{t('communities.countriesServed')}</Label>
                   <MultiSelect
                     options={countryOptions}
                     selected={formData.countriesServed}
@@ -559,27 +730,14 @@ export default function Communities() {
                   />
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>{t('communities.form.joinPolicy')} <span className="text-destructive">*</span></Label>
-                    <Select value={formData.joinPolicy} onValueChange={(value) => setFormData({ ...formData, joinPolicy: value })}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent className="bg-popover border-border">
-                        <SelectItem value="Open">{t('communities.form.joinOpen')}</SelectItem>
-                        <SelectItem value="Approval Required">{t('communities.form.joinApproval')}</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>{t('communities.form.whoCanPost')} <span className="text-destructive">*</span></Label>
-                    <Select value={formData.whoCanPost} onValueChange={(value) => setFormData({ ...formData, whoCanPost: value })}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent className="bg-popover border-border">
-                        <SelectItem value="Admins Only">{t('communities.form.adminsOnly')}</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+                <div className="space-y-2">
+                  <Label>{t('communities.form.whoCanPost')}</Label>
+                  <Select value={formData.whoCanPost} onValueChange={(value) => setFormData({ ...formData, whoCanPost: value })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent className="bg-popover border-border">
+                      <SelectItem value="Admins Only">{t('communities.form.adminsOnly')}</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -723,8 +881,10 @@ export default function Communities() {
             </div>
           </ScrollArea>
           <DialogFooter>
-            <Button variant="outline" onClick={() => { setCreateModalOpen(false); setFormData(initialFormData); }}>{t('common.cancel')}</Button>
-            <Button onClick={handleCreateCommunity}>{t('communities.createCommunity')}</Button>
+            <Button variant="outline" onClick={() => { setCreateModalOpen(false); setFormData(initialFormData); }} disabled={creating}>{t('common.cancel')}</Button>
+            <Button onClick={handleCreateCommunity} disabled={creating}>
+              {creating ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />{t('common.creating') || "Creating..."}</> : t('communities.createCommunity')}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

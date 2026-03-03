@@ -31,8 +31,11 @@ This document lists all **queries** and **mutations** implemented in the admin h
 | **GetReport** | `reportId!` | Single report by ID. |
 | **GetModerationActions** | `adminId`, `actionType`, `targetType`, `targetId`, `limit`, `offset` | List moderation actions. |
 | **GetContentPriorities** | `priorityLevel`, `scopeType`, `scopeId` | Content priority/boost list. |
+| **GetCommunity** | `id: String!` | Community by ID (Community Service). Returns `id`, `name`, `description`, `visibility`, `memberCount`, `isJoined`. |
+| **ListCommunities** | `limit`, `offset`, `searchTerm`, `visibility` | List communities. Returns `communities`, `total` (CommunityListResponse). |
 | **GetCommunityStats** | `communityId!` | Stats for a community. |
 | **GetAssociationStats** | `associationId!` | Stats for an association. |
+| **DiscoverAssociations** | `limit`, `offset`, `searchTerm` | Find associations (Community Service). Returns `associations`, `total`. |
 | **GetAuditLogs** | `actorId`, `action`, `resourceType`, `resourceId`, `fromDate`, `toDate`, `limit`, `offset` | Audit log entries. |
 
 ### Mutations
@@ -49,8 +52,9 @@ This document lists all **queries** and **mutations** implemented in the admin h
 | **DeletePost** | `postId!`, `reason!`, `relatedReportId` | Delete a post (moderation). |
 | **BoostContent** | `postId!`, `priorityLevel!`, `expiresAt`, `reason`, `scopeType`, `scopeId` | Boost/pin content. |
 | **UnboostContent** | `priorityId!` | Remove content boost. |
-| **CreateCommunity** | `name!`, `description!`, `visibility!`, `joinPolicy!`, `ownerId` | Create a community. |
+| **CreateCommunity** | `input: CreateCommunityInput!` | Create a community (Community Service). Input: `name`, `description`, `visibility` (PUBLIC \| PRIVATE), `joinPolicy` (FREE \| PAID), `paymentType` (NONE \| ONE_TIME \| SUBSCRIPTION), `communityTypeId`; optional: `priceAmount`, `priceCurrency`. |
 | **CreateAssociation** | `name!`, `description!`, `visibility!`, `creatorId` | Create an association. |
+| **RequestMembership** | `input: RequestMembershipInput!` | Join entity. Input: `entityId`, `entityType` (COMMUNITY \| ASSOCIATION). Returns `isMember`, `status`. |
 | **AssignMemberRole** | `userId!`, `entityId!`, `entityType!`, `role!` | Assign member role in community/association. |
 
 ---
@@ -110,6 +114,9 @@ Hooks use the shared admin Apollo client (Bearer from session). Import from `@/h
 | `useUpdateReportStatus()` | UpdateReportStatus | |
 | `useGetModerationActions(options)` | GetModerationActions | |
 | `useGetContentPriorities(variables)` | GetContentPriorities | |
+| `useGetCommunity(id)` | GetCommunity | Skip when `id` is null. |
+| `useListCommunities(options)` | ListCommunities | `limit`, `offset`, `searchTerm`, `visibility`. Used on Communities page. |
+| `useDiscoverAssociations(options)` | DiscoverAssociations | `limit`, `offset`, `searchTerm`. |
 | `useGetCommunityStats(communityId)` | GetCommunityStats | |
 | `useGetAssociationStats(associationId)` | GetAssociationStats | |
 | `useGetAuditLogs(options)` | GetAuditLogs | |
@@ -121,8 +128,9 @@ Hooks use the shared admin Apollo client (Bearer from session). Import from `@/h
 | `useDeletePost()` | DeletePost | |
 | `useBoostContent()` | BoostContent | |
 | `useUnboostContent()` | UnboostContent | |
-| `useCreateCommunity()` | CreateCommunity | |
+| `useCreateCommunity()` | CreateCommunity | Typed with `CreateCommunityInput`. |
 | `useCreateAssociation()` | CreateAssociation | |
+| `useRequestMembership()` | RequestMembership | |
 | `useAssignMemberRole()` | AssignMemberRole | |
 | `useAdminClient()` | — | Apollo client for one-off calls. |
 
