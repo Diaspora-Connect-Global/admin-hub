@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { LayoutDashboard, Users, Wallet, AlertTriangle, CheckSquare, BarChart3, Settings, Bell, FileText, HeadphonesIcon, Shield, Store, Key, Activity, ChevronLeft, ChevronRight, LogOut, MessageSquare } from "lucide-react";
+import { LayoutDashboard, Users, Wallet, AlertTriangle, CheckSquare, BarChart3, Settings, Bell, FileText, HeadphonesIcon, Shield, Store, Key, Activity, ChevronLeft, ChevronRight, LogOut, MessageSquare, Calendar, Briefcase } from "lucide-react";
 import { cn } from "@/lib/utils";
 import logo from "@/assets/logo.svg";
+import { useAdminAuth } from "@/hooks/auth/useAdminAuth";
 
 const navItems = [
   { id: "dashboard", titleKey: "nav.dashboard", icon: LayoutDashboard, path: "/" },
@@ -12,6 +13,8 @@ const navItems = [
   { id: "escrow_management", titleKey: "nav.escrow", icon: Wallet, path: "/escrow" },
   { id: "disputes", titleKey: "nav.disputes", icon: AlertTriangle, path: "/disputes" },
   { id: "communities", titleKey: "nav.communities", icon: Users, path: "/communities" },
+  { id: "events", titleKey: "nav.events", icon: Calendar, path: "/events" },
+  { id: "opportunities", titleKey: "nav.opportunities", icon: Briefcase, path: "/opportunities" },
   { id: "reports_analytics", titleKey: "nav.reports", icon: BarChart3, path: "/reports" },
   { id: "system_settings", titleKey: "nav.settings", icon: Settings, path: "/settings" },
   { id: "notifications", titleKey: "nav.notifications", icon: Bell, path: "/notifications" },
@@ -26,6 +29,7 @@ export function AdminSidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
   const { t } = useTranslation();
+  const { userEmail } = useAdminAuth();
   
   const isActive = (path: string) => {
     if (path === "/") return location.pathname === "/";
@@ -74,7 +78,7 @@ export function AdminSidebar() {
           {!collapsed && (
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-foreground truncate">{t('roles.systemAdmin')}</p>
-              <p className="text-xs text-muted-foreground truncate">admin@system.com</p>
+              <p className="text-xs text-muted-foreground truncate">{userEmail ?? "Admin"}</p>
             </div>
           )}
           {!collapsed && (

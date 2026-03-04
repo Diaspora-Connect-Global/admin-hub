@@ -49,6 +49,12 @@ const opportunitiesData = [
   { id: "OPP-002", title: "Job Opening - Marketing", type: "Job", applicationsCount: 28, status: "Open", postedAt: "2024-01-14" },
 ];
 
+const eventsData = [
+  { id: "EVT-001", title: "Annual Diaspora Meetup", location: "Brussels", date: "2024-03-15", attendees: 120, status: "Scheduled" },
+  { id: "EVT-002", title: "Cultural Night", location: "Antwerp", date: "2024-02-28", attendees: 85, status: "Scheduled" },
+  { id: "EVT-003", title: "Networking Breakfast", location: "Online", date: "2024-02-10", attendees: 45, status: "Completed" },
+];
+
 const vendorItems = [
   { id: "ITM-001", title: "African Art Print", category: "Art", price: "$45", stock: 25, status: "Approved" },
   { id: "ITM-002", title: "Kente Cloth", category: "Fashion", price: "$120", stock: 10, status: "Pending" },
@@ -68,6 +74,8 @@ const getStatusBadge = (status: string) => {
     "Approved": "badge-status badge-success",
     "Pending": "badge-status badge-warning",
     "Open": "badge-status badge-info",
+    "Scheduled": "badge-status badge-info",
+    "Completed": "badge-status badge-success",
   };
   return <span className={styles[status] || "badge-status badge-muted"}>{status}</span>;
 };
@@ -190,6 +198,7 @@ export default function CommunityDetail() {
               <TabsTrigger value="overview">Overview</TabsTrigger>
               <TabsTrigger value="members">Members</TabsTrigger>
               <TabsTrigger value="posts">Posts</TabsTrigger>
+              <TabsTrigger value="events">Events</TabsTrigger>
               <TabsTrigger value="opportunities">Opportunities</TabsTrigger>
               <TabsTrigger value="vendor">Vendor</TabsTrigger>
               <TabsTrigger value="audit">Audit Log</TabsTrigger>
@@ -413,6 +422,54 @@ export default function CommunityDetail() {
                             <Button variant="ghost" size="icon" className="text-destructive"><X className="h-4 w-4" /></Button>
                             <Button variant="ghost" size="icon" className="text-destructive"><Trash2 className="h-4 w-4" /></Button>
                             <Button variant="ghost" size="icon"><Eye className="h-4 w-4" /></Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Events Tab */}
+          <TabsContent value="events" className="space-y-4">
+            <Card className="glass">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="text-base">Events</CardTitle>
+                    <CardDescription>Community events and meetups.</CardDescription>
+                  </div>
+                  <Button size="sm">Create Event</Button>
+                </div>
+              </CardHeader>
+              <CardContent className="p-0">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="border-border/50">
+                      <TableHead>Event ID</TableHead>
+                      <TableHead>Title</TableHead>
+                      <TableHead>Location</TableHead>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Attendees</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {eventsData.map((evt) => (
+                      <TableRow key={evt.id} className="border-border/50">
+                        <TableCell className="font-mono text-xs">{evt.id}</TableCell>
+                        <TableCell className="font-medium">{evt.title}</TableCell>
+                        <TableCell>{evt.location}</TableCell>
+                        <TableCell className="text-muted-foreground">{evt.date}</TableCell>
+                        <TableCell>{evt.attendees}</TableCell>
+                        <TableCell>{getStatusBadge(evt.status)}</TableCell>
+                        <TableCell>
+                          <div className="flex gap-1">
+                            <Button variant="ghost" size="icon"><Eye className="h-4 w-4" /></Button>
+                            <Button variant="ghost" size="icon"><Edit className="h-4 w-4" /></Button>
                           </div>
                         </TableCell>
                       </TableRow>

@@ -14,6 +14,8 @@ import EscrowManagement from "./pages/EscrowManagement";
 import NotificationsBroadcasts from "./pages/NotificationsBroadcasts";
 import Communities from "./pages/Communities";
 import CommunityDetail from "./pages/CommunityDetail";
+import Events from "./pages/Events";
+import Opportunities from "./pages/Opportunities";
 import UserManagement from "./pages/UserManagement";
 import Associations from "./pages/Associations";
 import AssociationDetail from "./pages/AssociationDetail";
@@ -49,6 +51,8 @@ const App = () => (
               <Route path="/disputes" element={<DisputesResolution />} />
               <Route path="/communities" element={<Communities />} />
               <Route path="/communities/:id" element={<CommunityDetail />} />
+              <Route path="/events" element={<Events />} />
+              <Route path="/opportunities" element={<Opportunities />} />
               <Route path="/associations" element={<Associations />} />
               <Route path="/associations/:id" element={<AssociationDetail />} />
               <Route path="/reports" element={<Reports />} />
