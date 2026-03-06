@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useCallback } from "react";
 import { useLocation } from "react-router-dom";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import { useT } from "@/hooks/useT";
@@ -25,40 +25,65 @@ import { OpportunityBulkActionsBar } from "@/components/opportunities/Opportunit
 import { Plus, RefreshCw, LayoutList, LayoutGrid, Search } from "lucide-react";
 import { Opportunity, Applicant } from "@/types/opportunities";
 import { toast } from "@/hooks/use-toast";
-
-const mockOpportunities: Opportunity[] = [
-  { id: "1", title: "Community Outreach Coordinator", shortDescription: "Lead community engagement initiatives across Ghana diaspora networks.", type: "job", status: "published", visibility: "public", location: "Remote", deadline: "Dec 31, 2024", applicantsCount: 24, shortlistCount: 5, hireCount: 0, publishedAt: "Nov 15, 2024", createdAt: "Nov 10, 2024", updatedAt: "Nov 15, 2024", requireCv: true, allowAnonymous: false, autoAcknowledge: true, notifyMembers: true, searchable: true, formType: "structured", reviewWorkflow: "manual", tags: ["community", "outreach"] },
-  { id: "2", title: "Youth Mentorship Program", shortDescription: "Volunteer mentors needed for our youth development program.", type: "volunteer", status: "published", visibility: "members", applicantsCount: 12, shortlistCount: 3, hireCount: 2, publishedAt: "Nov 20, 2024", createdAt: "Nov 18, 2024", updatedAt: "Nov 20, 2024", requireCv: false, allowAnonymous: false, autoAcknowledge: true, notifyMembers: true, searchable: true, formType: "simple", reviewWorkflow: "manual" },
-  { id: "3", title: "Digital Skills Training Grant", shortDescription: "Funding available for members pursuing tech certifications.", type: "funding", status: "published", visibility: "members", deadline: "Jan 15, 2025", maxApplicants: 50, applicantsCount: 38, shortlistCount: 10, hireCount: 0, publishedAt: "Dec 01, 2024", createdAt: "Nov 28, 2024", updatedAt: "Dec 01, 2024", requireCv: true, allowAnonymous: false, autoAcknowledge: true, notifyMembers: true, searchable: true, formType: "structured", reviewWorkflow: "auto_sort" },
-  { id: "4", title: "Annual Scholarship Program 2025", shortDescription: "Full scholarships for undergraduate studies.", type: "scholarship", status: "draft", visibility: "public", applicantsCount: 0, shortlistCount: 0, hireCount: 0, publishedAt: null, createdAt: "Dec 02, 2024", updatedAt: "Dec 02, 2024", requireCv: true, allowAnonymous: false, autoAcknowledge: true, notifyMembers: true, searchable: true, formType: "structured", reviewWorkflow: "assign_reviewer" },
-];
-
-const mockApplicants: Applicant[] = [
-  { id: "1", opportunityId: "1", name: "Kwame Asante", email: "kwame@example.com", phone: "+233 55 123 4567", status: "shortlisted", appliedAt: "Nov 20, 2024", screeningScore: 85, cvUrl: "/cv.pdf" },
-  { id: "2", opportunityId: "1", name: "Ama Serwaa", email: "ama@example.com", status: "pending", appliedAt: "Nov 22, 2024", screeningScore: 72 },
-  { id: "3", opportunityId: "1", name: "Kofi Mensah", email: "kofi@example.com", status: "rejected", appliedAt: "Nov 18, 2024" },
-];
+import {
+  useListOpportunities,
+  useGetApplications,
+  usePublishOpportunity,
+  useCloseOpportunity,
+  useDeleteOpportunity,
+  useAcceptApplication,
+  useRejectApplication,
+} from "@/hooks/opportunity";
 
 export default function Opportunities() {
   const location = useLocation();
   const t = useT("opportunities");
-  const [opportunities] = useState<Opportunity[]>(mockOpportunities);
-  const [viewMode, setViewMode] = useState<"list" | "card">("list");
-  const [selectedOpportunities, setSelectedOpportunities] = useState<string[]>([]);
-  
-  // Filters
+
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
   const [visibilityFilter, setVisibilityFilter] = useState("all");
+  const [viewMode, setViewMode] = useState<"list" | "card">("list");
+  const [selectedOpportunities, setSelectedOpportunities] = useState<string[]>([]);
 
-  // Modals
+  // Modals (declare before useGetApplications so applicantsOpportunity is defined)
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [editOpportunity, setEditOpportunity] = useState<Opportunity | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerOpportunity, setDrawerOpportunity] = useState<Opportunity | null>(null);
   const [applicantsDrawerOpen, setApplicantsDrawerOpen] = useState(false);
   const [applicantsOpportunity, setApplicantsOpportunity] = useState<Opportunity | null>(null);
+
+  const listInput = {
+    limit: 50,
+    offset: 0,
+    searchTerm: searchQuery.trim() || undefined,
+    status: statusFilter === "all" ? undefined : statusFilter,
+    type: typeFilter === "all" ? undefined : typeFilter,
+    visibility: visibilityFilter === "all" ? undefined : visibilityFilter,
+  };
+  const { data: listData, loading: listLoading, refetch: refetchList } = useListOpportunities(listInput);
+  const rawOpportunities = Array.isArray(listData?.listOpportunities?.opportunities) ? listData.listOpportunities.opportunities : [];
+  const opportunities: Opportunity[] = rawOpportunities.map((o: { applicationCount?: number; [k: string]: unknown }) => ({
+    ...o,
+    applicantsCount: o.applicationCount ?? 0,
+    shortlistCount: 0,
+    hireCount: 0,
+  })) as Opportunity[];
+
+  const { data: applicationsData } = useGetApplications(
+    applicantsOpportunity?.id ? { opportunityId: applicantsOpportunity.id, limit: 100 } : null
+  );
+  const rawApplications = Array.isArray(applicationsData?.getApplications?.applications) ? applicationsData.getApplications.applications : [];
+  const applicants: Applicant[] = rawApplications.map((a: { applicantId?: string; createdAt?: string; [k: string]: unknown }) => ({
+    id: (a as { id: string }).id,
+    opportunityId: (a as { opportunityId: string }).opportunityId,
+    applicantId: a.applicantId,
+    status: (a as { status: string }).status?.toLowerCase() ?? "pending",
+    appliedAt: a.createdAt,
+    name: "",
+    email: "",
+  })) as Applicant[];
   const [applicationModalOpen, setApplicationModalOpen] = useState(false);
   const [selectedApplicant, setSelectedApplicant] = useState<Applicant | null>(null);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
@@ -153,7 +178,7 @@ export default function Opportunities() {
               </TabsTrigger>
             </TabsList>
           </Tabs>
-          <Button variant="outline" size="icon" className="h-9 w-9">
+          <Button variant="outline" size="icon" className="h-9 w-9" onClick={() => refetchList()}>
             <RefreshCw className="h-4 w-4" />
           </Button>
           <Button className="gap-2" onClick={() => setCreateModalOpen(true)}>
@@ -186,12 +211,18 @@ export default function Opportunities() {
       {/* Results Info */}
       <div className="mb-4">
         <p className="text-sm text-foreground/80">
-          {t.showingXOfYOpportunities.replace("{filtered}", filteredOpportunities.length.toString()).replace("{total}", opportunities.length.toString())}
+          {listLoading
+            ? "Loading…"
+            : t.showingXOfYOpportunities
+                .replace("{filtered}", filteredOpportunities.length.toString())
+                .replace("{total}", opportunities.length.toString())}
         </p>
       </div>
 
       {/* Opportunities View */}
-      {viewMode === "list" ? (
+      {listLoading ? (
+        <div className="text-center py-16 text-muted-foreground">Loading opportunities…</div>
+      ) : viewMode === "list" ? (
         <OpportunitiesTable
           opportunities={filteredOpportunities}
           selectedOpportunities={selectedOpportunities}
@@ -204,7 +235,7 @@ export default function Opportunities() {
           onViewApplicants={handleViewApplicants}
           onDelete={(opp) => { setDeleteOpportunity(opp); setDeleteModalOpen(true); }}
         />
-      ) : (
+      ) : viewMode === "card" ? (
         <OpportunitiesCardView
           opportunities={filteredOpportunities}
           onOpenDrawer={handleOpenDrawer}
@@ -213,7 +244,7 @@ export default function Opportunities() {
           onViewApplicants={handleViewApplicants}
           onDelete={(opp) => { setDeleteOpportunity(opp); setDeleteModalOpen(true); }}
         />
-      )}
+      ) : null}
 
       {/* Modals */}
       <CreateEditOpportunityModal
@@ -236,7 +267,7 @@ export default function Opportunities() {
         open={applicantsDrawerOpen}
         onOpenChange={setApplicantsDrawerOpen}
         opportunity={applicantsOpportunity}
-        applicants={mockApplicants}
+        applicants={applicants}
         onViewApplication={(a) => { setSelectedApplicant(a); setApplicationModalOpen(true); }}
         onShortlist={(a) => toast({ title: `${a.name} shortlisted` })}
         onMessage={(a) => { setSelectedApplicant(a); setMessageModalOpen(true); }}

@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { format } from "date-fns";
 import { Event, EventFormData, EventType } from "@/types/events";
 import {
   Dialog,
@@ -20,7 +21,6 @@ import {
 } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { format } from "date-fns";
 import { CalendarIcon, ChevronLeft, ChevronRight, Upload, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useT } from "@/hooks/useT";
@@ -40,25 +40,50 @@ export function CreateEditEventModal({
 }: CreateEditEventModalProps) {
   const t = useT("events");
   const [currentStep, setCurrentStep] = useState(1);
-  const [formData, setFormData] = useState<EventFormData>({
-    title: event?.title || "",
-    description: event?.description || "",
+  const defaultForm: EventFormData = {
+    title: "",
+    description: "",
     bannerImage: null,
-    date: event?.date ? new Date(event.date) : undefined,
-    startTime: event?.startTime || "",
-    endTime: event?.endTime || "",
-    eventType: event?.eventType || "in-person",
-    location: event?.location || "",
-    virtualLink: event?.virtualLink || "",
-    isPaid: event?.isPaid || false,
-    ticketPrice: event?.ticketPrice || 0,
-    currency: event?.currency || "USD",
-    hasParticipantLimit: event?.hasParticipantLimit || false,
-    maxParticipants: event?.maxParticipants || 100,
+    date: undefined,
+    startTime: "",
+    endTime: "",
+    eventType: "in-person",
+    location: "",
+    virtualLink: "",
+    isPaid: false,
+    ticketPrice: 0,
+    currency: "USD",
+    hasParticipantLimit: false,
+    maxParticipants: 100,
     publishNow: false,
     notifyMembers: true,
     allowComments: true,
-  });
+  };
+  const [formData, setFormData] = useState<EventFormData>(defaultForm);
+
+  useEffect(() => {
+    if (!event) {
+      setFormData(defaultForm);
+      return;
+    }
+    const eventType: EventType =
+      event.locationType === "physical" ? "in-person" : event.locationType === "virtual" ? "virtual" : "hybrid";
+    setFormData({
+      ...defaultForm,
+      title: event.title,
+      description: event.description,
+      date: event.startAt ? new Date(event.startAt) : undefined,
+      startTime: event.startAt ? format(new Date(event.startAt), "HH:mm") : "",
+      endTime: event.endAt ? format(new Date(event.endAt), "HH:mm") : "",
+      eventType,
+      location: event.locationDetails?.address || event.locationDetails?.venueName || "",
+      virtualLink: event.locationDetails?.virtualLink || "",
+      isPaid: event.isPaid,
+      ticketPrice: event.tickets?.[0] ? event.tickets[0].priceInCents / 100 : 0,
+      hasParticipantLimit: event.availableSpots != null && event.availableSpots > 0,
+      maxParticipants: event.availableSpots ?? 100,
+    });
+  }, [event?.id]);
 
   const steps = [
     { id: 1, title: t.basicInformation },

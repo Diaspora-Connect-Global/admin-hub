@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { format } from "date-fns";
 import { Event, EventRegistration } from "@/types/events";
 import {
   Sheet,
@@ -24,90 +25,74 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { StatusBadge } from "@/components/ui/StatusBadge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { 
-  Search, 
-  Download, 
-  MoreHorizontal, 
-  CheckCircle, 
-  Send, 
-  UserX,
-  Users
-} from "lucide-react";
+import { Search, Download, MoreHorizontal, CheckCircle, UserX, Users } from "lucide-react";
 import { useT } from "@/hooks/useT";
+import {
+  useGetEventRegistrations,
+  useMarkRegistrationCheckedIn,
+  useRemoveEventRegistration,
+} from "@/hooks/events";
 
 interface RegistrationsDrawerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   event: Event | null;
+  onRefetch?: () => void;
 }
-
-// Mock registrations data
-const mockRegistrations: EventRegistration[] = [
-  {
-    id: "1",
-    eventId: "1",
-    userId: "u1",
-    userName: "John Doe",
-    userEmail: "john@example.com",
-    userPhone: "+1 234 567 8900",
-    paymentStatus: "paid",
-    checkInStatus: "checked-in",
-    registeredAt: "Dec 1, 2024",
-  },
-  {
-    id: "2",
-    eventId: "1",
-    userId: "u2",
-    userName: "Jane Smith",
-    userEmail: "jane@example.com",
-    userPhone: "+1 234 567 8901",
-    paymentStatus: "paid",
-    checkInStatus: "not-checked-in",
-    registeredAt: "Dec 2, 2024",
-  },
-  {
-    id: "3",
-    eventId: "1",
-    userId: "u3",
-    userName: "Mike Johnson",
-    userEmail: "mike@example.com",
-    userPhone: "+1 234 567 8902",
-    paymentStatus: "pending",
-    checkInStatus: "not-checked-in",
-    registeredAt: "Dec 3, 2024",
-  },
-];
 
 export function RegistrationsDrawer({
   open,
   onOpenChange,
   event,
+  onRefetch,
 }: RegistrationsDrawerProps) {
   const [searchQuery, setSearchQuery] = useState("");
-  const [paymentFilter, setPaymentFilter] = useState<string>("all");
-  const [checkInFilter, setCheckInFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
   const t = useT("events");
 
-  if (!event) return null;
+  const { data, loading, refetch } = useGetEventRegistrations(
+    event?.id ? { eventId: event.id, limit: 100, offset: 0, status: statusFilter === "all" ? undefined : statusFilter } : null
+  );
+  const [markCheckedIn] = useMarkRegistrationCheckedIn();
+  const [removeRegistration] = useRemoveEventRegistration();
 
-  const filteredRegistrations = mockRegistrations.filter((reg) => {
-    const matchesSearch = 
-      reg.userName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      reg.userEmail.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      reg.userPhone?.includes(searchQuery);
-    
-    const matchesPayment = paymentFilter === "all" || reg.paymentStatus === paymentFilter;
-    const matchesCheckIn = checkInFilter === "all" || reg.checkInStatus === checkInFilter;
+  const registrations: EventRegistration[] = data?.getEventRegistrations?.registrations ?? [];
+  const total = data?.getEventRegistrations?.total ?? 0;
 
-    return matchesSearch && matchesPayment && matchesCheckIn;
+  const filteredRegistrations = registrations.filter((reg) => {
+    const matchesSearch =
+      reg.userId.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (reg.totalAmount ?? "").toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesSearch;
   });
+
+  const handleMarkCheckedIn = async (reg: EventRegistration) => {
+    try {
+      await markCheckedIn({ variables: { registrationId: reg.id } });
+      refetch();
+      onRefetch?.();
+    } catch (_e) {
+      // toast on error if desired
+    }
+  };
+
+  const handleRemove = async (reg: EventRegistration) => {
+    try {
+      await removeRegistration({ variables: { registrationId: reg.id } });
+      refetch();
+      onRefetch?.();
+    } catch (_e) {
+      // toast on error if desired
+    }
+  };
+
+  if (!event) return null;
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -129,27 +114,15 @@ export function RegistrationsDrawer({
                 className="pl-9"
               />
             </div>
-            {event.isPaid && (
-              <Select value={paymentFilter} onValueChange={setPaymentFilter}>
-                <SelectTrigger className="w-[140px]">
-                  <SelectValue placeholder={t.payment} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">{t.allPayments}</SelectItem>
-                  <SelectItem value="paid">{t.paidStatus}</SelectItem>
-                  <SelectItem value="pending">{t.pending}</SelectItem>
-                  <SelectItem value="refunded">{t.refundedPayment}</SelectItem>
-                </SelectContent>
-              </Select>
-            )}
-            <Select value={checkInFilter} onValueChange={setCheckInFilter}>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="w-[140px]">
                 <SelectValue placeholder={t.status} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">{t.allCheckInStatus}</SelectItem>
-                <SelectItem value="checked-in">{t.checkedIn}</SelectItem>
-                <SelectItem value="not-checked-in">{t.notCheckedIn}</SelectItem>
+                <SelectItem value="all">{t.allStatus}</SelectItem>
+                <SelectItem value="pending">{t.pending}</SelectItem>
+                <SelectItem value="confirmed">Confirmed</SelectItem>
+                <SelectItem value="cancelled">Cancelled</SelectItem>
               </SelectContent>
             </Select>
             <Button variant="outline" size="icon">
@@ -158,13 +131,15 @@ export function RegistrationsDrawer({
           </div>
 
           {/* Table */}
-          {filteredRegistrations.length > 0 ? (
+          {loading ? (
+            <div className="text-center py-12 text-muted-foreground">Loading…</div>
+          ) : filteredRegistrations.length > 0 ? (
             <div className="rounded-lg border border-border overflow-hidden">
               <Table>
                 <TableHeader>
                   <TableRow className="bg-muted/50">
-                    <TableHead>{t.attendee}</TableHead>
-                    <TableHead>{t.contact}</TableHead>
+                    <TableHead>User ID</TableHead>
+                    <TableHead>Quantity</TableHead>
                     {event.isPaid && <TableHead>{t.payment}</TableHead>}
                     <TableHead>{t.status}</TableHead>
                     <TableHead>{t.registeredAt}</TableHead>
@@ -174,47 +149,24 @@ export function RegistrationsDrawer({
                 <TableBody>
                   {filteredRegistrations.map((registration) => (
                     <TableRow key={registration.id}>
-                      <TableCell>
-                        <div className="flex items-center gap-3">
-                          <Avatar className="h-8 w-8">
-                            <AvatarImage src={registration.userPhoto} />
-                            <AvatarFallback>
-                              {registration.userName.split(" ").map(n => n[0]).join("")}
-                            </AvatarFallback>
-                          </Avatar>
-                          <span className="font-medium">{registration.userName}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="text-sm">
-                          <p>{registration.userEmail}</p>
-                          <p className="text-muted-foreground">{registration.userPhone}</p>
-                        </div>
-                      </TableCell>
+                      <TableCell className="font-medium">{registration.userId}</TableCell>
+                      <TableCell>{registration.quantity}</TableCell>
                       {event.isPaid && (
-                        <TableCell>
-                          <StatusBadge
-                            variant={
-                              registration.paymentStatus === "paid"
-                                ? "active"
-                                : registration.paymentStatus === "pending"
-                                ? "warning"
-                                : "inactive"
-                            }
-                          >
-                            {registration.paymentStatus}
-                          </StatusBadge>
-                        </TableCell>
+                        <TableCell>{registration.totalAmount ?? "—"}</TableCell>
                       )}
                       <TableCell>
                         <StatusBadge
-                          variant={registration.checkInStatus === "checked-in" ? "active" : "inactive"}
+                          variant={
+                            registration.status === "confirmed" ? "active" : registration.status === "pending" ? "warning" : "inactive"
+                          }
                         >
-                          {registration.checkInStatus === "checked-in" ? t.checkedIn : t.notCheckedIn}
+                          {registration.status}
                         </StatusBadge>
                       </TableCell>
                       <TableCell className="text-muted-foreground">
-                        {registration.registeredAt}
+                        {registration.registeredAt
+                          ? format(new Date(registration.registeredAt), "MMM d, yyyy HH:mm")
+                          : "—"}
                       </TableCell>
                       <TableCell>
                         <DropdownMenu>
@@ -224,15 +176,11 @@ export function RegistrationsDrawer({
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleMarkCheckedIn(registration)}>
                               <CheckCircle className="mr-2 h-4 w-4" />
                               {t.markAsCheckedIn}
                             </DropdownMenuItem>
-                            <DropdownMenuItem>
-                              <Send className="mr-2 h-4 w-4" />
-                              {t.resendTicket}
-                            </DropdownMenuItem>
-                            <DropdownMenuItem className="text-destructive">
+                            <DropdownMenuItem className="text-destructive" onClick={() => handleRemove(registration)}>
                               <UserX className="mr-2 h-4 w-4" />
                               {t.removeAttendee}
                             </DropdownMenuItem>

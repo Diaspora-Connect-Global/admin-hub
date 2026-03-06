@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useLocation } from "react-router-dom";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import { useT } from "@/hooks/useT";
@@ -21,138 +21,23 @@ import { RegistrationsDrawer } from "@/components/events/RegistrationsDrawer";
 import { DeleteEventModal } from "@/components/events/DeleteEventModal";
 import { EventAnalyticsWidget } from "@/components/events/EventAnalyticsWidget";
 import { toast } from "@/hooks/use-toast";
-
-// Mock data
-const mockEvents: Event[] = [
-  {
-    id: "1",
-    title: "Annual General Meeting 2024",
-    description: "Join us for our yearly gathering to discuss association matters and elect new leaders. This is an important event for all members.",
-    bannerEmoji: "🎤",
-    date: "Dec 15, 2024",
-    startTime: "2:00 PM",
-    endTime: "5:00 PM",
-    eventType: "virtual",
-    virtualLink: "https://zoom.us/meeting",
-    isPaid: false,
-    hasParticipantLimit: true,
-    maxParticipants: 500,
-    registeredCount: 342,
-    status: "published",
-    publishNow: true,
-    notifyMembers: true,
-    allowComments: true,
-    views: 1250,
-    ticketsSold: 0,
-    revenue: 0,
-    createdAt: "2024-11-01",
-    updatedAt: "2024-11-15",
-  },
-  {
-    id: "2",
-    title: "Tech Career Workshop",
-    description: "Learn about career opportunities in the tech industry from industry experts. Network with professionals and get career advice.",
-    bannerEmoji: "💼",
-    date: "Dec 20, 2024",
-    startTime: "10:00 AM",
-    endTime: "1:00 PM",
-    eventType: "in-person",
-    location: "Accra Innovation Hub, Ghana",
-    isPaid: true,
-    ticketPrice: 25,
-    currency: "$",
-    hasParticipantLimit: true,
-    maxParticipants: 100,
-    registeredCount: 87,
-    status: "published",
-    publishNow: true,
-    notifyMembers: true,
-    allowComments: true,
-    views: 890,
-    ticketsSold: 87,
-    revenue: 2175,
-    createdAt: "2024-11-10",
-    updatedAt: "2024-11-20",
-  },
-  {
-    id: "3",
-    title: "Networking Dinner",
-    description: "An evening of networking and celebration with fellow diaspora members. Enjoy great food and make new connections.",
-    bannerEmoji: "🍽️",
-    date: "Dec 28, 2024",
-    startTime: "6:00 PM",
-    endTime: "10:00 PM",
-    eventType: "in-person",
-    location: "Marriott Hotel, Accra",
-    isPaid: true,
-    ticketPrice: 75,
-    currency: "$",
-    hasParticipantLimit: true,
-    maxParticipants: 150,
-    registeredCount: 150,
-    status: "published",
-    publishNow: true,
-    notifyMembers: true,
-    allowComments: true,
-    views: 2100,
-    ticketsSold: 150,
-    revenue: 11250,
-    createdAt: "2024-11-05",
-    updatedAt: "2024-11-25",
-  },
-  {
-    id: "4",
-    title: "Webinar: Investment in Ghana",
-    description: "Explore investment opportunities in Ghana's growing economy. Learn from experts about real estate, agriculture, and tech investments.",
-    bannerEmoji: "📈",
-    date: "Nov 30, 2024",
-    startTime: "3:00 PM",
-    endTime: "5:00 PM",
-    eventType: "virtual",
-    virtualLink: "https://meet.google.com/abc-defg",
-    isPaid: false,
-    hasParticipantLimit: true,
-    maxParticipants: 300,
-    registeredCount: 256,
-    status: "completed",
-    publishNow: true,
-    notifyMembers: true,
-    allowComments: true,
-    views: 3200,
-    ticketsSold: 0,
-    revenue: 0,
-    createdAt: "2024-10-15",
-    updatedAt: "2024-11-30",
-  },
-  {
-    id: "5",
-    title: "Community Health Fair",
-    description: "Free health screenings and wellness education for all community members.",
-    bannerEmoji: "🏥",
-    date: "Jan 15, 2025",
-    startTime: "9:00 AM",
-    endTime: "4:00 PM",
-    eventType: "in-person",
-    location: "Community Center, Tema",
-    isPaid: false,
-    hasParticipantLimit: false,
-    registeredCount: 45,
-    status: "draft",
-    publishNow: false,
-    notifyMembers: true,
-    allowComments: true,
-    views: 0,
-    ticketsSold: 0,
-    revenue: 0,
-    createdAt: "2024-12-01",
-    updatedAt: "2024-12-01",
-  },
-];
+import {
+  useListEvents,
+  useGetEvent,
+  useCreateEvent,
+  useUpdateEvent,
+  useDeleteEvent,
+  usePublishEvent,
+} from "@/hooks/events";
 
 export default function Events() {
   const location = useLocation();
   const t = useT("events");
-  const [events] = useState<Event[]>(mockEvents);
+
+  const [listInput, setListInput] = useState<{ limit?: number; offset?: number; searchTerm?: string; status?: string }>({ limit: 20, offset: 0 });
+  const { data: listData, loading: listLoading, error: listError, refetch: refetchList } = useListEvents(listInput);
+  const events: Event[] = Array.isArray(listData?.listEvents?.events) ? listData.listEvents.events : [];
+  const totalEvents = listData?.listEvents?.total ?? 0;
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
@@ -160,14 +45,29 @@ export default function Events() {
 
   // Modal states
   const [createModalOpen, setCreateModalOpen] = useState(false);
-  const [editingEvent, setEditingEvent] = useState<Event | null>(null);
+  const [editingEventId, setEditingEventId] = useState<string | null>(null);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [detailsDrawerOpen, setDetailsDrawerOpen] = useState(false);
   const [registrationsDrawerOpen, setRegistrationsDrawerOpen] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [eventToDelete, setEventToDelete] = useState<Event | null>(null);
 
-  // Handle quick action navigation
+  const { data: editingEventData } = useGetEvent(editingEventId);
+  const editingEvent = editingEventData?.getEvent ?? null;
+
+  const [createEvent] = useCreateEvent();
+  const [updateEvent] = useUpdateEvent();
+  const [deleteEvent] = useDeleteEvent();
+  const [publishEvent] = usePublishEvent();
+
+  useEffect(() => {
+    setListInput((prev) => ({
+      ...prev,
+      searchTerm: searchQuery.trim() || undefined,
+      status: statusFilter === "all" ? undefined : statusFilter,
+    }));
+  }, [searchQuery, statusFilter]);
+
   useEffect(() => {
     if (location.state?.openCreate) {
       setCreateModalOpen(true);
@@ -175,50 +75,53 @@ export default function Events() {
     }
   }, [location.state]);
 
-  // Filter and sort events
   const filteredEvents = events
     .filter((event) => {
-      const matchesSearch = 
-        event.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        event.description.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesStatus = statusFilter === "all" || event.status === statusFilter;
-      const matchesType = 
-        typeFilter === "all" || 
+      const matchesType =
+        typeFilter === "all" ||
         (typeFilter === "free" && !event.isPaid) ||
         (typeFilter === "paid" && event.isPaid);
-      return matchesSearch && matchesStatus && matchesType;
+      return matchesType;
     })
     .sort((a, b) => {
+      const aTime = a.createdAt ? new Date(a.createdAt).getTime() : new Date(a.startAt).getTime();
+      const bTime = b.createdAt ? new Date(b.createdAt).getTime() : new Date(b.startAt).getTime();
       switch (sortBy) {
         case "oldest":
-          return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+          return aTime - bTime;
         case "date-soonest":
-          return new Date(a.date).getTime() - new Date(b.date).getTime();
+          return new Date(a.startAt).getTime() - new Date(b.startAt).getTime();
         case "date-latest":
-          return new Date(b.date).getTime() - new Date(a.date).getTime();
+          return new Date(b.startAt).getTime() - new Date(a.startAt).getTime();
         default:
-          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+          return bTime - aTime;
       }
     });
 
-  // Stats
-  const upcomingCount = events.filter(e => e.status === "published" || e.status === "draft").length;
-  const totalRegistrations = events.reduce((sum, e) => sum + e.registeredCount, 0);
-  const totalRevenue = events.reduce((sum, e) => sum + e.revenue, 0);
-  const avgAttendance = events.length > 0 
-    ? Math.round((events.filter(e => e.hasParticipantLimit && e.maxParticipants)
-        .reduce((sum, e) => sum + (e.registeredCount / (e.maxParticipants || 1)) * 100, 0) / 
-        events.filter(e => e.hasParticipantLimit).length) || 0)
-    : 0;
+  const upcomingCount = events.filter((e) => e.status === "published" || e.status === "draft").length;
+  const totalRegistrations = events.reduce((sum, e) => sum + e.registrationCount, 0);
+  const totalRevenue = 0;
+  const avgAttendance =
+    events.length > 0 && events.some((e) => e.availableSpots != null && e.availableSpots > 0)
+      ? Math.round(
+          events
+            .filter((e) => e.availableSpots != null && e.availableSpots > 0)
+            .reduce((sum, e) => sum + (e.registrationCount / (e.availableSpots ?? 1)) * 100, 0) /
+            events.filter((e) => e.availableSpots != null && e.availableSpots > 0).length
+        ) || 0
+      : 0;
 
-  // Handlers
+  const refetch = useCallback(() => {
+    refetchList();
+  }, [refetchList]);
+
   const handleViewDetails = (event: Event) => {
     setSelectedEvent(event);
     setDetailsDrawerOpen(true);
   };
 
   const handleEdit = (event: Event) => {
-    setEditingEvent(event);
+    setEditingEventId(event.id);
     setCreateModalOpen(true);
   };
 
@@ -227,13 +130,18 @@ export default function Events() {
     setRegistrationsDrawerOpen(true);
   };
 
-  const handleTogglePublish = (event: Event) => {
-    toast({
-      title: event.status === "published" ? "Event Unpublished" : "Event Published",
-      description: event.status === "published" 
-        ? "Event is now hidden from members." 
-        : "Your event is now live!",
-    });
+  const handleTogglePublish = async (event: Event) => {
+    if (event.status === "published") {
+      toast({ title: "Unpublish", description: "Use edit to change status to draft." });
+      return;
+    }
+    try {
+      await publishEvent({ variables: { id: event.id } });
+      toast({ title: "Event Published", description: "Your event is now live!" });
+      refetch();
+    } catch (e) {
+      toast({ title: "Error", description: (e as Error).message, variant: "destructive" });
+    }
   };
 
   const handleDelete = (event: Event) => {
@@ -241,25 +149,73 @@ export default function Events() {
     setDeleteModalOpen(true);
   };
 
-  const handleConfirmDelete = () => {
-    toast({
-      title: "Event Deleted",
-      description: "The event has been permanently deleted.",
-    });
-    setDeleteModalOpen(false);
-    setEventToDelete(null);
+  const handleConfirmDelete = async () => {
+    if (!eventToDelete) return;
+    try {
+      await deleteEvent({ variables: { id: eventToDelete.id } });
+      toast({ title: "Event Deleted", description: "The event has been permanently deleted." });
+      setDeleteModalOpen(false);
+      setEventToDelete(null);
+      refetch();
+    } catch (e) {
+      toast({ title: "Error", description: (e as Error).message, variant: "destructive" });
+    }
   };
 
-  const handleCreateSubmit = (data: EventFormData) => {
-    toast({
-      title: editingEvent ? "Event Updated" : "Event Created",
-      description: editingEvent 
-        ? "Your changes have been saved."
-        : data.publishNow 
-          ? "Your event is now live!" 
-          : "Event saved as draft.",
-    });
-    setEditingEvent(null);
+  const handleCreateSubmit = async (data: EventFormData) => {
+    const startAt = data.date && data.startTime
+      ? new Date(`${data.date.toISOString().slice(0, 10)}T${data.startTime}`).toISOString()
+      : new Date().toISOString();
+    const endAt = data.date && data.endTime
+      ? new Date(`${data.date.toISOString().slice(0, 10)}T${data.endTime}`).toISOString()
+      : new Date().toISOString();
+    const locationType = data.eventType === "in-person" ? "physical" : data.eventType === "virtual" ? "virtual" : "hybrid";
+    const locationDetails = data.eventType === "virtual"
+      ? { type: locationType, virtualLink: data.virtualLink || undefined }
+      : { type: locationType, address: data.location, venueName: data.location };
+
+    try {
+      if (editingEventId) {
+        await updateEvent({
+          variables: {
+            id: editingEventId,
+            input: {
+              title: data.title,
+              description: data.description,
+              locationType,
+              locationDetails,
+              startAt,
+              endAt,
+              tags: [],
+            },
+          },
+        });
+        toast({ title: "Event Updated", description: "Your changes have been saved." });
+      } else {
+        await createEvent({
+          variables: {
+            input: {
+              ownerType: "USER",
+              ownerId: "current-user-id",
+              title: data.title,
+              description: data.description,
+              eventCategory: data.eventCategory ?? "general",
+              locationType,
+              locationDetails,
+              startAt,
+              endAt,
+              isPaid: data.isPaid,
+            },
+          },
+        });
+        toast({ title: "Event Created", description: data.publishNow ? "Your event is now live!" : "Event saved as draft." });
+      }
+      setEditingEventId(null);
+      setCreateModalOpen(false);
+      refetch();
+    } catch (e) {
+      toast({ title: "Error", description: (e as Error).message, variant: "destructive" });
+    }
   };
 
   return (
@@ -357,7 +313,11 @@ export default function Events() {
 
         <TabsContent value="events">
           {/* Events Grid */}
-          {filteredEvents.length > 0 ? (
+          {listLoading ? (
+            <div className="text-center py-16 text-muted-foreground">Loading events…</div>
+          ) : listError ? (
+            <div className="text-center py-16 text-destructive">Failed to load events. Try again.</div>
+          ) : filteredEvents.length > 0 ? (
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
               {filteredEvents.map((event, index) => (
                 <div
@@ -401,7 +361,7 @@ export default function Events() {
         open={createModalOpen}
         onOpenChange={(open) => {
           setCreateModalOpen(open);
-          if (!open) setEditingEvent(null);
+          if (!open) setEditingEventId(null);
         }}
         event={editingEvent}
         onSubmit={handleCreateSubmit}
@@ -421,6 +381,7 @@ export default function Events() {
         open={registrationsDrawerOpen}
         onOpenChange={setRegistrationsDrawerOpen}
         event={selectedEvent}
+        onRefetch={refetch}
       />
 
       <DeleteEventModal

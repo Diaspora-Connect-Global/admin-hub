@@ -16,6 +16,7 @@ export { PRIORITY_LEVELS, type PriorityLevel, type SetOpportunityPriorityInput }
 /**
  * Set opportunity priority (pin/boost). System admin only.
  * Backend returns 403 if caller is not super admin.
+ * Pass variables: { opportunityId: string, priority: "HIGH" | "NORMAL" | "LOW" }.
  */
 export function useSetOpportunityPriority() {
   return useMutation(SET_OPPORTUNITY_PRIORITY);
