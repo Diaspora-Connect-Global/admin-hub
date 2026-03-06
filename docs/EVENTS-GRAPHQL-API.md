@@ -1,209 +1,304 @@
-# Events — GraphQL API Requirements
+# Events — GraphQL API (Provided Schema)
 
-This document describes the **GraphQL API the admin hub Events feature expects**, so you can implement or expose the backend operations. The Events UI currently uses mock data; wiring it to real APIs will need the following.
+This document describes the **Events GraphQL API** as provided by the backend. Use it to wire the admin hub Events page and components.
 
 ---
 
-## 1. Types (schema)
+## 1. Enums
+
+```graphql
+enum EventStatus {
+  draft
+  published
+  cancelled
+  completed
+}
+
+enum EventLocationType {
+  physical
+  virtual
+  hybrid
+}
+```
+
+---
+
+## 2. Types
+
+### EventLocation
+
+```graphql
+type EventLocation {
+  type: EventLocationType!
+  venueName: String
+  address: String
+  city: String
+  country: String
+  virtualLink: String
+  platform: String
+}
+```
+
+### EventTicket
+
+```graphql
+type EventTicket {
+  id: ID!
+  name: String!
+  priceInCents: Int!
+  description: String
+  availableQuantity: Int
+}
+```
 
 ### Event
-
-Used for list, get-by-id, and create/update responses.
 
 ```graphql
 type Event {
   id: ID!
   title: String!
-  description: String
-  bannerImage: String
-  bannerEmoji: String
-  date: String!           # e.g. "Dec 15, 2024"
-  startTime: String!     # e.g. "2:00 PM"
-  endTime: String!       # e.g. "5:00 PM"
-  eventType: String!     # "in-person" | "virtual"
-  location: String
-  virtualLink: String
+  description: String!
+  status: EventStatus!
+  startAt: String!        # ISO 8601
+  endAt: String!         # ISO 8601
+  eventCategory: String!
+  locationType: EventLocationType!
+  locationDetails: EventLocation
   isPaid: Boolean!
-  ticketPrice: Float
-  currency: String       # e.g. "USD", "$"
-  hasParticipantLimit: Boolean!
-  maxParticipants: Int
-  registeredCount: Int!
-  status: String!        # "published" | "unpublished" | "draft" | "ongoing" | "completed" | "cancelled"
-  publishNow: Boolean
-  notifyMembers: Boolean
-  allowComments: Boolean
-  views: Int
-  ticketsSold: Int
-  revenue: Float
-  createdAt: String!
+  registrationCount: Int!
+  availableSpots: Int
+  isRegistered: Boolean!
+  canRegister: Boolean!
+  tickets: [EventTicket]
+  coverImageUrl: String
+  tags: [String]
+  timezone: String
+  createdAt: String
   updatedAt: String
-  communityId: String    # optional, if events are scoped to community
+}
+```
+
+### EventListResponse
+
+```graphql
+type EventListResponse {
+  events: [Event!]!
+  total: Int!
 }
 ```
 
 ### EventRegistration
-
-Used for the “Manage registrations” drawer (list per event).
 
 ```graphql
 type EventRegistration {
   id: ID!
   eventId: ID!
   userId: ID!
-  userName: String
-  userEmail: String!
-  userPhone: String
-  paymentStatus: String!   # "paid" | "pending" | "refunded"
-  checkInStatus: String!  # "checked-in" | "not-checked-in"
-  registeredAt: String!
+  ticketId: String
+  quantity: Int!
+  status: String!         # pending | confirmed | cancelled
+  totalAmount: String
+  registeredAt: String
+  confirmedAt: String
+  cancelledAt: String
+  createdAt: String
 }
 ```
 
-### Create/Update input
-
-Used for create and update mutations.
+### EventRegistrationListResponse
 
 ```graphql
-input CreateEventInput {
-  title: String!
-  description: String
-  bannerImage: String
-  date: String!
-  startTime: String!
-  endTime: String!
-  eventType: String!      # "in-person" | "virtual"
-  location: String
-  virtualLink: String
-  isPaid: Boolean!
-  ticketPrice: Float
-  currency: String
-  hasParticipantLimit: Boolean!
-  maxParticipants: Int
-  publishNow: Boolean!
-  notifyMembers: Boolean!
-  allowComments: Boolean!
-  communityId: String
+type EventRegistrationListResponse {
+  registrations: [EventRegistration!]!
+  total: Int!
 }
+```
 
-# Same shape for update; all fields optional except id
-input UpdateEventInput {
-  id: ID!
-  title: String
-  description: String
-  bannerImage: String
-  date: String
-  startTime: String
-  endTime: String
-  eventType: String
-  location: String
-  virtualLink: String
-  isPaid: Boolean
-  ticketPrice: Float
-  currency: String
-  hasParticipantLimit: Boolean
-  maxParticipants: Int
-  publishNow: Boolean
-  notifyMembers: Boolean
-  allowComments: Boolean
+### DeleteEventResult
+
+```graphql
+type DeleteEventResult {
+  success: Boolean!
+  message: String
 }
 ```
 
 ---
 
-## 2. Queries
+## 3. Inputs
 
-### List events (for Events page list + filters)
-
-Used for the main Events list with search, status, type (free/paid), and sort.
+### ListEventsInput
 
 ```graphql
-query ListEvents(
-  $limit: Int
-  $offset: Int
-  $searchTerm: String
-  $status: String        # "published" | "draft" | "completed" | "cancelled" | etc.
-  $communityId: ID
-) {
-  listEvents(
-    limit: $limit
-    offset: $offset
-    searchTerm: $searchTerm
-    status: $status
-    communityId: $communityId
-  ) {
-    events { ... EventFields ... }
-    total: Int!   # or Float! depending on your schema
+input ListEventsInput {
+  limit: Int       # default 20
+  offset: Int      # default 0
+  searchTerm: String
+  status: String   # draft | published | cancelled | completed
+  communityId: ID
+  ownerType: String
+  ownerId: ID
+}
+```
+
+### CreateEventInput
+
+```graphql
+input CreateEventInput {
+  ownerType: String!      # USER | COMMUNITY | ASSOCIATION
+  ownerId: ID!
+  title: String!
+  description: String!
+  eventCategory: String!
+  locationType: String!   # physical | virtual | hybrid
+  locationDetails: CreateEventLocationInput
+  startAt: String!        # ISO 8601
+  endAt: String!         # ISO 8601
+  isPaid: Boolean
+}
+```
+
+### CreateEventLocationInput
+
+```graphql
+input CreateEventLocationInput {
+  type: String!
+  venue: String
+  address: String
+  city: String
+  country: String
+  virtualLink: String
+  platform: String
+}
+```
+
+### UpdateEventInput
+
+```graphql
+input UpdateEventInput {
+  title: String
+  description: String
+  eventCategory: String
+  locationType: String
+  locationDetails: CreateEventLocationInput
+  startAt: String
+  endAt: String
+  timezone: String
+  coverImageUrl: String
+  tags: [String]
+  capacity: Int
+  visibility: String
+}
+```
+
+---
+
+## 4. Queries
+
+### listEvents (paginated list with filters)
+
+```graphql
+query ListEvents($input: ListEventsInput) {
+  listEvents(input: $input) {
+    events {
+      id
+      title
+      status
+      startAt
+      endAt
+      eventCategory
+      locationType
+      locationDetails { type city country virtualLink }
+      isPaid
+      registrationCount
+      availableSpots
+      coverImageUrl
+    }
+    total
   }
 }
 ```
 
-**Suggested default:** `limit: 20`, `offset: 0`.
-
----
-
-### Get event by ID (for detail view / edit prefill)
-
-Used when opening event details or the edit modal.
+### getEvent (single event by ID; replaces legacy `event`)
 
 ```graphql
 query GetEvent($id: ID!) {
   getEvent(id: $id) {
-    ... EventFields
+    id
+    title
+    description
+    status
+    startAt
+    endAt
+    eventCategory
+    locationType
+    locationDetails {
+      type
+      venueName
+      address
+      city
+      country
+      virtualLink
+      platform
+    }
+    isPaid
+    registrationCount
+    availableSpots
+    isRegistered
+    canRegister
+    tickets {
+      id
+      name
+      priceInCents
+      availableQuantity
+    }
+    coverImageUrl
+    tags
+    timezone
+    createdAt
+    updatedAt
   }
 }
 ```
 
----
-
-### List registrations for an event (for “Manage registrations” drawer)
-
-Used in the registrations drawer: list, search, filter by payment/check-in.
+### getEventRegistrations (registrations for an event)
 
 ```graphql
 query GetEventRegistrations(
   $eventId: ID!
   $limit: Int
   $offset: Int
-  $searchTerm: String
-  $paymentStatus: String   # "all" | "paid" | "pending" | "refunded"
-  $checkInStatus: String   # "all" | "checked-in" | "not-checked-in"
+  $status: String
 ) {
   getEventRegistrations(
     eventId: $eventId
     limit: $limit
     offset: $offset
-    searchTerm: $searchTerm
-    paymentStatus: $paymentStatus
-    checkInStatus: $checkInStatus
+    status: $status
   ) {
-    registrations { ... EventRegistrationFields ... }
-    total: Int!
-  }
-}
-```
-
-If you prefer a single “get event with registrations” query, the UI can use that instead, e.g.:
-
-```graphql
-query GetEvent($id: ID!) {
-  getEvent(id: $id) {
-    ... EventFields
-    registrations(limit: 100, offset: 0) {
-      items { ... EventRegistrationFields ... }
-      total
+    registrations {
+      id
+      eventId
+      userId
+      ticketId
+      quantity
+      status
+      totalAmount
+      registeredAt
+      confirmedAt
+      cancelledAt
+      createdAt
     }
+    total
   }
 }
 ```
 
 ---
 
-## 3. Mutations
+## 5. Mutations
 
-### Create event
-
-Used when submitting the “Create event” form.
+### createEvent (returns full Event, not ID)
 
 ```graphql
 mutation CreateEvent($input: CreateEventInput!) {
@@ -211,88 +306,65 @@ mutation CreateEvent($input: CreateEventInput!) {
     id
     title
     status
-    createdAt
+    startAt
+    endAt
   }
 }
 ```
 
----
-
-### Update event
-
-Used when saving changes in the edit modal.
+### updateEvent
 
 ```graphql
-mutation UpdateEvent($input: UpdateEventInput!) {
-  updateEvent(input: $input) {
+mutation UpdateEvent($id: ID!, $input: UpdateEventInput!) {
+  updateEvent(id: $id, input: $input) {
     id
     title
     status
-    updatedAt
+    startAt
+    endAt
+    coverImageUrl
+    tags
   }
 }
 ```
 
----
-
-### Delete event
-
-Used when confirming delete in the delete modal.
+### deleteEvent
 
 ```graphql
 mutation DeleteEvent($id: ID!) {
   deleteEvent(id: $id) {
-    success: Boolean!
-    message: String
+    success
+    message
   }
 }
 ```
 
----
-
-### Publish / unpublish event
-
-Used by the “Publish” / “Unpublish” action on a card.
+### publishEvent
 
 ```graphql
 mutation PublishEvent($id: ID!) {
   publishEvent(id: $id) {
     id
     status
+    title
   }
 }
+```
 
-mutation UnpublishEvent($id: ID!) {
-  unpublishEvent(id: $id) {
+### markRegistrationCheckedIn
+
+```graphql
+mutation MarkRegistrationCheckedIn($registrationId: ID!) {
+  markRegistrationCheckedIn(registrationId: $registrationId) {
     id
     status
   }
 }
 ```
 
-If you prefer a single mutation, e.g. `setEventStatus(id: ID!, status: String!)`, the UI can call that instead.
-
----
-
-### Registration actions (optional but useful for the drawer)
-
-Used for “Mark as checked in”, “Resend ticket”, “Remove attendee” in the registrations drawer.
+### removeEventRegistration
 
 ```graphql
-mutation MarkRegistrationCheckedIn($registrationId: ID!) {
-  markRegistrationCheckedIn(registrationId: $registrationId) {
-    id
-    checkInStatus
-  }
-}
-
-mutation ResendEventTicket($registrationId: ID!) {
-  resendEventTicket(registrationId: $registrationId) {
-    success
-    message
-  }
-}
-
 mutation RemoveEventRegistration($registrationId: ID!) {
   removeEventRegistration(registrationId: $registrationId) {
     success
@@ -303,29 +375,51 @@ mutation RemoveEventRegistration($registrationId: ID!) {
 
 ---
 
-## 4. Summary table
+## 6. Existing operations (unchanged)
 
-| Operation              | Type   | Purpose                                      |
-|------------------------|--------|----------------------------------------------|
-| `listEvents`           | Query  | Events list with filters, search, pagination |
-| `getEvent`             | Query  | Single event (detail / edit)                 |
-| `getEventRegistrations`| Query  | Registrations for one event (drawer)         |
-| `createEvent`          | Mutation | Create event (form submit)                 |
-| `updateEvent`          | Mutation | Update event (edit form submit)            |
-| `deleteEvent`          | Mutation | Delete event (confirm in modal)            |
-| `publishEvent`         | Mutation | Publish event (card action)                |
-| `unpublishEvent`       | Mutation | Unpublish event (card action)              |
-| `markRegistrationCheckedIn` | Mutation | Check-in in drawer                    |
-| `resendEventTicket`    | Mutation | Resend ticket (drawer)                    |
-| `removeEventRegistration` | Mutation | Remove attendee (drawer)                 |
+These remain as in the existing schema; not redefined above.
+
+| Operation | Type | Notes |
+|-----------|------|--------|
+| `events(limit, offset)` | Query | Returns `[Event]`. |
+| `userEvents` | Query | Returns `{ attending: [Event], saved: [Event] }`. |
+| `registerForEvent(input)` | Mutation | Returns `{ registrationId, paymentIntentClientSecret? }`. |
+| `saveEvent(eventId)` | Mutation | Returns `{ id, savedAt }`. |
+| `unsaveEvent(eventId)` | Mutation | Returns `Boolean`. |
+| `checkIn(input)` | Mutation | Returns `{ id, checkedInAt, checkInMethod }`. |
 
 ---
 
-## 5. Notes for backend
+## 7. Summary table
 
-- **Auth:** All of the above should be protected (e.g. admin or community admin only) and use the same Bearer token as the rest of the admin hub.
-- **Scoping:** If events belong to a community, include `communityId` in list/get/create/update where needed; the UI can pass it from the current context (e.g. when opened from a community detail page).
-- **IDs:** Use `ID!` for `id`, `eventId`, `userId`, `registrationId` consistently.
-- **Enums:** You can replace `String` for `status`, `eventType`, `paymentStatus`, `checkInStatus` with enums if your schema uses them; the UI currently sends/receives strings.
+| Operation | Type | Purpose |
+|-----------|------|---------|
+| `listEvents` | Query | Events list with filters, pagination (ListEventsInput). |
+| `getEvent` | Query | Single event (detail / edit). Replaces `event(id)`. |
+| `getEventRegistrations` | Query | Registrations for one event (drawer). |
+| `createEvent` | Mutation | Create event; returns full Event. |
+| `updateEvent` | Mutation | Update event (id + UpdateEventInput). |
+| `deleteEvent` | Mutation | Delete event (DeleteEventResult). |
+| `publishEvent` | Mutation | Publish event. |
+| `markRegistrationCheckedIn` | Mutation | Check-in in registrations drawer. |
+| `removeEventRegistration` | Mutation | Remove attendee in drawer. |
 
-Once you have these (or equivalent) operations and types, we can wire the Events page and components to them (replace mock data with `listEvents` / `getEvent` / `getEventRegistrations`, and hook up create/update/delete/publish and registration actions).
+**Not in provided schema:** `unpublishEvent`, `resendEventTicket` (see [APIS-NEEDED.md](./APIS-NEEDED.md)).
+
+---
+
+## 8. Breaking changes (legacy → provided)
+
+| Old | New |
+|-----|-----|
+| `event(id)` | `getEvent(id)` |
+| `createEvent` returned ID | `createEvent` returns full `Event` |
+
+---
+
+## 9. Notes for wiring the admin hub
+
+- **Auth:** All operations use the same admin Bearer token as the rest of the app.
+- **IDs:** Use `ID!` for `id`, `eventId`, `userId`, `registrationId`.
+- **Dates:** `startAt` / `endAt` are ISO 8601 strings.
+- **Scoping:** Use `communityId`, `ownerType`, `ownerId` in `ListEventsInput` when listing in a community or owner context.

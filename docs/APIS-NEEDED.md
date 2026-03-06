@@ -24,7 +24,7 @@ This document tracks **GraphQL (or REST) APIs that the admin hub UI is built to 
 
 **Where in the app:** `/events` page (`src/pages/Events.tsx`), event cards, Create/Edit event modal, Delete event modal, Event details modal, Registrations drawer.
 
-**Current UI behaviour:** All data is mock. No GraphQL operations or hooks exist for events. Once APIs are provided, the next step is to add operations in `src/services/networks/graphql/`, hooks in `src/hooks/`, and replace mock data in the Events page and event components.
+**Current UI behaviour:** All data is mock. GraphQL operations and hooks need to be added to match the provided schema, then replace mock data. **API schema provided** — see [EVENTS-GRAPHQL-API.md](./EVENTS-GRAPHQL-API.md) and [GRAPHQL-API.md](./GRAPHQL-API.md) § Events Service.
 
 ---
 
@@ -34,12 +34,12 @@ This document tracks **GraphQL (or REST) APIs that the admin hub UI is built to 
 
 | Field | Detail |
 |-------|--------|
-| **Status** | **Not provided** |
+| **Status** | **Provided** |
 | **Priority** | Required |
-| **Used in** | Events page main list (grid of event cards), stats (upcoming count, total registrations, revenue, avg attendance). |
-| **Variables** | `limit: Int`, `offset: Int`, `searchTerm: String`, `status: String` (e.g. `"published"`, `"draft"`, `"completed"`), optional `communityId: ID`. |
-| **Returns** | `{ listEvents: { events: [Event!]!, total: Int! } }` (or equivalent; see [EVENTS-GRAPHQL-API.md](./EVENTS-GRAPHQL-API.md)). |
-| **Notes** | UI filters by status and type (free/paid) and sorts (newest, oldest, date soonest/latest). Backend can support `status` and `searchTerm`; client can do extra filter/sort if needed. |
+| **Used in** | Events page main list (grid of event cards), stats. |
+| **Variables** | `input: ListEventsInput` — limit, offset, searchTerm, status, communityId, ownerType, ownerId. |
+| **Returns** | `{ listEvents: { events: [Event!]!, total: Int! } }` (EventListResponse). |
+| **Notes** | Backend provided. Wire admin-hub when ready. |
 
 ---
 
@@ -47,12 +47,12 @@ This document tracks **GraphQL (or REST) APIs that the admin hub UI is built to 
 
 | Field | Detail |
 |-------|--------|
-| **Status** | **Not provided** |
+| **Status** | **Provided** |
 | **Priority** | Required |
-| **Used in** | Event details modal (view), Create/Edit event modal (prefill when editing). |
+| **Used in** | Event details modal, Edit event modal (prefill). |
 | **Variables** | `id: ID!`. |
-| **Returns** | `{ getEvent: Event }` (single event; see Event type in spec). |
-| **Notes** | Called when user opens “View details” or “Edit” on an event. |
+| **Returns** | `{ getEvent: Event }` (full Event with locationDetails, tickets, etc.). |
+| **Notes** | Replaces old `event(id)`. Backend provided. |
 
 ---
 
@@ -60,12 +60,12 @@ This document tracks **GraphQL (or REST) APIs that the admin hub UI is built to 
 
 | Field | Detail |
 |-------|--------|
-| **Status** | **Not provided** |
-| **Priority** | Required for “Manage registrations” to be real. |
-| **Used in** | Registrations drawer (`RegistrationsDrawer.tsx`) when user clicks “Manage registrations” on an event. |
-| **Variables** | `eventId: ID!`, `limit: Int`, `offset: Int`, optional `searchTerm: String`, `paymentStatus: String`, `checkInStatus: String`. |
-| **Returns** | `{ getEventRegistrations: { registrations: [EventRegistration!]!, total: Int! } }` (or nested under `getEvent.registrations`; see spec). |
-| **Notes** | UI shows table of attendees with payment status, check-in status, and actions (check-in, resend ticket, remove). |
+| **Status** | **Provided** |
+| **Priority** | Required |
+| **Used in** | Registrations drawer. |
+| **Variables** | `eventId: ID!`, `limit`, `offset`, `status`. |
+| **Returns** | `{ getEventRegistrations: { registrations: [EventRegistration!]!, total: Int! } }` (EventRegistrationListResponse). |
+| **Notes** | Backend provided. |
 
 ---
 
@@ -75,12 +75,12 @@ This document tracks **GraphQL (or REST) APIs that the admin hub UI is built to 
 
 | Field | Detail |
 |-------|--------|
-| **Status** | **Not provided** |
+| **Status** | **Provided** |
 | **Priority** | Required |
-| **Used in** | Create event modal (multi-step form: basic info, schedule/location, ticketing/capacity, visibility). |
-| **Variables** | `input: CreateEventInput!` (title, description, date, startTime, endTime, eventType, location/virtualLink, isPaid, ticketPrice, currency, hasParticipantLimit, maxParticipants, publishNow, notifyMembers, allowComments, optional communityId). |
-| **Returns** | `{ createEvent: { id, title, status, createdAt } }` or full `Event`. |
-| **Notes** | See [EVENTS-GRAPHQL-API.md](./EVENTS-GRAPHQL-API.md) for full `CreateEventInput` shape. |
+| **Used in** | Create event modal. |
+| **Variables** | `input: CreateEventInput!` — ownerType!, ownerId!, title!, description!, eventCategory!, locationType!, locationDetails, startAt!, endAt!, isPaid. |
+| **Returns** | Full `Event` (id, title, status, startAt, endAt). |
+| **Notes** | Now returns Event instead of ID. Backend provided. |
 
 ---
 
@@ -88,12 +88,12 @@ This document tracks **GraphQL (or REST) APIs that the admin hub UI is built to 
 
 | Field | Detail |
 |-------|--------|
-| **Status** | **Not provided** |
+| **Status** | **Provided** |
 | **Priority** | Required |
-| **Used in** | Edit event modal (same form as create, pre-filled from `getEvent`). |
-| **Variables** | `input: UpdateEventInput!` (id required; all other fields optional). |
-| **Returns** | `{ updateEvent: { id, title, status, updatedAt } }` or full `Event`. |
-| **Notes** | Same field set as create; partial updates should be supported. |
+| **Used in** | Edit event modal. |
+| **Variables** | `id: ID!`, `input: UpdateEventInput!` (title, description, eventCategory, locationType, locationDetails, startAt, endAt, timezone, coverImageUrl, tags, capacity, visibility). |
+| **Returns** | Updated Event (id, title, status, startAt, endAt, coverImageUrl, tags). |
+| **Notes** | Backend provided. |
 
 ---
 
@@ -101,64 +101,77 @@ This document tracks **GraphQL (or REST) APIs that the admin hub UI is built to 
 
 | Field | Detail |
 |-------|--------|
-| **Status** | **Not provided** |
+| **Status** | **Provided** |
 | **Priority** | Required |
-| **Used in** | Delete event modal (confirmation after “Delete” from card menu). |
+| **Used in** | Delete event modal. “Delete” from card menu). |
 | **Variables** | `id: ID!`. |
-| **Returns** | `{ deleteEvent: { success: Boolean!, message: String } }` or similar. |
-| **Notes** | UI shows confirmation; on success closes modal and refreshes list. |
+| **Returns** | `{ deleteEvent: DeleteEventResult }` — success, message. |
+| **Notes** | Backend provided. |
 
 ---
 
-#### 7. `publishEvent` / `unpublishEvent`
+#### 7. `publishEvent`
+
+| Field | Detail |
+|-------|--------|
+| **Status** | **Provided** |
+| **Priority** | Optional |
+| **Used in** | Event card dropdown Publish. |
+| **Variables** | `id: ID!`. |
+| **Returns** | `{ publishEvent: { id, status, title } }`. |
+| **Notes** | Backend provided. |
+
+---
+
+#### 8. `unpublishEvent`
 
 | Field | Detail |
 |-------|--------|
 | **Status** | **Not provided** |
 | **Priority** | Optional |
-| **Used in** | Event card dropdown (“Publish” / “Unpublish”). |
+| **Used in** | Event card dropdown Unpublish. |
 | **Variables** | `id: ID!`. |
-| **Returns** | `{ publishEvent: { id, status } }` and same for `unpublishEvent`. |
-| **Notes** | Can be replaced by a single mutation, e.g. `setEventStatus(id: ID!, status: String!)`, if preferred. |
+| **Returns** | Event with status. |
+| **Notes** | Not in provided schema; use updateEvent to set status if backend supports. |
 
 ---
 
-#### 8. `markRegistrationCheckedIn`
+#### 9. `markRegistrationCheckedIn`
 
 | Field | Detail |
 |-------|--------|
-| **Status** | **Not provided** |
+| **Status** | **Provided** |
 | **Priority** | Optional |
 | **Used in** | Registrations drawer — “Mark as checked in” on a row. |
 | **Variables** | `registrationId: ID!`. |
-| **Returns** | `{ markRegistrationCheckedIn: { id, checkInStatus } }` or similar. |
-| **Notes** | Updates check-in status for one registration. |
+| **Returns** | `{ markRegistrationCheckedIn: { id, status } }`. |
+| **Notes** | Backend provided. |
 
 ---
 
-#### 9. `resendEventTicket`
+#### 10. `resendEventTicket`
 
 | Field | Detail |
 |-------|--------|
 | **Status** | **Not provided** |
 | **Priority** | Optional |
-| **Used in** | Registrations drawer — “Resend ticket” on a row. |
+| **Used in** | Registrations drawer Resend ticket. |
 | **Variables** | `registrationId: ID!`. |
-| **Returns** | `{ resendEventTicket: { success, message } }` or similar. |
-| **Notes** | Sends ticket/confirmation email again to the attendee. |
+| **Returns** | success/message. |
+| **Notes** | Not in provided schema. |
 
 ---
 
-#### 10. `removeEventRegistration`
+#### 11. `removeEventRegistration`
 
 | Field | Detail |
 |-------|--------|
-| **Status** | **Not provided** |
+| **Status** | **Provided** |
 | **Priority** | Optional |
-| **Used in** | Registrations drawer — “Remove attendee” on a row. |
+| **Used in** | Registrations drawer. |
 | **Variables** | `registrationId: ID!`. |
-| **Returns** | `{ removeEventRegistration: { success, message } }` or similar. |
-| **Notes** | Removes the registration; UI will refresh the list. |
+| **Returns** | `{ removeEventRegistration: { success, message } }`. |
+| **Notes** | Backend provided. |
 
 ---
 
@@ -166,17 +179,17 @@ This document tracks **GraphQL (or REST) APIs that the admin hub UI is built to 
 
 | Operation | Type | Priority | Status |
 |-----------|------|----------|--------|
-| `listEvents` | Query | Required | **Not provided** |
-| `getEvent` | Query | Required | **Not provided** |
-| `getEventRegistrations` | Query | Required | **Not provided** |
-| `createEvent` | Mutation | Required | **Not provided** |
-| `updateEvent` | Mutation | Required | **Not provided** |
-| `deleteEvent` | Mutation | Required | **Not provided** |
-| `publishEvent` | Mutation | Optional | **Not provided** |
+| `listEvents` | Query | Required | **Provided** |
+| `getEvent` | Query | Required | **Provided** |
+| `getEventRegistrations` | Query | Required | **Provided** |
+| `createEvent` | Mutation | Required | **Provided** |
+| `updateEvent` | Mutation | Required | **Provided** |
+| `deleteEvent` | Mutation | Required | **Provided** |
+| `publishEvent` | Mutation | Optional | **Provided** |
 | `unpublishEvent` | Mutation | Optional | **Not provided** |
-| `markRegistrationCheckedIn` | Mutation | Optional | **Not provided** |
+| `markRegistrationCheckedIn` | Mutation | Optional | **Provided** |
 | `resendEventTicket` | Mutation | Optional | **Not provided** |
-| `removeEventRegistration` | Mutation | Optional | **Not provided** |
+| `removeEventRegistration` | Mutation | Optional | **Provided** |
 
 ---
 
@@ -196,7 +209,7 @@ This document tracks **GraphQL (or REST) APIs that the admin hub UI is built to 
 
 | Field | Detail |
 |-------|--------|
-| **Status** | **Not provided** |
+| **Status** | **Provided** |
 | **Priority** | Required |
 | **Used in** | Opportunities page list/table and card view, stats (total, open, applicants, shortlisted). |
 | **Variables** | `input: ListOpportunitiesInput` — `limit`, `offset`, `searchTerm`, `type`, `category`, `subCategory`, `workMode`, `engagementType`, `location`, `ownerType`, `ownerId`, `status`, `sortBy`, `sortOrder`. |
@@ -209,7 +222,7 @@ This document tracks **GraphQL (or REST) APIs that the admin hub UI is built to 
 
 | Field | Detail |
 |-------|--------|
-| **Status** | **Not provided** |
+| **Status** | **Provided** |
 | **Priority** | Required |
 | **Used in** | Opportunity detail drawer/modal, Edit opportunity form (prefill). |
 | **Variables** | `id: String!` (or `ID!`). |
@@ -222,7 +235,7 @@ This document tracks **GraphQL (or REST) APIs that the admin hub UI is built to 
 
 | Field | Detail |
 |-------|--------|
-| **Status** | **Not provided** |
+| **Status** | **Provided** |
 | **Priority** | Required |
 | **Used in** | Applicants drawer when user clicks “View applicants” on an opportunity. |
 | **Variables** | `input: GetApplicationsInput!` — `opportunityId!`, `limit`, `offset`, `status`. |
@@ -235,7 +248,7 @@ This document tracks **GraphQL (or REST) APIs that the admin hub UI is built to 
 
 | Field | Detail |
 |-------|--------|
-| **Status** | **Not provided** |
+| **Status** | **Provided** |
 | **Priority** | Optional |
 | **Used in** | Single application view/modal (view details, message, reject, mark hired). |
 | **Variables** | `id: String!`. |
@@ -250,7 +263,7 @@ This document tracks **GraphQL (or REST) APIs that the admin hub UI is built to 
 
 | Field | Detail |
 |-------|--------|
-| **Status** | **Not provided** |
+| **Status** | **Provided** |
 | **Priority** | Required |
 | **Used in** | Create opportunity modal (multi-step form). |
 | **Variables** | `input: CreateOpportunityInput!` (see opportunity schema). |
@@ -263,7 +276,7 @@ This document tracks **GraphQL (or REST) APIs that the admin hub UI is built to 
 
 | Field | Detail |
 |-------|--------|
-| **Status** | **Not provided** |
+| **Status** | **Provided** |
 | **Priority** | Required |
 | **Used in** | Edit opportunity modal. |
 | **Variables** | `id: String!`, `input: UpdateOpportunityInput!`. |
@@ -276,7 +289,7 @@ This document tracks **GraphQL (or REST) APIs that the admin hub UI is built to 
 
 | Field | Detail |
 |-------|--------|
-| **Status** | **Not provided** |
+| **Status** | **Provided** |
 | **Priority** | Required (publish, close); Required (delete). |
 | **Used in** | Card/table actions: Publish, Close applications, Delete. |
 | **Variables** | `id: String!`; Close can have `reason`. |
@@ -289,7 +302,7 @@ This document tracks **GraphQL (or REST) APIs that the admin hub UI is built to 
 
 | Field | Detail |
 |-------|--------|
-| **Status** | **Not provided** |
+| **Status** | **Provided** |
 | **Priority** | Required |
 | **Used in** | Applicants drawer / application modal: Accept, Reject, Mark under review. |
 | **Variables** | Accept/Reject: `id: String!`; Reject: `reason`; Review: `input: ReviewApplicationInput!` (applicationId, reviewNotes, status). |
@@ -302,7 +315,7 @@ This document tracks **GraphQL (or REST) APIs that the admin hub UI is built to 
 
 | Field | Detail |
 |-------|--------|
-| **Status** | **Not provided** |
+| **Status** | **Provided** |
 | **Priority** | Optional |
 | **Used in** | Super-admin-only UI: set featuring priority (HIGH / NORMAL / LOW). |
 | **Variables** | `input: SetOpportunityPriorityInput!` — `opportunityId!`, `priority`. |
@@ -315,19 +328,19 @@ This document tracks **GraphQL (or REST) APIs that the admin hub UI is built to 
 
 | Operation | Type | Priority | Status |
 |-----------|------|----------|--------|
-| `listOpportunities` | Query | Required | **Not provided** |
-| `getOpportunity` | Query | Required | **Not provided** |
-| `getApplications` | Query | Required | **Not provided** |
-| `getApplication` | Query | Optional | **Not provided** |
-| `createOpportunity` | Mutation | Required | **Not provided** |
-| `updateOpportunity` | Mutation | Required | **Not provided** |
-| `publishOpportunity` | Mutation | Required | **Not provided** |
-| `closeOpportunity` | Mutation | Required | **Not provided** |
-| `deleteOpportunity` | Mutation | Required | **Not provided** |
-| `acceptApplication` | Mutation | Required | **Not provided** |
-| `rejectApplication` | Mutation | Required | **Not provided** |
-| `reviewApplication` | Mutation | Required | **Not provided** |
-| `setOpportunityPriority` | Mutation | Optional | **Not provided** |
+| `listOpportunities` | Query | Required | **Provided** |
+| `getOpportunity` | Query | Required | **Provided** |
+| `getApplications` | Query | Required | **Provided** |
+| `getApplication` | Query | Optional | **Provided** |
+| `createOpportunity` | Mutation | Required | **Provided** |
+| `updateOpportunity` | Mutation | Required | **Provided** |
+| `publishOpportunity` | Mutation | Required | **Provided** |
+| `closeOpportunity` | Mutation | Required | **Provided** |
+| `deleteOpportunity` | Mutation | Required | **Provided** |
+| `acceptApplication` | Mutation | Required | **Provided** |
+| `rejectApplication` | Mutation | Required | **Provided** |
+| `reviewApplication` | Mutation | Required | **Provided** |
+| `setOpportunityPriority` | Mutation | Optional | **Provided** |
 
 ---
 

@@ -114,7 +114,7 @@ export const APPLICATION_FIELDS = gql`
 export const GET_OPPORTUNITY = gql`
   ${OPPORTUNITY_FULL_FIELDS}
   query GetOpportunity($id: String!) {
-    opportunity(id: $id) {
+    getOpportunity(id: $id) {
       ...OpportunityFullFields
     }
   }
@@ -124,7 +124,7 @@ export const GET_OPPORTUNITY = gql`
 export const LIST_OPPORTUNITIES = gql`
   ${OPPORTUNITY_CARD_FIELDS}
   query ListOpportunities($input: ListOpportunitiesInput) {
-    opportunities(input: $input) {
+    listOpportunities(input: $input) {
       total
       opportunities {
         ...OpportunityCardFields
@@ -150,7 +150,7 @@ export const GET_APPLICATIONS = gql`
 export const GET_APPLICATION = gql`
   ${APPLICATION_FIELDS}
   query GetApplication($id: String!) {
-    application(id: $id) {
+    getApplication(id: $id) {
       ...ApplicationFields
     }
   }
@@ -200,8 +200,8 @@ export const DELETE_OPPORTUNITY = gql`
 
 /** Accept an application. */
 export const ACCEPT_APPLICATION = gql`
-  mutation AcceptApplication($id: String!) {
-    acceptApplication(id: $id)
+  mutation AcceptApplication($id: String!, $notes: String) {
+    acceptApplication(id: $id, notes: $notes)
   }
 `;
 
@@ -214,7 +214,7 @@ export const REJECT_APPLICATION = gql`
 
 /** Mark application as under review (optional notes). */
 export const REVIEW_APPLICATION = gql`
-  mutation ReviewApplication($input: ReviewApplicationInput!) {
-    reviewApplication(input: $input)
+  mutation ReviewApplication($applicationId: String!, $notes: String) {
+    reviewApplication(applicationId: $applicationId, notes: $notes)
   }
 `;

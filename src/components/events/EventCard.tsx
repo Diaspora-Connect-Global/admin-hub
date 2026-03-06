@@ -1,3 +1,4 @@
+import { format } from "date-fns";
 import { Event } from "@/types/events";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { Button } from "@/components/ui/button";
@@ -8,17 +9,17 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { 
-  MoreHorizontal, 
-  Eye, 
-  Edit, 
-  Users, 
-  ToggleLeft, 
-  Trash2, 
-  MapPin, 
-  Video, 
+import {
+  MoreHorizontal,
+  Eye,
+  Edit,
+  Users,
+  ToggleLeft,
+  Trash2,
+  MapPin,
+  Video,
   Clock,
-  Calendar
+  Calendar,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useT } from "@/hooks/useT";
@@ -50,9 +51,15 @@ export function EventCard({
   onDelete,
 }: EventCardProps) {
   const t = useT("events");
-  const capacityPercentage = event.hasParticipantLimit && event.maxParticipants 
-    ? (event.registeredCount / event.maxParticipants) * 100 
-    : 0;
+  const isVirtual = event.locationType === "virtual";
+  const locationLabel =
+    event.locationDetails?.virtualLink ||
+    event.locationDetails?.address ||
+    [event.locationDetails?.city, event.locationDetails?.country].filter(Boolean).join(", ") ||
+    "";
+  const hasCapacity = event.availableSpots != null && event.availableSpots > 0;
+  const capacityPercentage = hasCapacity ? (event.registrationCount / event.availableSpots) * 100 : 0;
+  const firstTicketPrice = event.tickets?.[0]?.priceInCents;
 
   const statusLabels: Record<string, string> = {
     published: t.published,
@@ -67,14 +74,14 @@ export function EventCard({
     <div className="group overflow-hidden rounded-xl border border-border bg-card transition-all duration-300 hover:shadow-lg hover:-translate-y-1">
       {/* Banner */}
       <div className="relative flex h-36 items-center justify-center bg-gradient-to-br from-primary/10 to-accent/10">
-        {event.bannerImage ? (
-          <img 
-            src={event.bannerImage} 
-            alt={event.title} 
+        {event.coverImageUrl ? (
+          <img
+            src={event.coverImageUrl}
+            alt={event.title}
             className="h-full w-full object-cover"
           />
         ) : (
-          <span className="text-5xl">{event.bannerEmoji || "📅"}</span>
+          <span className="text-5xl">📅</span>
         )}
         <div className="absolute right-3 top-3">
           <StatusBadge variant={statusVariants[event.status]}>
@@ -93,33 +100,34 @@ export function EventCard({
         <div className="mb-4 space-y-2">
           <div className="flex items-center gap-2 text-sm text-foreground/80">
             <Calendar className="h-4 w-4 shrink-0" />
-            <span>{event.date}</span>
+            <span>{event.startAt ? format(new Date(event.startAt), "MMM d, yyyy") : ""}</span>
           </div>
           <div className="flex items-center gap-2 text-sm text-foreground/80">
             <Clock className="h-4 w-4 shrink-0" />
-            <span>{event.startTime} - {event.endTime}</span>
+            <span>
+              {event.startAt ? format(new Date(event.startAt), "h:mm a") : ""} -{" "}
+              {event.endAt ? format(new Date(event.endAt), "h:mm a") : ""}
+            </span>
           </div>
           <div className="flex items-center gap-2 text-sm text-foreground/80">
-            {event.eventType === "virtual" ? (
+            {isVirtual ? (
               <Video className="h-4 w-4 shrink-0" />
             ) : (
               <MapPin className="h-4 w-4 shrink-0" />
             )}
-            <span className="truncate">
-              {event.eventType === "virtual" ? event.virtualLink || t.virtualEvent : event.location}
-            </span>
+            <span className="truncate">{isVirtual ? locationLabel || t.virtualEvent : locationLabel || "—"}</span>
           </div>
           <div className="flex items-center gap-2 text-sm text-foreground/80">
             <Users className="h-4 w-4 shrink-0" />
             <span>
-              {event.registeredCount}
-              {event.hasParticipantLimit && event.maxParticipants && ` / ${event.maxParticipants}`} {t.registered}
+              {event.registrationCount}
+              {hasCapacity && ` / ${event.availableSpots}`} {t.registered}
             </span>
           </div>
         </div>
 
         {/* Capacity Bar (if limited) */}
-        {event.hasParticipantLimit && event.maxParticipants && (
+        {hasCapacity && event.availableSpots != null && (
           <div className="mb-4">
             <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
               <div
@@ -128,8 +136,8 @@ export function EventCard({
                   capacityPercentage >= 100
                     ? "bg-destructive"
                     : capacityPercentage >= 80
-                    ? "bg-warning"
-                    : "bg-primary"
+                      ? "bg-warning"
+                      : "bg-primary"
                 )}
                 style={{ width: `${Math.min(capacityPercentage, 100)}%` }}
               />
@@ -140,9 +148,9 @@ export function EventCard({
         {/* Footer */}
         <div className="flex items-center justify-between">
           <div>
-            {event.isPaid && event.ticketPrice ? (
+            {event.isPaid && firstTicketPrice != null ? (
               <span className="text-lg font-bold text-foreground">
-                {event.currency || "$"}{event.ticketPrice}
+                ${(firstTicketPrice / 100).toFixed(0)}
               </span>
             ) : (
               <span className="text-sm font-medium text-primary">{t.free}</span>

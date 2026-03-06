@@ -21,7 +21,7 @@ export interface SetOpportunityPriorityInput {
  * Backend returns 403 "Only system admins can set opportunity priority" if not super admin.
  */
 export const SET_OPPORTUNITY_PRIORITY = gql`
-  mutation SetOpportunityPriority($input: SetOpportunityPriorityInput!) {
-    setOpportunityPriority(input: $input)
+  mutation SetOpportunityPriority($opportunityId: String!, $priority: String!) {
+    setOpportunityPriority(opportunityId: $opportunityId, priority: $priority)
   }
 `;

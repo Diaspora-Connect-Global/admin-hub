@@ -9,8 +9,9 @@ This document lists all **queries** and **mutations** implemented in the admin h
 ## Table of Contents
 
 1. [Admin Service](#1-admin-service)
-2. [Opportunity Service](#2-opportunity-service)
-3. [Hooks Reference](#3-hooks-reference)
+2. [Events Service](#2-events-service)
+3. [Opportunity Service](#3-opportunity-service)
+4. [Hooks Reference](#4-hooks-reference)
 
 ---
 
@@ -59,7 +60,36 @@ This document lists all **queries** and **mutations** implemented in the admin h
 
 ---
 
-## 2. Opportunity Service
+## 2. Events Service
+
+**Endpoint:** Same as Admin (gateway) or dedicated Events service URL if configured.  
+**Spec (full types, inputs, queries, mutations):** [EVENTS-GRAPHQL-API.md](./EVENTS-GRAPHQL-API.md)  
+**Auth:** Bearer JWT (same admin token)
+
+### Queries
+
+| Operation | Variables | Description |
+|-----------|-----------|-------------|
+| **ListEvents** | `input: ListEventsInput` | Paginated list. Input: `limit`, `offset`, `searchTerm`, `status`, `communityId`, `ownerType`, `ownerId`. Returns `events`, `total`. |
+| **GetEvent** | `id: ID!` | Single event (replaces legacy `event(id)`). Full Event with locationDetails, tickets, etc. |
+| **GetEventRegistrations** | `eventId: ID!`, `limit`, `offset`, `status` | Registrations for one event. Returns `registrations`, `total`. |
+
+### Mutations
+
+| Operation | Variables | Description |
+|-----------|-----------|-------------|
+| **CreateEvent** | `input: CreateEventInput!` | Create event. Returns full **Event** (not ID). Input: `ownerType!`, `ownerId!`, `title!`, `description!`, `eventCategory!`, `locationType!`, `locationDetails`, `startAt!`, `endAt!`, `isPaid`. |
+| **UpdateEvent** | `id: ID!`, `input: UpdateEventInput!` | Update event. Partial fields: title, description, eventCategory, locationType, locationDetails, startAt, endAt, timezone, coverImageUrl, tags, capacity, visibility. |
+| **DeleteEvent** | `id: ID!` | Delete event. Returns `DeleteEventResult` (success, message). |
+| **PublishEvent** | `id: ID!` | Publish event. Returns Event (id, status, title). |
+| **MarkRegistrationCheckedIn** | `registrationId: ID!` | Mark one registration as checked in. Returns `{ id, status }`. |
+| **RemoveEventRegistration** | `registrationId: ID!` | Remove a registration. Returns `{ success, message }`. |
+
+**Not in schema:** `unpublishEvent`, `resendEventTicket` — see [APIS-NEEDED.md](./APIS-NEEDED.md).
+
+---
+
+## 3. Opportunity Service
 
 **Endpoint:** Same as Admin (gateway) or `http://localhost:3008/graphql` if using a dedicated opportunity client.  
 **Definitions:** `src/services/networks/graphql/opportunity/operations.ts` and `superAdmin.ts`  
@@ -83,21 +113,30 @@ This document lists all **queries** and **mutations** implemented in the admin h
 | **PublishOpportunity** | `id: String!` | Publish (DRAFT → PUBLISHED). |
 | **CloseOpportunity** | `id: String!`, `reason` | Close opportunity. |
 | **DeleteOpportunity** | `id: String!` | Permanently delete. |
-| **AcceptApplication** | `id: String!` | Accept an application. |
-| **RejectApplication** | `id: String!`, `reason` | Reject an application. |
-| **ReviewApplication** | `input: ReviewApplicationInput!` | Mark application as under review. Input: `applicationId!`, `reviewNotes`, `status`. |
+| **AcceptApplication** | `id: String!`, `notes` | Accept an application. Returns Boolean. |
+| **RejectApplication** | `id: String!`, `reason` | Reject an application. Returns Boolean. |
+| **ReviewApplication** | `applicationId: String!`, `notes` | Move application to REVIEWING status. Returns Boolean. |
 
 ### Mutations — Super Admin only (⚡)
 
 | Operation | Variables | Description |
 |-----------|-----------|-------------|
-| **SetOpportunityPriority** | `input: SetOpportunityPriorityInput!` | Set priority for featuring. Input: `opportunityId!`, `priority` (`HIGH` \| `NORMAL` \| `LOW`). **Only system admins.** Backend returns 403 otherwise. |
+| **SetOpportunityPriority** | `opportunityId: String!`, `priority: String!` | Set priority for featuring. Priority: `HIGH` \| `NORMAL` \| `LOW`. Returns Boolean. **Only system admins.** Backend returns 403 otherwise. |
 
 **Definitions (super admin only):** `src/services/networks/graphql/opportunity/superAdmin.ts`
 
 ---
 
-## 3. Hooks Reference
+### Breaking renames (Opportunity)
+
+| Old | New |
+|-----|-----|
+| `opportunity(id)` | `getOpportunity(id)` |
+| `opportunities(input)` | `listOpportunities(input)` |
+
+---
+
+## 4. Hooks Reference
 
 Hooks use the shared admin Apollo client (Bearer from session). Import from `@/hooks/admin`, `@/hooks/opportunity`, or `@/hooks/opportunity/superAdmin` as below.
 

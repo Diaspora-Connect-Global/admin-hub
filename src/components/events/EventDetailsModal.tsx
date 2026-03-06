@@ -1,3 +1,4 @@
+import { format } from "date-fns";
 import { Event } from "@/types/events";
 import {
   Dialog,
@@ -65,10 +66,10 @@ export function EventDetailsModal({
           <div className="mt-4 space-y-6">
             {/* Banner */}
             <div className="relative h-40 rounded-lg overflow-hidden bg-gradient-to-br from-primary/10 to-accent/10 flex items-center justify-center">
-              {event.bannerImage ? (
-                <img src={event.bannerImage} alt={event.title} className="w-full h-full object-cover" />
+              {event.coverImageUrl ? (
+                <img src={event.coverImageUrl} alt={event.title} className="w-full h-full object-cover" />
               ) : (
-                <span className="text-6xl">{event.bannerEmoji || "📅"}</span>
+                <span className="text-6xl">📅</span>
               )}
             </div>
 
@@ -84,40 +85,48 @@ export function EventDetailsModal({
               <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
                 <div className="flex items-center gap-1.5">
                   <Calendar className="h-4 w-4" />
-                  <span>{event.date}</span>
+                  <span>{event.startAt ? format(new Date(event.startAt), "MMM d, yyyy") : ""}</span>
                 </div>
                 <div className="flex items-center gap-1.5">
                   <Clock className="h-4 w-4" />
-                  <span>{event.startTime} - {event.endTime}</span>
+                  <span>
+                    {event.startAt ? format(new Date(event.startAt), "h:mm a") : ""} -{" "}
+                    {event.endAt ? format(new Date(event.endAt), "h:mm a") : ""}
+                  </span>
                 </div>
               </div>
 
               <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                {event.eventType === "virtual" ? (
+                {event.locationType === "virtual" ? (
                   <>
                     <Video className="h-4 w-4" />
-                    <span>{event.virtualLink || "Virtual Event"}</span>
+                    <span>{event.locationDetails?.virtualLink || "Virtual Event"}</span>
                   </>
                 ) : (
                   <>
                     <MapPin className="h-4 w-4" />
-                    <span>{event.location}</span>
+                    <span>
+                      {event.locationDetails?.address ||
+                        event.locationDetails?.venueName ||
+                        [event.locationDetails?.city, event.locationDetails?.country].filter(Boolean).join(", ") ||
+                        "—"}
+                    </span>
                   </>
                 )}
               </div>
 
               <div className="flex items-center gap-2">
-                {event.isPaid && event.ticketPrice ? (
+                {event.isPaid && event.tickets?.[0]?.priceInCents != null ? (
                   <span className="text-lg font-bold text-foreground">
-                    {event.currency || "$"}{event.ticketPrice}
+                    ${(event.tickets[0].priceInCents / 100).toFixed(0)}
                   </span>
                 ) : (
                   <span className="text-sm font-medium text-primary">Free Event</span>
                 )}
                 <span className="text-muted-foreground">•</span>
                 <span className="text-sm text-muted-foreground">
-                  {event.registeredCount}
-                  {event.hasParticipantLimit && event.maxParticipants && ` / ${event.maxParticipants}`} registered
+                  {event.registrationCount}
+                  {event.availableSpots != null && ` / ${event.availableSpots}`} registered
                 </span>
               </div>
             </div>
@@ -170,37 +179,19 @@ export function EventDetailsModal({
                   <div className="grid grid-cols-2 gap-3">
                     <div className="p-3 rounded-lg border border-border bg-card">
                       <div className="flex items-center gap-2 text-muted-foreground mb-1">
-                        <Eye className="h-4 w-4" />
-                        <span className="text-xs">Total Views</span>
-                      </div>
-                      <p className="text-lg font-semibold text-foreground">{event.views}</p>
-                    </div>
-                    <div className="p-3 rounded-lg border border-border bg-card">
-                      <div className="flex items-center gap-2 text-muted-foreground mb-1">
                         <Users className="h-4 w-4" />
                         <span className="text-xs">Registrations</span>
                       </div>
-                      <p className="text-lg font-semibold text-foreground">{event.registeredCount}</p>
+                      <p className="text-lg font-semibold text-foreground">{event.registrationCount}</p>
                     </div>
-                    {event.isPaid && (
-                      <>
-                        <div className="p-3 rounded-lg border border-border bg-card">
-                          <div className="flex items-center gap-2 text-muted-foreground mb-1">
-                            <TrendingUp className="h-4 w-4" />
-                            <span className="text-xs">Tickets Sold</span>
-                          </div>
-                          <p className="text-lg font-semibold text-foreground">{event.ticketsSold}</p>
+                    {event.availableSpots != null && (
+                      <div className="p-3 rounded-lg border border-border bg-card">
+                        <div className="flex items-center gap-2 text-muted-foreground mb-1">
+                          <Eye className="h-4 w-4" />
+                          <span className="text-xs">Available Spots</span>
                         </div>
-                        <div className="p-3 rounded-lg border border-border bg-card">
-                          <div className="flex items-center gap-2 text-muted-foreground mb-1">
-                            <DollarSign className="h-4 w-4" />
-                            <span className="text-xs">Revenue</span>
-                          </div>
-                          <p className="text-lg font-semibold text-foreground">
-                            {event.currency || "$"}{event.revenue}
-                          </p>
-                        </div>
-                      </>
+                        <p className="text-lg font-semibold text-foreground">{event.availableSpots}</p>
+                      </div>
                     )}
                   </div>
                 </div>
