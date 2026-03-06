@@ -18,13 +18,25 @@ This document tracks **GraphQL (or REST) APIs that the admin hub UI is built to 
 
 ---
 
+## At a glance
+
+| Area | Provided | Wired in admin hub | What’s left |
+|------|----------|--------------------|-------------|
+| **Events** | All except `unpublishEvent`, `resendEventTicket` | Yes — list, get, create, update, delete, publish, registrations, check-in, remove | Backend: optional unpublish/resend. Hub: use real `ownerId` for create. |
+| **Opportunities** | All | Partially — list + applicants only | Hub: wire Create/Edit, Publish/Close/Delete, Accept/Reject, set priority. |
+| **Communities** | list, get, create | Yes — list, get, create | Backend: getCommunityStats, update, delete, suspend, link association, discoverAssociations. |
+
+See each section’s **“What’s left to do”** subsection for details.
+
+---
+
 ## Events
 
 **Full spec (types, query/mutation signatures, examples):** [EVENTS-GRAPHQL-API.md](./EVENTS-GRAPHQL-API.md)
 
 **Where in the app:** `/events` page (`src/pages/Events.tsx`), event cards, Create/Edit event modal, Delete event modal, Event details modal, Registrations drawer.
 
-**Current UI behaviour:** All data is mock. GraphQL operations and hooks need to be added to match the provided schema, then replace mock data. **API schema provided** — see [EVENTS-GRAPHQL-API.md](./EVENTS-GRAPHQL-API.md) and [GRAPHQL-API.md](./GRAPHQL-API.md) § Events Service.
+**Current UI behaviour:** **Wired to real API.** Events page uses `useListEvents`, `useGetEvent`, `useCreateEvent`, `useUpdateEvent`, `useDeleteEvent`, `usePublishEvent`; Registrations drawer uses `useGetEventRegistrations`, `useMarkRegistrationCheckedIn`, `useRemoveEventRegistration`. Operations live in `src/services/networks/graphql/events/` and `src/hooks/events/`.
 
 ---
 
@@ -39,7 +51,7 @@ This document tracks **GraphQL (or REST) APIs that the admin hub UI is built to 
 | **Used in** | Events page main list (grid of event cards), stats. |
 | **Variables** | `input: ListEventsInput` — limit, offset, searchTerm, status, communityId, ownerType, ownerId. |
 | **Returns** | `{ listEvents: { events: [Event!]!, total: Int! } }` (EventListResponse). |
-| **Notes** | Backend provided. Wire admin-hub when ready. |
+| **Notes** | Backend provided. **Wired:** `useListEvents()` in Events page. |
 
 ---
 
@@ -52,7 +64,7 @@ This document tracks **GraphQL (or REST) APIs that the admin hub UI is built to 
 | **Used in** | Event details modal, Edit event modal (prefill). |
 | **Variables** | `id: ID!`. |
 | **Returns** | `{ getEvent: Event }` (full Event with locationDetails, tickets, etc.). |
-| **Notes** | Replaces old `event(id)`. Backend provided. |
+| **Notes** | Replaces old `event(id)`. **Wired:** `useGetEvent(id)` for edit modal prefill. |
 
 ---
 
@@ -65,7 +77,7 @@ This document tracks **GraphQL (or REST) APIs that the admin hub UI is built to 
 | **Used in** | Registrations drawer. |
 | **Variables** | `eventId: ID!`, `limit`, `offset`, `status`. |
 | **Returns** | `{ getEventRegistrations: { registrations: [EventRegistration!]!, total: Int! } }` (EventRegistrationListResponse). |
-| **Notes** | Backend provided. |
+| **Notes** | **Wired:** `useGetEventRegistrations()` in RegistrationsDrawer. |
 
 ---
 
@@ -80,7 +92,7 @@ This document tracks **GraphQL (or REST) APIs that the admin hub UI is built to 
 | **Used in** | Create event modal. |
 | **Variables** | `input: CreateEventInput!` — ownerType!, ownerId!, title!, description!, eventCategory!, locationType!, locationDetails, startAt!, endAt!, isPaid. |
 | **Returns** | Full `Event` (id, title, status, startAt, endAt). |
-| **Notes** | Now returns Event instead of ID. Backend provided. |
+| **Notes** | Now returns Event instead of ID. **Wired:** `useCreateEvent()` in CreateEditEventModal submit. |
 
 ---
 
@@ -93,7 +105,7 @@ This document tracks **GraphQL (or REST) APIs that the admin hub UI is built to 
 | **Used in** | Edit event modal. |
 | **Variables** | `id: ID!`, `input: UpdateEventInput!` (title, description, eventCategory, locationType, locationDetails, startAt, endAt, timezone, coverImageUrl, tags, capacity, visibility). |
 | **Returns** | Updated Event (id, title, status, startAt, endAt, coverImageUrl, tags). |
-| **Notes** | Backend provided. |
+| **Notes** | **Wired:** `useUpdateEvent()` in CreateEditEventModal submit. |
 
 ---
 
@@ -106,7 +118,7 @@ This document tracks **GraphQL (or REST) APIs that the admin hub UI is built to 
 | **Used in** | Delete event modal. “Delete” from card menu). |
 | **Variables** | `id: ID!`. |
 | **Returns** | `{ deleteEvent: DeleteEventResult }` — success, message. |
-| **Notes** | Backend provided. |
+| **Notes** | **Wired:** `useDeleteEvent()` in DeleteEventModal confirm. |
 
 ---
 
@@ -119,7 +131,7 @@ This document tracks **GraphQL (or REST) APIs that the admin hub UI is built to 
 | **Used in** | Event card dropdown Publish. |
 | **Variables** | `id: ID!`. |
 | **Returns** | `{ publishEvent: { id, status, title } }`. |
-| **Notes** | Backend provided. |
+| **Notes** | **Wired:** `usePublishEvent()` on card dropdown Publish. |
 
 ---
 
@@ -145,7 +157,7 @@ This document tracks **GraphQL (or REST) APIs that the admin hub UI is built to 
 | **Used in** | Registrations drawer — “Mark as checked in” on a row. |
 | **Variables** | `registrationId: ID!`. |
 | **Returns** | `{ markRegistrationCheckedIn: { id, status } }`. |
-| **Notes** | Backend provided. |
+| **Notes** | **Wired:** `useMarkRegistrationCheckedIn()` in RegistrationsDrawer. |
 
 ---
 
@@ -171,7 +183,19 @@ This document tracks **GraphQL (or REST) APIs that the admin hub UI is built to 
 | **Used in** | Registrations drawer. |
 | **Variables** | `registrationId: ID!`. |
 | **Returns** | `{ removeEventRegistration: { success, message } }`. |
-| **Notes** | Backend provided. |
+| **Notes** | **Wired:** `useRemoveEventRegistration()` in RegistrationsDrawer. |
+
+---
+
+### Events – what’s left to do
+
+| Item | Status | Action |
+|------|--------|--------|
+| **Backend** | | |
+| `unpublishEvent` | Not provided | Optional. Use `updateEvent` to set status to draft if backend supports. |
+| `resendEventTicket` | Not provided | Optional. Add when backend supports resending ticket/email. |
+| **Admin hub** | | |
+| Create event `ownerId` | Placeholder | Replace `"current-user-id"` in createEvent input with real admin/user id from session when available. |
 
 ---
 
@@ -199,7 +223,7 @@ This document tracks **GraphQL (or REST) APIs that the admin hub UI is built to 
 
 **Where in the app:** `/opportunities` page (`src/pages/Opportunities.tsx`), opportunity table/card view, Create/Edit opportunity modal, opportunity detail drawer, Applicants drawer, application modals (view, message, reject, etc.).
 
-**Current UI behaviour:** All data is mock (`mockOpportunities`, mock applicants). **GraphQL operations and hooks already exist** in `src/services/networks/graphql/opportunity/` and `src/hooks/opportunity/`. When the backend provides the API, wire the page by replacing mock data with `useListOpportunities`, `useGetOpportunity`, etc.
+**Current UI behaviour:** **Partially wired.** List and applicants use real API: `useListOpportunities()` and `useGetApplications()` on the Opportunities page; data comes from backend. Create/Edit modal, Publish/Close/Delete actions, and Applicants drawer actions (Accept, Reject, etc.) still show toasts only — hooks exist but are not yet called from the UI.
 
 ---
 
@@ -214,7 +238,7 @@ This document tracks **GraphQL (or REST) APIs that the admin hub UI is built to 
 | **Used in** | Opportunities page list/table and card view, stats (total, open, applicants, shortlisted). |
 | **Variables** | `input: ListOpportunitiesInput` — `limit`, `offset`, `searchTerm`, `type`, `category`, `subCategory`, `workMode`, `engagementType`, `location`, `ownerType`, `ownerId`, `status`, `sortBy`, `sortOrder`. |
 | **Returns** | List of opportunities (see OpportunityType in spec) and total count. |
-| **Notes** | Hooks: `useListOpportunities(input)`. UI filters by status, type, visibility; backend can support these via input. |
+| **Notes** | **Wired:** `useListOpportunities(input)` on Opportunities page. UI filters by status, type, visibility. |
 
 ---
 
@@ -227,7 +251,7 @@ This document tracks **GraphQL (or REST) APIs that the admin hub UI is built to 
 | **Used in** | Opportunity detail drawer/modal, Edit opportunity form (prefill). |
 | **Variables** | `id: String!` (or `ID!`). |
 | **Returns** | Single opportunity (full fields). |
-| **Notes** | Hooks: `useGetOpportunity(id)`. |
+| **Notes** | Hook: `useGetOpportunity(id)`. **Not yet wired** in detail drawer / edit prefill. |
 
 ---
 
@@ -240,7 +264,7 @@ This document tracks **GraphQL (or REST) APIs that the admin hub UI is built to 
 | **Used in** | Applicants drawer when user clicks “View applicants” on an opportunity. |
 | **Variables** | `input: GetApplicationsInput!` — `opportunityId!`, `limit`, `offset`, `status`. |
 | **Returns** | List of applications (applicant id, status, resume ref, etc.) and total. |
-| **Notes** | Hooks: `useGetApplications(input)`. System admin / opportunity owner only. |
+| **Notes** | **Wired:** `useGetApplications(input)` in Applicants drawer. |
 
 ---
 
@@ -253,7 +277,7 @@ This document tracks **GraphQL (or REST) APIs that the admin hub UI is built to 
 | **Used in** | Single application view/modal (view details, message, reject, mark hired). |
 | **Variables** | `id: String!`. |
 | **Returns** | Single application with full fields. |
-| **Notes** | Hooks: `useGetApplication(id)`. |
+| **Notes** | Hook: `useGetApplication(id)`. **Not yet wired** in application detail modal. |
 
 ---
 
@@ -281,7 +305,7 @@ This document tracks **GraphQL (or REST) APIs that the admin hub UI is built to 
 | **Used in** | Edit opportunity modal. |
 | **Variables** | `id: String!`, `input: UpdateOpportunityInput!`. |
 | **Returns** | Updated opportunity. |
-| **Notes** | Hooks: `useUpdateOpportunity()`. |
+| **Notes** | Hook: `useUpdateOpportunity()`. **Not yet wired** — Edit modal still toasts. |
 
 ---
 
@@ -294,7 +318,7 @@ This document tracks **GraphQL (or REST) APIs that the admin hub UI is built to 
 | **Used in** | Card/table actions: Publish, Close applications, Delete. |
 | **Variables** | `id: String!`; Close can have `reason`. |
 | **Returns** | Updated opportunity or success/message. |
-| **Notes** | Hooks: `usePublishOpportunity()`, `useCloseOpportunity()`, `useDeleteOpportunity()`. |
+| **Notes** | Hooks exist. **Not yet wired** — Publish/Close/Delete on table/card still toasts. |
 
 ---
 
@@ -307,7 +331,7 @@ This document tracks **GraphQL (or REST) APIs that the admin hub UI is built to 
 | **Used in** | Applicants drawer / application modal: Accept, Reject, Mark under review. |
 | **Variables** | Accept/Reject: `id: String!`; Reject: `reason`; Review: `input: ReviewApplicationInput!` (applicationId, reviewNotes, status). |
 | **Returns** | Updated application or success. |
-| **Notes** | Hooks: `useAcceptApplication()`, `useRejectApplication()`, `useReviewApplication()`. |
+| **Notes** | Hooks exist. **Not yet wired** — Accept/Reject in Applicants drawer still toasts. Review uses `applicationId` + `notes`. |
 
 ---
 
@@ -320,7 +344,22 @@ This document tracks **GraphQL (or REST) APIs that the admin hub UI is built to 
 | **Used in** | Super-admin-only UI: set featuring priority (HIGH / NORMAL / LOW). |
 | **Variables** | `input: SetOpportunityPriorityInput!` — `opportunityId!`, `priority`. |
 | **Returns** | Updated opportunity or success. |
-| **Notes** | Hooks: `useSetOpportunityPriority()` in `@/hooks/opportunity/superAdmin`. Backend should return 403 for non–super-admins. |
+| **Notes** | Hook: `useSetOpportunityPriority()`. **Not yet wired** in UI. Backend should return 403 for non–super-admins. |
+
+---
+
+### Opportunities – what’s left to do
+
+| Item | Status | Action |
+|------|--------|--------|
+| **Admin hub (wire UI to existing hooks)** | | |
+| Edit opportunity / detail drawer | Hooks ready | Call `useGetOpportunity(id)` when opening drawer or edit modal; prefill form from response. |
+| Create opportunity | Hooks ready | In CreateEditOpportunityModal, on submit call `useCreateOpportunity()` with form input; refetch list on success. |
+| Update opportunity | Hooks ready | In CreateEditOpportunityModal (edit mode), on submit call `useUpdateOpportunity(id, input)`; refetch list. |
+| Publish / Close / Delete | Hooks ready | In table and card actions, call `usePublishOpportunity()`, `useCloseOpportunity()`, `useDeleteOpportunity()`; refetch list. |
+| Accept / Reject application | Hooks ready | In ApplicantsDrawer and ApplicationModal, call `useAcceptApplication()` / `useRejectApplication()`; refetch applications. |
+| Set priority (super admin) | Hooks ready | Add UI for `useSetOpportunityPriority(opportunityId, priority)` if super-admin role. |
+| **Backend** | All listed operations Provided | Ensure schema type names match (e.g. `OpportunityType` vs `Opportunity` in fragments if you see validation errors). |
 
 ---
 
@@ -472,6 +511,25 @@ This document tracks **GraphQL (or REST) APIs that the admin hub UI is built to 
 | Link association to community | Mutation | Optional | **Not provided** |
 | `discoverAssociations` | Query | Optional | **Not provided** |
 | `requestMembership` | Mutation | Optional | **Not provided** |
+
+---
+
+### Communities – what’s left to do
+
+| Item | Status | Action |
+|------|--------|--------|
+| **Already wired** | | |
+| `listCommunities` | Provided + Wired | Communities page table. |
+| `getCommunity` | Provided + Wired | Community detail page. |
+| `createCommunity` | Provided + Wired | Create Community modal. |
+| **Backend not provided yet** | | |
+| `getCommunityStats` | Not provided | Optional. Hook exists; wire CommunityDetail stats when backend exposes it. |
+| `updateCommunity` | Not provided | Add operation + hook when backend provides; wire Edit community form. |
+| `deleteCommunity` | Not provided | Add operation + hook when backend provides; wire Delete action. |
+| Suspend / unsuspend | Not provided | Add operation + hook when backend provides; wire Suspend modal. |
+| Link association | Not provided | Add operation when backend provides; wire Link Associations modal. |
+| `discoverAssociations` | Not provided | For link-association picker. Hook exists. |
+| `requestMembership` | Not provided | Member-facing; lower priority for admin hub. |
 
 ---
 
