@@ -17,25 +17,23 @@ import {
   ACCEPT_APPLICATION,
   REJECT_APPLICATION,
   REVIEW_APPLICATION,
+  SAVE_OPPORTUNITY,
+  UNSAVE_OPPORTUNITY,
+  SUBMIT_APPLICATION,
+  WITHDRAW_APPLICATION,
+  USER_APPLICATIONS,
+  GET_SAVED_OPPORTUNITIES,
+  GET_OPPORTUNITY_FEED,
 } from "@/services/networks/graphql/opportunity";
 
-/** ListOpportunitiesInput: limit, offset, searchTerm, type, category, subCategory, workMode, engagementType, location, ownerType, ownerId, status, sortBy, sortOrder */
-export interface ListOpportunitiesInput {
-  limit?: number;
-  offset?: number;
-  searchTerm?: string;
-  type?: string;
-  category?: string;
-  subCategory?: string;
-  workMode?: string;
-  engagementType?: string;
-  location?: string;
-  ownerType?: string;
-  ownerId?: string;
-  status?: string;
-  sortBy?: string;
-  sortOrder?: string;
-}
+import type {
+  ListOpportunitiesInput,
+  CreateOpportunityInput,
+  UpdateOpportunityInput,
+  GetApplicationsInput,
+  SubmitApplicationInput,
+  GetOpportunityFeedInput,
+} from "@/types/opportunities";
 
 export function useGetOpportunity(id: string | null) {
   return useQuery(GET_OPPORTUNITY, {
@@ -104,4 +102,40 @@ export function useRejectApplication() {
 
 export function useReviewApplication() {
   return useMutation(REVIEW_APPLICATION);
+}
+
+// --- User/Public Functionality ---
+
+export function useSaveOpportunity() {
+  return useMutation(SAVE_OPPORTUNITY);
+}
+
+export function useUnsaveOpportunity() {
+  return useMutation(UNSAVE_OPPORTUNITY);
+}
+
+export function useSubmitApplication() {
+  return useMutation(SUBMIT_APPLICATION);
+}
+
+export function useWithdrawApplication() {
+  return useMutation(WITHDRAW_APPLICATION);
+}
+
+export function useUserApplications(limit?: number, offset?: number, status?: string) {
+  return useQuery(USER_APPLICATIONS, {
+    variables: { limit, offset, status },
+  });
+}
+
+export function useGetSavedOpportunities(limit?: number, offset?: number) {
+  return useQuery(GET_SAVED_OPPORTUNITIES, {
+    variables: { limit, offset },
+  });
+}
+
+export function useGetOpportunityFeed(input: GetOpportunityFeedInput) {
+  return useQuery(GET_OPPORTUNITY_FEED, {
+    variables: { input },
+  });
 }

@@ -20,39 +20,11 @@ export const OPPORTUNITY_OWNER_FIELDS = gql`
   }
 `;
 
-export const OPPORTUNITY_CARD_FIELDS = gql`
-  ${OPPORTUNITY_OWNER_FIELDS}
-  fragment OpportunityCardFields on OpportunityType {
-    id
-    title
-    type
-    category
-    status
-    priorityLevel
-    location
-    workMode
-    engagementType
-    deadline
-    applicationCount
-    owner {
-      ...OpportunityOwnerFields
-    }
-    isSavedByCurrentUser
-    hasCurrentUserApplied
-    createdAt
-    publishedAt
-  }
-`;
-
-export const OPPORTUNITY_FULL_FIELDS = gql`
-  ${OPPORTUNITY_OWNER_FIELDS}
-  fragment OpportunityFullFields on OpportunityType {
+export const OPPORTUNITY_FIELDS = gql`
+  fragment OpportunityFields on OpportunityType {
     id
     ownerType
     ownerId
-    owner {
-      ...OpportunityOwnerFields
-    }
     type
     category
     subCategory
@@ -73,16 +45,40 @@ export const OPPORTUNITY_FULL_FIELDS = gql`
     salaryMax
     salaryCurrency
     deadline
-    applicationCount
     skills
     tags
-    isSavedByCurrentUser
-    hasCurrentUserApplied
-    currentUserApplicationId
+    applicationCount
     createdAt
     updatedAt
     publishedAt
     closedAt
+  }
+`;
+
+export const OPPORTUNITY_CARD_FIELDS = gql`
+  ${OPPORTUNITY_OWNER_FIELDS}
+  ${OPPORTUNITY_FIELDS}
+  fragment OpportunityCardFields on OpportunityType {
+    ...OpportunityFields
+    owner {
+      ...OpportunityOwnerFields
+    }
+    isSavedByCurrentUser
+    hasCurrentUserApplied
+  }
+`;
+
+export const OPPORTUNITY_FULL_FIELDS = gql`
+  ${OPPORTUNITY_OWNER_FIELDS}
+  ${OPPORTUNITY_FIELDS}
+  fragment OpportunityFullFields on OpportunityType {
+    ...OpportunityFields
+    owner {
+      ...OpportunityOwnerFields
+    }
+    isSavedByCurrentUser
+    hasCurrentUserApplied
+    currentUserApplicationId
   }
 `;
 
@@ -158,14 +154,11 @@ export const GET_APPLICATION = gql`
 
 // --- Mutations (system admin) ---
 
-/** Create opportunity (system admin can create for anyone). */
+/** Create opportunity (system admin can create for anyone). Returns OpportunityType but only id is reliable. */
 export const CREATE_OPPORTUNITY = gql`
   mutation CreateOpportunity($input: CreateOpportunityInput!) {
     createOpportunity(input: $input) {
       id
-      title
-      status
-      createdAt
     }
   }
 `;
@@ -216,5 +209,93 @@ export const REJECT_APPLICATION = gql`
 export const REVIEW_APPLICATION = gql`
   mutation ReviewApplication($applicationId: String!, $notes: String) {
     reviewApplication(applicationId: $applicationId, notes: $notes)
+  }
+`;
+
+/** Set opportunity priority - flat args, no input wrapper. Priority: HIGH | NORMAL | LOW */
+export const SET_OPPORTUNITY_PRIORITY = gql`
+  mutation SetOpportunityPriority($opportunityId: String!, $priority: String!) {
+    setOpportunityPriority(opportunityId: $opportunityId, priority: $priority)
+  }
+`;
+
+/** Save opportunity for current user. */
+export const SAVE_OPPORTUNITY = gql`
+  mutation SaveOpportunity($id: String!) {
+    saveOpportunity(id: $id)
+  }
+`;
+
+/** Unsave opportunity for current user. */
+export const UNSAVE_OPPORTUNITY = gql`
+  mutation UnsaveOpportunity($id: String!) {
+    unsaveOpportunity(id: $id)
+  }
+`;
+
+/** Submit application. Returns the new applicationId string. */
+export const SUBMIT_APPLICATION = gql`
+  mutation SubmitApplication($input: SubmitApplicationInput!) {
+    submitApplication(input: $input)
+  }
+`;
+
+/** Withdraw application (stub - always returns true, gRPC not wired yet). */
+export const WITHDRAW_APPLICATION = gql`
+  mutation WithdrawApplication($id: String!) {
+    withdrawApplication(id: $id)
+  }
+`;
+
+// --- Additional Queries for User/Feed functionality ---
+
+/** Current user's submitted applications. */
+export const USER_APPLICATIONS = gql`
+  ${APPLICATION_FIELDS}
+  query UserApplications($limit: Int, $offset: Int, $status: String) {
+    userApplications(limit: $limit, offset: $offset, status: $status) {
+      total
+      applications {
+        ...ApplicationFields
+        opportunity {
+          id
+          title
+          status
+          deadline
+        }
+      }
+    }
+  }
+`;
+
+/** Current user's saved opportunities. */
+export const GET_SAVED_OPPORTUNITIES = gql`
+  ${OPPORTUNITY_FULL_FIELDS}
+  query GetSavedOpportunities($limit: Int, $offset: Int) {
+    getSavedOpportunities(limit: $limit, offset: $offset) {
+      total
+      savedOpportunities {
+        id
+        opportunityId
+        userId
+        savedAt
+        opportunity {
+          ...OpportunityFullFields
+        }
+      }
+    }
+  }
+`;
+
+/** Get opportunity feed (always PUBLISHED status). */
+export const GET_OPPORTUNITY_FEED = gql`
+  ${OPPORTUNITY_FULL_FIELDS}
+  query GetOpportunityFeed($input: GetOpportunityFeedInput!) {
+    getOpportunityFeed(input: $input) {
+      total
+      opportunities {
+        ...OpportunityFullFields
+      }
+    }
   }
 `;

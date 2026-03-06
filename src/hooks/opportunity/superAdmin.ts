@@ -4,19 +4,16 @@
  */
 
 import { useMutation } from "@apollo/client/react";
-import {
-  SET_OPPORTUNITY_PRIORITY,
-  PRIORITY_LEVELS,
-  type PriorityLevel,
-  type SetOpportunityPriorityInput,
-} from "@/services/networks/graphql/opportunity";
+import { SET_OPPORTUNITY_PRIORITY } from "@/services/networks/graphql/opportunity/superAdmin";
+import { PriorityLevel } from "@/types/opportunities";
 
-export { PRIORITY_LEVELS, type PriorityLevel, type SetOpportunityPriorityInput };
+export { PriorityLevel };
 
 /**
  * Set opportunity priority (pin/boost). System admin only.
  * Backend returns 403 if caller is not super admin.
  * Pass variables: { opportunityId: string, priority: "HIGH" | "NORMAL" | "LOW" }.
+ * ⚠️ Uses flat arguments - no input wrapper object.
  */
 export function useSetOpportunityPriority() {
   return useMutation(SET_OPPORTUNITY_PRIORITY);
