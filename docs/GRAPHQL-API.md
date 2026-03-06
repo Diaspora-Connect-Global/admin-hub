@@ -16,7 +16,7 @@ This document lists all **queries** and **mutations** implemented in the admin h
 
 ## 1. Admin Service
 
-**Endpoint:** `VITE_ADMIN_GRAPHQL_URL` (default `http://localhost:3006/graphql`)  
+**Endpoint:** `VITE_ADMIN_GRAPHQL_URL` (default `https://api.diaspoplug.net/graphql`)  
 **Definitions:** `src/services/networks/graphql/admin/operations.ts`  
 **Auth:** Bearer JWT (no auth for `adminLogin` only)
 

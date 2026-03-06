@@ -12,7 +12,7 @@ import { logger } from "@/lib/logger";
 const adminGraphqlUrl =
   typeof import.meta !== "undefined" && import.meta.env?.VITE_ADMIN_GRAPHQL_URL
     ? import.meta.env.VITE_ADMIN_GRAPHQL_URL
-    : "http://localhost:3006/graphql";
+    : "https://api.diaspoplug.net/graphql";
 
 const httpLink = new HttpLink({
   uri: adminGraphqlUrl,
