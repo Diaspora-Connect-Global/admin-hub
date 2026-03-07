@@ -8,10 +8,13 @@ type SessionState = {
   sessionId: string | null;
   /** Refresh token for renewing accessToken. */
   refreshToken: string | null;
+  /** Current admin's user id (from adminLogin admin.userId). Used e.g. as ownerId when creating opportunities. */
+  userId: string | null;
   devUserId: string | null;
   userEmail: string | null;
   setSessionId: (sessionId: string | null) => void;
   setRefreshToken: (refreshToken: string | null) => void;
+  setUserId: (userId: string | null) => void;
   setDevUserId: (userId: string | null) => void;
   setUserEmail: (email: string | null) => void;
   clearSession: () => void;
@@ -22,14 +25,16 @@ export const useSessionStore = create<SessionState>()(
     (set) => ({
       sessionId: null,
       refreshToken: null,
+      userId: null,
       devUserId: null,
       userEmail: null,
       setSessionId: (sessionId) => set({ sessionId: sessionId ?? null }),
       setRefreshToken: (refreshToken) => set({ refreshToken: refreshToken ?? null }),
+      setUserId: (userId) => set({ userId: userId ?? null }),
       setDevUserId: (userId) => set({ devUserId: userId ?? null }),
       setUserEmail: (email) => set({ userEmail: email ?? null }),
       clearSession: () =>
-        set({ sessionId: null, refreshToken: null, devUserId: null, userEmail: null }),
+        set({ sessionId: null, refreshToken: null, userId: null, devUserId: null, userEmail: null }),
     }),
     {
       name: SESSION_STORAGE_KEY,
@@ -37,6 +42,7 @@ export const useSessionStore = create<SessionState>()(
       partialize: (state) => ({
         sessionId: state.sessionId,
         refreshToken: state.refreshToken,
+        userId: state.userId,
         devUserId: state.devUserId,
         userEmail: state.userEmail,
       }),
@@ -52,6 +58,11 @@ export function isAuthenticated(): boolean {
 /** Get session ID without subscribing (for use outside React, e.g. Apollo link). */
 export function getSessionIdFromStore(): string | null {
   return useSessionStore.getState().sessionId;
+}
+
+/** Get current admin user ID without subscribing (from login admin.userId). */
+export function getUserIdFromStore(): string | null {
+  return useSessionStore.getState().userId;
 }
 
 /** Get dev user ID without subscribing. */

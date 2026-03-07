@@ -6,6 +6,7 @@
 import {
   useSessionStore,
   getSessionIdFromStore,
+  getUserIdFromStore,
   getDevUserIdFromStore,
 } from "@/stores/sessionStore";
 
@@ -24,6 +25,16 @@ export function setSessionId(sessionId: string): void {
 /** Set the refresh token after successful login. */
 export function setRefreshToken(refreshToken: string | null): void {
   useSessionStore.getState().setRefreshToken(refreshToken);
+}
+
+/** Set the current admin user id (from login admin.userId). Used e.g. as ownerId when creating opportunities. */
+export function setUserId(userId: string | null): void {
+  useSessionStore.getState().setUserId(userId);
+}
+
+/** Get the current admin user id. */
+export function getUserId(): string | null {
+  return getUserIdFromStore();
 }
 
 /** Set the current user email (for display and audit). */

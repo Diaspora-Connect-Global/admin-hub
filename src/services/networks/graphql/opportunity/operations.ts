@@ -154,11 +154,16 @@ export const GET_APPLICATION = gql`
 
 // --- Mutations (system admin) ---
 
-/** Create opportunity (system admin can create for anyone). Returns OpportunityType but only id is reliable. */
+/** Create opportunity (system admin can create for anyone). Returns OpportunityType. */
 export const CREATE_OPPORTUNITY = gql`
   mutation CreateOpportunity($input: CreateOpportunityInput!) {
     createOpportunity(input: $input) {
       id
+      title
+      status
+      type
+      category
+      createdAt
     }
   }
 `;

@@ -23,11 +23,23 @@ import { MessageApplicantModal } from "@/components/opportunities/MessageApplica
 import { RejectApplicantModal } from "@/components/opportunities/RejectApplicantModal";
 import { OpportunityBulkActionsBar } from "@/components/opportunities/OpportunityBulkActionsBar";
 import { Plus, RefreshCw, LayoutList, LayoutGrid, Search } from "lucide-react";
-import { Opportunity, Applicant } from "@/types/opportunities";
+import {
+  Opportunity,
+  Applicant,
+  OpportunityType as OpportunityTypeEnum,
+  OpportunityCategory,
+  Visibility,
+  ApplicationMethod,
+  OwnerType,
+  type CreateOpportunityInput,
+} from "@/types/opportunities";
 import { toast } from "@/hooks/use-toast";
+import { getUserId } from "@/stores/session";
 import {
   useListOpportunities,
   useGetApplications,
+  useCreateOpportunity,
+  useUpdateOpportunity,
   usePublishOpportunity,
   useCloseOpportunity,
   useDeleteOpportunity,
@@ -90,6 +102,93 @@ export default function Opportunities() {
   const [deleteOpportunity, setDeleteOpportunity] = useState<Opportunity | null>(null);
   const [messageModalOpen, setMessageModalOpen] = useState(false);
   const [rejectModalOpen, setRejectModalOpen] = useState(false);
+
+  const [createOpportunityMutation] = useCreateOpportunity();
+  const [updateOpportunityMutation] = useUpdateOpportunity();
+
+  function mapFormTypeToEnums(
+    typeStr: string
+  ): { type: OpportunityTypeEnum; category: OpportunityCategory } {
+    const t = (typeStr || "job").toLowerCase();
+    if (t === "volunteer") return { type: OpportunityTypeEnum.VOLUNTEER, category: OpportunityCategory.VOLUNTEERING_SOCIAL_IMPACT };
+    if (t === "funding") return { type: OpportunityTypeEnum.GRANT, category: OpportunityCategory.FUNDING_GRANTS };
+    if (t === "scholarship") return { type: OpportunityTypeEnum.SCHOLARSHIP, category: OpportunityCategory.FELLOWSHIPS_LEADERSHIP };
+    if (t === "training") return { type: OpportunityTypeEnum.PROGRAM, category: OpportunityCategory.EDUCATION_TRAINING };
+    return { type: OpportunityTypeEnum.EMPLOYMENT, category: OpportunityCategory.EMPLOYMENT_CAREER };
+  }
+
+  const handleSaveOpportunity = async (
+    data: Partial<Opportunity>,
+    action: "draft" | "publish" | "schedule"
+  ) => {
+    const { type: typeEnum, category } = mapFormTypeToEnums(data.type as string);
+    const visibility =
+      data.visibility === "public" ? Visibility.PUBLIC : Visibility.COMMUNITY_ONLY;
+    const deadlineStr = data.deadline
+      ? (typeof data.deadline === "string" && data.deadline.includes(",")
+          ? new Date(data.deadline).toISOString()
+          : (data.deadline as string))
+      : undefined;
+
+    if (editOpportunity?.id) {
+      try {
+        await updateOpportunityMutation({
+          variables: {
+            id: editOpportunity.id,
+            input: {
+              title: data.title,
+              description: data.description ?? "",
+              location: data.location ?? undefined,
+              deadline: deadlineStr,
+            },
+          },
+        });
+        toast({ title: "Opportunity updated", description: "Your changes have been saved." });
+        setCreateModalOpen(false);
+        setEditOpportunity(null);
+        refetchList();
+      } catch (e) {
+        toast({ title: "Error", description: (e as Error).message, variant: "destructive" });
+      }
+      return;
+    }
+
+    const ownerId = getUserId();
+    if (!ownerId) {
+      toast({
+        title: "Session error",
+        description: "Your user id is not available. Please log out and log in again.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const input: CreateOpportunityInput = {
+      ownerType: OwnerType.USER,
+      ownerId,
+      type: typeEnum,
+      category,
+      title: data.title ?? "",
+      description: data.description ?? "",
+      visibility,
+      applicationMethod: ApplicationMethod.IN_PLATFORM_FORM,
+      location: data.location ?? undefined,
+      deadline: deadlineStr,
+    };
+
+    try {
+      await createOpportunityMutation({ variables: { input } });
+      toast({
+        title: "Opportunity created",
+        description: action === "draft" ? "Saved as draft." : "Opportunity is now live.",
+      });
+      setCreateModalOpen(false);
+      setEditOpportunity(null);
+      refetchList();
+    } catch (e) {
+      toast({ title: "Error", description: (e as Error).message, variant: "destructive" });
+    }
+  };
 
   const filteredOpportunities = opportunities.filter((opp) => {
     if (searchQuery && !opp.title.toLowerCase().includes(searchQuery.toLowerCase())) return false;
@@ -251,7 +350,7 @@ export default function Opportunities() {
         open={createModalOpen}
         onOpenChange={(open) => { setCreateModalOpen(open); if (!open) setEditOpportunity(null); }}
         opportunity={editOpportunity}
-        onSave={(data, action) => toast({ title: `Opportunity ${action}` })}
+        onSave={handleSaveOpportunity}
       />
       <OpportunityModal
         open={drawerOpen}
