@@ -6,7 +6,7 @@ import {
   from,
   Observable,
 } from "@apollo/client";
-import { getSessionId, getDevUserId, DEV_USER_ID_HEADER_KEY } from "@/stores/session";
+import { getAccessToken, getDevUserId, DEV_USER_ID_HEADER_KEY } from "@/stores/session";
 import { logger } from "@/lib/logger";
 
 const adminGraphqlUrl =
@@ -24,16 +24,22 @@ const httpLink = new HttpLink({
 const log = logger.child("GraphQL");
 
 const authLink = new ApolloLink((operation, forward) => {
-  const sessionId = getSessionId();
+  const accessToken = getAccessToken();
   const devUserId = getDevUserId();
   const headers: Record<string, string> = { ...operation.getContext().headers };
-  if (sessionId) headers["Authorization"] = `Bearer ${sessionId}`;
+  if (accessToken) {
+    headers["Authorization"] = `Bearer ${accessToken}`;
+    log.debug("Request with auth", {
+      operation: operation.operationName,
+      hasAuth: true,
+      devUserId: devUserId ?? undefined,
+    });
+  } else {
+    log.warn("No access token available", {
+      operation: operation.operationName,
+    });
+  }
   if (devUserId) headers[DEV_USER_ID_HEADER_KEY] = devUserId;
-  log.debug("Request", {
-    operation: operation.operationName,
-    hasAuth: !!sessionId,
-    devUserId: devUserId ?? undefined,
-  });
   operation.setContext({ headers });
   return forward(operation);
 });
@@ -43,10 +49,22 @@ const errorLogLink = new ApolloLink((operation, forward) => {
     forward(operation).subscribe({
       next(response) {
         if (response.errors?.length) {
-          log.warn("GraphQL errors", {
-            operation: operation.operationName,
-            errors: response.errors.map((e) => e.message),
-          });
+          const isForbidden = response.errors.some(e => e.message?.toLowerCase().includes('forbidden'));
+          if (isForbidden) {
+            log.error("GraphQL authorization error", {
+              operation: operation.operationName,
+              errors: response.errors.map((e) => ({
+                message: e.message,
+                code: e.extensions?.code,
+                path: e.path,
+              })),
+            });
+          } else {
+            log.warn("GraphQL errors", {
+              operation: operation.operationName,
+              errors: response.errors.map((e) => e.message),
+            });
+          }
         }
         observer.next(response);
       },

@@ -70,7 +70,7 @@ export function CreateEditOpportunityModal({
   
   // Core Details
   const [title, setTitle] = useState("");
-  const [type, setType] = useState<OpportunityType>("job");
+  const [type, setType] = useState<OpportunityType>("EMPLOYMENT");
   const [shortDescription, setShortDescription] = useState("");
   const [description, setDescription] = useState("");
   const [tags, setTags] = useState<string[]>([]);
@@ -118,7 +118,7 @@ export function CreateEditOpportunityModal({
       } else {
         // Reset to defaults
         setTitle("");
-        setType("job");
+        setType("EMPLOYMENT");
         setShortDescription("");
         setDescription("");
         setTags([]);
@@ -236,12 +236,15 @@ export function CreateEditOpportunityModal({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="job">Job</SelectItem>
-                    <SelectItem value="volunteer">Volunteer</SelectItem>
-                    <SelectItem value="training">Training</SelectItem>
-                    <SelectItem value="funding">Funding</SelectItem>
-                    <SelectItem value="scholarship">Scholarship</SelectItem>
-                    <SelectItem value="other">Other</SelectItem>
+                    <SelectItem value="EMPLOYMENT">Employment</SelectItem>
+                    <SelectItem value="CONTRACT">Contract</SelectItem>
+                    <SelectItem value="VOLUNTEER">Volunteer</SelectItem>
+                    <SelectItem value="SCHOLARSHIP">Scholarship</SelectItem>
+                    <SelectItem value="FELLOWSHIP">Fellowship</SelectItem>
+                    <SelectItem value="GRANT">Grant</SelectItem>
+                    <SelectItem value="PROGRAM">Program</SelectItem>
+                    <SelectItem value="INVESTMENT">Investment</SelectItem>
+                    <SelectItem value="INITIATIVE">Initiative</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

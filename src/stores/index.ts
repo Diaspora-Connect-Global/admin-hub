@@ -1,12 +1,15 @@
 export {
   useSessionStore,
+  getAccessTokenFromStore,
   getSessionIdFromStore,
   getDevUserIdFromStore,
   isAuthenticated,
   SESSION_STORAGE_KEY,
 } from "./sessionStore";
 export {
+  getAccessToken,
   getSessionId,
+  setAccessToken,
   setSessionId,
   setRefreshToken,
   setUserEmail,

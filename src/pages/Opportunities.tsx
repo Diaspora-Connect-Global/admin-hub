@@ -35,6 +35,7 @@ import {
 } from "@/types/opportunities";
 import { toast } from "@/hooks/use-toast";
 import { getUserId } from "@/stores/session";
+import { debugAuthState } from "@/lib/auth-debug";
 import {
   useListOpportunities,
   useGetApplications,
@@ -45,7 +46,9 @@ import {
   useDeleteOpportunity,
   useAcceptApplication,
   useRejectApplication,
+  useReviewApplication,
 } from "@/hooks/opportunity";
+import { useSetOpportunityPriority } from "@/hooks/opportunity/superAdmin";
 
 export default function Opportunities() {
   const location = useLocation();
@@ -54,7 +57,6 @@ export default function Opportunities() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
-  const [visibilityFilter, setVisibilityFilter] = useState("all");
   const [viewMode, setViewMode] = useState<"list" | "card">("list");
   const [selectedOpportunities, setSelectedOpportunities] = useState<string[]>([]);
 
@@ -70,9 +72,10 @@ export default function Opportunities() {
     limit: 50,
     offset: 0,
     searchTerm: searchQuery.trim() || undefined,
-    status: statusFilter === "all" ? undefined : statusFilter,
-    type: typeFilter === "all" ? undefined : typeFilter,
-    visibility: visibilityFilter === "all" ? undefined : visibilityFilter,
+    status: statusFilter === "all" ? undefined : statusFilter.toUpperCase(),
+    type: typeFilter === "all" ? undefined : (typeFilter.toUpperCase() as OpportunityTypeEnum),
+    sortBy: "createdAt",
+    sortOrder: "DESC",
   };
   const { data: listData, loading: listLoading, refetch: refetchList } = useListOpportunities(listInput);
   const rawOpportunities = Array.isArray(listData?.listOpportunities?.opportunities) ? listData.listOpportunities.opportunities : [];
@@ -105,6 +108,13 @@ export default function Opportunities() {
 
   const [createOpportunityMutation] = useCreateOpportunity();
   const [updateOpportunityMutation] = useUpdateOpportunity();
+  const [publishOpportunityMutation] = usePublishOpportunity();
+  const [closeOpportunityMutation] = useCloseOpportunity();
+  const [deleteOpportunityMutation] = useDeleteOpportunity();
+  const [setPriorityMutation] = useSetOpportunityPriority();
+  const [reviewApplicationMutation] = useReviewApplication();
+  const [acceptApplicationMutation] = useAcceptApplication();
+  const [rejectApplicationMutation] = useRejectApplication();
 
   function mapFormTypeToEnums(
     typeStr: string
@@ -186,6 +196,95 @@ export default function Opportunities() {
       setEditOpportunity(null);
       refetchList();
     } catch (e) {
+      const error = e as { graphQLErrors?: Array<{ message: string; extensions?: { code?: string } }> };
+      const graphQLError = error.graphQLErrors?.[0];
+      
+      if (graphQLError?.extensions?.code === "FORBIDDEN" || graphQLError?.message?.toLowerCase().includes('forbidden')) {
+        toast({ 
+          title: "Permission Denied", 
+          description: "You need SYSTEM_ADMIN role to create opportunities. Please contact your administrator.", 
+          variant: "destructive" 
+        });
+      } else {
+        toast({ 
+          title: "Error", 
+          description: graphQLError?.message || (e as Error).message || "Failed to create opportunity", 
+          variant: "destructive" 
+        });
+      }
+    }
+  };
+
+  // Admin Action Handlers
+  const handlePublishOpportunity = async (opportunityId: string) => {
+    try {
+      await publishOpportunityMutation({ variables: { id: opportunityId } });
+      toast({ title: "Success", description: "Opportunity published successfully." });
+      refetchList();
+    } catch (e) {
+      toast({ title: "Error", description: (e as Error).message, variant: "destructive" });
+    }
+  };
+
+  const handleCloseOpportunity = async (opportunityId: string, reason?: string) => {
+    try {
+      await closeOpportunityMutation({ variables: { id: opportunityId, reason } });
+      toast({ title: "Success", description: "Opportunity closed successfully." });
+      refetchList();
+    } catch (e) {
+      toast({ title: "Error", description: (e as Error).message, variant: "destructive" });
+    }
+  };
+
+  const handleDeleteOpportunity = async (opportunityId: string) => {
+    try {
+      await deleteOpportunityMutation({ variables: { id: opportunityId } });
+      toast({ title: "Success", description: "Opportunity deleted successfully." });
+      setDeleteModalOpen(false);
+      setDeleteOpportunity(null);
+      refetchList();
+    } catch (e) {
+      toast({ title: "Error", description: (e as Error).message, variant: "destructive" });
+    }
+  };
+
+  const handleSetPriority = async (opportunityId: string, priority: "HIGH" | "NORMAL" | "LOW") => {
+    try {
+      await setPriorityMutation({ variables: { opportunityId, priority } });
+      toast({ title: "Success", description: `Priority set to ${priority.toLowerCase()}.` });
+      refetchList();
+    } catch (e) {
+      toast({ title: "Error", description: (e as Error).message, variant: "destructive" });
+    }
+  };
+
+  const handleReviewApplication = async (applicationId: string, notes?: string) => {
+    try {
+      await reviewApplicationMutation({ variables: { applicationId, notes } });
+      toast({ title: "Success", description: "Application marked for review." });
+    } catch (e) {
+      toast({ title: "Error", description: (e as Error).message, variant: "destructive" });
+    }
+  };
+
+  const handleAcceptApplication = async (applicationId: string, notes?: string) => {
+    try {
+      await acceptApplicationMutation({ variables: { id: applicationId, notes } });
+      toast({ title: "Success", description: "Application accepted." });
+      setApplicationModalOpen(false);
+      setSelectedApplicant(null);
+    } catch (e) {
+      toast({ title: "Error", description: (e as Error).message, variant: "destructive" });
+    }
+  };
+
+  const handleRejectApplication = async (applicationId: string, reason?: string) => {
+    try {
+      await rejectApplicationMutation({ variables: { id: applicationId, reason } });
+      toast({ title: "Success", description: "Application rejected." });
+      setRejectModalOpen(false);
+      setSelectedApplicant(null);
+    } catch (e) {
       toast({ title: "Error", description: (e as Error).message, variant: "destructive" });
     }
   };
@@ -194,7 +293,6 @@ export default function Opportunities() {
     if (searchQuery && !opp.title.toLowerCase().includes(searchQuery.toLowerCase())) return false;
     if (statusFilter !== "all" && opp.status !== statusFilter) return false;
     if (typeFilter !== "all" && opp.type !== typeFilter) return false;
-    if (visibilityFilter !== "all" && opp.visibility !== visibilityFilter) return false;
     return true;
   });
 
@@ -234,10 +332,10 @@ export default function Opportunities() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">{t.allStatus}</SelectItem>
-              <SelectItem value="published">{t.published}</SelectItem>
-              <SelectItem value="draft">{t.draft}</SelectItem>
-              <SelectItem value="scheduled">{t.scheduled}</SelectItem>
-              <SelectItem value="closed">{t.closed}</SelectItem>
+              <SelectItem value="PUBLISHED">{t.published}</SelectItem>
+              <SelectItem value="DRAFT">{t.draft}</SelectItem>
+              <SelectItem value="CLOSED">{t.closed}</SelectItem>
+              <SelectItem value="ARCHIVED">{t.archived}</SelectItem>
             </SelectContent>
           </Select>
           <Select value={typeFilter} onValueChange={setTypeFilter}>
@@ -246,21 +344,15 @@ export default function Opportunities() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">{t.allTypes}</SelectItem>
-              <SelectItem value="job">{t.job}</SelectItem>
-              <SelectItem value="volunteer">{t.volunteer}</SelectItem>
-              <SelectItem value="training">{t.training}</SelectItem>
-              <SelectItem value="funding">{t.funding}</SelectItem>
-              <SelectItem value="scholarship">{t.scholarship}</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select value={visibilityFilter} onValueChange={setVisibilityFilter}>
-            <SelectTrigger className="w-32">
-              <SelectValue placeholder={t.visibilityPlaceholder} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">{t.all}</SelectItem>
-              <SelectItem value="members">{t.membersOnly}</SelectItem>
-              <SelectItem value="public">{t.public}</SelectItem>
+              <SelectItem value="EMPLOYMENT">{t.employment || "Employment"}</SelectItem>
+              <SelectItem value="CONTRACT">{t.contract || "Contract"}</SelectItem>
+              <SelectItem value="VOLUNTEER">{t.volunteer || "Volunteer"}</SelectItem>
+              <SelectItem value="SCHOLARSHIP">{t.scholarship || "Scholarship"}</SelectItem>
+              <SelectItem value="FELLOWSHIP">{t.fellowship || "Fellowship"}</SelectItem>
+              <SelectItem value="GRANT">{t.grant || "Grant"}</SelectItem>
+              <SelectItem value="PROGRAM">{t.program || "Program"}</SelectItem>
+              <SelectItem value="INVESTMENT">{t.investment || "Investment"}</SelectItem>
+              <SelectItem value="INITIATIVE">{t.initiative || "Initiative"}</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -279,6 +371,14 @@ export default function Opportunities() {
           </Tabs>
           <Button variant="outline" size="icon" className="h-9 w-9" onClick={() => refetchList()}>
             <RefreshCw className="h-4 w-4" />
+          </Button>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => debugAuthState()}
+            className="h-9"
+          >
+            🔍 Debug Auth
           </Button>
           <Button className="gap-2" onClick={() => setCreateModalOpen(true)}>
             <Plus className="h-4 w-4" />
@@ -329,19 +429,21 @@ export default function Opportunities() {
           onSelectAll={handleSelectAll}
           onOpenDrawer={handleOpenDrawer}
           onEdit={(opp) => { setEditOpportunity(opp); setCreateModalOpen(true); }}
-          onTogglePublish={(opp) => toast({ title: `Opportunity ${opp.status === "published" ? "unpublished" : "published"}` })}
-          onClose={(opp) => toast({ title: "Applications closed" })}
+          onTogglePublish={(opp) => opp.status === "DRAFT" ? handlePublishOpportunity(opp.id) : handleCloseOpportunity(opp.id)}
+          onClose={(opp) => handleCloseOpportunity(opp.id, "Closed by admin")}
           onViewApplicants={handleViewApplicants}
           onDelete={(opp) => { setDeleteOpportunity(opp); setDeleteModalOpen(true); }}
+          onSetPriority={(opp, priority) => handleSetPriority(opp.id, priority)}
         />
       ) : viewMode === "card" ? (
         <OpportunitiesCardView
           opportunities={filteredOpportunities}
           onOpenDrawer={handleOpenDrawer}
           onEdit={(opp) => { setEditOpportunity(opp); setCreateModalOpen(true); }}
-          onTogglePublish={(opp) => toast({ title: `Opportunity ${opp.status === "published" ? "unpublished" : "published"}` })}
+          onTogglePublish={(opp) => opp.status === "DRAFT" ? handlePublishOpportunity(opp.id) : handleCloseOpportunity(opp.id)}
           onViewApplicants={handleViewApplicants}
           onDelete={(opp) => { setDeleteOpportunity(opp); setDeleteModalOpen(true); }}
+          onSetPriority={(opp, priority) => handleSetPriority(opp.id, priority)}
         />
       ) : null}
 
@@ -357,10 +459,10 @@ export default function Opportunities() {
         onOpenChange={setDrawerOpen}
         opportunity={drawerOpportunity}
         onEdit={() => { setEditOpportunity(drawerOpportunity); setCreateModalOpen(true); setDrawerOpen(false); }}
-        onTogglePublish={() => toast({ title: "Toggled" })}
-        onClose={() => toast({ title: "Closed" })}
+        onTogglePublish={() => drawerOpportunity && (drawerOpportunity.status === "DRAFT" ? handlePublishOpportunity(drawerOpportunity.id) : handleCloseOpportunity(drawerOpportunity.id))}
+        onClose={() => drawerOpportunity && handleCloseOpportunity(drawerOpportunity.id, "Closed by admin")}
         onViewApplicants={() => { setApplicantsOpportunity(drawerOpportunity); setApplicantsDrawerOpen(true); }}
-        onDuplicate={() => toast({ title: "Duplicated" })}
+        onDuplicate={() => toast({ title: "Duplicate functionality not yet implemented" })}
       />
       <ApplicantsDrawer
         open={applicantsDrawerOpen}
@@ -378,16 +480,16 @@ export default function Opportunities() {
         open={applicationModalOpen}
         onOpenChange={setApplicationModalOpen}
         applicant={selectedApplicant}
-        onShortlist={() => toast({ title: "Shortlisted" })}
+        onShortlist={() => selectedApplicant?.id && handleReviewApplication(selectedApplicant.id, "Shortlisted for review")}
         onMessage={() => { setMessageModalOpen(true); }}
         onReject={() => { setRejectModalOpen(true); }}
-        onMarkHired={() => toast({ title: "Hired" })}
+        onMarkHired={() => selectedApplicant?.id && handleAcceptApplication(selectedApplicant.id, "Hired")}
       />
       <DeleteOpportunityModal
         open={deleteModalOpen}
         onOpenChange={setDeleteModalOpen}
         opportunity={deleteOpportunity}
-        onConfirm={() => toast({ title: "Deleted" })}
+        onConfirm={() => deleteOpportunity?.id && handleDeleteOpportunity(deleteOpportunity.id)}
       />
       <MessageApplicantModal
         open={messageModalOpen}
@@ -399,7 +501,7 @@ export default function Opportunities() {
         open={rejectModalOpen}
         onOpenChange={setRejectModalOpen}
         applicant={selectedApplicant}
-        onConfirm={() => toast({ title: "Rejected" })}
+        onConfirm={(reason) => selectedApplicant?.id && handleRejectApplication(selectedApplicant.id, reason)}
       />
       <OpportunityBulkActionsBar
         selectedCount={selectedOpportunities.length}

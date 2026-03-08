@@ -5,6 +5,7 @@
 
 import {
   useSessionStore,
+  getAccessTokenFromStore,
   getSessionIdFromStore,
   getUserIdFromStore,
   getDevUserIdFromStore,
@@ -12,14 +13,24 @@ import {
 
 export const DEV_USER_ID_HEADER_KEY = "x-user-id";
 
-/** Get the current session ID (Bearer token). Returns null if not logged in. */
+/** Get the current access token (Bearer token). Returns null if not logged in. */
+export function getAccessToken(): string | null {
+  return getAccessTokenFromStore();
+}
+
+/** Legacy alias for getAccessToken - use getAccessToken instead */
 export function getSessionId(): string | null {
-  return getSessionIdFromStore();
+  return getAccessTokenFromStore();
 }
 
 /** Set the access token (Bearer) after successful login. */
+export function setAccessToken(accessToken: string): void {
+  useSessionStore.getState().setAccessToken(accessToken);
+}
+
+/** Legacy alias for setAccessToken - use setAccessToken instead */
 export function setSessionId(sessionId: string): void {
-  useSessionStore.getState().setSessionId(sessionId);
+  useSessionStore.getState().setAccessToken(sessionId);
 }
 
 /** Set the refresh token after successful login. */
