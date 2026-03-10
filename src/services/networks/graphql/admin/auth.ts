@@ -4,7 +4,23 @@
  */
 
 import { adminClient } from "./client";
-import { ADMIN_LOGIN } from "./operations";
+import { ADMIN_LOGIN, REFRESH_TOKEN, LOGOUT } from "./operations";
+import { getAccessToken, getRefreshToken, setAccessToken, setRefreshToken, clearSession } from "@/stores/session";
+
+interface RefreshTokenMutationData {
+  refreshToken: {
+    accessToken: string;
+    refreshToken: string;
+    sessionToken?: string;
+  };
+}
+
+interface LogoutMutationData {
+  logout: {
+    success: boolean;
+    message: string;
+  };
+}
 
 export interface AdminRoleInfo {
   id: string;
@@ -98,3 +114,69 @@ export async function login(
     return { ok: false, error: { code: "LOGIN_FAILED", message } };
   }
 }
+
+/**
+ * Refresh session token when it expires
+ */
+export async function refreshSession(): Promise<{ ok: true; data: { accessToken: string; refreshToken: string } } | { ok: false; error: LoginError }> {
+  try {
+    const refreshToken = getRefreshToken();
+    if (!refreshToken) {
+      return { ok: false, error: { code: "NO_REFRESH_TOKEN", message: "No refresh token available" } };
+    }
+
+    const result = await adminClient.mutate<RefreshTokenMutationData>({
+      mutation: REFRESH_TOKEN,
+      variables: { refreshToken },
+    });
+
+    const data = result.data?.refreshToken;
+    if (!data?.accessToken) {
+      return { ok: false, error: { code: "REFRESH_FAILED", message: "Failed to refresh token" } };
+    }
+
+    // Update stored tokens
+    setAccessToken(data.accessToken);
+    if (data.refreshToken) {
+      setRefreshToken(data.refreshToken);
+    }
+
+    return {
+      ok: true,
+      data: {
+        accessToken: data.accessToken,
+        refreshToken: data.refreshToken || refreshToken,
+      },
+    };
+  } catch (e) {
+    const err = e as { graphQLErrors?: Array<{ message: string }>; message?: string };
+    const message = err.graphQLErrors?.[0]?.message ?? err.message ?? "Refresh failed";
+    return { ok: false, error: { code: "REFRESH_FAILED", message } };
+  }
+}
+
+/**
+ * Logout and invalidate session
+ */
+export async function logout(): Promise<{ ok: boolean; error?: LoginError }> {
+  try {
+    const accessToken = getAccessToken();
+    if (accessToken) {
+      await adminClient.mutate<LogoutMutationData>({
+        mutation: LOGOUT,
+        variables: {
+          sessionId: accessToken,
+          logoutAll: false,
+        },
+      });
+    }
+    clearSession();
+    return { ok: true };
+  } catch (e) {
+    // Still clear local session even if server call fails
+    clearSession();
+    const err = e as { message?: string };
+    return { ok: false, error: { code: "LOGOUT_FAILED", message: err.message ?? "Logout failed" } };
+  }
+}
+

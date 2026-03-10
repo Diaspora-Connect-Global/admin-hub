@@ -268,6 +268,25 @@ export const ADMIN_LOGIN = gql`
   }
 `;
 
+export const REFRESH_TOKEN = gql`
+  mutation RefreshToken($refreshToken: String!) {
+    refreshToken(refreshToken: $refreshToken) {
+      accessToken
+      refreshToken
+      sessionToken
+    }
+  }
+`;
+
+export const LOGOUT = gql`
+  mutation Logout($sessionId: String, $logoutAll: Boolean) {
+    logout(sessionId: $sessionId, logoutAllSessions: $logoutAll) {
+      success
+      message
+    }
+  }
+`;
+
 export const ASSIGN_ADMIN_ROLE = gql`
   mutation AssignAdminRole($input: AssignAdminRoleInput!) {
     assignAdminRole(input: $input) {

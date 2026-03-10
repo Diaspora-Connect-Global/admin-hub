@@ -1,7 +1,8 @@
-import { useState, useCallback } from "react";
+import { useState } from "react";
 import { useLocation } from "react-router-dom";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import { useT } from "@/hooks/useT";
+import { useAdminAuth } from "@/hooks/auth/useAdminAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -32,6 +33,9 @@ import {
   ApplicationMethod,
   OwnerType,
   type CreateOpportunityInput,
+  OpportunityStatus,
+  PriorityLevel,
+  ApplicationStatus,
 } from "@/types/opportunities";
 import { toast } from "@/hooks/use-toast";
 import { getUserId } from "@/stores/session";
@@ -53,6 +57,7 @@ import { useSetOpportunityPriority } from "@/hooks/opportunity/superAdmin";
 export default function Opportunities() {
   const location = useLocation();
   const t = useT("opportunities");
+  const { isSystemAdmin } = useAdminAuth();
 
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -78,15 +83,25 @@ export default function Opportunities() {
     sortOrder: "DESC",
   };
   const { data: listData, loading: listLoading, refetch: refetchList } = useListOpportunities(listInput);
+  const listTotal = listData?.listOpportunities?.total ?? 0;
   const rawOpportunities = Array.isArray(listData?.listOpportunities?.opportunities) ? listData.listOpportunities.opportunities : [];
   const opportunities: Opportunity[] = rawOpportunities.map((o: { applicationCount?: number; [k: string]: unknown }) => ({
     ...o,
+    status: ((o.status as string | undefined) ?? OpportunityStatus.DRAFT).toUpperCase(),
+    visibility: ((o.visibility as string | undefined) ?? Visibility.PUBLIC).toUpperCase(),
     applicantsCount: o.applicationCount ?? 0,
     shortlistCount: 0,
     hireCount: 0,
+    shortDescription:
+      typeof o.description === "string" ? o.description.slice(0, 120) : "",
+    formType: "structured",
+    requireCv: true,
+    reviewWorkflow: "manual",
+    reviewers: [],
+    maxApplicants: null,
   })) as Opportunity[];
 
-  const { data: applicationsData } = useGetApplications(
+  const { data: applicationsData, refetch: refetchApplications } = useGetApplications(
     applicantsOpportunity?.id ? { opportunityId: applicantsOpportunity.id, limit: 100 } : null
   );
   const rawApplications = Array.isArray(applicationsData?.getApplications?.applications) ? applicationsData.getApplications.applications : [];
@@ -94,10 +109,36 @@ export default function Opportunities() {
     id: (a as { id: string }).id,
     opportunityId: (a as { opportunityId: string }).opportunityId,
     applicantId: a.applicantId,
-    status: (a as { status: string }).status?.toLowerCase() ?? "pending",
+    status: ((a as { status?: string }).status ?? ApplicationStatus.PENDING).toUpperCase(),
     appliedAt: a.createdAt,
-    name: "",
-    email: "",
+    name: (a as { fullName?: string }).fullName ?? a.applicantId ?? "Unknown applicant",
+    email: (a as { email?: string }).email ?? "",
+    phone: (a as { phoneNumber?: string }).phoneNumber,
+    location: (a as { location?: string }).location,
+    cvUrl: (a as { resumeFileRef?: { path?: string } | null }).resumeFileRef?.path,
+    responses: (() => {
+      const answers = (a as { customAnswers?: string | Record<string, string> | null }).customAnswers;
+      if (!answers) return undefined;
+      if (typeof answers === "string") {
+        try {
+          return JSON.parse(answers) as Record<string, string>;
+        } catch {
+          return { Answers: answers };
+        }
+      }
+      return answers;
+    })(),
+    notes: (a as { reviewNotes?: string | null }).reviewNotes
+      ? [
+          {
+            id: `review-${(a as { id: string }).id}`,
+            authorName: "Admin",
+            createdAt: a.createdAt ?? "",
+            content: (a as { reviewNotes?: string }).reviewNotes ?? "",
+            isPrivate: false,
+          },
+        ]
+      : [],
   })) as Applicant[];
   const [applicationModalOpen, setApplicationModalOpen] = useState(false);
   const [selectedApplicant, setSelectedApplicant] = useState<Applicant | null>(null);
@@ -115,6 +156,8 @@ export default function Opportunities() {
   const [reviewApplicationMutation] = useReviewApplication();
   const [acceptApplicationMutation] = useAcceptApplication();
   const [rejectApplicationMutation] = useRejectApplication();
+
+  const canUsePriorityActions = isSystemAdmin || window.location.hostname === "localhost";
 
   function mapFormTypeToEnums(
     typeStr: string
@@ -153,7 +196,18 @@ export default function Opportunities() {
             },
           },
         });
-        toast({ title: "Opportunity updated", description: "Your changes have been saved." });
+        if (action === "publish" && editOpportunity.status !== OpportunityStatus.PUBLISHED) {
+          await publishOpportunityMutation({ variables: { id: editOpportunity.id } });
+        }
+        toast({
+          title: "Opportunity updated",
+          description:
+            action === "publish"
+              ? "Opportunity updated and published."
+              : action === "schedule"
+                ? "Opportunity updated. Scheduled publishing is not yet supported by the API."
+                : "Your changes have been saved.",
+        });
         setCreateModalOpen(false);
         setEditOpportunity(null);
         refetchList();
@@ -187,10 +241,19 @@ export default function Opportunities() {
     };
 
     try {
-      await createOpportunityMutation({ variables: { input } });
+      const result = await createOpportunityMutation({ variables: { input } });
+      const createdId = result.data?.createOpportunity?.id as string | undefined;
+      if (action === "publish" && createdId) {
+        await publishOpportunityMutation({ variables: { id: createdId } });
+      }
       toast({
         title: "Opportunity created",
-        description: action === "draft" ? "Saved as draft." : "Opportunity is now live.",
+        description:
+          action === "draft"
+            ? "Saved as draft."
+            : action === "schedule"
+              ? "Created as draft. Scheduled publishing is not yet supported by the API."
+              : "Opportunity is now live.",
       });
       setCreateModalOpen(false);
       setEditOpportunity(null);
@@ -262,6 +325,7 @@ export default function Opportunities() {
     try {
       await reviewApplicationMutation({ variables: { applicationId, notes } });
       toast({ title: "Success", description: "Application marked for review." });
+      refetchApplications();
     } catch (e) {
       toast({ title: "Error", description: (e as Error).message, variant: "destructive" });
     }
@@ -271,6 +335,7 @@ export default function Opportunities() {
     try {
       await acceptApplicationMutation({ variables: { id: applicationId, notes } });
       toast({ title: "Success", description: "Application accepted." });
+      refetchApplications();
       setApplicationModalOpen(false);
       setSelectedApplicant(null);
     } catch (e) {
@@ -282,6 +347,7 @@ export default function Opportunities() {
     try {
       await rejectApplicationMutation({ variables: { id: applicationId, reason } });
       toast({ title: "Success", description: "Application rejected." });
+      refetchApplications();
       setRejectModalOpen(false);
       setSelectedApplicant(null);
     } catch (e) {
@@ -291,10 +357,53 @@ export default function Opportunities() {
 
   const filteredOpportunities = opportunities.filter((opp) => {
     if (searchQuery && !opp.title.toLowerCase().includes(searchQuery.toLowerCase())) return false;
-    if (statusFilter !== "all" && opp.status !== statusFilter) return false;
-    if (typeFilter !== "all" && opp.type !== typeFilter) return false;
+    if (statusFilter !== "all" && opp.status !== statusFilter.toUpperCase()) return false;
+    if (typeFilter !== "all" && opp.type !== typeFilter.toUpperCase()) return false;
     return true;
   });
+
+  const handleBulkPublish = async () => {
+    try {
+      await Promise.all(selectedOpportunities.map((id) => publishOpportunityMutation({ variables: { id } })));
+      toast({ title: "Success", description: `${selectedOpportunities.length} opportunities published.` });
+      setSelectedOpportunities([]);
+      refetchList();
+    } catch (e) {
+      toast({ title: "Error", description: (e as Error).message, variant: "destructive" });
+    }
+  };
+
+  const handleBulkClose = async () => {
+    try {
+      await Promise.all(
+        selectedOpportunities.map((id) => closeOpportunityMutation({ variables: { id, reason: "Closed by system admin" } }))
+      );
+      toast({ title: "Success", description: `${selectedOpportunities.length} opportunities closed.` });
+      setSelectedOpportunities([]);
+      refetchList();
+    } catch (e) {
+      toast({ title: "Error", description: (e as Error).message, variant: "destructive" });
+    }
+  };
+
+  const handleBulkExport = () => {
+    const selected = filteredOpportunities.filter((opp) => selectedOpportunities.includes(opp.id));
+    const csvRows = [
+      ["id", "title", "status", "priorityLevel", "type", "category", "applicationCount", "createdAt"].join(","),
+      ...selected.map((opp) =>
+        [opp.id, opp.title, opp.status, opp.priorityLevel, opp.type, opp.category, String(opp.applicantsCount ?? 0), opp.createdAt]
+          .map((value) => `"${String(value ?? "").replaceAll('"', '""')}"`)
+          .join(",")
+      ),
+    ];
+    const blob = new Blob([csvRows.join("\n")], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "opportunities-export.csv";
+    link.click();
+    URL.revokeObjectURL(url);
+  };
 
   const handleSelectOpportunity = (id: string) => {
     setSelectedOpportunities((prev) => prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]);
@@ -333,9 +442,9 @@ export default function Opportunities() {
             <SelectContent>
               <SelectItem value="all">{t.allStatus}</SelectItem>
               <SelectItem value="PUBLISHED">{t.published}</SelectItem>
-              <SelectItem value="DRAFT">{t.draft}</SelectItem>
+              {canUsePriorityActions && <SelectItem value="DRAFT">{t.draft}</SelectItem>}
               <SelectItem value="CLOSED">{t.closed}</SelectItem>
-              <SelectItem value="ARCHIVED">{t.archived}</SelectItem>
+              {canUsePriorityActions && <SelectItem value="ARCHIVED">{t.archived}</SelectItem>}
             </SelectContent>
           </Select>
           <Select value={typeFilter} onValueChange={setTypeFilter}>
@@ -395,7 +504,7 @@ export default function Opportunities() {
         </div>
         <div className="rounded-xl border border-border bg-card p-4">
           <p className="text-sm text-foreground/80">{t.open}</p>
-          <p className="text-2xl font-semibold text-foreground">{opportunities.filter(o => o.status === "published").length}</p>
+          <p className="text-2xl font-semibold text-foreground">{opportunities.filter(o => o.status === OpportunityStatus.PUBLISHED).length}</p>
         </div>
         <div className="rounded-xl border border-border bg-card p-4">
           <p className="text-sm text-foreground/80">{t.totalApplicants}</p>
@@ -414,7 +523,7 @@ export default function Opportunities() {
             ? "Loading…"
             : t.showingXOfYOpportunities
                 .replace("{filtered}", filteredOpportunities.length.toString())
-                .replace("{total}", opportunities.length.toString())}
+                .replace("{total}", listTotal.toString())}
         </p>
       </div>
 
@@ -433,7 +542,7 @@ export default function Opportunities() {
           onClose={(opp) => handleCloseOpportunity(opp.id, "Closed by admin")}
           onViewApplicants={handleViewApplicants}
           onDelete={(opp) => { setDeleteOpportunity(opp); setDeleteModalOpen(true); }}
-          onSetPriority={(opp, priority) => handleSetPriority(opp.id, priority)}
+          onSetPriority={canUsePriorityActions ? (opp, priority) => handleSetPriority(opp.id, priority) : undefined}
         />
       ) : viewMode === "card" ? (
         <OpportunitiesCardView
@@ -443,7 +552,7 @@ export default function Opportunities() {
           onTogglePublish={(opp) => opp.status === "DRAFT" ? handlePublishOpportunity(opp.id) : handleCloseOpportunity(opp.id)}
           onViewApplicants={handleViewApplicants}
           onDelete={(opp) => { setDeleteOpportunity(opp); setDeleteModalOpen(true); }}
-          onSetPriority={(opp, priority) => handleSetPriority(opp.id, priority)}
+          onSetPriority={canUsePriorityActions ? (opp, priority) => handleSetPriority(opp.id, priority) : undefined}
         />
       ) : null}
 
@@ -462,6 +571,7 @@ export default function Opportunities() {
         onTogglePublish={() => drawerOpportunity && (drawerOpportunity.status === "DRAFT" ? handlePublishOpportunity(drawerOpportunity.id) : handleCloseOpportunity(drawerOpportunity.id))}
         onClose={() => drawerOpportunity && handleCloseOpportunity(drawerOpportunity.id, "Closed by admin")}
         onViewApplicants={() => { setApplicantsOpportunity(drawerOpportunity); setApplicantsDrawerOpen(true); }}
+        onSetPriority={canUsePriorityActions ? (priority) => drawerOpportunity && handleSetPriority(drawerOpportunity.id, priority) : undefined}
         onDuplicate={() => toast({ title: "Duplicate functionality not yet implemented" })}
       />
       <ApplicantsDrawer
@@ -506,10 +616,10 @@ export default function Opportunities() {
       <OpportunityBulkActionsBar
         selectedCount={selectedOpportunities.length}
         onClearSelection={() => setSelectedOpportunities([])}
-        onBulkPublish={() => toast({ title: `${selectedOpportunities.length} published` })}
-        onBulkClose={() => toast({ title: `${selectedOpportunities.length} closed` })}
-        onBulkArchive={() => toast({ title: `${selectedOpportunities.length} archived` })}
-        onBulkExport={() => toast({ title: "Exporting..." })}
+        onBulkPublish={handleBulkPublish}
+        onBulkClose={handleBulkClose}
+        onBulkArchive={() => toast({ title: "Archive is not yet supported by the API" })}
+        onBulkExport={handleBulkExport}
       />
     </AdminLayout>
   );

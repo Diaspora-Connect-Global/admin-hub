@@ -7,8 +7,10 @@ import {
   useSessionStore,
   getAccessTokenFromStore,
   getSessionIdFromStore,
+  getRefreshTokenFromStore,
   getUserIdFromStore,
   getDevUserIdFromStore,
+  getAdminProfileFromStore,
 } from "@/stores/sessionStore";
 
 export const DEV_USER_ID_HEADER_KEY = "x-user-id";
@@ -33,6 +35,11 @@ export function setSessionId(sessionId: string): void {
   useSessionStore.getState().setAccessToken(sessionId);
 }
 
+/** Get the current refresh token. Returns null if not logged in. */
+export function getRefreshToken(): string | null {
+  return getRefreshTokenFromStore();
+}
+
 /** Set the refresh token after successful login. */
 export function setRefreshToken(refreshToken: string | null): void {
   useSessionStore.getState().setRefreshToken(refreshToken);
@@ -51,6 +58,16 @@ export function getUserId(): string | null {
 /** Set the current user email (for display and audit). */
 export function setUserEmail(email: string | null): void {
   useSessionStore.getState().setUserEmail(email);
+}
+
+/** Store the admin profile returned from adminLogin for scope/permission-aware UI gating. */
+export function setAdminProfile(adminProfile: ReturnType<typeof getAdminProfileFromStore>): void {
+  useSessionStore.getState().setAdminProfile(adminProfile);
+}
+
+/** Get the current admin profile metadata. */
+export function getAdminProfile(): ReturnType<typeof getAdminProfileFromStore> {
+  return getAdminProfileFromStore();
 }
 
 /** Clear the session (e.g. on logout). */

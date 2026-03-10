@@ -1,8 +1,10 @@
-/** Admin GraphQL: client, operations, and login. */
+/** Admin GraphQL: client, operations, and authentication. */
 export { adminClient } from "./client";
 export * from "./operations";
 export {
   login,
+  refreshSession,
+  logout,
   type LoginResponse,
   type LoginError,
   type AdminUserInfo,
