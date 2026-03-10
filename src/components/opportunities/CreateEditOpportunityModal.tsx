@@ -42,7 +42,7 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
-import { Opportunity, OpportunityType, FormField } from "@/types/opportunities";
+import { Opportunity, OpportunityType, FormField, Visibility } from "@/types/opportunities";
 import { toast } from "@/hooks/use-toast";
 
 interface CreateEditOpportunityModalProps {
@@ -53,11 +53,11 @@ interface CreateEditOpportunityModalProps {
 }
 
 const defaultFormFields: FormField[] = [
-  { id: "1", label: "Full Name", type: "text", required: true },
-  { id: "2", label: "Email", type: "email", required: true },
-  { id: "3", label: "Phone", type: "text", required: false },
-  { id: "4", label: "Cover Letter", type: "textarea", required: false },
-  { id: "5", label: "Resume / CV", type: "file_upload", required: true, accept: ["pdf", "doc", "docx"] },
+  { key: "full-name", label: "Full Name", type: "text", required: true },
+  { key: "email", label: "Email", type: "email", required: true },
+  { key: "phone", label: "Phone", type: "text", required: false },
+  { key: "cover-letter", label: "Cover Letter", type: "textarea", required: false },
+  { key: "resume", label: "Resume / CV", type: "file_upload", required: true },
 ];
 
 export function CreateEditOpportunityModal({
@@ -103,18 +103,19 @@ export function CreateEditOpportunityModal({
       if (opportunity) {
         setTitle(opportunity.title);
         setType(opportunity.type);
-        setShortDescription(opportunity.shortDescription);
+        setShortDescription(opportunity.description?.slice(0, 300) || "");
         setDescription(opportunity.description || "");
         setTags(opportunity.tags || []);
-        setVisibility(opportunity.visibility);
+        setVisibility(opportunity.visibility === Visibility.PUBLIC ? "public" : "members");
         setLocation(opportunity.location || "");
-        setFormType(opportunity.formType);
-        setRequireCv(opportunity.requireCv);
-        setAllowAnonymous(opportunity.allowAnonymous);
-        setAutoAcknowledge(opportunity.autoAcknowledge);
-        setReviewWorkflow(opportunity.reviewWorkflow);
-        setNotifyMembers(opportunity.notifyMembers);
-        setSearchable(opportunity.searchable);
+        setDeadline(opportunity.deadline ? new Date(opportunity.deadline) : undefined);
+        setFormType("structured");
+        setRequireCv(true);
+        setAllowAnonymous(false);
+        setAutoAcknowledge(true);
+        setReviewWorkflow("manual");
+        setNotifyMembers(true);
+        setSearchable(true);
       } else {
         // Reset to defaults
         setTitle("");
@@ -396,7 +397,7 @@ export function CreateEditOpportunityModal({
                   <div className="space-y-2">
                     {formFields.map((field) => (
                       <div
-                        key={field.id}
+                        key={field.key}
                         className="flex items-center gap-2 rounded-lg border border-border p-2"
                       >
                         <GripVertical className="h-4 w-4 text-muted-foreground cursor-grab" />

@@ -60,11 +60,11 @@ interface ApplicantsDrawerProps {
 }
 
 const statusColors: Record<ApplicantStatus, string> = {
-  pending: "secondary",
-  shortlisted: "default",
-  rejected: "destructive",
-  hired: "default",
-  withdrawn: "secondary",
+  PENDING: "secondary",
+  REVIEWING: "default",
+  ACCEPTED: "default",
+  REJECTED: "destructive",
+  WITHDRAWN: "secondary",
 };
 
 export function ApplicantsDrawer({
@@ -85,10 +85,14 @@ export function ApplicantsDrawer({
   const t = useT("opportunities");
 
   const filteredApplicants = applicants.filter((a) => {
-    if (searchQuery && !a.name.toLowerCase().includes(searchQuery.toLowerCase()) && !a.email.toLowerCase().includes(searchQuery.toLowerCase())) {
+    if (
+      searchQuery &&
+      !(a.name ?? "").toLowerCase().includes(searchQuery.toLowerCase()) &&
+      !(a.email ?? "").toLowerCase().includes(searchQuery.toLowerCase())
+    ) {
       return false;
     }
-    if (statusFilter !== "all" && a.status !== statusFilter) return false;
+    if (statusFilter !== "all" && a.status !== statusFilter.toUpperCase()) return false;
     return true;
   });
 
@@ -137,10 +141,10 @@ export function ApplicantsDrawer({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">{t.all}</SelectItem>
-                <SelectItem value="pending">{t.pending}</SelectItem>
-                <SelectItem value="shortlisted">{t.shortlisted}</SelectItem>
-                <SelectItem value="rejected">{t.rejected}</SelectItem>
-                <SelectItem value="hired">{t.hired}</SelectItem>
+                <SelectItem value="PENDING">{t.pending}</SelectItem>
+                <SelectItem value="REVIEWING">{t.shortlisted}</SelectItem>
+                <SelectItem value="REJECTED">{t.rejected}</SelectItem>
+                <SelectItem value="ACCEPTED">{t.hired}</SelectItem>
               </SelectContent>
             </Select>
             <Button variant="outline" className="gap-2" onClick={onExport}>
@@ -211,7 +215,7 @@ export function ApplicantsDrawer({
                     </TableCell>
                     <TableCell>
                       <div>
-                        <p className="font-medium">{applicant.name}</p>
+                        <p className="font-medium">{applicant.name || applicant.applicantId}</p>
                         <p className="text-xs text-muted-foreground">{applicant.email}</p>
                       </div>
                     </TableCell>
@@ -220,7 +224,7 @@ export function ApplicantsDrawer({
                     </TableCell>
                     <TableCell>
                       <Badge variant={statusColors[applicant.status] as any} className="capitalize">
-                        {applicant.status}
+                        {applicant.status.toLowerCase()}
                       </Badge>
                     </TableCell>
                     <TableCell>

@@ -29,8 +29,11 @@ import {
   ToggleRight,
   XCircle,
   Briefcase,
+  ArrowUpCircle,
+  MinusCircle,
+  ArrowDownCircle,
 } from "lucide-react";
-import { Opportunity, OpportunityType } from "@/types/opportunities";
+import { Opportunity, OpportunityType, PriorityLevel } from "@/types/opportunities";
 import { useT } from "@/hooks/useT";
 
 interface OpportunitiesTableProps {
@@ -44,15 +47,14 @@ interface OpportunitiesTableProps {
   onClose: (opp: Opportunity) => void;
   onViewApplicants: (opp: Opportunity) => void;
   onDelete: (opp: Opportunity) => void;
+  onSetPriority?: (opp: Opportunity, priority: PriorityLevel) => void;
 }
 
 const statusMap = {
-  published: "active" as const,
-  draft: "inactive" as const,
-  scheduled: "pending" as const,
-  closed: "inactive" as const,
-  archived: "inactive" as const,
-  removed: "inactive" as const,
+  PUBLISHED: "active" as const,
+  DRAFT: "inactive" as const,
+  CLOSED: "inactive" as const,
+  ARCHIVED: "inactive" as const,
 };
 
 export function OpportunitiesTable({
@@ -66,32 +68,35 @@ export function OpportunitiesTable({
   onClose,
   onViewApplicants,
   onDelete,
+  onSetPriority,
 }: OpportunitiesTableProps) {
   const t = useT("opportunities");
   const allSelected = opportunities.length > 0 && selectedOpportunities.length === opportunities.length;
   const someSelected = selectedOpportunities.length > 0 && selectedOpportunities.length < opportunities.length;
 
   const typeLabels: Record<OpportunityType, string> = {
-    job: t.job,
-    volunteer: t.volunteer,
-    training: t.training,
-    funding: t.funding,
-    scholarship: t.scholarship,
-    other: t.other,
+    EMPLOYMENT: t.employment || "Employment",
+    VOLUNTEER: t.volunteer,
+    SCHOLARSHIP: t.scholarship,
+    FELLOWSHIP: t.fellowship || "Fellowship",
+    GRANT: t.grant || "Grant",
+    PROGRAM: t.program || "Program",
+    CONTRACT: t.contract || "Contract",
+    INVESTMENT: t.investment || "Investment",
+    INITIATIVE: t.initiative || "Initiative",
   };
 
   const statusLabels: Record<string, string> = {
-    published: t.published,
-    draft: t.draft,
-    scheduled: t.scheduled,
-    closed: t.closed,
-    archived: t.archived,
-    removed: t.removed,
+    PUBLISHED: t.published,
+    DRAFT: t.draft,
+    CLOSED: t.closed,
+    ARCHIVED: t.archived,
   };
 
   const visibilityLabels: Record<string, string> = {
-    public: t.public,
-    members: t.membersOnly,
+    PUBLIC: t.public,
+    COMMUNITY_ONLY: t.membersOnly,
+    ASSOCIATION_ONLY: t.membersOnly,
   };
 
   if (opportunities.length === 0) {
@@ -154,7 +159,7 @@ export function OpportunitiesTable({
                 <TableCell>
                   <div className="min-w-0">
                     <p className="font-medium text-foreground line-clamp-1">{opp.title}</p>
-                    <p className="text-sm text-muted-foreground line-clamp-1">{opp.shortDescription}</p>
+                    <p className="text-sm text-muted-foreground line-clamp-1">{(opp as Opportunity & { shortDescription?: string }).shortDescription || opp.description}</p>
                   </div>
                 </TableCell>
                 <TableCell>
@@ -170,7 +175,7 @@ export function OpportunitiesTable({
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center gap-1.5">
-                    {opp.visibility === "public" ? (
+                    {opp.visibility === "PUBLIC" ? (
                       <Globe className="h-4 w-4 text-muted-foreground" />
                     ) : (
                       <Lock className="h-4 w-4 text-muted-foreground" />
@@ -207,10 +212,10 @@ export function OpportunitiesTable({
                         {t.edit}
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => onTogglePublish(opp)}>
-                        {opp.status === "published" ? (
+                        {opp.status === "PUBLISHED" ? (
                           <>
                             <ToggleLeft className="mr-2 h-4 w-4" />
-                            {t.unpublish}
+                            {t.closeApplications}
                           </>
                         ) : (
                           <>
@@ -227,6 +232,23 @@ export function OpportunitiesTable({
                         <Users className="mr-2 h-4 w-4" />
                         {t.viewApplicants}
                       </DropdownMenuItem>
+                      {onSetPriority && (
+                        <>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem onClick={() => onSetPriority(opp, PriorityLevel.HIGH)}>
+                            <ArrowUpCircle className="mr-2 h-4 w-4" />
+                            Set priority: High
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => onSetPriority(opp, PriorityLevel.NORMAL)}>
+                            <MinusCircle className="mr-2 h-4 w-4" />
+                            Set priority: Normal
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => onSetPriority(opp, PriorityLevel.LOW)}>
+                            <ArrowDownCircle className="mr-2 h-4 w-4" />
+                            Set priority: Low
+                          </DropdownMenuItem>
+                        </>
+                      )}
                       <DropdownMenuSeparator />
                       <DropdownMenuItem
                         className="text-destructive"

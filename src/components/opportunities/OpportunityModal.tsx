@@ -22,8 +22,11 @@ import {
   MapPin,
   Calendar,
   Clock,
+  ArrowUpCircle,
+  MinusCircle,
+  ArrowDownCircle,
 } from "lucide-react";
-import { Opportunity, OpportunityType } from "@/types/opportunities";
+import { Opportunity, OpportunityType, PriorityLevel } from "@/types/opportunities";
 import { toast } from "@/hooks/use-toast";
 
 interface OpportunityModalProps {
@@ -34,25 +37,27 @@ interface OpportunityModalProps {
   onTogglePublish: () => void;
   onClose: () => void;
   onViewApplicants: () => void;
+  onSetPriority?: (priority: PriorityLevel) => void;
   onDuplicate: () => void;
 }
 
 const statusMap = {
-  published: "active" as const,
-  draft: "inactive" as const,
-  scheduled: "pending" as const,
-  closed: "inactive" as const,
-  archived: "inactive" as const,
-  removed: "inactive" as const,
+  PUBLISHED: "active" as const,
+  DRAFT: "inactive" as const,
+  CLOSED: "inactive" as const,
+  ARCHIVED: "inactive" as const,
 };
 
 const typeLabels: Record<OpportunityType, string> = {
-  job: "Job",
-  volunteer: "Volunteer",
-  training: "Training",
-  funding: "Funding",
-  scholarship: "Scholarship",
-  other: "Other",
+  EMPLOYMENT: "Employment",
+  VOLUNTEER: "Volunteer",
+  SCHOLARSHIP: "Scholarship",
+  FELLOWSHIP: "Fellowship",
+  GRANT: "Grant",
+  PROGRAM: "Program",
+  CONTRACT: "Contract",
+  INVESTMENT: "Investment",
+  INITIATIVE: "Initiative",
 };
 
 export function OpportunityModal({
@@ -63,6 +68,7 @@ export function OpportunityModal({
   onTogglePublish,
   onClose,
   onViewApplicants,
+  onSetPriority,
   onDuplicate,
 }: OpportunityModalProps) {
   if (!opportunity) return null;
@@ -87,7 +93,7 @@ export function OpportunityModal({
                   {opportunity.status}
                 </StatusBadge>
                 <Badge variant="outline" className="gap-1">
-                  {opportunity.visibility === "public" ? (
+                  {opportunity.visibility === "PUBLIC" ? (
                     <Globe className="h-3 w-3" />
                   ) : (
                     <Lock className="h-3 w-3" />
@@ -125,10 +131,10 @@ export function OpportunityModal({
               Edit
             </Button>
             <Button variant="outline" size="sm" className="gap-1.5" onClick={onTogglePublish}>
-              {opportunity.status === "published" ? (
+              {opportunity.status === "PUBLISHED" ? (
                 <>
                   <ToggleLeft className="h-4 w-4" />
-                  Unpublish
+                  Close
                 </>
               ) : (
                 <>
@@ -145,6 +151,22 @@ export function OpportunityModal({
               <Users className="h-4 w-4" />
               Applicants
             </Button>
+            {onSetPriority && (
+              <>
+                <Button variant="outline" size="sm" className="gap-1.5" onClick={() => onSetPriority(PriorityLevel.HIGH)}>
+                  <ArrowUpCircle className="h-4 w-4" />
+                  High priority
+                </Button>
+                <Button variant="outline" size="sm" className="gap-1.5" onClick={() => onSetPriority(PriorityLevel.NORMAL)}>
+                  <MinusCircle className="h-4 w-4" />
+                  Normal priority
+                </Button>
+                <Button variant="outline" size="sm" className="gap-1.5" onClick={() => onSetPriority(PriorityLevel.LOW)}>
+                  <ArrowDownCircle className="h-4 w-4" />
+                  Low priority
+                </Button>
+              </>
+            )}
           </div>
         </DialogHeader>
 
@@ -155,7 +177,7 @@ export function OpportunityModal({
             {/* Description */}
             <div>
               <h4 className="font-medium mb-2">Description</h4>
-              <p className="text-sm text-muted-foreground">{opportunity.shortDescription}</p>
+              <p className="text-sm text-muted-foreground">{(opportunity as Opportunity & { shortDescription?: string }).shortDescription || opportunity.description}</p>
               {opportunity.description && (
                 <div className="mt-3 rounded-lg bg-muted/50 p-4">
                   <p className="text-sm whitespace-pre-wrap">{opportunity.description}</p>
@@ -183,18 +205,18 @@ export function OpportunityModal({
               <div className="rounded-lg border border-border p-4">
                 <div className="flex items-center justify-between mb-3">
                   <span className="text-sm">Form Type</span>
-                  <Badge variant="outline" className="capitalize">{opportunity.formType}</Badge>
+                  <Badge variant="outline" className="capitalize">{(opportunity as Opportunity & { formType?: string }).formType || "structured"}</Badge>
                 </div>
                 <div className="flex items-center justify-between mb-3">
                   <span className="text-sm">CV Required</span>
                   <span className="text-sm text-muted-foreground">
-                    {opportunity.requireCv ? "Yes" : "No"}
+                    {(opportunity as Opportunity & { requireCv?: boolean }).requireCv !== false ? "Yes" : "No"}
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm">Max Applicants</span>
                   <span className="text-sm text-muted-foreground">
-                    {opportunity.maxApplicants || "No limit"}
+                    {(opportunity as Opportunity & { maxApplicants?: number | null }).maxApplicants || "No limit"}
                   </span>
                 </div>
               </div>
@@ -207,14 +229,14 @@ export function OpportunityModal({
                 <div className="flex items-center justify-between mb-3">
                   <span className="text-sm">Review Workflow</span>
                   <Badge variant="outline" className="capitalize">
-                    {opportunity.reviewWorkflow.replace("_", " ")}
+                    {((opportunity as Opportunity & { reviewWorkflow?: string }).reviewWorkflow || "manual").replace("_", " ")}
                   </Badge>
                 </div>
-                {opportunity.reviewers && opportunity.reviewers.length > 0 && (
+                {((opportunity as Opportunity & { reviewers?: unknown[] }).reviewers || []).length > 0 && (
                   <div className="flex items-center justify-between">
                     <span className="text-sm">Assigned Reviewers</span>
                     <span className="text-sm text-muted-foreground">
-                      {opportunity.reviewers.length} assigned
+                      {((opportunity as Opportunity & { reviewers?: unknown[] }).reviewers || []).length} assigned
                     </span>
                   </div>
                 )}

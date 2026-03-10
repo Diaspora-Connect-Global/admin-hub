@@ -38,11 +38,11 @@ interface ApplicationModalProps {
 }
 
 const statusColors: Record<ApplicantStatus, string> = {
-  pending: "secondary",
-  shortlisted: "default",
-  rejected: "destructive",
-  hired: "default",
-  withdrawn: "secondary",
+  PENDING: "secondary",
+  REVIEWING: "default",
+  ACCEPTED: "default",
+  REJECTED: "destructive",
+  WITHDRAWN: "secondary",
 };
 
 export function ApplicationModal({
@@ -66,7 +66,7 @@ export function ApplicationModal({
             <div>
               <DialogTitle className="text-xl">{applicant.name}</DialogTitle>
               <Badge variant={statusColors[applicant.status] as any} className="mt-2 capitalize">
-                {applicant.status}
+                {applicant.status.toLowerCase()}
               </Badge>
             </div>
           </div>
@@ -113,7 +113,7 @@ export function ApplicationModal({
                 </div>
               </div>
             )}
-            {applicant.responses && Object.entries(applicant.responses).map(([key, value]) => (
+            {(applicant as Applicant & { responses?: Record<string, string> }).responses && Object.entries((applicant as Applicant & { responses?: Record<string, string> }).responses || {}).map(([key, value]) => (
               <div key={key} className="space-y-1">
                 <p className="text-sm font-medium text-muted-foreground">{key}</p>
                 <p className="text-sm">{value}</p>
@@ -126,7 +126,7 @@ export function ApplicationModal({
           {/* Attachments */}
           <div className="space-y-4 pb-4">
             <h4 className="font-medium">Attachments</h4>
-            {applicant.cvUrl ? (
+            {(applicant as Applicant & { cvUrl?: string }).cvUrl ? (
               <div className="flex items-center justify-between rounded-lg border border-border p-3">
                 <div className="flex items-center gap-3">
                   <FileText className="h-5 w-5 text-muted-foreground" />
@@ -167,9 +167,9 @@ export function ApplicationModal({
             </div>
 
             {/* Notes */}
-            {applicant.notes && applicant.notes.length > 0 && (
+            {(applicant as Applicant & { notes?: Array<{ id: string; authorName: string; createdAt: string; content: string; isPrivate?: boolean }> }).notes && (applicant as Applicant & { notes?: Array<{ id: string; authorName: string; createdAt: string; content: string; isPrivate?: boolean }> }).notes!.length > 0 && (
               <div className="space-y-2">
-                {applicant.notes.map((note) => (
+                {(applicant as Applicant & { notes?: Array<{ id: string; authorName: string; createdAt: string; content: string; isPrivate?: boolean }> }).notes!.map((note) => (
                   <div key={note.id} className="rounded-lg border border-border p-3">
                     <div className="flex items-center justify-between mb-1">
                       <span className="text-sm font-medium">{note.authorName}</span>
