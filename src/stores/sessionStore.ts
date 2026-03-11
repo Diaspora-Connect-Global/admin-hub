@@ -60,7 +60,7 @@ export const useSessionStore = create<SessionState>()(
     }),
     {
       name: SESSION_STORAGE_KEY,
-      storage: createJSONStorage(() => localStorage),
+      storage: createJSONStorage(() => sessionStorage),
       partialize: (state) => ({
         adminProfile: state.adminProfile,
         accessToken: state.accessToken,

@@ -269,8 +269,8 @@ export const ADMIN_LOGIN = gql`
 `;
 
 export const REFRESH_TOKEN = gql`
-  mutation RefreshToken($refreshToken: String!) {
-    refreshToken(refreshToken: $refreshToken) {
+  mutation RefreshToken($input: RefreshTokenInput!) {
+    refreshToken(input: $input) {
       accessToken
       refreshToken
       sessionToken

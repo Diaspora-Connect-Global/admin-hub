@@ -7,6 +7,58 @@ import { adminClient } from "./client";
 import { ADMIN_LOGIN, REFRESH_TOKEN, LOGOUT } from "./operations";
 import { getAccessToken, getRefreshToken, setAccessToken, setRefreshToken, clearSession } from "@/stores/session";
 
+type JwtPayload = {
+  role?: string;
+  roles?: string[];
+  scopeType?: string;
+  scope?: string;
+  [key: string]: unknown;
+};
+
+function decodeJwtPayload(token: string): JwtPayload | null {
+  try {
+    const parts = token.split(".");
+    if (parts.length !== 3) return null;
+
+    const payload = parts[1];
+    const normalized = payload.replace(/-/g, "+").replace(/_/g, "/");
+    const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, "=");
+    return JSON.parse(atob(padded)) as JwtPayload;
+  } catch {
+    return null;
+  }
+}
+
+function logTokenRoleDiagnostics(accessToken: string, admin: AdminUserInfo | null) {
+  const payload = decodeJwtPayload(accessToken);
+  if (!payload || !admin) return;
+
+  const tokenRoles = Array.isArray(payload.roles)
+    ? payload.roles.filter((role): role is string => typeof role === "string")
+    : typeof payload.role === "string"
+      ? [payload.role]
+      : [];
+
+  const adminRoleName = admin.role?.name;
+  const tokenScopeType = typeof payload.scopeType === "string"
+    ? payload.scopeType
+    : typeof payload.scope === "string"
+      ? payload.scope
+      : undefined;
+
+  const hasRoleMismatch = !!adminRoleName && tokenRoles.length > 0 && !tokenRoles.includes(adminRoleName);
+  const hasScopeMismatch = !!admin.scopeType && !!tokenScopeType && tokenScopeType !== admin.scopeType;
+
+  if (hasRoleMismatch || hasScopeMismatch) {
+    console.warn("⚠️ Admin login role/token mismatch detected", {
+      adminRole: adminRoleName,
+      adminScopeType: admin.scopeType,
+      tokenRoles,
+      tokenScopeType,
+    });
+  }
+}
+
 interface RefreshTokenMutationData {
   refreshToken: {
     accessToken: string;
@@ -99,6 +151,8 @@ export async function login(
       return { ok: false, error: { code: "LOGIN_FAILED", message } };
     }
 
+    logTokenRoleDiagnostics(data.accessToken, data.admin ?? null);
+
     return {
       ok: true,
       data: {
@@ -127,7 +181,7 @@ export async function refreshSession(): Promise<{ ok: true; data: { accessToken:
 
     const result = await adminClient.mutate<RefreshTokenMutationData>({
       mutation: REFRESH_TOKEN,
-      variables: { refreshToken },
+      variables: { input: { refreshToken } },
     });
 
     const data = result.data?.refreshToken;

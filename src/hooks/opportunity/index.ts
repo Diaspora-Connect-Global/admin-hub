@@ -34,6 +34,59 @@ import type {
   SubmitApplicationInput,
   GetOpportunityFeedInput,
 } from "@/types/opportunities";
+import type {
+  Opportunity,
+  Application,
+  GetApplicationsInput as GetApplicationsInputType,
+} from "@/types/opportunities";
+
+/**
+ * GraphQL Response Types — typed responses from Apollo queries/mutations
+ */
+export interface ListOpportunitiesResponse {
+  listOpportunities: {
+    total: number;
+    opportunities: Opportunity[];
+  };
+}
+
+export interface GetOpportunityResponse {
+  getOpportunity: Opportunity;
+}
+
+export interface GetApplicationsResponse {
+  getApplications: {
+    total: number;
+    applications: Application[];
+  };
+}
+
+export interface GetApplicationResponse {
+  getApplication: Application;
+}
+
+export interface CreateOpportunityResponse {
+  createOpportunity: Opportunity;
+}
+
+export interface UpdateOpportunityResponse {
+  updateOpportunity: Opportunity;
+}
+
+export interface PublishOpportunityResponse {
+  publishOpportunity: Opportunity;
+}
+
+export interface CloseOpportunityResponse {
+  closeOpportunity: Opportunity;
+}
+
+export interface DeleteOpportunityResponse {
+  deleteOpportunity: boolean;
+}
+
+// Export the original name for backward compatibility
+export interface GetApplicationsInput extends GetApplicationsInputType {}
 
 export function useGetOpportunity(id: string | null) {
   return useQuery(GET_OPPORTUNITY, {
@@ -46,13 +99,6 @@ export function useListOpportunities(input?: ListOpportunitiesInput) {
   return useQuery(LIST_OPPORTUNITIES, {
     variables: { input: input ?? {} },
   });
-}
-
-export interface GetApplicationsInput {
-  opportunityId: string;
-  limit?: number;
-  offset?: number;
-  status?: string;
 }
 
 export function useGetApplications(input: GetApplicationsInput | null) {

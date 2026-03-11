@@ -1,5 +1,8 @@
 import { useTranslation } from "react-i18next";
 
+export function useT(): ReturnType<typeof useTranslation>["t"];
+export function useT(namespace: string): Record<string, string>;
+
 /**
  * Returns the translation function, or a namespaced object when a namespace is passed.
  * - useT() returns the i18n t function.

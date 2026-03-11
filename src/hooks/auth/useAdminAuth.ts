@@ -11,6 +11,10 @@ export function useAdminAuth() {
   const sessionId = useSessionStore((s) => s.sessionId);
   const userEmail = useSessionStore((s) => s.userEmail);
   const adminProfile = useSessionStore((s) => s.adminProfile);
+  const roleName = adminProfile?.role?.name?.toUpperCase();
+  const hasWildcardPermission = adminProfile?.role?.permissions?.includes("*") ?? false;
+  const hasSystemRole = roleName === "SYSTEM_ADMIN" || roleName === "SUPER_ADMIN";
+  const hasGlobalScope = adminProfile?.scopeType === "GLOBAL" || adminProfile?.role?.scopeType === "GLOBAL";
 
   const logout = () => {
     const email = useSessionStore.getState().userEmail ?? "unknown";
@@ -22,11 +26,7 @@ export function useAdminAuth() {
     sessionId,
     userEmail,
     adminProfile,
-    isSystemAdmin:
-      adminProfile?.scopeType === "GLOBAL" &&
-      (adminProfile.role?.permissions?.includes("*") ||
-        adminProfile.role?.name === "SYSTEM_ADMIN" ||
-        adminProfile.role?.name === "SUPER_ADMIN"),
+    isSystemAdmin: hasSystemRole || hasWildcardPermission || hasGlobalScope,
     isAuthenticated: !!sessionId,
     logout,
   };

@@ -6,8 +6,7 @@ import {
   from,
   Observable,
 } from "@apollo/client";
-import { getAccessToken, getDevUserId, DEV_USER_ID_HEADER_KEY } from "@/stores/session";
-import { refreshSession } from "@/services/networks/graphql/admin/auth";
+import { getAccessToken, getDevUserId, DEV_USER_ID_HEADER_KEY, clearSession } from "@/stores/session";
 import { logger } from "@/lib/logger";
 
 const adminGraphqlUrl =
@@ -24,16 +23,33 @@ const httpLink = new HttpLink({
 
 const log = logger.child("GraphQL");
 
+const TOKEN_OPTIONAL_OPERATIONS = new Set(["AdminLogin"]);
+
+function forceRelogin(reason: string) {
+  clearSession();
+  log.warn("Session cleared; redirecting to login", { reason });
+  if (typeof window !== "undefined") {
+    const onLoginPage = window.location.pathname.includes("/login");
+    if (!onLoginPage) {
+      window.location.href = "/login";
+    }
+  }
+}
+
+function getServiceName(operationType: string) {
+  if (/event/i.test(operationType)) return "Events";
+  if (/(user|profile)/i.test(operationType)) return "Users";
+  if (/opportunit(y|ies)|application/i.test(operationType)) return "Opportunities";
+  if (/admin|auth|login|logout|refresh/i.test(operationType)) return "Admin";
+  return "Other";
+}
+
 const authLink = new ApolloLink((operation, forward) => {
   const accessToken = getAccessToken();
   const devUserId = getDevUserId();
   const operationType = operation.operationName || 'Unknown';
-  
-  // Determine service type for debugging
-  const service = operationType.includes('Event') ? 'Events' :
-                  operationType.includes('User') || operationType.includes('Profile') ? 'Users' :
-                  operationType.includes('Opportunity') ? 'Opportunities' :
-                  operationType.includes('Admin') ? 'Admin' : 'Other';
+  const isTokenOptionalOperation = TOKEN_OPTIONAL_OPERATIONS.has(operationType);
+  const service = getServiceName(operationType);
   
   const headers: Record<string, string> = { ...operation.getContext().headers };
   
@@ -57,14 +73,21 @@ const authLink = new ApolloLink((operation, forward) => {
       tokenPreview: accessToken.substring(0, 20) + '...'
     });
   } else {
-    log.warn("No access token available", {
-      operation: operationType,
-      service: service,
-    });
-    console.warn(`❌ ${service} Service Request: NO TOKEN`, {
-      operation: operationType,
-      service: service
-    });
+    if (isTokenOptionalOperation) {
+      log.debug("No access token required", {
+        operation: operationType,
+        service: service,
+      });
+    } else {
+      log.warn("No access token available", {
+        operation: operationType,
+        service: service,
+      });
+      console.warn(`❌ ${service} Service Request: NO TOKEN`, {
+        operation: operationType,
+        service: service
+      });
+    }
   }
   
   if (devUserId) headers[DEV_USER_ID_HEADER_KEY] = devUserId;
@@ -77,13 +100,14 @@ const errorLogLink = new ApolloLink((operation, forward) => {
     forward(operation).subscribe({
       next(response) {
         if (response.errors?.length) {
-          const isForbidden = response.errors.some(e => e.message?.toLowerCase().includes('forbidden'));
           const operationType = operation.operationName || 'Unknown';
-          const service = operationType.includes('Event') ? 'Events' :
-                          operationType.includes('User') || operationType.includes('Profile') ? 'Users' :
-                          operationType.includes('Opportunity') ? 'Opportunities' :
-                          operationType.includes('Admin') ? 'Admin' : 'Other';
-          
+          const service = getServiceName(operationType);
+          const errorMessages = response.errors.map((e) => e.message ?? "");
+          const isForbidden = errorMessages.some((message) => message.toLowerCase().includes("forbidden"));
+          const isUnauthenticated = errorMessages.some((message) =>
+            /(unauthenticated|unauthorized|jwt|token expired|invalid token|expired)/i.test(message)
+          );
+
           if (isForbidden) {
             log.error("GraphQL authorization error", {
               operation: operationType,
@@ -102,9 +126,21 @@ const errorLogLink = new ApolloLink((operation, forward) => {
               errors: response.errors.map(e => e.message),
               path: response.errors.map(e => e.path).filter(Boolean)
             });
-            
-            // Token expired - attempt automatic refresh
-            console.log('🔄 JWT token expired (15min expiry), attempting refresh...');
+            console.warn(`🚫 ${service} permission denied for ${operationType}.`);
+            forceRelogin("forbidden-resource");
+          } else if (isUnauthenticated) {
+            log.warn("GraphQL authentication error", {
+              operation: operationType,
+              service: service,
+              errors: response.errors.map((e) => ({
+                message: e.message,
+                code: e.extensions?.code,
+                path: e.path,
+              })),
+            });
+
+            console.warn(`🔄 ${service} authentication expired for ${operationType}. Re-login required.`);
+            forceRelogin("unauthenticated");
           } else {
             log.warn("GraphQL errors", {
               operation: operation.operationName,

@@ -125,6 +125,16 @@ export interface Opportunity {
   isSavedByCurrentUser?: boolean | null;        // ⚠️ Always null — not yet implemented
   hasCurrentUserApplied?: boolean | null;        // ⚠️ Always null — not yet implemented
   currentUserApplicationId?: string | null;      // ⚠️ Always null — not yet implemented
+  // UI-derived optional fields
+  applicantsCount?: number;
+  shortlistCount?: number;
+  hireCount?: number;
+  shortDescription?: string;
+  formType?: string;
+  requireCv?: boolean;
+  reviewWorkflow?: string;
+  reviewers?: string[];
+  maxApplicants?: number | null;
   createdAt: string;
   updatedAt: string;
   publishedAt?: string | null;
@@ -181,27 +191,41 @@ export interface SavedOpportunityListResponse {
 
 // ─── Input Types ───────────────────────────────────────────────────────────────
 
-// NOTE: skills, tags, subCategory are NOT in the gateway input — omit them
+// NOTE: Ownership rules per backend contract:
+// - Any verified user can create for themselves (ownerType: USER, ownerId = their ID)
+// - Community admins can create for their community (ownerType: COMMUNITY, ownerId = community ID)
+// - Association admins can create for their association (ownerType: ASSOCIATION, ownerId = association ID)
+// - Super admins can create for anyone
+// 
+// Conditional field rules:
+// - applicationEmail is REQUIRED when applicationMethod is EMAIL_REQUEST
+// - externalLink is REQUIRED when applicationMethod is EXTERNAL_LINK
+// 
+// Optional fields: subCategory, skills, tags, responsibilities, requirements, workMode,
+// engagementType, location, salaryMin, salaryMax, salaryCurrency, deadline
 export interface CreateOpportunityInput {
-  ownerType: OwnerType;
-  ownerId: string;
+  ownerType: OwnerType;  // USER | COMMUNITY | ASSOCIATION
+  ownerId: string;       // Must match user's ID or owned entity (community/association)
   type: OpportunityType;
-  category: OpportunityCategory;
+  category: OpportunityCategoryEnum;
   title: string;
   description: string;
   visibility: Visibility;
   applicationMethod: ApplicationMethod;
+  applicationEmail?: string;  // REQUIRED if applicationMethod is EMAIL_REQUEST
+  externalLink?: string;      // REQUIRED if applicationMethod is EXTERNAL_LINK
   responsibilities?: string;
   requirements?: string;
   workMode?: WorkMode;
   engagementType?: EngagementType;
   location?: string;
-  externalLink?: string;
-  applicationEmail?: string;
+  subCategory?: string;
   salaryMin?: number;
   salaryMax?: number;
-  salaryCurrency?: string;
-  deadline?: string; // ISO 8601 string
+  salaryCurrency?: string;    // ISO currency code e.g. "GHS"
+  deadline?: string;          // ISO 8601 date string
+  skills?: string[];
+  tags?: string[];
 }
 
 // NOTE: skills, tags, subCategory are NOT in the gateway input — omit them

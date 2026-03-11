@@ -33,13 +33,18 @@ import {
   ApplicationMethod,
   OwnerType,
   type CreateOpportunityInput,
+  type Application,
   OpportunityStatus,
   PriorityLevel,
   ApplicationStatus,
 } from "@/types/opportunities";
+import type {
+  ListOpportunitiesResponse,
+  GetApplicationsResponse,
+} from "@/hooks/opportunity";
 import { toast } from "@/hooks/use-toast";
-import { getUserId } from "@/stores/session";
-import { debugAuthState } from "@/lib/auth-debug";
+import { getAccessToken, getUserId } from "@/stores/session";
+import { debugAuthState, decodeJWT } from "@/lib/auth-debug";
 import {
   useListOpportunities,
   useGetApplications,
@@ -57,7 +62,7 @@ import { useSetOpportunityPriority } from "@/hooks/opportunity/superAdmin";
 export default function Opportunities() {
   const location = useLocation();
   const t = useT("opportunities");
-  const { isSystemAdmin } = useAdminAuth();
+  const { isSystemAdmin, adminProfile } = useAdminAuth();
 
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -82,40 +87,57 @@ export default function Opportunities() {
     sortBy: "createdAt",
     sortOrder: "DESC",
   };
-  const { data: listData, loading: listLoading, refetch: refetchList } = useListOpportunities(listInput);
-  const listTotal = listData?.listOpportunities?.total ?? 0;
-  const rawOpportunities = Array.isArray(listData?.listOpportunities?.opportunities) ? listData.listOpportunities.opportunities : [];
-  const opportunities: Opportunity[] = rawOpportunities.map((o: { applicationCount?: number; [k: string]: unknown }) => ({
+  const { data: listData, loading: listLoading, error: listError, refetch: refetchList } = useListOpportunities(listInput);
+
+  // Debug logging
+  if (listError) {
+    console.error("❌ ListOpportunities error:", listError);
+  }
+  if (listData) {
+    console.log("✅ ListOpportunities data:", listData);
+  }
+
+  const listDataTyped = listData as ListOpportunitiesResponse | undefined;
+  const listTotal = listDataTyped?.listOpportunities?.total ?? 0;
+  const rawOpportunities = Array.isArray(listDataTyped?.listOpportunities?.opportunities)
+    ? listDataTyped.listOpportunities.opportunities
+    : [];
+  const opportunities: Opportunity[] = rawOpportunities.map((o) => ({
     ...o,
-    status: ((o.status as string | undefined) ?? OpportunityStatus.DRAFT).toUpperCase(),
-    visibility: ((o.visibility as string | undefined) ?? Visibility.PUBLIC).toUpperCase(),
+    status: ((o.status as string | undefined) ?? OpportunityStatus.DRAFT).toUpperCase() as OpportunityStatus,
+    visibility: ((o.visibility as string | undefined) ?? Visibility.PUBLIC).toUpperCase() as Visibility,
     applicantsCount: o.applicationCount ?? 0,
-    shortlistCount: 0,
-    hireCount: 0,
-    shortDescription:
-      typeof o.description === "string" ? o.description.slice(0, 120) : "",
+    shortlistCount: o.shortlistCount ?? 0,
+    hireCount: o.hireCount ?? 0,
+    shortDescription: typeof o.description === "string" ? o.description.slice(0, 120) : "",
     formType: "structured",
     requireCv: true,
     reviewWorkflow: "manual",
     reviewers: [],
     maxApplicants: null,
-  })) as Opportunity[];
+  }));
 
   const { data: applicationsData, refetch: refetchApplications } = useGetApplications(
     applicantsOpportunity?.id ? { opportunityId: applicantsOpportunity.id, limit: 100 } : null
   );
-  const rawApplications = Array.isArray(applicationsData?.getApplications?.applications) ? applicationsData.getApplications.applications : [];
-  const applicants: Applicant[] = rawApplications.map((a: { applicantId?: string; createdAt?: string; [k: string]: unknown }) => ({
-    id: (a as { id: string }).id,
-    opportunityId: (a as { opportunityId: string }).opportunityId,
+
+  const applicationsDataTyped = applicationsData as GetApplicationsResponse | undefined;
+  const rawApplications = Array.isArray(applicationsDataTyped?.getApplications?.applications)
+    ? applicationsDataTyped.getApplications.applications
+    : [];
+
+  const applicants: Applicant[] = rawApplications.map((a) => ({
+    id: a.id,
+    createdAt: a.createdAt,
+    opportunityId: a.opportunityId,
     applicantId: a.applicantId,
-    status: ((a as { status?: string }).status ?? ApplicationStatus.PENDING).toUpperCase(),
+    status: ((a.status as string | undefined) ?? ApplicationStatus.PENDING).toUpperCase() as ApplicationStatus,
     appliedAt: a.createdAt,
-    name: (a as { fullName?: string }).fullName ?? a.applicantId ?? "Unknown applicant",
-    email: (a as { email?: string }).email ?? "",
-    phone: (a as { phoneNumber?: string }).phoneNumber,
-    location: (a as { location?: string }).location,
-    cvUrl: (a as { resumeFileRef?: { path?: string } | null }).resumeFileRef?.path,
+    name: (a as Application & { fullName?: string }).fullName ?? a.applicantId ?? "Unknown applicant",
+    email: (a as Application & { email?: string }).email ?? "",
+    phone: (a as Application & { phoneNumber?: string }).phoneNumber,
+    location: (a as Application & { location?: string }).location,
+    cvUrl: a.resumeFileRef?.path,
     responses: (() => {
       const answers = (a as { customAnswers?: string | Record<string, string> | null }).customAnswers;
       if (!answers) return undefined;
@@ -128,18 +150,18 @@ export default function Opportunities() {
       }
       return answers;
     })(),
-    notes: (a as { reviewNotes?: string | null }).reviewNotes
+    notes: a.reviewNotes
       ? [
           {
-            id: `review-${(a as { id: string }).id}`,
+            id: `review-${a.id}`,
             authorName: "Admin",
             createdAt: a.createdAt ?? "",
-            content: (a as { reviewNotes?: string }).reviewNotes ?? "",
+            content: a.reviewNotes ?? "",
             isPrivate: false,
           },
         ]
       : [],
-  })) as Applicant[];
+  }));
   const [applicationModalOpen, setApplicationModalOpen] = useState(false);
   const [selectedApplicant, setSelectedApplicant] = useState<Applicant | null>(null);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
@@ -158,6 +180,19 @@ export default function Opportunities() {
   const [rejectApplicationMutation] = useRejectApplication();
 
   const canUsePriorityActions = isSystemAdmin || window.location.hostname === "localhost";
+  const adminRoleName = adminProfile?.role?.name ?? "UNKNOWN_ROLE";
+  const adminScopeType = adminProfile?.scopeType ?? "UNKNOWN_SCOPE";
+
+  const ensureSystemAdmin = (actionLabel: string) => {
+    if (isSystemAdmin) return true;
+
+    toast({
+      title: "Permission denied",
+      description: `${actionLabel} requires SYSTEM_ADMIN. Current role: ${adminRoleName} (${adminScopeType}).`,
+      variant: "destructive",
+    });
+    return false;
+  };
 
   function mapFormTypeToEnums(
     typeStr: string
@@ -174,9 +209,19 @@ export default function Opportunities() {
     data: Partial<Opportunity>,
     action: "draft" | "publish" | "schedule"
   ) => {
+    if (!ensureSystemAdmin(editOpportunity?.id ? "Updating opportunities" : "Creating opportunities")) {
+      return;
+    }
+
     const { type: typeEnum, category } = mapFormTypeToEnums(data.type as string);
+    // Support full visibility options per updated backend contract
+    const visibilityInput = String(data.visibility ?? Visibility.PUBLIC).toUpperCase();
     const visibility =
-      data.visibility === "public" ? Visibility.PUBLIC : Visibility.COMMUNITY_ONLY;
+      visibilityInput === Visibility.COMMUNITY_ONLY || visibilityInput === "COMMUNITY"
+        ? Visibility.COMMUNITY_ONLY
+        : visibilityInput === Visibility.ASSOCIATION_ONLY || visibilityInput === "ASSOCIATION"
+          ? Visibility.ASSOCIATION_ONLY
+          : Visibility.PUBLIC;
     const deadlineStr = data.deadline
       ? (typeof data.deadline === "string" && data.deadline.includes(",")
           ? new Date(data.deadline).toISOString()
@@ -227,9 +272,10 @@ export default function Opportunities() {
       return;
     }
 
+    // Backend contract: ownerType must be USER, ownerId must match logged-in user ID (ownership check enforced backend)
     const input: CreateOpportunityInput = {
       ownerType: OwnerType.USER,
-      ownerId,
+      ownerId,  // Must be authenticated user's ID per backend ownership validation
       type: typeEnum,
       category,
       title: data.title ?? "",
@@ -242,7 +288,7 @@ export default function Opportunities() {
 
     try {
       const result = await createOpportunityMutation({ variables: { input } });
-      const createdId = result.data?.createOpportunity?.id as string | undefined;
+      const createdId = (result.data as { createOpportunity?: { id?: string } } | undefined)?.createOpportunity?.id;
       if (action === "publish" && createdId) {
         await publishOpportunityMutation({ variables: { id: createdId } });
       }
@@ -280,6 +326,7 @@ export default function Opportunities() {
 
   // Admin Action Handlers
   const handlePublishOpportunity = async (opportunityId: string) => {
+    if (!ensureSystemAdmin("Publishing opportunities")) return;
     try {
       await publishOpportunityMutation({ variables: { id: opportunityId } });
       toast({ title: "Success", description: "Opportunity published successfully." });
@@ -290,6 +337,7 @@ export default function Opportunities() {
   };
 
   const handleCloseOpportunity = async (opportunityId: string, reason?: string) => {
+    if (!ensureSystemAdmin("Closing opportunities")) return;
     try {
       await closeOpportunityMutation({ variables: { id: opportunityId, reason } });
       toast({ title: "Success", description: "Opportunity closed successfully." });
@@ -300,6 +348,7 @@ export default function Opportunities() {
   };
 
   const handleDeleteOpportunity = async (opportunityId: string) => {
+    if (!ensureSystemAdmin("Deleting opportunities")) return;
     try {
       await deleteOpportunityMutation({ variables: { id: opportunityId } });
       toast({ title: "Success", description: "Opportunity deleted successfully." });
@@ -312,6 +361,7 @@ export default function Opportunities() {
   };
 
   const handleSetPriority = async (opportunityId: string, priority: "HIGH" | "NORMAL" | "LOW") => {
+    if (!ensureSystemAdmin("Setting opportunity priority")) return;
     try {
       await setPriorityMutation({ variables: { opportunityId, priority } });
       toast({ title: "Success", description: `Priority set to ${priority.toLowerCase()}.` });
@@ -322,6 +372,7 @@ export default function Opportunities() {
   };
 
   const handleReviewApplication = async (applicationId: string, notes?: string) => {
+    if (!ensureSystemAdmin("Reviewing applications")) return;
     try {
       await reviewApplicationMutation({ variables: { applicationId, notes } });
       toast({ title: "Success", description: "Application marked for review." });
@@ -332,6 +383,7 @@ export default function Opportunities() {
   };
 
   const handleAcceptApplication = async (applicationId: string, notes?: string) => {
+    if (!ensureSystemAdmin("Accepting applications")) return;
     try {
       await acceptApplicationMutation({ variables: { id: applicationId, notes } });
       toast({ title: "Success", description: "Application accepted." });
@@ -344,6 +396,7 @@ export default function Opportunities() {
   };
 
   const handleRejectApplication = async (applicationId: string, reason?: string) => {
+    if (!ensureSystemAdmin("Rejecting applications")) return;
     try {
       await rejectApplicationMutation({ variables: { id: applicationId, reason } });
       toast({ title: "Success", description: "Application rejected." });
@@ -363,6 +416,7 @@ export default function Opportunities() {
   });
 
   const handleBulkPublish = async () => {
+    if (!ensureSystemAdmin("Bulk publishing opportunities")) return;
     try {
       await Promise.all(selectedOpportunities.map((id) => publishOpportunityMutation({ variables: { id } })));
       toast({ title: "Success", description: `${selectedOpportunities.length} opportunities published.` });
@@ -374,6 +428,7 @@ export default function Opportunities() {
   };
 
   const handleBulkClose = async () => {
+    if (!ensureSystemAdmin("Bulk closing opportunities")) return;
     try {
       await Promise.all(
         selectedOpportunities.map((id) => closeOpportunityMutation({ variables: { id, reason: "Closed by system admin" } }))
@@ -392,7 +447,7 @@ export default function Opportunities() {
       ["id", "title", "status", "priorityLevel", "type", "category", "applicationCount", "createdAt"].join(","),
       ...selected.map((opp) =>
         [opp.id, opp.title, opp.status, opp.priorityLevel, opp.type, opp.category, String(opp.applicantsCount ?? 0), opp.createdAt]
-          .map((value) => `"${String(value ?? "").replaceAll('"', '""')}"`)
+          .map((value) => `"${String(value ?? "").replace(/"/g, '""')}"`)
           .join(",")
       ),
     ];
@@ -414,13 +469,46 @@ export default function Opportunities() {
   };
 
   const handleOpenDrawer = (opp: Opportunity) => { setDrawerOpportunity(opp); setDrawerOpen(true); };
-  const handleViewApplicants = (opp: Opportunity) => { setApplicantsOpportunity(opp); setApplicantsDrawerOpen(true); };
+  const handleViewApplicants = (opp: Opportunity) => {
+    if (!ensureSystemAdmin("Viewing applicants")) return;
+    setApplicantsOpportunity(opp);
+    setApplicantsDrawerOpen(true);
+  };
+
+  const handleDebugAuthClick = () => {
+    debugAuthState();
+
+    const token = getAccessToken();
+    const payload = token ? (decodeJWT(token) as Record<string, unknown> | null) : null;
+    const tokenRoles = Array.isArray(payload?.roles)
+      ? payload?.roles.join(",")
+      : typeof payload?.role === "string"
+        ? payload.role
+        : "n/a";
+    const exp = typeof payload?.exp === "number" ? new Date(payload.exp * 1000) : null;
+    const minutesLeft = exp ? Math.max(0, Math.round((exp.getTime() - Date.now()) / 60000)) : null;
+
+    toast({
+      title: "Auth debug snapshot",
+      description: [
+        `profileRole=${adminProfile?.role?.name ?? "n/a"}`,
+        `profileScope=${adminProfile?.scopeType ?? "n/a"}`,
+        `tokenRoles=${tokenRoles}`,
+        `expiresIn=${minutesLeft != null ? `${minutesLeft}m` : "n/a"}`,
+      ].join(" | "),
+    });
+  };
 
   return (
     <AdminLayout>
       <div className="mb-6">
         <h1 className="text-2xl font-semibold text-foreground">{t.opportunitiesTitle}</h1>
         <p className="text-sm text-muted-foreground mt-1">{t.opportunitiesSubtitle}</p>
+        {!isSystemAdmin && (
+          <p className="mt-2 text-sm text-amber-600">
+            Read-only access. Privileged opportunity actions require SYSTEM_ADMIN. Current role: {adminRoleName} ({adminScopeType}).
+          </p>
+        )}
       </div>
       {/* Top Controls Bar */}
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -484,12 +572,19 @@ export default function Opportunities() {
           <Button 
             variant="outline" 
             size="sm" 
-            onClick={() => debugAuthState()}
+            onClick={handleDebugAuthClick}
             className="h-9"
           >
             🔍 Debug Auth
           </Button>
-          <Button className="gap-2" onClick={() => setCreateModalOpen(true)}>
+          <Button
+            className="gap-2"
+            disabled={!isSystemAdmin}
+            onClick={() => {
+              if (!ensureSystemAdmin("Creating opportunities")) return;
+              setCreateModalOpen(true);
+            }}
+          >
             <Plus className="h-4 w-4" />
             <span className="hidden sm:inline">{t.newOpportunity}</span>
           </Button>
@@ -504,15 +599,15 @@ export default function Opportunities() {
         </div>
         <div className="rounded-xl border border-border bg-card p-4">
           <p className="text-sm text-foreground/80">{t.open}</p>
-          <p className="text-2xl font-semibold text-foreground">{opportunities.filter(o => o.status === OpportunityStatus.PUBLISHED).length}</p>
+          <p className="text-2xl font-semibold text-foreground">{opportunities.filter((o) => o.status === OpportunityStatus.PUBLISHED).length}</p>
         </div>
         <div className="rounded-xl border border-border bg-card p-4">
           <p className="text-sm text-foreground/80">{t.totalApplicants}</p>
-          <p className="text-2xl font-semibold text-foreground">{opportunities.reduce((sum, o) => sum + o.applicantsCount, 0)}</p>
+          <p className="text-2xl font-semibold text-foreground">{opportunities.reduce((sum, o) => sum + (o.applicantsCount ?? 0), 0)}</p>
         </div>
         <div className="rounded-xl border border-border bg-card p-4">
           <p className="text-sm text-foreground/80">{t.shortlisted}</p>
-          <p className="text-2xl font-semibold text-foreground">{opportunities.reduce((sum, o) => sum + o.shortlistCount, 0)}</p>
+          <p className="text-2xl font-semibold text-foreground">{opportunities.reduce((sum, o) => sum + (o.shortlistCount ?? 0), 0)}</p>
         </div>
       </div>
 
@@ -525,6 +620,16 @@ export default function Opportunities() {
                 .replace("{filtered}", filteredOpportunities.length.toString())
                 .replace("{total}", listTotal.toString())}
         </p>
+        {listError && (
+          <p className="text-sm text-red-600 mt-2">
+            ⚠️ Error loading opportunities: {listError.message}
+          </p>
+        )}
+        {!listLoading && listTotal === 0 && (
+          <p className="text-sm text-amber-600 mt-2">
+            ℹ️ No opportunities found. {!isSystemAdmin ? "Log in as SYSTEM_ADMIN to create and manage opportunities." : "Create your first opportunity!"}
+          </p>
+        )}
       </div>
 
       {/* Opportunities View */}

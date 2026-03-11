@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogFooter,
@@ -202,6 +203,11 @@ export function CreateEditOpportunityModal({
       <DialogContent className="max-w-4xl max-h-[90vh] p-0">
         <DialogHeader className="px-6 pt-6 pb-2">
           <DialogTitle>{isEdit ? "Edit Opportunity" : "Create Opportunity"}</DialogTitle>
+          <DialogDescription>
+            {isEdit
+              ? "Update opportunity details, application settings, and publishing options."
+              : "Create a new opportunity with details, application settings, and publishing options."}
+          </DialogDescription>
           {lastSaved && (
             <p className="text-xs text-muted-foreground">
               Draft saved at {format(lastSaved, "h:mm a")}

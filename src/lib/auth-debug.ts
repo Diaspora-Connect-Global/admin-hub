@@ -62,11 +62,13 @@ export function getCurrentUserRoles(): string[] {
  */
 export function hasSystemAdminRole(): boolean {
   const adminProfile = getAdminProfile();
+  const roleName = adminProfile?.role?.name?.toUpperCase();
   if (
-    adminProfile?.scopeType === 'GLOBAL' &&
-    (adminProfile.role?.permissions?.includes('*') ||
-      adminProfile.role?.name === 'SYSTEM_ADMIN' ||
-      adminProfile.role?.name === 'SUPER_ADMIN')
+    roleName === 'SYSTEM_ADMIN' ||
+    roleName === 'SUPER_ADMIN' ||
+    adminProfile?.role?.permissions?.includes('*') ||
+    adminProfile?.scopeType === 'GLOBAL' ||
+    adminProfile?.role?.scopeType === 'GLOBAL'
   ) {
     return true;
   }
@@ -116,7 +118,7 @@ export function debugAuthState(): void {
           console.log('Time Until Expiry:', minutesLeft, 'minutes');
           
           if (minutesLeft < 2) {
-            console.warn('⚠️ Token expiring soon - consider refreshing');
+            console.warn('⚠️ Token expiring soon - re-login required');
           }
         }
       }
@@ -128,8 +130,8 @@ export function debugAuthState(): void {
     console.log('');
     console.log('📋 Authentication Facts:');
     console.log('• adminLogin returns JWT accessToken (15 min expiry)');
-    console.log('• Backend auth guard supports both JWT and session tokens');
-    console.log('• Use refreshToken mutation when "Forbidden resource" occurs');
+    console.log('• Backend auth guard validates Bearer JWT');
+    console.log('• No refresh endpoint: re-login when token expires');
     console.log('• All services use the same authentication now');
   } else {
     console.log('❌ No access token found - use adminLogin mutation to get JWT');
