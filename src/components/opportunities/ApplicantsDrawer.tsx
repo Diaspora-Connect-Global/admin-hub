@@ -114,7 +114,7 @@ export function ApplicantsDrawer({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full sm:max-w-2xl p-0">
+        <SheetContent className="w-full sm:max-w-2xl p-0" onInteractOutside={(e) => e.preventDefault()}>
         <SheetHeader className="p-6 pb-4">
           <SheetTitle className="flex items-center gap-2">
             <Users className="h-5 w-5" />
