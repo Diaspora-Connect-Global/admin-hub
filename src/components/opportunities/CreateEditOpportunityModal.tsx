@@ -164,7 +164,7 @@ export function CreateEditOpportunityModal({
   };
 
   const handleSubmit = (action: "draft" | "publish" | "schedule") => {
-    if (action !== "draft" && !title.trim()) {
+    if (!title.trim()) {
       toast({ title: "Title Required", description: "Please enter a title.", variant: "destructive" });
       return;
     }

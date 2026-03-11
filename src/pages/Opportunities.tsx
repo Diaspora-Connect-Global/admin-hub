@@ -65,6 +65,7 @@ export default function Opportunities() {
   const { isSystemAdmin, adminProfile } = useAdminAuth();
 
   const [searchQuery, setSearchQuery] = useState("");
+  // Admin default: "all" (omit status) to fetch all statuses.
   const [statusFilter, setStatusFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
   const [viewMode, setViewMode] = useState<"list" | "card">("list");
@@ -78,11 +79,17 @@ export default function Opportunities() {
   const [applicantsDrawerOpen, setApplicantsDrawerOpen] = useState(false);
   const [applicantsOpportunity, setApplicantsOpportunity] = useState<Opportunity | null>(null);
 
+  const normalizedStatusFilter = statusFilter.toUpperCase();
   const listInput = {
     limit: 50,
     offset: 0,
     searchTerm: searchQuery.trim() || undefined,
-    status: statusFilter === "all" ? undefined : statusFilter.toUpperCase(),
+    // Backend contract (admin): omitted / ALL => all statuses.
+    // Use explicit "ALL" for admin to avoid deployment-specific undefined/null handling.
+    status:
+      statusFilter === "all" || normalizedStatusFilter === "ALL"
+        ? (isSystemAdmin ? "ALL" : undefined)
+        : normalizedStatusFilter,
     type: typeFilter === "all" ? undefined : (typeFilter.toUpperCase() as OpportunityTypeEnum),
     sortBy: "createdAt",
     sortOrder: "DESC",
@@ -94,7 +101,27 @@ export default function Opportunities() {
     console.error("❌ ListOpportunities error:", listError);
   }
   if (listData) {
-    console.log("✅ ListOpportunities data:", listData);
+    const typedData = listData as ListOpportunitiesResponse | undefined;
+    console.log("✅ ListOpportunities query succeeded", {
+      query: listInput,
+      auth: {
+        isSystemAdmin,
+        role: adminProfile?.role?.name,
+        scopeType: adminProfile?.scopeType,
+      },
+      response: {
+        total: typedData?.listOpportunities?.total ?? 0,
+        count: typedData?.listOpportunities?.opportunities?.length ?? 0,
+        opportunities: typedData?.listOpportunities?.opportunities?.map((o) => ({
+          id: o.id,
+          title: o.title,
+          status: o.status,
+          type: o.type,
+          category: o.category,
+          createdAt: o.createdAt,
+        })) ?? [],
+      },
+    });
   }
 
   const listDataTyped = listData as ListOpportunitiesResponse | undefined;
@@ -213,6 +240,16 @@ export default function Opportunities() {
       return;
     }
 
+    // Validate required fields
+    if (!data.title || !data.title.trim()) {
+      toast({
+        title: "Title Required",
+        description: "Please enter a title for the opportunity.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     const { type: typeEnum, category } = mapFormTypeToEnums(data.type as string);
     // Support full visibility options per updated backend contract
     const visibilityInput = String(data.visibility ?? Visibility.PUBLIC).toUpperCase();
@@ -278,7 +315,7 @@ export default function Opportunities() {
       ownerId,  // Must be authenticated user's ID per backend ownership validation
       type: typeEnum,
       category,
-      title: data.title ?? "",
+      title: data.title!.trim(), // Title validated above, safe to use
       description: data.description ?? "",
       visibility,
       applicationMethod: ApplicationMethod.IN_PLATFORM_FORM,
