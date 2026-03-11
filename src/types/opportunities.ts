@@ -65,6 +65,8 @@ export enum OpportunityStatus {
   ARCHIVED  = 'ARCHIVED',
 }
 
+export type OpportunityStatusFilter = OpportunityStatus | 'ALL';
+
 export enum OwnerType {
   USER        = 'USER',
   COMMUNITY   = 'COMMUNITY',
@@ -110,7 +112,7 @@ export interface Opportunity {
   engagementType?: EngagementType | null;
   location?: string | null;
   visibility: Visibility;
-  applicationMethod: ApplicationMethod;
+  applicationMethod?: ApplicationMethod | null;  // ⚠️ Nullable from backend, defaults to IN_PLATFORM_FORM
   externalLink?: string | null;
   applicationEmail?: string | null;
   status: OpportunityStatus;
@@ -211,7 +213,7 @@ export interface CreateOpportunityInput {
   title: string;
   description: string;
   visibility: Visibility;
-  applicationMethod: ApplicationMethod;
+  applicationMethod?: ApplicationMethod;  // Optional, defaults to IN_PLATFORM_FORM
   applicationEmail?: string;  // REQUIRED if applicationMethod is EMAIL_REQUEST
   externalLink?: string;      // REQUIRED if applicationMethod is EXTERNAL_LINK
   responsibilities?: string;
@@ -252,7 +254,7 @@ export interface ListOpportunitiesInput {
   searchTerm?: string;
   ownerType?: OwnerType;
   ownerId?: string;
-  status?: string;       // default: 'PUBLISHED' — pass 'DRAFT', 'CLOSED' etc. for admin
+  status?: OpportunityStatusFilter;
   workMode?: WorkMode;
   engagementType?: EngagementType;
   location?: string;
@@ -294,7 +296,7 @@ export interface GetApplicationsInput {
   opportunityId: string;
   limit?: number;
   offset?: number;
-  status?: string;
+  status?: ApplicationStatus;
 }
 
 // Legacy types for backward compatibility

@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
 import { adminClient } from "@/services/networks/graphql/admin";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+import { TokenExpiryMonitor } from "@/components/auth/TokenExpiryMonitor";
 import "@/i18n";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
@@ -38,10 +39,11 @@ const App = () => (
     <ApolloProvider client={adminClient}>
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Routes>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <TokenExpiryMonitor />
+            <Routes>
             <Route path="/login" element={<Login />} />
             <Route element={<ProtectedRoute />}>
               <Route path="/" element={<Index />} />

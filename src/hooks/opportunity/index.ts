@@ -98,6 +98,8 @@ export function useGetOpportunity(id: string | null) {
 export function useListOpportunities(input?: ListOpportunitiesInput) {
   return useQuery(LIST_OPPORTUNITIES, {
     variables: { input: input ?? {} },
+    fetchPolicy: "network-only",
+    notifyOnNetworkStatusChange: true,
   });
 }
 

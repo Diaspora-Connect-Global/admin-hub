@@ -36,7 +36,6 @@ export const OPPORTUNITY_FIELDS = gql`
     engagementType
     location
     visibility
-    applicationMethod
     externalLink
     applicationEmail
     status
@@ -148,6 +147,13 @@ export const GET_APPLICATION = gql`
   query GetApplication($id: ID!) {
     getApplication(id: $id) {
       ...ApplicationFields
+      opportunity {
+        id
+        title
+        status
+        ownerType
+        ownerId
+      }
     }
   }
 `;

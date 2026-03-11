@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useLocation } from "react-router-dom";
+import { gql } from "@apollo/client";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import { useT } from "@/hooks/useT";
 import { useAdminAuth } from "@/hooks/auth/useAdminAuth";
@@ -35,6 +36,7 @@ import {
   type CreateOpportunityInput,
   type Application,
   OpportunityStatus,
+  type OpportunityStatusFilter,
   PriorityLevel,
   ApplicationStatus,
 } from "@/types/opportunities";
@@ -43,8 +45,7 @@ import type {
   GetApplicationsResponse,
 } from "@/hooks/opportunity";
 import { toast } from "@/hooks/use-toast";
-import { getAccessToken, getUserId } from "@/stores/session";
-import { debugAuthState, decodeJWT } from "@/lib/auth-debug";
+import { getUserId } from "@/stores/session";
 import {
   useListOpportunities,
   useGetApplications,
@@ -58,6 +59,7 @@ import {
   useReviewApplication,
 } from "@/hooks/opportunity";
 import { useSetOpportunityPriority } from "@/hooks/opportunity/superAdmin";
+import { LIST_OPPORTUNITIES } from "@/services/networks/graphql/opportunity";
 
 export default function Opportunities() {
   const location = useLocation();
@@ -65,8 +67,7 @@ export default function Opportunities() {
   const { isSystemAdmin, adminProfile } = useAdminAuth();
 
   const [searchQuery, setSearchQuery] = useState("");
-  // Admin default: "all" (omit status) to fetch all statuses.
-  const [statusFilter, setStatusFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState<OpportunityStatusFilter>("ALL");
   const [typeFilter, setTypeFilter] = useState("all");
   const [viewMode, setViewMode] = useState<"list" | "card">("list");
   const [selectedOpportunities, setSelectedOpportunities] = useState<string[]>([]);
@@ -79,20 +80,11 @@ export default function Opportunities() {
   const [applicantsDrawerOpen, setApplicantsDrawerOpen] = useState(false);
   const [applicantsOpportunity, setApplicantsOpportunity] = useState<Opportunity | null>(null);
 
-  const normalizedStatusFilter = statusFilter.toUpperCase();
   const listInput = {
     limit: 50,
     offset: 0,
-    searchTerm: searchQuery.trim() || undefined,
-    // Backend contract (admin): omitted / ALL => all statuses.
-    // Use explicit "ALL" for admin to avoid deployment-specific undefined/null handling.
-    status:
-      statusFilter === "all" || normalizedStatusFilter === "ALL"
-        ? (isSystemAdmin ? "ALL" : undefined)
-        : normalizedStatusFilter,
-    type: typeFilter === "all" ? undefined : (typeFilter.toUpperCase() as OpportunityTypeEnum),
-    sortBy: "createdAt",
-    sortOrder: "DESC",
+    // Match backend-verified behavior: send only limit, offset, status (no sort)
+    status: statusFilter,
   };
   const { data: listData, loading: listLoading, error: listError, refetch: refetchList } = useListOpportunities(listInput);
 
@@ -104,11 +96,6 @@ export default function Opportunities() {
     const typedData = listData as ListOpportunitiesResponse | undefined;
     console.log("✅ ListOpportunities query succeeded", {
       query: listInput,
-      auth: {
-        isSystemAdmin,
-        role: adminProfile?.role?.name,
-        scopeType: adminProfile?.scopeType,
-      },
       response: {
         total: typedData?.listOpportunities?.total ?? 0,
         count: typedData?.listOpportunities?.opportunities?.length ?? 0,
@@ -131,8 +118,12 @@ export default function Opportunities() {
     : [];
   const opportunities: Opportunity[] = rawOpportunities.map((o) => ({
     ...o,
+    // Normalize enum fields
     status: ((o.status as string | undefined) ?? OpportunityStatus.DRAFT).toUpperCase() as OpportunityStatus,
     visibility: ((o.visibility as string | undefined) ?? Visibility.PUBLIC).toUpperCase() as Visibility,
+    // Provide default for applicationMethod if null from backend
+    applicationMethod: (o.applicationMethod ?? ApplicationMethod.IN_PLATFORM_FORM) as ApplicationMethod,
+    // UI-derived fields
     applicantsCount: o.applicationCount ?? 0,
     shortlistCount: o.shortlistCount ?? 0,
     hireCount: o.hireCount ?? 0,
@@ -224,13 +215,32 @@ export default function Opportunities() {
   function mapFormTypeToEnums(
     typeStr: string
   ): { type: OpportunityTypeEnum; category: OpportunityCategory } {
-    const t = (typeStr || "job").toLowerCase();
-    if (t === "volunteer") return { type: OpportunityTypeEnum.VOLUNTEER, category: OpportunityCategory.VOLUNTEERING_SOCIAL_IMPACT };
-    if (t === "funding") return { type: OpportunityTypeEnum.GRANT, category: OpportunityCategory.FUNDING_GRANTS };
-    if (t === "scholarship") return { type: OpportunityTypeEnum.SCHOLARSHIP, category: OpportunityCategory.FELLOWSHIPS_LEADERSHIP };
-    if (t === "training") return { type: OpportunityTypeEnum.PROGRAM, category: OpportunityCategory.EDUCATION_TRAINING };
-    return { type: OpportunityTypeEnum.EMPLOYMENT, category: OpportunityCategory.EMPLOYMENT_CAREER };
+    const t = (typeStr || "EMPLOYMENT").toUpperCase();
+    
+    switch (t) {
+      case "EMPLOYMENT":
+        return { type: OpportunityTypeEnum.EMPLOYMENT, category: OpportunityCategory.EMPLOYMENT_CAREER };
+      case "SCHOLARSHIP":
+        return { type: OpportunityTypeEnum.SCHOLARSHIP, category: OpportunityCategory.EDUCATION_TRAINING };
+      case "INVESTMENT":
+        return { type: OpportunityTypeEnum.INVESTMENT, category: OpportunityCategory.BUSINESS_INVESTMENT };
+      case "FELLOWSHIP":
+        return { type: OpportunityTypeEnum.FELLOWSHIP, category: OpportunityCategory.FELLOWSHIPS_LEADERSHIP };
+      case "INITIATIVE":
+        return { type: OpportunityTypeEnum.INITIATIVE, category: OpportunityCategory.GOVERNMENT_EMBASSY_INITIATIVES };
+      case "GRANT":
+        return { type: OpportunityTypeEnum.GRANT, category: OpportunityCategory.FUNDING_GRANTS };
+      case "PROGRAM":
+        return { type: OpportunityTypeEnum.PROGRAM, category: OpportunityCategory.EDUCATION_TRAINING };
+      case "VOLUNTEER":
+        return { type: OpportunityTypeEnum.VOLUNTEER, category: OpportunityCategory.VOLUNTEERING_SOCIAL_IMPACT };
+      case "CONTRACT":
+        return { type: OpportunityTypeEnum.CONTRACT, category: OpportunityCategory.EMPLOYMENT_CAREER };
+      default:
+        return { type: OpportunityTypeEnum.EMPLOYMENT, category: OpportunityCategory.EMPLOYMENT_CAREER };
+    }
   }
+
 
   const handleSaveOpportunity = async (
     data: Partial<Opportunity>,
@@ -447,7 +457,7 @@ export default function Opportunities() {
 
   const filteredOpportunities = opportunities.filter((opp) => {
     if (searchQuery && !opp.title.toLowerCase().includes(searchQuery.toLowerCase())) return false;
-    if (statusFilter !== "all" && opp.status !== statusFilter.toUpperCase()) return false;
+    if (statusFilter !== "ALL" && opp.status !== statusFilter) return false;
     if (typeFilter !== "all" && opp.type !== typeFilter.toUpperCase()) return false;
     return true;
   });
@@ -512,30 +522,6 @@ export default function Opportunities() {
     setApplicantsDrawerOpen(true);
   };
 
-  const handleDebugAuthClick = () => {
-    debugAuthState();
-
-    const token = getAccessToken();
-    const payload = token ? (decodeJWT(token) as Record<string, unknown> | null) : null;
-    const tokenRoles = Array.isArray(payload?.roles)
-      ? payload?.roles.join(",")
-      : typeof payload?.role === "string"
-        ? payload.role
-        : "n/a";
-    const exp = typeof payload?.exp === "number" ? new Date(payload.exp * 1000) : null;
-    const minutesLeft = exp ? Math.max(0, Math.round((exp.getTime() - Date.now()) / 60000)) : null;
-
-    toast({
-      title: "Auth debug snapshot",
-      description: [
-        `profileRole=${adminProfile?.role?.name ?? "n/a"}`,
-        `profileScope=${adminProfile?.scopeType ?? "n/a"}`,
-        `tokenRoles=${tokenRoles}`,
-        `expiresIn=${minutesLeft != null ? `${minutesLeft}m` : "n/a"}`,
-      ].join(" | "),
-    });
-  };
-
   return (
     <AdminLayout>
       <div className="mb-6">
@@ -560,12 +546,12 @@ export default function Opportunities() {
               className="pl-9"
             />
           </div>
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as OpportunityStatusFilter)}>
             <SelectTrigger className="w-32">
               <SelectValue placeholder={t.statusPlaceholder} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">{t.allStatus}</SelectItem>
+              <SelectItem value="ALL">{t.allStatus}</SelectItem>
               <SelectItem value="PUBLISHED">{t.published}</SelectItem>
               {canUsePriorityActions && <SelectItem value="DRAFT">{t.draft}</SelectItem>}
               <SelectItem value="CLOSED">{t.closed}</SelectItem>
@@ -605,14 +591,6 @@ export default function Opportunities() {
           </Tabs>
           <Button variant="outline" size="icon" className="h-9 w-9" onClick={() => refetchList()}>
             <RefreshCw className="h-4 w-4" />
-          </Button>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={handleDebugAuthClick}
-            className="h-9"
-          >
-            🔍 Debug Auth
           </Button>
           <Button
             className="gap-2"
