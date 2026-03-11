@@ -108,7 +108,7 @@ export const APPLICATION_FIELDS = gql`
 /** Get a single opportunity. */
 export const GET_OPPORTUNITY = gql`
   ${OPPORTUNITY_FULL_FIELDS}
-  query GetOpportunity($id: ID!) {
+  query GetOpportunity($id: String!) {
     getOpportunity(id: $id) {
       ...OpportunityFullFields
     }
@@ -144,7 +144,7 @@ export const GET_APPLICATIONS = gql`
 /** Get a single application. */
 export const GET_APPLICATION = gql`
   ${APPLICATION_FIELDS}
-  query GetApplication($id: ID!) {
+  query GetApplication($id: String!) {
     getApplication(id: $id) {
       ...ApplicationFields
       opportunity {
@@ -176,56 +176,56 @@ export const CREATE_OPPORTUNITY = gql`
 
 /** Update opportunity. */
 export const UPDATE_OPPORTUNITY = gql`
-  mutation UpdateOpportunity($id: ID!, $input: UpdateOpportunityInput!) {
+  mutation UpdateOpportunity($id: String!, $input: UpdateOpportunityInput!) {
     updateOpportunity(id: $id, input: $input)
   }
 `;
 
 /** Publish opportunity (DRAFT → PUBLISHED). */
 export const PUBLISH_OPPORTUNITY = gql`
-  mutation PublishOpportunity($id: ID!) {
+  mutation PublishOpportunity($id: String!) {
     publishOpportunity(id: $id)
   }
 `;
 
 /** Close opportunity. */
 export const CLOSE_OPPORTUNITY = gql`
-  mutation CloseOpportunity($id: ID!, $reason: String) {
+  mutation CloseOpportunity($id: String!, $reason: String) {
     closeOpportunity(id: $id, reason: $reason)
   }
 `;
 
 /** Permanently delete opportunity. */
 export const DELETE_OPPORTUNITY = gql`
-  mutation DeleteOpportunity($id: ID!) {
+  mutation DeleteOpportunity($id: String!) {
     deleteOpportunity(id: $id)
   }
 `;
 
 /** Accept an application. */
 export const ACCEPT_APPLICATION = gql`
-  mutation AcceptApplication($id: ID!, $notes: String) {
+  mutation AcceptApplication($id: String!, $notes: String) {
     acceptApplication(id: $id, notes: $notes)
   }
 `;
 
 /** Reject an application. */
 export const REJECT_APPLICATION = gql`
-  mutation RejectApplication($id: ID!, $reason: String) {
+  mutation RejectApplication($id: String!, $reason: String) {
     rejectApplication(id: $id, reason: $reason)
   }
 `;
 
 /** Mark application as under review (optional notes). */
 export const REVIEW_APPLICATION = gql`
-  mutation ReviewApplication($applicationId: ID!, $notes: String) {
+  mutation ReviewApplication($applicationId: String!, $notes: String) {
     reviewApplication(applicationId: $applicationId, notes: $notes)
   }
 `;
 
 /** Set opportunity priority - flat args, no input wrapper. Priority: HIGH | NORMAL | LOW */
 export const SET_OPPORTUNITY_PRIORITY = gql`
-  mutation SetOpportunityPriority($opportunityId: ID!, $priority: String!) {
+  mutation SetOpportunityPriority($opportunityId: String!, $priority: String!) {
     setOpportunityPriority(opportunityId: $opportunityId, priority: $priority)
   }
 `;
