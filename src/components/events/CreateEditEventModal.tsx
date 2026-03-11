@@ -67,7 +67,7 @@ export function CreateEditEventModal({
       return;
     }
     const eventType: EventType =
-      event.locationType === "physical" ? "in-person" : event.locationType === "virtual" ? "virtual" : "hybrid";
+      event.locationType === "PHYSICAL" ? "in-person" : event.locationType === "VIRTUAL" ? "virtual" : "hybrid";
     setFormData({
       ...defaultForm,
       title: event.title,
@@ -259,10 +259,11 @@ export function CreateEditEventModal({
                   <SelectContent>
                     <SelectItem value="in-person">{t.inPerson}</SelectItem>
                     <SelectItem value="virtual">{t.virtual}</SelectItem>
+                    <SelectItem value="hybrid">Hybrid</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
-              {formData.eventType === "in-person" ? (
+              {(formData.eventType === "in-person" || formData.eventType === "hybrid") && (
                 <div className="space-y-2">
                   <Label htmlFor="location">{t.location}</Label>
                   <Input
@@ -272,7 +273,8 @@ export function CreateEditEventModal({
                     onChange={(e) => updateField("location", e.target.value)}
                   />
                 </div>
-              ) : (
+              )}
+              {(formData.eventType === "virtual" || formData.eventType === "hybrid") && (
                 <div className="space-y-2">
                   <Label htmlFor="virtualLink">{t.virtualLinkLabel}</Label>
                   <Input

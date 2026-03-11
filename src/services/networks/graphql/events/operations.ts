@@ -17,14 +17,19 @@ const EVENT_LIST_FIELDS = gql`
     locationType
     locationDetails {
       type
+      venueName
       city
       country
       virtualLink
+      platform
     }
     isPaid
     registrationCount
     availableSpots
+    isRegistered
+    canRegister
     coverImageUrl
+    tags
   }
 `;
 
@@ -67,7 +72,7 @@ const EVENT_FULL_FIELDS = gql`
 `;
 
 const EVENT_REGISTRATION_FIELDS = gql`
-  fragment EventRegistrationFields on EventRegistration {
+  fragment EventRegistrationFields on EventRegistrationGQL {
     id
     eventId
     userId

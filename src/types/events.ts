@@ -3,8 +3,8 @@
  * @see docs/EVENTS-GRAPHQL-API.md
  */
 
-export type EventStatus = "draft" | "published" | "cancelled" | "completed";
-export type EventLocationType = "physical" | "virtual" | "hybrid";
+export type EventStatus = "DRAFT" | "PUBLISHED" | "CANCELLED" | "COMPLETED";
+export type EventLocationType = "PHYSICAL" | "VIRTUAL" | "HYBRID";
 
 export interface EventLocation {
   type: EventLocationType;
@@ -61,8 +61,8 @@ export interface EventRegistration {
   createdAt?: string | null;
 }
 
-/** Form data for create/edit event modal (maps to API inputs). */
-export type EventType = "physical" | "virtual" | "hybrid";
+/** Form data for create/edit event modal (UI values). */
+export type EventType = "in-person" | "virtual" | "hybrid";
 
 export interface EventFormData {
   title: string;

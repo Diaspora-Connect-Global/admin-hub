@@ -20,7 +20,7 @@ export interface ListEventsInput {
   limit?: number;
   offset?: number;
   searchTerm?: string;
-  status?: string;
+  status?: "DRAFT" | "PUBLISHED" | "CANCELLED" | "COMPLETED";
   communityId?: string;
   ownerType?: string;
   ownerId?: string;
@@ -29,6 +29,7 @@ export interface ListEventsInput {
 export function useListEvents(input?: ListEventsInput) {
   return useQuery(LIST_EVENTS, {
     variables: { input: input ?? {} },
+    fetchPolicy: "network-only",
   });
 }
 

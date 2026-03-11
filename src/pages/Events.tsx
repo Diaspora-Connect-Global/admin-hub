@@ -29,17 +29,19 @@ import {
   useDeleteEvent,
   usePublishEvent,
 } from "@/hooks/events";
+import { getUserId } from "@/stores/session";
+import { useSessionStore } from "@/stores/sessionStore";
 
 export default function Events() {
   const location = useLocation();
   const t = useT("events");
 
-  const [listInput, setListInput] = useState<{ limit?: number; offset?: number; searchTerm?: string; status?: string }>({ limit: 20, offset: 0 });
+  const [listInput, setListInput] = useState<{ limit?: number; offset?: number; searchTerm?: string; status?: "DRAFT" | "PUBLISHED" | "CANCELLED" | "COMPLETED" }>({ limit: 20, offset: 0, status: "PUBLISHED" });
   const { data: listData, loading: listLoading, error: listError, refetch: refetchList } = useListEvents(listInput);
   const events: Event[] = Array.isArray(listData?.listEvents?.events) ? listData.listEvents.events : [];
   const totalEvents = listData?.listEvents?.total ?? 0;
   const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string>("PUBLISHED");
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [sortBy, setSortBy] = useState<string>("newest");
 
@@ -60,11 +62,25 @@ export default function Events() {
   const [deleteEvent] = useDeleteEvent();
   const [publishEvent] = usePublishEvent();
 
+  const adminProfile = useSessionStore((state) => state.adminProfile);
+  const adminRoleName = adminProfile?.role?.name ?? "UNKNOWN_ROLE";
+  const isSystemAdmin = adminRoleName === "SYSTEM_ADMIN";
+
+  const ensureSystemAdmin = (actionLabel: string) => {
+    if (isSystemAdmin) return true;
+    toast({
+      title: "Permission denied",
+      description: `${actionLabel} requires SYSTEM_ADMIN. Current role: ${adminRoleName}.`,
+      variant: "destructive",
+    });
+    return false;
+  };
+
   useEffect(() => {
     setListInput((prev) => ({
       ...prev,
       searchTerm: searchQuery.trim() || undefined,
-      status: statusFilter === "all" ? undefined : statusFilter,
+      status: statusFilter === "ALL" ? undefined : (statusFilter as "DRAFT" | "PUBLISHED" | "CANCELLED" | "COMPLETED"),
     }));
   }, [searchQuery, statusFilter]);
 
@@ -98,7 +114,7 @@ export default function Events() {
       }
     });
 
-  const upcomingCount = events.filter((e) => e.status === "published" || e.status === "draft").length;
+  const upcomingCount = events.filter((e) => e.status === "PUBLISHED" || e.status === "DRAFT").length;
   const totalRegistrations = events.reduce((sum, e) => sum + e.registrationCount, 0);
   const totalRevenue = 0;
   const avgAttendance =
@@ -131,7 +147,9 @@ export default function Events() {
   };
 
   const handleTogglePublish = async (event: Event) => {
-    if (event.status === "published") {
+    if (!ensureSystemAdmin("Publishing events")) return;
+
+    if (event.status === "PUBLISHED") {
       toast({ title: "Unpublish", description: "Use edit to change status to draft." });
       return;
     }
@@ -145,11 +163,13 @@ export default function Events() {
   };
 
   const handleDelete = (event: Event) => {
+    if (!ensureSystemAdmin("Deleting events")) return;
     setEventToDelete(event);
     setDeleteModalOpen(true);
   };
 
   const handleConfirmDelete = async () => {
+    if (!ensureSystemAdmin("Deleting events")) return;
     if (!eventToDelete) return;
     try {
       await deleteEvent({ variables: { id: eventToDelete.id } });
@@ -163,6 +183,18 @@ export default function Events() {
   };
 
   const handleCreateSubmit = async (data: EventFormData) => {
+    if (!ensureSystemAdmin(editingEventId ? "Updating events" : "Creating events")) return;
+
+    const ownerId = getUserId();
+    if (!ownerId) {
+      toast({
+        title: "Session error",
+        description: "Your user ID is missing. Please log in again.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     const startAt = data.date && data.startTime
       ? new Date(`${data.date.toISOString().slice(0, 10)}T${data.startTime}`).toISOString()
       : new Date().toISOString();
@@ -171,8 +203,8 @@ export default function Events() {
       : new Date().toISOString();
     const locationType = data.eventType === "in-person" ? "physical" : data.eventType === "virtual" ? "virtual" : "hybrid";
     const locationDetails = data.eventType === "virtual"
-      ? { type: locationType, virtualLink: data.virtualLink || undefined }
-      : { type: locationType, address: data.location, venueName: data.location };
+      ? { type: locationType, virtualLink: data.virtualLink || undefined, platform: "Zoom" }
+      : { type: locationType, address: data.location, venue: data.location };
 
     try {
       if (editingEventId) {
@@ -192,14 +224,14 @@ export default function Events() {
         });
         toast({ title: "Event Updated", description: "Your changes have been saved." });
       } else {
-        await createEvent({
+        const createResult = await createEvent({
           variables: {
             input: {
               ownerType: "USER",
-              ownerId: "current-user-id",
+              ownerId,
               title: data.title,
               description: data.description,
-              eventCategory: data.eventCategory ?? "general",
+              eventCategory: data.eventCategory ?? "OTHER",
               locationType,
               locationDetails,
               startAt,
@@ -208,6 +240,12 @@ export default function Events() {
             },
           },
         });
+
+        const createdId = createResult?.data?.createEvent?.id as string | undefined;
+        if (data.publishNow && createdId) {
+          await publishEvent({ variables: { id: createdId } });
+        }
+
         toast({ title: "Event Created", description: data.publishNow ? "Your event is now live!" : "Event saved as draft." });
       }
       setEditingEventId(null);
@@ -241,13 +279,10 @@ export default function Events() {
               <SelectValue placeholder={t.statusPlaceholder} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">{t.allStatus}</SelectItem>
-              <SelectItem value="published">{t.published}</SelectItem>
-              <SelectItem value="unpublished">{t.unpublished}</SelectItem>
-              <SelectItem value="draft">{t.draft}</SelectItem>
-              <SelectItem value="ongoing">{t.ongoing}</SelectItem>
-              <SelectItem value="completed">{t.completed}</SelectItem>
-              <SelectItem value="cancelled">{t.cancelled}</SelectItem>
+              <SelectItem value="PUBLISHED">Published</SelectItem>
+              <SelectItem value="DRAFT">Draft</SelectItem>
+              <SelectItem value="COMPLETED">Completed</SelectItem>
+              <SelectItem value="CANCELLED">Cancelled</SelectItem>
             </SelectContent>
           </Select>
           <Select value={typeFilter} onValueChange={setTypeFilter}>

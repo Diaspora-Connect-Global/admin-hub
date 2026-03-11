@@ -36,12 +36,10 @@ interface EventDetailsModalProps {
 }
 
 const statusVariants: Record<string, "active" | "warning" | "inactive" | "error" | "pending"> = {
-  published: "active",
-  unpublished: "inactive",
-  draft: "pending",
-  ongoing: "warning",
-  completed: "inactive",
-  cancelled: "error",
+  PUBLISHED: "active",
+  DRAFT: "pending",
+  COMPLETED: "inactive",
+  CANCELLED: "error",
 };
 
 export function EventDetailsModal({
@@ -54,6 +52,9 @@ export function EventDetailsModal({
   onDelete,
 }: EventDetailsModalProps) {
   if (!event) return null;
+
+  const normalizedStatus = (event.status ?? "").toUpperCase();
+  const isVirtual = (event.locationType ?? "").toUpperCase() === "VIRTUAL";
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -77,7 +78,7 @@ export function EventDetailsModal({
             <div className="space-y-3">
               <div className="flex items-start justify-between gap-4">
                 <h2 className="text-xl font-semibold text-foreground">{event.title}</h2>
-                <StatusBadge variant={statusVariants[event.status]}>
+                <StatusBadge variant={statusVariants[normalizedStatus] ?? "inactive"}>
                   {event.status}
                 </StatusBadge>
               </div>
@@ -97,7 +98,7 @@ export function EventDetailsModal({
               </div>
 
               <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                {event.locationType === "virtual" ? (
+                {isVirtual ? (
                   <>
                     <Video className="h-4 w-4" />
                     <span>{event.locationDetails?.virtualLink || "Virtual Event"}</span>
@@ -139,7 +140,7 @@ export function EventDetailsModal({
               </Button>
               <Button variant="outline" size="sm" onClick={() => onTogglePublish(event)}>
                 <ToggleLeft className="h-4 w-4 mr-1.5" />
-                {event.status === "published" ? "Unpublish" : "Publish"}
+                {normalizedStatus === "PUBLISHED" ? "Unpublish" : "Publish"}
               </Button>
               <Button variant="outline" size="sm" onClick={() => onManageRegistrations(event)}>
                 <Users className="h-4 w-4 mr-1.5" />

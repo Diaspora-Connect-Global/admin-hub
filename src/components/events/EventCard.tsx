@@ -34,12 +34,10 @@ interface EventCardProps {
 }
 
 const statusVariants: Record<string, "active" | "warning" | "inactive" | "error" | "pending"> = {
-  published: "active",
-  unpublished: "inactive",
-  draft: "pending",
-  ongoing: "warning",
-  completed: "inactive",
-  cancelled: "error",
+  PUBLISHED: "active",
+  DRAFT: "pending",
+  COMPLETED: "inactive",
+  CANCELLED: "error",
 };
 
 export function EventCard({
@@ -51,7 +49,8 @@ export function EventCard({
   onDelete,
 }: EventCardProps) {
   const t = useT("events");
-  const isVirtual = event.locationType === "virtual";
+  const normalizedStatus = (event.status ?? "").toUpperCase();
+  const isVirtual = (event.locationType ?? "").toUpperCase() === "VIRTUAL";
   const locationLabel =
     event.locationDetails?.virtualLink ||
     event.locationDetails?.address ||
@@ -62,12 +61,10 @@ export function EventCard({
   const firstTicketPrice = event.tickets?.[0]?.priceInCents;
 
   const statusLabels: Record<string, string> = {
-    published: t.published,
-    unpublished: t.unpublish,
-    draft: t.draft,
-    ongoing: t.active,
-    completed: t.inactive,
-    cancelled: t.error,
+    PUBLISHED: t.published,
+    DRAFT: t.draft,
+    COMPLETED: t.completed,
+    CANCELLED: t.cancelled,
   };
 
   return (
@@ -84,8 +81,8 @@ export function EventCard({
           <span className="text-5xl">📅</span>
         )}
         <div className="absolute right-3 top-3">
-          <StatusBadge variant={statusVariants[event.status]}>
-            {statusLabels[event.status] || event.status}
+          <StatusBadge variant={statusVariants[normalizedStatus] ?? "inactive"}>
+            {statusLabels[normalizedStatus] || event.status}
           </StatusBadge>
         </div>
       </div>
@@ -177,7 +174,7 @@ export function EventCard({
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => onTogglePublish(event)}>
                 <ToggleLeft className="mr-2 h-4 w-4" />
-                {event.status === "published" ? t.unpublish : t.publish}
+                {normalizedStatus === "PUBLISHED" ? t.unpublish : t.publish}
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem 
