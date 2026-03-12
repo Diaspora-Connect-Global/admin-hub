@@ -14,6 +14,19 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
+import {
+  useGetAssociation,
+  useGetAssociationMembers,
+  useGetPendingMembershipRequests,
+  useApproveMembership,
+  useRejectMembership,
+  useRemoveMember,
+  useInviteMember,
+  useLinkAssociation,
+  useUnlinkAssociation,
+  useGetAssociationAvatarUploadUrl,
+} from "@/hooks/admin/useAssociation";
+import { Loader2 } from "lucide-react";
 import { 
   ArrowLeft, Edit, Check, X, Link2, UserPlus, Users, FileText, 
   Briefcase, Store, Settings, History, Download, Upload, Eye,
@@ -95,10 +108,117 @@ export default function AssociationDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
-  
+
+  // ── Live data ──────────────────────────────────────────────────────────────
+  const { data: assocData, loading: assocLoading } = useGetAssociation(id ?? null);
+  const association = assocData?.getAssociation;
+
+  const { data: membersData, loading: membersLoading, refetch: refetchMembers } =
+    useGetAssociationMembers(id ?? null);
+  const liveMembers = membersData?.getAssociationMembers.members ?? [];
+
+  const { data: pendingData, refetch: refetchPending } =
+    useGetPendingMembershipRequests(id ?? null, "ASSOCIATION");
+  const pendingRequests = pendingData?.getPendingMembershipRequests.requests ?? [];
+
+  // ── Mutations ──────────────────────────────────────────────────────────────
+  const [approveMembership] = useApproveMembership();
+  const [rejectMembership] = useRejectMembership();
+  const [removeMemberMutation] = useRemoveMember();
+  const [inviteMemberMutation] = useInviteMember();
+  const [linkCommunityMutation] = useLinkAssociation();
+  const [unlinkCommunityMutation] = useUnlinkAssociation();
+  const [getAvatarUploadUrl] = useGetAssociationAvatarUploadUrl();
+
+  // ── Member action handlers ─────────────────────────────────────────────────
+  const handleApproveMembership = async (userId: string) => {
+    if (!id) return;
+    try {
+      await approveMembership({ variables: { input: { entityId: id, entityType: "ASSOCIATION", userId } } });
+      toast({ title: "Membership approved" });
+      refetchMembers();
+      refetchPending();
+    } catch (err) {
+      toast({ title: "Error", description: err instanceof Error ? err.message : "Failed", variant: "destructive" });
+    }
+  };
+
+  const handleRejectMembership = async (userId: string) => {
+    if (!id) return;
+    try {
+      await rejectMembership({ variables: { input: { entityId: id, entityType: "ASSOCIATION", userId } } });
+      toast({ title: "Membership rejected" });
+      refetchPending();
+    } catch (err) {
+      toast({ title: "Error", description: err instanceof Error ? err.message : "Failed", variant: "destructive" });
+    }
+  };
+
+  const handleRemoveMember = async (userId: string) => {
+    if (!id) return;
+    try {
+      await removeMemberMutation({ variables: { input: { entityId: id, entityType: "ASSOCIATION", userId } } });
+      toast({ title: "Member removed" });
+      refetchMembers();
+    } catch (err) {
+      toast({ title: "Error", description: err instanceof Error ? err.message : "Failed", variant: "destructive" });
+    }
+  };
+
+  // ── Community link/unlink handlers ────────────────────────────────────────
+  const [linkCommunityId, setLinkCommunityId] = useState("");
+
+  const handleLinkCommunity = async () => {
+    if (!id || !linkCommunityId) return;
+    try {
+      await linkCommunityMutation({ variables: { input: { associationId: id, communityId: linkCommunityId } } });
+      toast({ title: "Community linked" });
+      setLinkCommunityId("");
+      setLinkCommunitiesOpen(false);
+    } catch (err) {
+      toast({ title: "Error", description: err instanceof Error ? err.message : "Failed", variant: "destructive" });
+    }
+  };
+
+  const handleUnlinkCommunity = async (communityId: string) => {
+    if (!id) return;
+    try {
+      await unlinkCommunityMutation({ variables: { input: { associationId: id, communityId } } });
+      toast({ title: "Community unlinked" });
+    } catch (err) {
+      toast({ title: "Error", description: err instanceof Error ? err.message : "Failed", variant: "destructive" });
+    }
+  };
+
+  // ── Invite member handler ──────────────────────────────────────────────────
+  const [inviteUserId, setInviteUserId] = useState("");
+
+  const handleInviteMember = async () => {
+    if (!id || !inviteUserId) return;
+    try {
+      await inviteMemberMutation({ variables: { input: { entityId: id, entityType: "ASSOCIATION", userId: inviteUserId } } });
+      toast({ title: "Invitation sent" });
+      setInviteUserId("");
+      setInviteMemberOpen(false);
+    } catch (err) {
+      toast({ title: "Error", description: err instanceof Error ? err.message : "Failed", variant: "destructive" });
+    }
+  };
+
+  // ── Avatar upload handler ──────────────────────────────────────────────────
+  const handleAvatarUpload = async (file: File) => {
+    if (!id) return;
+    try {
+      const { data } = await getAvatarUploadUrl({ variables: { associationId: id } });
+      if (!data) return;
+      await fetch(data.getAssociationAvatarUploadUrl.uploadUrl, { method: "PUT", body: file });
+      toast({ title: "Avatar uploaded — confirm with Update Association" });
+    } catch (err) {
+      toast({ title: "Error", description: err instanceof Error ? err.message : "Upload failed", variant: "destructive" });
+    }
+  };
   const [vendorEnabled, setVendorEnabled] = useState(associationData.vendor_enabled);
   const [postingEnabled, setPostingEnabled] = useState(associationData.posting_enabled);
-  const [linkCommunitiesOpen, setLinkCommunitiesOpen] = useState(false);
   const [inviteMemberOpen, setInviteMemberOpen] = useState(false);
   const [suspendOpen, setSuspendOpen] = useState(false);
   const [rejectDocOpen, setRejectDocOpen] = useState(false);
@@ -113,7 +233,7 @@ export default function AssociationDetail() {
           </Button>
           <div className="flex-1">
             <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-semibold text-foreground">{associationData.name}</h1>
+              <h1 className="text-2xl font-semibold text-foreground">{association?.name ?? associationData.name}</h1>
               {getStatusBadge(associationData.verification_status)}
               {getRiskBadge(associationData.risk_score)}
             </div>
@@ -162,7 +282,7 @@ export default function AssociationDetail() {
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
                       <p className="text-muted-foreground text-xs">Name</p>
-                      <p className="font-medium">{associationData.name}</p>
+                      <p className="font-medium">{association?.name ?? associationData.name}</p>
                     </div>
                     <div>
                       <p className="text-muted-foreground text-xs">Registration ID</p>
@@ -210,7 +330,7 @@ export default function AssociationDetail() {
                   </div>
                   <div>
                     <p className="text-muted-foreground text-xs mb-1">Description</p>
-                    <p className="text-sm">{associationData.description}</p>
+                    <p className="text-sm">{association?.description ?? associationData.description}</p>
                   </div>
                 </CardContent>
               </Card>
@@ -232,7 +352,7 @@ export default function AssociationDetail() {
                         </div>
                         <div className="flex items-center gap-2">
                           <Button variant="ghost" size="sm">View</Button>
-                          <Button variant="ghost" size="sm" className="text-destructive">Unlink</Button>
+                          <Button variant="ghost" size="sm" className="text-destructive" onClick={() => handleUnlinkCommunity(community.id)}>Unlink</Button>
                         </div>
                       </div>
                     ))}
@@ -251,8 +371,8 @@ export default function AssociationDetail() {
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div>
-                    <CardTitle className="text-base">Members ({sampleMembers.length})</CardTitle>
-                    <CardDescription>List of association members and their roles.</CardDescription>
+                    <CardTitle className="text-base">Members ({membersData?.getAssociationMembers.total ?? liveMembers.length})</CardTitle>
+                    <CardDescription>Active association members.</CardDescription>
                   </div>
                   <div className="flex gap-2">
                     <Button variant="outline" size="sm">
@@ -264,39 +384,68 @@ export default function AssociationDetail() {
                   </div>
                 </div>
               </CardHeader>
+
+              {pendingRequests.length > 0 && (
+                <CardContent className="pb-0">
+                  <p className="text-sm font-medium mb-2">Pending Requests ({pendingRequests.length})</p>
+                  <div className="space-y-2 mb-4">
+                    {pendingRequests.map((req) => (
+                      <div key={req.userId} className="flex items-center justify-between p-3 rounded-lg bg-warning/10 border border-warning/20">
+                        <div>
+                          <p className="font-mono text-xs">{req.userId}</p>
+                          <p className="text-xs text-muted-foreground">{new Date(req.requestedAt).toLocaleDateString()}</p>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button size="sm" variant="outline" className="text-success" onClick={() => handleApproveMembership(req.userId)}>
+                            <Check className="mr-1 h-3 w-3" /> Approve
+                          </Button>
+                          <Button size="sm" variant="outline" className="text-destructive" onClick={() => handleRejectMembership(req.userId)}>
+                            <X className="mr-1 h-3 w-3" /> Reject
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              )}
+
               <CardContent className="p-0">
+                {membersLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                  </div>
+                ) : (
                 <Table>
                   <TableHeader>
                     <TableRow className="border-border/50">
-                      <TableHead>Member Name</TableHead>
+                      <TableHead>User ID</TableHead>
                       <TableHead>Role</TableHead>
-                      <TableHead>Email</TableHead>
-                      <TableHead>Phone</TableHead>
-                      <TableHead>Joined At</TableHead>
                       <TableHead>Status</TableHead>
+                      <TableHead>Joined At</TableHead>
                       <TableHead>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {sampleMembers.map((member) => (
-                      <TableRow key={member.id} className="border-border/50">
-                        <TableCell className="font-medium">{member.name}</TableCell>
-                        <TableCell><Badge variant="secondary">{member.role}</Badge></TableCell>
-                        <TableCell className="text-muted-foreground">{member.email}</TableCell>
-                        <TableCell className="text-muted-foreground">{member.phone}</TableCell>
-                        <TableCell className="text-muted-foreground">{member.joined_at}</TableCell>
-                        <TableCell>{getStatusBadge(member.status)}</TableCell>
+                    {liveMembers.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">No members found</TableCell>
+                      </TableRow>
+                    ) : liveMembers.map((member) => (
+                      <TableRow key={member.userId} className="border-border/50">
+                        <TableCell className="font-mono text-xs">{member.userId}</TableCell>
+                        <TableCell><Badge variant="secondary">{member.role ?? "Member"}</Badge></TableCell>
+                        <TableCell>{getStatusBadge(member.status === "ACTIVE" ? "Active" : member.status)}</TableCell>
+                        <TableCell className="text-muted-foreground">{member.joinedAt ? new Date(member.joinedAt).toLocaleDateString() : "-"}</TableCell>
                         <TableCell>
                           <div className="flex gap-1">
-                            <Button variant="ghost" size="sm">View</Button>
-                            <Button variant="ghost" size="sm" className="text-primary">Promote</Button>
-                            <Button variant="ghost" size="sm" className="text-destructive">Remove</Button>
+                            <Button variant="ghost" size="sm" className="text-destructive" onClick={() => handleRemoveMember(member.userId)}>Remove</Button>
                           </div>
                         </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
                 </Table>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
@@ -573,23 +722,21 @@ export default function AssociationDetail() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Link Association to Communities</DialogTitle>
-            <DialogDescription>Link to one or more communities.</DialogDescription>
+            <DialogDescription>Enter the Community ID to link this association.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label>Select Communities</Label>
-              <Select>
-                <SelectTrigger><SelectValue placeholder="Search communities..." /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="com1">Ghana Belgium Community</SelectItem>
-                  <SelectItem value="com2">Nigeria France Community</SelectItem>
-                </SelectContent>
-              </Select>
+              <Label>Community ID</Label>
+              <Input
+                placeholder="Enter community UUID..."
+                value={linkCommunityId}
+                onChange={(e) => setLinkCommunityId(e.target.value)}
+              />
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setLinkCommunitiesOpen(false)}>Cancel</Button>
-            <Button onClick={() => { toast({ title: "Community Linked" }); setLinkCommunitiesOpen(false); }}>Link</Button>
+            <Button onClick={handleLinkCommunity} disabled={!linkCommunityId}>Link</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -599,27 +746,21 @@ export default function AssociationDetail() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Invite Member</DialogTitle>
-            <DialogDescription>Invite a new member to the association.</DialogDescription>
+            <DialogDescription>Enter the User ID to invite to this association.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label>Email Address</Label>
-              <Input type="email" placeholder="member@example.com" />
-            </div>
-            <div className="space-y-2">
-              <Label>Role</Label>
-              <Select>
-                <SelectTrigger><SelectValue placeholder="Select role" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="member">Member</SelectItem>
-                  <SelectItem value="admin">Admin</SelectItem>
-                </SelectContent>
-              </Select>
+              <Label>User ID</Label>
+              <Input
+                placeholder="Enter user UUID..."
+                value={inviteUserId}
+                onChange={(e) => setInviteUserId(e.target.value)}
+              />
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setInviteMemberOpen(false)}>Cancel</Button>
-            <Button onClick={() => { toast({ title: "Invitation Sent" }); setInviteMemberOpen(false); }}>Send Invitation</Button>
+            <Button onClick={handleInviteMember} disabled={!inviteUserId}>Send Invitation</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

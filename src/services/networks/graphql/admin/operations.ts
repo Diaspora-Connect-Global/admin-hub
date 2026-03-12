@@ -540,15 +540,19 @@ export const CREATE_COMMUNITY = gql`
 export interface Association {
   id: string;
   name: string;
-  description: string;
+  description?: string;
   visibility: "PUBLIC" | "PRIVATE";
-  joinPolicy: "FREE" | "PAID";
-  paymentType: "NONE" | "ONE_TIME" | "SUBSCRIPTION";
+  joinPolicy: "OPEN" | "REQUEST" | "INVITE_ONLY";
+  associationTypeId?: string;
+  defaultGroupId?: string;
+  memberCount?: number;
+  avatarUrl?: string;
   contactEmail?: string;
   contactPhone?: string;
   website?: string;
   address?: string;
-  countriesServed?: string[];
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 /** discoverAssociations(limit, offset, searchTerm). */
@@ -582,20 +586,48 @@ export const REQUEST_MEMBERSHIP = gql`
   }
 `;
 
+export interface CreateAssociationInput {
+  name: string;
+  description?: string;
+  associationTypeId: string;
+  joinPolicy: "OPEN" | "REQUEST" | "INVITE_ONLY";
+  visibility: "PUBLIC" | "PRIVATE";
+  communityIds?: string[];
+  associationAdmins?: { email: string; password: string }[];
+}
+
+export interface UpdateAssociationInput {
+  id: string;
+  name?: string;
+  description?: string;
+  joinPolicy?: "OPEN" | "REQUEST" | "INVITE_ONLY";
+  visibility?: "PUBLIC" | "PRIVATE";
+  avatarKey?: string;
+}
+
+export interface AssociationMember {
+  userId: string;
+  role?: string;
+  status: string;
+  joinedAt?: string;
+}
+
+export interface MembershipActionInput {
+  entityId: string;
+  entityType: "COMMUNITY" | "ASSOCIATION";
+  userId: string;
+  reason?: string;
+}
+
 export const CREATE_ASSOCIATION = gql`
-  mutation CreateAssociation(
-    $name: String!
-    $description: String!
-    $visibility: String!
-    $creatorId: ID
-  ) {
-    createAssociation(
-      name: $name
-      description: $description
-      visibility: $visibility
-      creatorId: $creatorId
-    ) {
+  mutation CreateAssociation($input: CreateAssociationInput!) {
+    createAssociation(input: $input) {
       id
+      name
+      defaultGroupId
+      joinPolicy
+      visibility
+      createdAt
     }
   }
 `;
@@ -843,6 +875,158 @@ export const DELETE_ASSOCIATION_TYPE = gql`
     deleteAssociationType(id: $id) {
       success
       message
+    }
+  }
+`;
+
+// ─── Association Management ──────────────────────────────────────────────────
+
+export const GET_ASSOCIATION = gql`
+  query GetAssociation($id: ID!) {
+    getAssociation(id: $id) {
+      id
+      name
+      description
+      joinPolicy
+      visibility
+      defaultGroupId
+      memberCount
+      avatarUrl
+      createdAt
+      updatedAt
+    }
+  }
+`;
+
+export const SEARCH_ASSOCIATIONS = gql`
+  query SearchAssociations($input: SearchAssociationsInput) {
+    searchAssociations(input: $input) {
+      associations {
+        id
+        name
+        description
+        memberCount
+        joinPolicy
+        visibility
+        avatarUrl
+        createdAt
+      }
+      total
+      page
+      limit
+    }
+  }
+`;
+
+export const UPDATE_ASSOCIATION = gql`
+  mutation UpdateAssociation($input: UpdateAssociationInput!) {
+    updateAssociation(input: $input) {
+      id
+      name
+      joinPolicy
+      visibility
+      updatedAt
+    }
+  }
+`;
+
+export const LINK_ASSOCIATION = gql`
+  mutation LinkAssociation($input: LinkAssociationInput!) {
+    linkAssociation(input: $input) {
+      success
+      message
+    }
+  }
+`;
+
+export const UNLINK_ASSOCIATION = gql`
+  mutation UnlinkAssociation($input: UnlinkAssociationInput!) {
+    unlinkAssociation(input: $input) {
+      success
+      message
+    }
+  }
+`;
+
+export const APPROVE_MEMBERSHIP = gql`
+  mutation ApproveMembership($input: ApproveMembershipInput!) {
+    approveMembership(input: $input) {
+      success
+      message
+    }
+  }
+`;
+
+export const REJECT_MEMBERSHIP = gql`
+  mutation RejectMembership($input: RejectMembershipInput!) {
+    rejectMembership(input: $input) {
+      success
+      message
+    }
+  }
+`;
+
+export const REMOVE_MEMBER = gql`
+  mutation RemoveMember($input: RemoveMemberInput!) {
+    removeMember(input: $input) {
+      success
+      message
+    }
+  }
+`;
+
+export const INVITE_MEMBER = gql`
+  mutation InviteMember($input: InviteMemberInput!) {
+    inviteMember(input: $input) {
+      success
+      message
+    }
+  }
+`;
+
+export const GET_ASSOCIATION_MEMBERS = gql`
+  query GetAssociationMembers(
+    $associationId: ID!
+    $page: Int
+    $limit: Int
+    $status: String
+  ) {
+    getAssociationMembers(
+      associationId: $associationId
+      page: $page
+      limit: $limit
+      status: $status
+    ) {
+      members {
+        userId
+        role
+        status
+        joinedAt
+      }
+      total
+      page
+    }
+  }
+`;
+
+export const GET_PENDING_MEMBERSHIP_REQUESTS = gql`
+  query GetPendingMembershipRequests($entityId: ID!, $entityType: String!) {
+    getPendingMembershipRequests(entityId: $entityId, entityType: $entityType) {
+      requests {
+        userId
+        requestedAt
+        message
+      }
+      total
+    }
+  }
+`;
+
+export const GET_ASSOCIATION_AVATAR_UPLOAD_URL = gql`
+  mutation GetAssociationAvatarUploadUrl($associationId: ID!) {
+    getAssociationAvatarUploadUrl(associationId: $associationId) {
+      uploadUrl
+      fileKey
     }
   }
 `;

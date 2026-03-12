@@ -20,8 +20,11 @@ import { MultiSelect } from "@/components/ui/multi-select";
 import { useToast } from "@/hooks/use-toast";
 import { 
   Search, Plus, Eye, MoreHorizontal, Edit, Trash2, Link2, Users, 
-  Download, ChevronDown, Upload, Building2, Globe, Mail, Phone, LinkIcon
+  Download, ChevronDown, Upload, Building2, Globe, Mail, Phone, LinkIcon,
+  Loader2
 } from "lucide-react";
+import { useSearchAssociations, useCreateAssociation, useLinkAssociation } from "@/hooks/admin/useAssociation";
+import { useListAssociationTypes } from "@/hooks/admin/useEntityTypes";
 
 // Complete list of all countries
 const allCountries = [
@@ -194,7 +197,8 @@ const sampleAssociations = [
 interface CreateFormData {
   name: string;
   description: string;
-  type: string;
+  associationTypeId: string;
+  visibility: string;
   countriesServed: string[];
   logoBanner: File | null;
   joinPolicy: string;
@@ -203,7 +207,8 @@ interface CreateFormData {
   paymentType: string;
   paymentAmount: string;
   paymentCurrency: string;
-  assignedAdmins: string[];
+  adminEmail: string;
+  adminPassword: string;
   address: string;
   contactEmail: string;
   contactPhone: string;
@@ -213,16 +218,18 @@ interface CreateFormData {
 const initialFormData: CreateFormData = {
   name: "",
   description: "",
-  type: "",
+  associationTypeId: "",
+  visibility: "PUBLIC",
   countriesServed: [],
   logoBanner: null,
-  joinPolicy: "Approval Required",
+  joinPolicy: "OPEN",
   whoCanPost: "Admins Only",
   isPaid: false,
   paymentType: "Monthly",
   paymentAmount: "",
   paymentCurrency: "EUR",
-  assignedAdmins: [],
+  adminEmail: "",
+  adminPassword: "",
   address: "",
   contactEmail: "",
   contactPhone: "",
@@ -256,9 +263,42 @@ export default function Associations() {
   // Form state
   const [formData, setFormData] = useState<CreateFormData>(initialFormData);
 
+  // Live API data
+  const { data: searchData, loading: searchLoading } = useSearchAssociations({ limit: 50 });
+  const [createAssociationMutation, { loading: createLoading }] = useCreateAssociation();
+  const [linkAssociationMutation] = useLinkAssociation();
+  const { data: assocTypesData } = useListAssociationTypes();
+
+  const apiAssociations = searchData?.searchAssociations.associations.map((a) => ({
+    id: a.id,
+    name: a.name,
+    type: a.joinPolicy ?? "OPEN",
+    description: a.description ?? "",
+    countriesServed: [] as string[],
+    linkedCommunities: [] as string[],
+    membersCount: a.memberCount ?? 0,
+    postsCount: 0,
+    opportunitiesCount: 0,
+    vendorProductsCount: 0,
+    isPaid: false,
+    paymentType: null as string | null,
+    paymentAmount: null as number | null,
+    paymentCurrency: null as string | null,
+    assignedAdmins: [] as string[],
+    joinPolicy: a.joinPolicy ?? "OPEN",
+    visibility: a.visibility ?? "PUBLIC",
+    whoCanPost: "All Members",
+    logoUrl: a.avatarUrl ?? null,
+    address: "",
+    contactEmail: "",
+    contactPhone: "",
+    website: "",
+    createdAt: a.createdAt ?? new Date().toISOString(),
+  })) ?? sampleAssociations;
+
   const communityOptions = mockCommunities.map(c => ({ label: c.name, value: c.id }));
 
-  const filteredAssociations = sampleAssociations
+  const filteredAssociations = apiAssociations
     .filter((assoc) => {
       const searchLower = searchQuery.toLowerCase();
       const matchesSearch = 
@@ -292,7 +332,7 @@ export default function Associations() {
     });
 
   const handleSelectAll = (checked: boolean) => {
-    setSelectedAssociations(checked ? sampleAssociations.map(a => a.id) : []);
+    setSelectedAssociations(checked ? apiAssociations.map(a => a.id) : []);
   };
 
   const handleSelectAssociation = (id: string, checked: boolean) => {
@@ -314,8 +354,8 @@ export default function Associations() {
     }
   };
 
-  const handleCreateAssociation = () => {
-    if (!formData.name || !formData.type || formData.countriesServed.length === 0 || formData.assignedAdmins.length === 0) {
+  const handleCreateAssociation = async () => {
+    if (!formData.name || !formData.associationTypeId || !formData.visibility) {
       toast({ title: t('associations.validationError'), description: t('associations.fillRequired'), variant: "destructive" });
       return;
     }
@@ -331,10 +371,28 @@ export default function Associations() {
       toast({ title: t('associations.validationError'), description: t('associations.paymentAmountRequired'), variant: "destructive" });
       return;
     }
-    
-    toast({ title: t('associations.createSuccess'), description: t('associations.createSuccessDesc') });
-    setCreateModalOpen(false);
-    setFormData(initialFormData);
+    try {
+      await createAssociationMutation({
+        variables: {
+          input: {
+            name: formData.name,
+            description: formData.description || undefined,
+            associationTypeId: formData.associationTypeId,
+            joinPolicy: formData.joinPolicy as "OPEN" | "REQUEST" | "INVITE_ONLY",
+            visibility: formData.visibility as "PUBLIC" | "PRIVATE",
+            associationAdmins: formData.adminEmail
+              ? [{ email: formData.adminEmail, password: formData.adminPassword }]
+              : undefined,
+          },
+        },
+      });
+      toast({ title: t('associations.createSuccess'), description: t('associations.createSuccessDesc') });
+      setCreateModalOpen(false);
+      setFormData(initialFormData);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "An error occurred";
+      toast({ title: "Error creating association", description: message, variant: "destructive" });
+    }
   };
 
   const handleDeleteAssociation = () => {
@@ -376,8 +434,9 @@ export default function Associations() {
             <Button variant="outline" onClick={() => toast({ title: "Export", description: "Exporting associations..." })}>
               <Download className="mr-2 h-4 w-4" /> {t('associations.exportAssociations')}
             </Button>
-            <Button onClick={() => setCreateModalOpen(true)}>
-              <Plus className="mr-2 h-4 w-4" /> {t('associations.createAssociation')}
+            <Button onClick={() => setCreateModalOpen(true)} disabled={createLoading}>
+              {createLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
+              {t('associations.createAssociation')}
             </Button>
           </div>
         </div>
@@ -462,7 +521,7 @@ export default function Associations() {
                   <TableRow className="border-border/50 hover:bg-transparent">
                     <TableHead className="w-12">
                       <Checkbox 
-                        checked={selectedAssociations.length === sampleAssociations.length}
+                        checked={apiAssociations.length > 0 && selectedAssociations.length === apiAssociations.length}
                         onCheckedChange={handleSelectAll}
                       />
                     </TableHead>
@@ -621,11 +680,11 @@ export default function Associations() {
                   </div>
                   <div className="space-y-2">
                     <Label>{t('associations.form.type')} <span className="text-destructive">*</span></Label>
-                    <Select value={formData.type} onValueChange={(val) => setFormData(prev => ({ ...prev, type: val }))}>
+                    <Select value={formData.associationTypeId} onValueChange={(val) => setFormData(prev => ({ ...prev, associationTypeId: val }))}>
                       <SelectTrigger><SelectValue placeholder={t('associations.form.selectType')} /></SelectTrigger>
                       <SelectContent>
-                        {typeOptions.map(type => (
-                          <SelectItem key={type} value={type}>{type}</SelectItem>
+                        {(assocTypesData?.listAssociationTypes ?? []).map(type => (
+                          <SelectItem key={type.id} value={type.id}>{type.name}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -661,8 +720,19 @@ export default function Associations() {
                     <Select value={formData.joinPolicy} onValueChange={(val) => setFormData(prev => ({ ...prev, joinPolicy: val }))}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="Open">{t('associations.form.joinOpen')}</SelectItem>
-                        <SelectItem value="Approval Required">{t('associations.form.joinApproval')}</SelectItem>
+                        <SelectItem value="OPEN">{t('associations.form.joinOpen')}</SelectItem>
+                        <SelectItem value="REQUEST">{t('associations.form.joinApproval')}</SelectItem>
+                        <SelectItem value="INVITE_ONLY">Invite Only</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Visibility <span className="text-destructive">*</span></Label>
+                    <Select value={formData.visibility} onValueChange={(val) => setFormData(prev => ({ ...prev, visibility: val }))}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="PUBLIC">Public</SelectItem>
+                        <SelectItem value="PRIVATE">Private</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -769,17 +839,29 @@ export default function Associations() {
                 )}
               </div>
 
-              {/* Assigned Admins */}
+              {/* Auto-create Association Admin Account */}
               <div className="space-y-4">
-                <h3 className="font-semibold text-foreground">{t('associations.form.assignedAdmins')}</h3>
-                <div className="space-y-2">
-                  <Label>{t('associations.form.selectAdmins')} <span className="text-destructive">*</span></Label>
-                  <MultiSelect
-                    options={mockAdmins.map(a => ({ label: `${a.name} (${a.email})`, value: a.id }))}
-                    selected={formData.assignedAdmins}
-                    onChange={(val) => setFormData(prev => ({ ...prev, assignedAdmins: val }))}
-                    placeholder={t('associations.form.selectAdminsPlaceholder')}
-                  />
+                <h3 className="font-semibold text-foreground">Auto-create Association Admin</h3>
+                <p className="text-sm text-muted-foreground">Optionally create an admin panel account scoped to this association.</p>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label>Admin Email</Label>
+                    <Input
+                      type="email"
+                      placeholder="assoc.admin@example.com"
+                      value={formData.adminEmail}
+                      onChange={(e) => setFormData(prev => ({ ...prev, adminEmail: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Admin Password</Label>
+                    <Input
+                      type="password"
+                      placeholder="Secure password"
+                      value={formData.adminPassword}
+                      onChange={(e) => setFormData(prev => ({ ...prev, adminPassword: e.target.value }))}
+                    />
+                  </div>
                 </div>
               </div>
             </div>
@@ -1037,8 +1119,15 @@ export default function Associations() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setLinkCommunitiesModalOpen(false)}>{t('common.cancel')}</Button>
-            <Button onClick={() => { 
-              toast({ title: t('associations.communityLinkSuccess') }); 
+            <Button onClick={async () => { 
+              if (selectedAssociation) {
+                try {
+                  await linkAssociationMutation({ variables: { input: { associationId: selectedAssociation.id, communityId: selectedAssociation.linkedCommunities[0] ?? "" } } });
+                  toast({ title: t('associations.communityLinkSuccess') });
+                } catch {
+                  toast({ title: "Error linking community", variant: "destructive" });
+                }
+              }
               setLinkCommunitiesModalOpen(false); 
             }}>{t('common.save')}</Button>
           </DialogFooter>
