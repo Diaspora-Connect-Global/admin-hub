@@ -209,7 +209,7 @@ export interface CreateOpportunityInput {
   ownerType: OwnerType;  // USER | COMMUNITY | ASSOCIATION
   ownerId: string;       // Must match user's ID or owned entity (community/association)
   type: OpportunityType;
-  category: OpportunityCategoryEnum;
+  category: OpportunityCategory;
   title: string;
   description: string;
   visibility: Visibility;
@@ -230,7 +230,6 @@ export interface CreateOpportunityInput {
   tags?: string[];
 }
 
-// NOTE: skills, tags, subCategory are NOT in the gateway input — omit them
 export interface UpdateOpportunityInput {
   title?: string;
   description?: string;
@@ -243,6 +242,14 @@ export interface UpdateOpportunityInput {
   salaryMax?: number;
   salaryCurrency?: string;
   deadline?: string;
+  subCategory?: string;
+  skills?: string[];
+  tags?: string[];
+  // Application method — only send fields you intend to change.
+  // Backend ignores empty strings; stale email/link is auto-cleared on method change.
+  applicationMethod?: ApplicationMethod;
+  applicationEmail?: string;  // Required when applicationMethod is EMAIL_REQUEST
+  externalLink?: string;      // Required when applicationMethod is EXTERNAL_LINK
 }
 
 export interface ListOpportunitiesInput {

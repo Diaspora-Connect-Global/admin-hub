@@ -43,7 +43,7 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
-import { Opportunity, OpportunityType, FormField, Visibility } from "@/types/opportunities";
+import { Opportunity, OpportunityType, FormField, Visibility, ApplicationMethod, OpportunityStatus } from "@/types/opportunities";
 import { toast } from "@/hooks/use-toast";
 
 interface CreateEditOpportunityModalProps {
@@ -71,7 +71,7 @@ export function CreateEditOpportunityModal({
   
   // Core Details
   const [title, setTitle] = useState("");
-  const [type, setType] = useState<OpportunityType>("EMPLOYMENT");
+  const [type, setType] = useState<OpportunityType>(OpportunityType.EMPLOYMENT);
   const [shortDescription, setShortDescription] = useState("");
   const [description, setDescription] = useState("");
   const [tags, setTags] = useState<string[]>([]);
@@ -82,7 +82,9 @@ export function CreateEditOpportunityModal({
   // Application Settings
   const [deadline, setDeadline] = useState<Date | undefined>();
   const [maxApplicants, setMaxApplicants] = useState("");
-  const [formType, setFormType] = useState<"simple" | "structured">("structured");
+  const [formType, setFormType] = useState<"simple" | "structured" | "external">("structured");
+  const [applicationEmail, setApplicationEmail] = useState("");
+  const [externalApplicationLink, setExternalApplicationLink] = useState("");
   const [formFields, setFormFields] = useState<FormField[]>(defaultFormFields);
   const [requireCv, setRequireCv] = useState(true);
   const [allowAnonymous, setAllowAnonymous] = useState(false);
@@ -110,7 +112,15 @@ export function CreateEditOpportunityModal({
         setVisibility(opportunity.visibility === Visibility.PUBLIC ? "public" : "members");
         setLocation(opportunity.location || "");
         setDeadline(opportunity.deadline ? new Date(opportunity.deadline) : undefined);
-        setFormType("structured");
+        if (opportunity.applicationMethod === ApplicationMethod.EMAIL_REQUEST) {
+          setFormType("simple");
+        } else if (opportunity.applicationMethod === ApplicationMethod.EXTERNAL_LINK) {
+          setFormType("external");
+        } else {
+          setFormType("structured");
+        }
+        setApplicationEmail(opportunity.applicationEmail ?? "");
+        setExternalApplicationLink(opportunity.externalLink ?? "");
         setRequireCv(true);
         setAllowAnonymous(false);
         setAutoAcknowledge(true);
@@ -120,7 +130,7 @@ export function CreateEditOpportunityModal({
       } else {
         // Reset to defaults
         setTitle("");
-        setType("EMPLOYMENT");
+        setType(OpportunityType.EMPLOYMENT);
         setShortDescription("");
         setDescription("");
         setTags([]);
@@ -129,6 +139,8 @@ export function CreateEditOpportunityModal({
         setDeadline(undefined);
         setMaxApplicants("");
         setFormType("structured");
+        setApplicationEmail("");
+        setExternalApplicationLink("");
         setFormFields(defaultFormFields);
         setRequireCv(true);
         setAllowAnonymous(false);
@@ -173,25 +185,42 @@ export function CreateEditOpportunityModal({
       return;
     }
 
+    if (formType === "simple" && !applicationEmail.trim()) {
+      toast({ title: "Application Email Required", description: "Please enter an email to receive applications.", variant: "destructive" });
+      return;
+    }
+
+    if (formType === "external" && !externalApplicationLink.trim()) {
+      toast({ title: "External Link Required", description: "Please enter an external application link.", variant: "destructive" });
+      return;
+    }
+
+    const applicationMethod =
+      formType === "simple"
+        ? ApplicationMethod.EMAIL_REQUEST
+        : formType === "external"
+          ? ApplicationMethod.EXTERNAL_LINK
+          : ApplicationMethod.IN_PLATFORM_FORM;
+
+    const visibilityValue = visibility === "public" ? Visibility.PUBLIC : Visibility.COMMUNITY_ONLY;
+
     const oppData: Partial<Opportunity> = {
       title,
       type,
       shortDescription,
       description,
       tags,
-      visibility,
+      visibility: visibilityValue,
       location,
       deadline: deadline ? format(deadline, "MMM dd, yyyy") : null,
       maxApplicants: maxApplicants ? parseInt(maxApplicants) : null,
       formType,
+      applicationMethod,
+      applicationEmail: formType === "simple" ? applicationEmail.trim() : null,
+      externalLink: formType === "external" ? externalApplicationLink.trim() : null,
       requireCv,
-      allowAnonymous,
-      autoAcknowledge,
       reviewWorkflow,
-      notifyMembers,
-      searchable,
-      status: action === "draft" ? "draft" : action === "schedule" ? "scheduled" : "published",
-      scheduledAt: action === "schedule" && scheduleDate ? scheduleDate.toISOString() : null,
+      status: action === "publish" ? OpportunityStatus.PUBLISHED : OpportunityStatus.DRAFT,
     };
 
     onSave(oppData, action);
@@ -379,17 +408,47 @@ export function CreateEditOpportunityModal({
 
               <div className="space-y-2">
                 <Label>Application Form Type</Label>
-                <RadioGroup value={formType} onValueChange={(v) => setFormType(v as "simple" | "structured")}>
+                <RadioGroup value={formType} onValueChange={(v) => setFormType(v as "simple" | "structured" | "external")}>
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="simple" id="simple" />
-                    <Label htmlFor="simple" className="font-normal">Simple (email + CV)</Label>
+                    <Label htmlFor="simple" className="font-normal">Simple email</Label>
                   </div>
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="structured" id="structured" />
                     <Label htmlFor="structured" className="font-normal">Structured Form (custom fields)</Label>
                   </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="external" id="external" />
+                    <Label htmlFor="external" className="font-normal">External link for application</Label>
+                  </div>
                 </RadioGroup>
               </div>
+
+              {formType === "simple" && (
+                <div className="space-y-2">
+                  <Label htmlFor="applicationEmail">Application Email</Label>
+                  <Input
+                    id="applicationEmail"
+                    type="email"
+                    placeholder="applications@example.com"
+                    value={applicationEmail}
+                    onChange={(e) => setApplicationEmail(e.target.value)}
+                  />
+                </div>
+              )}
+
+              {formType === "external" && (
+                <div className="space-y-2">
+                  <Label htmlFor="externalApplicationLink">External Application Link</Label>
+                  <Input
+                    id="externalApplicationLink"
+                    type="url"
+                    placeholder="https://example.com/apply"
+                    value={externalApplicationLink}
+                    onChange={(e) => setExternalApplicationLink(e.target.value)}
+                  />
+                </div>
+              )}
 
               {formType === "structured" && (
                 <div className="space-y-3 rounded-lg border border-border p-4">
@@ -450,7 +509,10 @@ export function CreateEditOpportunityModal({
             <TabsContent value="screening" className="space-y-4">
               <div className="space-y-2">
                 <Label>Application Review Workflow</Label>
-                <Select value={reviewWorkflow} onValueChange={(v) => setReviewWorkflow(v as any)}>
+                <Select
+                  value={reviewWorkflow}
+                  onValueChange={(v) => setReviewWorkflow(v as "manual" | "auto_sort" | "assign_reviewer")}
+                >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>

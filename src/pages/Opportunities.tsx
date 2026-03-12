@@ -274,19 +274,56 @@ export default function Opportunities() {
           ? new Date(data.deadline).toISOString()
           : (data.deadline as string))
       : undefined;
+    const applicationMethod = data.applicationMethod ?? ApplicationMethod.IN_PLATFORM_FORM;
+
+    if (applicationMethod === ApplicationMethod.EMAIL_REQUEST && !data.applicationEmail?.trim()) {
+      toast({
+        title: "Application Email Required",
+        description: "Please provide an email to receive applications.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (applicationMethod === ApplicationMethod.EXTERNAL_LINK && !data.externalLink?.trim()) {
+      toast({
+        title: "External Link Required",
+        description: "Please provide an external application link.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     if (editOpportunity?.id) {
       try {
+        // Sparse update — only send fields with actual values (backend ignores empty strings).
+        // applicationMethod change auto-clears the stale email/link on the service side.
+        const updateInput: import("@/types/opportunities").UpdateOpportunityInput = {};
+        if (data.title)                       updateInput.title           = data.title.trim();
+        if (data.description)                 updateInput.description     = data.description;
+        if (data.responsibilities)            updateInput.responsibilities = data.responsibilities;
+        if (data.requirements)                updateInput.requirements    = data.requirements;
+        if (data.location)                    updateInput.location        = data.location;
+        if (deadlineStr)                      updateInput.deadline        = deadlineStr;
+        if (data.workMode)                    updateInput.workMode        = data.workMode as import("@/types/opportunities").WorkMode;
+        if (data.engagementType)             updateInput.engagementType  = data.engagementType as import("@/types/opportunities").EngagementType;
+        if (data.salaryMin  != null)          updateInput.salaryMin       = data.salaryMin  as number;
+        if (data.salaryMax  != null)          updateInput.salaryMax       = data.salaryMax  as number;
+        if (data.salaryCurrency)             updateInput.salaryCurrency  = data.salaryCurrency as string;
+        if (data.tags?.length)               updateInput.tags            = data.tags as string[];
+        if (data.skills?.length)             updateInput.skills          = data.skills as string[];
+        if (data.subCategory)               updateInput.subCategory     = data.subCategory as string;
+        // Application method (always include when present so stale values are cleared)
+        updateInput.applicationMethod = applicationMethod;
+        if (applicationMethod === ApplicationMethod.EMAIL_REQUEST) {
+          updateInput.applicationEmail = data.applicationEmail?.trim() || undefined;
+        }
+        if (applicationMethod === ApplicationMethod.EXTERNAL_LINK) {
+          updateInput.externalLink = data.externalLink?.trim() || undefined;
+        }
+
         await updateOpportunityMutation({
-          variables: {
-            id: editOpportunity.id,
-            input: {
-              title: data.title,
-              description: data.description ?? "",
-              location: data.location ?? undefined,
-              deadline: deadlineStr,
-            },
-          },
+          variables: { id: editOpportunity.id, input: updateInput },
         });
         if (action === "publish" && editOpportunity.status !== OpportunityStatus.PUBLISHED) {
           await publishOpportunityMutation({ variables: { id: editOpportunity.id } });
@@ -328,7 +365,15 @@ export default function Opportunities() {
       title: data.title!.trim(), // Title validated above, safe to use
       description: data.description ?? "",
       visibility,
-      applicationMethod: ApplicationMethod.IN_PLATFORM_FORM,
+      applicationMethod,
+      applicationEmail:
+        applicationMethod === ApplicationMethod.EMAIL_REQUEST
+          ? data.applicationEmail?.trim() || undefined
+          : undefined,
+      externalLink:
+        applicationMethod === ApplicationMethod.EXTERNAL_LINK
+          ? data.externalLink?.trim() || undefined
+          : undefined,
       location: data.location ?? undefined,
       deadline: deadlineStr,
     };
