@@ -20,6 +20,20 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   Save,
   Settings,
   Shield,
@@ -29,10 +43,23 @@ import {
   Globe,
   Sun,
   Moon,
+  Plus,
+  Trash2,
+  MoreHorizontal,
+  Loader2,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useTheme } from "next-themes";
 import { useTranslation } from "react-i18next";
+import {
+  useListCommunityTypes,
+  useDeleteCommunityType,
+  useListAssociationTypes,
+  useDeleteAssociationType,
+} from "@/hooks/admin/useEntityTypes";
+import { CreateCommunityTypeModal } from "@/components/admin/CreateCommunityTypeModal";
+import { CreateAssociationTypeModal } from "@/components/admin/CreateAssociationTypeModal";
+import type { CommunityType, AssociationType } from "@/services/networks/graphql/admin";
 
 // Language options
 const languages = [
@@ -61,6 +88,25 @@ export default function SystemSettings() {
   const [activeTab, setActiveTab] = useState("general");
   const { t, i18n } = useTranslation();
   const { theme, setTheme } = useTheme();
+
+  // Entity Types state
+  const [createCommTypeOpen, setCreateCommTypeOpen] = useState(false);
+  const [createAssocTypeOpen, setCreateAssocTypeOpen] = useState(false);
+  const {
+    data: commTypesData,
+    loading: commTypesLoading,
+    refetch: refetchCommTypes,
+  } = useListCommunityTypes();
+  const {
+    data: assocTypesData,
+    loading: assocTypesLoading,
+    refetch: refetchAssocTypes,
+  } = useListAssociationTypes();
+  const [deleteCommTypeMutation] = useDeleteCommunityType();
+  const [deleteAssocTypeMutation] = useDeleteAssociationType();
+
+  const communityTypes = (commTypesData as any)?.listCommunityTypes ?? [];
+  const associationTypes = (assocTypesData as any)?.listAssociationTypes ?? [];
   
   // General settings state - initialize from localStorage
   const [generalSettings, setGeneralSettings] = useState(() => {
@@ -126,6 +172,44 @@ export default function SystemSettings() {
     });
   };
 
+  const handleDeleteCommunityType = async (id: string) => {
+    try {
+      const result = await deleteCommTypeMutation({ variables: { id } });
+      if (result.data?.deleteCommunityType?.success) {
+        toast({
+          title: "Community Type Deleted",
+          description: "The community type has been removed.",
+        });
+        await refetchCommTypes();
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: (error as Error).message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeleteAssociationType = async (id: string) => {
+    try {
+      const result = await deleteAssocTypeMutation({ variables: { id } });
+      if (result.data?.deleteAssociationType?.success) {
+        toast({
+          title: "Association Type Deleted",
+          description: "The association type has been removed.",
+        });
+        await refetchAssocTypes();
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: (error as Error).message,
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <AdminLayout>
       <div className="p-6 space-y-6">
@@ -147,6 +231,10 @@ export default function SystemSettings() {
             <TabsTrigger value="security" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <Shield className="w-4 h-4" />
               Security
+            </TabsTrigger>
+            <TabsTrigger value="entity-types" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              <Globe className="w-4 h-4" />
+              Entity Types
             </TabsTrigger>
             <TabsTrigger value="payments" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <CreditCard className="w-4 h-4" />
@@ -606,7 +694,191 @@ export default function SystemSettings() {
               </Button>
             </div>
           </TabsContent>
+
+          {/* Entity Types Tab */}
+          <TabsContent value="entity-types" className="space-y-6">
+            {/* Community Types Section */}
+            <Card className="border-border">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>Community Types</CardTitle>
+                    <CardDescription>
+                      Predefined categories admins use when creating communities
+                    </CardDescription>
+                  </div>
+                  <Button
+                    onClick={() => setCreateCommTypeOpen(true)}
+                    className="gap-2"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Add Type
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {commTypesLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+                  </div>
+                ) : communityTypes.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-8">
+                    No community types yet. Create one to get started.
+                  </p>
+                ) : (
+                  <div className="table-container">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="border-border">
+                          <TableHead>Name</TableHead>
+                          <TableHead>Description</TableHead>
+                          <TableHead>Embassy</TableHead>
+                          <TableHead className="text-right">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {communityTypes.map((type: CommunityType) => (
+                          <TableRow key={type.id} className="border-border">
+                            <TableCell className="font-medium">{type.name}</TableCell>
+                            <TableCell className="text-muted-foreground">
+                              {type.description || "—"}
+                            </TableCell>
+                            <TableCell>
+                              {type.isEmbassy ? "Yes" : "No"}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8"
+                                  >
+                                    <MoreHorizontal className="w-4 h-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent
+                                  align="end"
+                                  className="bg-popover border-border"
+                                >
+                                  <DropdownMenuItem
+                                    className="gap-2 text-destructive"
+                                    onClick={() =>
+                                      handleDeleteCommunityType(type.id)
+                                    }
+                                  >
+                                    <Trash2 className="w-4 h-4" /> Delete
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Association Types Section */}
+            <Card className="border-border">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>Association Types</CardTitle>
+                    <CardDescription>
+                      Predefined categories admins use when creating associations
+                    </CardDescription>
+                  </div>
+                  <Button
+                    onClick={() => setCreateAssocTypeOpen(true)}
+                    className="gap-2"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Add Type
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {assocTypesLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+                  </div>
+                ) : associationTypes.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-8">
+                    No association types yet. Create one to get started.
+                  </p>
+                ) : (
+                  <div className="table-container">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="border-border">
+                          <TableHead>Name</TableHead>
+                          <TableHead>Description</TableHead>
+                          <TableHead className="text-right">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {associationTypes.map((type: AssociationType) => (
+                          <TableRow key={type.id} className="border-border">
+                            <TableCell className="font-medium">{type.name}</TableCell>
+                            <TableCell className="text-muted-foreground">
+                              {type.description || "—"}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8"
+                                  >
+                                    <MoreHorizontal className="w-4 h-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent
+                                  align="end"
+                                  className="bg-popover border-border"
+                                >
+                                  <DropdownMenuItem
+                                    className="gap-2 text-destructive"
+                                    onClick={() =>
+                                      handleDeleteAssociationType(type.id)
+                                    }
+                                  >
+                                    <Trash2 className="w-4 h-4" /> Delete
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
         </Tabs>
+
+        {/* Modals */}
+        <CreateCommunityTypeModal
+          isOpen={createCommTypeOpen}
+          onClose={() => setCreateCommTypeOpen(false)}
+          onSuccess={() => {
+            refetchCommTypes();
+          }}
+        />
+
+        <CreateAssociationTypeModal
+          isOpen={createAssocTypeOpen}
+          onClose={() => setCreateAssocTypeOpen(false)}
+          onSuccess={() => {
+            refetchAssocTypes();
+          }}
+        />
       </div>
     </AdminLayout>
   );

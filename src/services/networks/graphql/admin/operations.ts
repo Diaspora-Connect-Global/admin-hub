@@ -618,3 +618,231 @@ export const ASSIGN_MEMBER_ROLE = gql`
     }
   }
 `;
+
+// ─── Admin Account Management ────────────────────────────────────────────
+
+export interface AdminAccount {
+  id: string;
+  email: string;
+  status: "ACTIVE" | "INACTIVE" | "SUSPENDED";
+  adminType: "SYSTEM_ADMIN" | "COMMUNITY_ADMIN" | "ASSOCIATION_ADMIN" | "MODERATOR";
+  roles: Array<{
+    id: string;
+    roleType: string;
+    scopeType: "GLOBAL" | "COMMUNITY" | "ASSOCIATION";
+    scopeId?: string;
+  }>;
+  permissions?: string[];
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface CreateAdminInput {
+  email: string;
+  password: string;
+  adminType: "SYSTEM_ADMIN" | "COMMUNITY_ADMIN" | "ASSOCIATION_ADMIN" | "MODERATOR";
+  scopeType: "GLOBAL" | "COMMUNITY" | "ASSOCIATION";
+  scopeId?: string;
+}
+
+export interface UpdateAdminStatusInput {
+  adminId: string;
+  status: "ACTIVE" | "INACTIVE" | "SUSPENDED";
+  reason?: string;
+}
+
+export interface AssignAdminRoleInput {
+  adminId: string;
+  roleType: string;
+  scopeType: "GLOBAL" | "COMMUNITY" | "ASSOCIATION";
+  scopeId?: string;
+}
+
+export const CREATE_ADMIN = gql`
+  mutation CreateAdmin($input: CreateAdminInput!) {
+    createAdmin(input: $input) {
+      success
+      message
+      admin {
+        id
+        email
+        status
+        adminType
+        roles {
+          id
+          roleType
+          scopeType
+          scopeId
+        }
+        permissions
+      }
+    }
+  }
+`;
+
+export const GET_ADMIN_BY_ID = gql`
+  query GetAdminById($adminId: String!) {
+    getAdminById(adminId: $adminId) {
+      success
+      admin {
+        id
+        email
+        status
+        adminType
+        roles {
+          id
+          roleType
+          scopeType
+          scopeId
+        }
+        permissions
+        createdAt
+        updatedAt
+      }
+    }
+  }
+`;
+
+export const LIST_ADMINS = gql`
+  query ListAdmins($limit: Int, $offset: Int, $status: String, $adminType: String) {
+    listAdmins(limit: $limit, offset: $offset, status: $status, adminType: $adminType) {
+      admins {
+        id
+        email
+        status
+        adminType
+        roles {
+          id
+          roleType
+          scopeType
+          scopeId
+        }
+        createdAt
+      }
+      total
+    }
+  }
+`;
+
+export const UPDATE_ADMIN_STATUS = gql`
+  mutation UpdateAdminStatus($input: UpdateAdminStatusInput!) {
+    updateAdminStatus(input: $input) {
+      success
+      message
+    }
+  }
+`;
+
+export const ASSIGN_ADMIN_ROLE_MUTATION = gql`
+  mutation AssignAdminRole($input: AssignAdminRoleInput!) {
+    assignAdminRole(input: $input) {
+      success
+      message
+      assignment {
+        id
+        roleType
+        scopeType
+        scopeId
+      }
+    }
+  }
+`;
+
+export const REVOKE_ADMIN_ROLE_MUTATION = gql`
+  mutation RevokeAdminRole($roleAssignmentId: String!, $reason: String) {
+    revokeAdminRole(roleAssignmentId: $roleAssignmentId, reason: $reason) {
+      success
+      message
+    }
+  }
+`;
+
+// ─── Community Type Management ────────────────────────────────────────────
+
+export interface CommunityType {
+  id: string;
+  name: string;
+  description?: string;
+  isEmbassy?: boolean;
+  createdAt?: string;
+}
+
+export interface CreateCommunityTypeInput {
+  name: string;
+  description?: string;
+  isEmbassy?: boolean;
+}
+
+export const CREATE_COMMUNITY_TYPE = gql`
+  mutation CreateCommunityType($input: CreateCommunityTypeInput!) {
+    createCommunityType(input: $input) {
+      id
+      name
+      description
+      isEmbassy
+    }
+  }
+`;
+
+export const LIST_COMMUNITY_TYPES = gql`
+  query ListCommunityTypes {
+    listCommunityTypes {
+      id
+      name
+      description
+      isEmbassy
+    }
+  }
+`;
+
+export const DELETE_COMMUNITY_TYPE = gql`
+  mutation DeleteCommunityType($id: String!) {
+    deleteCommunityType(id: $id) {
+      success
+      message
+    }
+  }
+`;
+
+// ─── Association Type Management ────────────────────────────────────────────
+
+export interface AssociationType {
+  id: string;
+  name: string;
+  description?: string;
+  createdAt?: string;
+}
+
+export interface CreateAssociationTypeInput {
+  name: string;
+  description?: string;
+}
+
+export const CREATE_ASSOCIATION_TYPE = gql`
+  mutation CreateAssociationType($input: CreateAssociationTypeInput!) {
+    createAssociationType(input: $input) {
+      id
+      name
+      description
+    }
+  }
+`;
+
+export const LIST_ASSOCIATION_TYPES = gql`
+  query ListAssociationTypes {
+    listAssociationTypes {
+      id
+      name
+      description
+    }
+  }
+`;
+
+export const DELETE_ASSOCIATION_TYPE = gql`
+  mutation DeleteAssociationType($id: String!) {
+    deleteAssociationType(id: $id) {
+      success
+      message
+    }
+  }
+`;
