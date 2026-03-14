@@ -239,6 +239,56 @@ export const GET_AUDIT_LOGS = gql`
   }
 `;
 
+export const GET_NOTIFICATIONS_WITH_META = gql`
+  query GetNotificationsWithMeta($limit: Int, $offset: Int) {
+    getNotificationsWithMeta(limit: $limit, offset: $offset) {
+      notifications {
+        id
+        userId
+        recipientId
+        type
+        title
+        message
+        body
+        data
+        read
+        isRead
+        actionUrl
+        link
+        imageUrl
+        createdAt
+        readAt
+      }
+      total
+      limit
+      offset
+      unreadCount
+    }
+  }
+`;
+
+export const GET_UNREAD_NOTIFICATION_COUNT = gql`
+  query GetUnreadNotificationCount {
+    getUnreadNotificationCount {
+      count
+    }
+  }
+`;
+
+export const GET_UNREAD_NOTIFICATIONS = gql`
+  query GetUnreadNotifications {
+    getUnreadNotifications {
+      id
+      type
+      title
+      message
+      link
+      actionUrl
+      createdAt
+    }
+  }
+`;
+
 // --- Mutations ---
 
 /** Admin login. No auth header required; returns accessToken (Bearer) and refreshToken. */
@@ -385,6 +435,42 @@ export const BOOST_CONTENT = gql`
 export const UNBOOST_CONTENT = gql`
   mutation UnboostContent($priorityId: ID!) {
     unboostContent(priorityId: $priorityId)
+  }
+`;
+
+export const MARK_NOTIFICATION_AS_READ = gql`
+  mutation MarkNotificationAsRead($notificationId: String!) {
+    markNotificationAsRead(notificationId: $notificationId) {
+      success
+      message
+    }
+  }
+`;
+
+export const MARK_ALL_NOTIFICATIONS_AS_READ = gql`
+  mutation MarkAllNotificationsAsRead {
+    markAllNotificationsAsRead {
+      success
+      message
+    }
+  }
+`;
+
+export const DELETE_NOTIFICATION = gql`
+  mutation DeleteNotification($notificationId: String!) {
+    deleteNotification(notificationId: $notificationId) {
+      success
+      message
+    }
+  }
+`;
+
+export const DELETE_ALL_NOTIFICATIONS = gql`
+  mutation DeleteAllNotifications {
+    deleteAllNotifications {
+      success
+      message
+    }
   }
 `;
 

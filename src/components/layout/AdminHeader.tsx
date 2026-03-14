@@ -1,4 +1,4 @@
-import { Search, Bell, UserPlus, ChevronDown, LogOut, User } from "lucide-react";
+import { Search, UserPlus, ChevronDown, LogOut, User } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useAdminAuth } from "@/hooks/auth/useAdminAuth";
+import { AdminNotificationBell } from "./AdminNotificationBell";
 
 export function AdminHeader() {
   const { t } = useTranslation();
@@ -60,10 +61,7 @@ export function AdminHeader() {
           </Button>
 
           {/* Notifications */}
-          <Button variant="ghost" size="icon" className="relative">
-            <Bell className="w-5 h-5" />
-            <span className="absolute top-1 right-1 w-2 h-2 bg-destructive rounded-full" />
-          </Button>
+          <AdminNotificationBell />
 
           {/* User menu with logout */}
           <DropdownMenu>

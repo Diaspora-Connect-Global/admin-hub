@@ -20,7 +20,7 @@ import Opportunities from "./pages/Opportunities";
 import UserManagement from "./pages/UserManagement";
 import Associations from "./pages/Associations";
 import AssociationDetail from "./pages/AssociationDetail";
-import VendorManagement from "./pages/VendorManagement";
+import VendorManagementGateway from "./pages/VendorManagementGateway";
 import SupportTicketing from "./pages/SupportTicketing";
 import SystemHealth from "./pages/SystemHealth";
 import ContentModeration from "./pages/ContentModeration";
@@ -63,7 +63,7 @@ const App = () => (
               <Route path="/audit" element={<AuditLogs />} />
               <Route path="/support" element={<SupportTicketing />} />
               <Route path="/moderation" element={<ContentModeration />} />
-              <Route path="/vendors" element={<VendorManagement />} />
+              <Route path="/vendors" element={<VendorManagementGateway />} />
               <Route path="/roles" element={<RolesPermissions />} />
               <Route path="/health" element={<SystemHealth />} />
             </Route>

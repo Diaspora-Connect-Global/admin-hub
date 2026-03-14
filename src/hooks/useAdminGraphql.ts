@@ -5,3 +5,4 @@
 export { useAdminAuth } from "./auth/useAdminAuth";
 export * from "./admin";
 export * from "./opportunity";
+export * from "./vendor";
