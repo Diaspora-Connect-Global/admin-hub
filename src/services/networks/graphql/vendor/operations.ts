@@ -10,16 +10,21 @@ import { gql } from "@apollo/client";
  */
 
 export type VendorType = "INDIVIDUAL" | "BUSINESS" | "COMMUNITY" | "ASSOCIATION";
+export type VendorStatus = "DRAFT" | "ACTIVE" | "KYC_PENDING" | "SUSPENDED";
 
 export interface VendorDTO {
   id: string;
-  vendorType: VendorType | string;
+  userId: string;
+  type: VendorType;
+  vendorType: VendorType;
   displayName: string;
   description?: string | null;
-  status?: string | null;
+  status: VendorStatus;
+  logoUrl?: string | null;
+  rating?: number | null;
+  completedOrders?: number | null;
   createdAt?: string | null;
   updatedAt?: string | null;
-  [key: string]: unknown;
 }
 
 export interface UploadUrlDTO {
@@ -31,35 +36,47 @@ export interface UploadUrlDTO {
 }
 
 export interface VendorDashboardDTO {
+  id?: string;
   vendorId?: string;
-  totalProducts?: number;
-  totalServicePackages?: number;
-  totalOrders?: number;
-  pendingOrders?: number;
-  totalRevenue?: number;
+  userId?: string;
+  displayName?: string;
+  totalSales?: number;
+  totalEarnings?: number;
+  averageRating?: number;
+  totalRatings?: number;
+  completedOrders?: number;
+  status?: string | null;
   currency?: string;
-  [key: string]: unknown;
 }
 
 export interface VendorEligibilityDTO {
   vendorId?: string;
-  canSellProducts?: boolean;
-  canSellServices?: boolean;
-  canRequestPayout?: boolean;
-  hasPayoutAccount?: boolean;
-  isKycVerified?: boolean;
-  reasons?: string[];
-  [key: string]: unknown;
+  canSell?: boolean;
+  canReceivePayout?: boolean;
+  isCompliant?: boolean;
+  status?: string | null;
+  payoutAccountCount?: number;
+  verifiedPayoutAccounts?: number;
+  activeSuspensionCount?: number;
 }
 
 export interface ProductDTO {
   id: string;
+  vendorId?: string;
   status?: string | null;
   name?: string | null;
   title?: string | null;
+  description?: string | null;
+  price?: number | null;
+  currency?: string | null;
+  inventoryCount?: number | null;
+  productType?: string | null;
+  shippingProfileId?: string | null;
+  downloadUrl?: string | null;
+  images?: string[] | null;
+  tags?: string[] | null;
   createdAt?: string | null;
   updatedAt?: string | null;
-  [key: string]: unknown;
 }
 
 export interface ProductListPaginatedDTO {
@@ -72,12 +89,17 @@ export interface ProductListPaginatedDTO {
 
 export interface ServicePackageDTO {
   id: string;
+  vendorId?: string;
   status?: string | null;
   title?: string | null;
   name?: string | null;
+  description?: string | null;
+  basePrice?: number | null;
+  currency?: string | null;
+  estimatedDuration?: number | null;
+  benefits?: string[] | null;
   createdAt?: string | null;
   updatedAt?: string | null;
-  [key: string]: unknown;
 }
 
 export interface ServicePackageListPaginatedDTO {
@@ -90,12 +112,13 @@ export interface ServicePackageListPaginatedDTO {
 
 export interface VendorOrderDTO {
   id: string;
+  vendorId?: string;
+  buyerId?: string;
   status?: string | null;
-  amount?: number | null;
+  totalAmount?: number | null;
   currency?: string | null;
   createdAt?: string | null;
   updatedAt?: string | null;
-  [key: string]: unknown;
 }
 
 export interface VendorOrderListPaginatedDTO {
@@ -104,6 +127,15 @@ export interface VendorOrderListPaginatedDTO {
   limit?: number;
   offset?: number;
   [key: string]: unknown;
+}
+
+export interface ListVendorsQueryResult {
+  listVendors: {
+    items: VendorDTO[];
+    total: number;
+    limit?: number;
+    offset?: number;
+  };
 }
 
 export interface GetVendorQueryResult {
@@ -188,6 +220,30 @@ export const GET_MY_VENDOR = gql`
       status
       createdAt
       updatedAt
+    }
+  }
+`;
+
+export const LIST_VENDORS = gql`
+  query ListVendors($limit: Int, $offset: Int, $status: String) {
+    listVendors(limit: $limit, offset: $offset, status: $status) {
+      items {
+        id
+        userId
+        displayName
+        description
+        type
+        vendorType
+        status
+        logoUrl
+        rating
+        completedOrders
+        createdAt
+        updatedAt
+      }
+      total
+      limit
+      offset
     }
   }
 `;
