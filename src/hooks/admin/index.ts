@@ -291,3 +291,26 @@ export function useGetUsers(options?: {
 export function useAdminClient() {
   return useApolloClient();
 }
+
+export {
+  useUpdateCommunity,
+  useUpdateCommunityVisibility,
+  useUpdateCommunityJoinPolicy,
+  useSoftDeleteCommunity,
+  useRestoreCommunity,
+  useSearchCommunitiesAdvanced,
+  useCommunityBanUser,
+  useCommunityUnbanUser,
+  useSuspendMember,
+  useUnsuspendMember,
+  useTransferOwnership,
+  useGetModerationLogs,
+  useGetBannedUsersList,
+  useGetSuspendedUsersList,
+  useListCommunityMembers,
+  useListAssociationMembers,
+  useSearchMembers,
+  useGetCommunityAvatarUploadUrl,
+  useGetCommunityCoverUploadUrl,
+  useDeleteEntityImage,
+} from "./useAssociation";

@@ -1116,3 +1116,391 @@ export const GET_ASSOCIATION_AVATAR_UPLOAD_URL = gql`
     }
   }
 `;
+
+// ─── Enforcement (Admin Module — Cross-Service) ──────────────────────────────
+
+/** Platform-level user ban (cross-service). Different from community-scoped BanUser. */
+export const ADMIN_BAN_USER = gql`
+  mutation AdminBanUser($userId: String!, $reason: String!, $permanent: Boolean) {
+    adminBanUser(userId: $userId, reason: $reason, permanent: $permanent) {
+      success
+      error
+    }
+  }
+`;
+
+export const ADMIN_BAN_VENDOR = gql`
+  mutation AdminBanVendor($vendorId: String!, $reason: String!, $permanent: Boolean) {
+    adminBanVendor(vendorId: $vendorId, reason: $reason, permanent: $permanent) {
+      success
+      error
+    }
+  }
+`;
+
+/** contentType: USER | POST | COMMENT | COMMUNITY | ASSOCIATION | MESSAGE | VENDOR */
+export const ADMIN_REMOVE_CONTENT = gql`
+  mutation AdminRemoveContent($contentType: String!, $contentId: String!, $reason: String!) {
+    adminRemoveContent(contentType: $contentType, contentId: $contentId, reason: $reason) {
+      success
+      error
+    }
+  }
+`;
+
+export const ADMIN_FORCE_RELEASE_ESCROW = gql`
+  mutation AdminForceReleaseEscrow($escrowId: String!, $reason: String!) {
+    adminForceReleaseEscrow(escrowId: $escrowId, reason: $reason) {
+      success
+      error
+    }
+  }
+`;
+
+export const ADMIN_RESOLVE_DISPUTE = gql`
+  mutation AdminResolveDispute($disputeId: String!, $outcome: String!, $notes: String) {
+    adminResolveDispute(disputeId: $disputeId, outcome: $outcome, notes: $notes) {
+      success
+      error
+    }
+  }
+`;
+
+export const BULK_BAN_USERS = gql`
+  mutation BulkBanUsers($userIds: [String]!, $reason: String!) {
+    bulkBanUsers(userIds: $userIds, reason: $reason) {
+      successCount
+      failureCount
+      failures
+    }
+  }
+`;
+
+export const BULK_REMOVE_CONTENT = gql`
+  mutation BulkRemoveContent($postIds: [String]!, $reason: String) {
+    bulkRemoveContent(postIds: $postIds, reason: $reason) {
+      successCount
+      failureCount
+      failures
+    }
+  }
+`;
+
+// ─── Role Definitions ────────────────────────────────────────────────────────
+
+export interface RoleDefinition {
+  id: string;
+  name: string;
+  description?: string;
+  scopeType: string;
+  scopeId: string;
+  permissions: string[];
+  isSystem: boolean;
+}
+
+export interface CreateRoleDefinitionInput {
+  name: string;
+  description?: string;
+  scopeType: string;
+  scopeId: string;
+  permissions: string[];
+}
+
+export const GET_ROLE_DEFINITIONS = gql`
+  query GetRoleDefinitions($scopeType: String, $scopeId: String, $createdBy: String) {
+    getRoleDefinitions(scopeType: $scopeType, scopeId: $scopeId, createdBy: $createdBy) {
+      success
+      message
+      roles {
+        id
+        name
+        description
+        scopeType
+        scopeId
+        permissions
+        isSystem
+      }
+    }
+  }
+`;
+
+export const CREATE_ROLE_DEFINITION = gql`
+  mutation CreateRoleDefinition($input: CreateRoleDefinitionInput!) {
+    createRoleDefinition(input: $input) {
+      success
+      message
+    }
+  }
+`;
+
+// ─── Extended Community Operations ───────────────────────────────────────────
+
+export interface UpdateCommunityInput {
+  communityId: string;
+  name?: string;
+  description?: string;
+  whoCanPost?: string;
+  groupCreationPermission?: string;
+  countriesServed?: string[];
+  communityRules?: string;
+  contactEmail?: string;
+  contactPhone?: string;
+  website?: string;
+  address?: string;
+  embassyCountry?: string;
+  locationCountry?: string;
+}
+
+export const UPDATE_COMMUNITY = gql`
+  mutation UpdateCommunity($input: UpdateCommunityInput!) {
+    updateCommunity(input: $input) {
+      id
+      name
+      description
+      updatedAt
+    }
+  }
+`;
+
+export const UPDATE_COMMUNITY_VISIBILITY = gql`
+  mutation UpdateCommunityVisibility($communityId: String!, $visibility: String!) {
+    updateCommunityVisibility(input: { communityId: $communityId, visibility: $visibility }) {
+      id
+      visibility
+      updatedAt
+    }
+  }
+`;
+
+export const UPDATE_COMMUNITY_JOIN_POLICY = gql`
+  mutation UpdateCommunityJoinPolicy($communityId: String!, $joinPolicy: String!, $priceAmount: Float, $priceCurrency: String) {
+    updateCommunityJoinPolicy(input: { communityId: $communityId, joinPolicy: $joinPolicy, priceAmount: $priceAmount, priceCurrency: $priceCurrency }) {
+      id
+      joinPolicy
+      updatedAt
+    }
+  }
+`;
+
+export const SOFT_DELETE_COMMUNITY = gql`
+  mutation SoftDeleteCommunity($communityId: ID!) {
+    softDeleteCommunity(communityId: $communityId) {
+      success
+      message
+      deletedAt
+    }
+  }
+`;
+
+export const RESTORE_COMMUNITY = gql`
+  mutation RestoreCommunity($communityId: ID!) {
+    restoreCommunity(communityId: $communityId) {
+      success
+      message
+      restoredAt
+    }
+  }
+`;
+
+export const SEARCH_COMMUNITIES_ADVANCED = gql`
+  query SearchCommunitiesAdvanced(
+    $searchTerm: String
+    $communityTypeId: String
+    $visibility: String
+    $country: String
+    $limit: Int
+    $offset: Int
+  ) {
+    searchCommunitiesAdvanced(
+      searchTerm: $searchTerm
+      communityTypeId: $communityTypeId
+      visibility: $visibility
+      country: $country
+      limit: $limit
+      offset: $offset
+    ) {
+      communities {
+        id
+        name
+        description
+        visibility
+        joinPolicy
+        communityTypeId
+        communityType { id name isEmbassy }
+        memberCount
+        createdAt
+        avatarUrl
+      }
+      total
+    }
+  }
+`;
+
+// ─── Community Moderation ─────────────────────────────────────────────────────
+
+/** Community-scoped ban (different from platform-level ADMIN_BAN_USER). */
+export const COMMUNITY_BAN_USER = gql`
+  mutation CommunityBanUser($userId: String!, $entityId: String!, $entityType: String!, $reason: String) {
+    banUser(input: { userId: $userId, entityId: $entityId, entityType: $entityType, reason: $reason }) {
+      success
+      message
+      bannedAt
+    }
+  }
+`;
+
+export const COMMUNITY_UNBAN_USER = gql`
+  mutation CommunityUnbanUser($userId: String!, $entityId: String!, $entityType: String!) {
+    unbanUser(input: { userId: $userId, entityId: $entityId, entityType: $entityType }) {
+      success
+      message
+      unbannedAt
+    }
+  }
+`;
+
+export const SUSPEND_MEMBER = gql`
+  mutation SuspendMember($userId: String!, $entityId: String!, $entityType: String!, $reason: String) {
+    suspendMember(input: { userId: $userId, entityId: $entityId, entityType: $entityType, reason: $reason }) {
+      success
+      message
+      suspendedAt
+    }
+  }
+`;
+
+export const UNSUSPEND_MEMBER = gql`
+  mutation UnsuspendMember($userId: String!, $entityId: String!, $entityType: String!) {
+    unsuspendMember(input: { userId: $userId, entityId: $entityId, entityType: $entityType }) {
+      success
+      message
+      unsuspendedAt
+    }
+  }
+`;
+
+export const TRANSFER_OWNERSHIP = gql`
+  mutation TransferOwnership(
+    $currentOwnerId: String!
+    $newOwnerId: String!
+    $entityId: String!
+    $entityType: String!
+  ) {
+    transferOwnership(input: {
+      currentOwnerId: $currentOwnerId
+      newOwnerId: $newOwnerId
+      entityId: $entityId
+      entityType: $entityType
+    }) {
+      success
+      message
+      timestamp
+    }
+  }
+`;
+
+export const GET_MODERATION_LOGS = gql`
+  query GetModerationLogs($entityId: ID!, $entityType: String!, $limit: Int, $offset: Int) {
+    getModerationLogs(entityId: $entityId, entityType: $entityType, limit: $limit, offset: $offset) {
+      id
+      entityId
+      entityType
+      action
+      performedBy
+      targetUser
+      details
+      createdAt
+    }
+  }
+`;
+
+export const GET_BANNED_USERS_LIST = gql`
+  query GetBannedUsers($entityId: ID!, $entityType: String!) {
+    getBannedUsers(entityId: $entityId, entityType: $entityType) {
+      userId
+      bannedBy
+      reason
+      bannedAt
+    }
+  }
+`;
+
+export const GET_SUSPENDED_USERS_LIST = gql`
+  query GetSuspendedUsers($entityId: ID!, $entityType: String!) {
+    getSuspendedUsers(entityId: $entityId, entityType: $entityType) {
+      userId
+      suspendedBy
+      reason
+      suspendedAt
+    }
+  }
+`;
+
+export const LIST_COMMUNITY_MEMBERS = gql`
+  query ListCommunityMembers($communityId: ID!, $limit: Int, $offset: Int) {
+    listCommunityMembers(communityId: $communityId, limit: $limit, offset: $offset) {
+      members {
+        userId
+        role
+        status
+        joinedAt
+      }
+      total
+    }
+  }
+`;
+
+export const LIST_ASSOCIATION_MEMBERS = gql`
+  query ListAssociationMembers($associationId: ID!, $limit: Int, $offset: Int) {
+    listAssociationMembers(associationId: $associationId, limit: $limit, offset: $offset) {
+      members {
+        userId
+        role
+        status
+        joinedAt
+      }
+      total
+    }
+  }
+`;
+
+export const SEARCH_MEMBERS = gql`
+  query SearchMembers($entityId: ID!, $entityType: String!, $searchTerm: String!, $limit: Int) {
+    searchMembers(entityId: $entityId, entityType: $entityType, searchTerm: $searchTerm, limit: $limit) {
+      userId
+      role
+      status
+      joinedAt
+    }
+  }
+`;
+
+// ─── Community / Association Upload URLs ─────────────────────────────────────
+
+export const GET_COMMUNITY_AVATAR_UPLOAD_URL = gql`
+  mutation GetCommunityAvatarUploadUrl($communityId: ID!, $filename: String!, $contentType: String!) {
+    getCommunityAvatarUploadUrl(communityId: $communityId, filename: $filename, contentType: $contentType) {
+      uploadUrl
+      fileUrl
+    }
+  }
+`;
+
+export const GET_COMMUNITY_COVER_UPLOAD_URL = gql`
+  mutation GetCommunityCoverUploadUrl($communityId: ID!, $filename: String!, $contentType: String!) {
+    getCommunityCoverUploadUrl(communityId: $communityId, filename: $filename, contentType: $contentType) {
+      uploadUrl
+      fileUrl
+    }
+  }
+`;
+
+export const DELETE_ENTITY_IMAGE = gql`
+  mutation DeleteEntityImage($entityId: ID!, $entityType: String!, $imageType: String!) {
+    deleteEntityImage(entityId: $entityId, entityType: $entityType, imageType: $imageType) {
+      success
+      message
+      timestamp
+    }
+  }
+`;
