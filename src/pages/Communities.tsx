@@ -155,7 +155,6 @@ export default function Communities() {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [countryFilter, setCountryFilter] = useState("all");
-  const [typeFilter, setTypeFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [visibilityFilter, setVisibilityFilter] = useState("all");
   const [sortBy, setSortBy] = useState("name-az");
@@ -186,9 +185,8 @@ export default function Communities() {
   const filteredCommunities = rows
     .filter((community) => {
       const matchesCountry = countryFilter === "all" || community.countriesServed.includes(countryFilter);
-      const matchesType = typeFilter === "all" || community.type === typeFilter;
       const matchesStatus = statusFilter === "all" || community.status === statusFilter;
-      return matchesCountry && matchesType && matchesStatus;
+      return matchesCountry && matchesStatus;
     })
     .sort((a, b) => {
       switch (sortBy) {
@@ -375,15 +373,6 @@ export default function Communities() {
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
               </div>
-              <Select value={typeFilter} onValueChange={setTypeFilter}>
-                <SelectTrigger className="w-[150px]"><SelectValue placeholder={t('communities.communityType')} /></SelectTrigger>
-                <SelectContent className="bg-popover border-border">
-                  <SelectItem value="all">{t('communities.allTypes')}</SelectItem>
-                  {typeOptions.map((type) => (
-                    <SelectItem key={type} value={type}>{type}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
               <Select value={countryFilter} onValueChange={setCountryFilter}>
                 <SelectTrigger className="w-[150px]"><SelectValue placeholder={t('communities.countriesServed')} /></SelectTrigger>
                 <SelectContent className="bg-popover border-border max-h-64">
@@ -437,7 +426,6 @@ export default function Communities() {
                       />
                     </TableHead>
                     <TableHead>{t('communities.communityName')}</TableHead>
-                    <TableHead>{t('communities.communityType')}</TableHead>
                     <TableHead>{t('communities.countriesServed')}</TableHead>
                     <TableHead>{t('communities.embassyInfo')}</TableHead>
                     <TableHead>{t('communities.associationsLinked')}</TableHead>
@@ -452,20 +440,20 @@ export default function Communities() {
                 <TableBody>
                   {listLoading ? (
                     <TableRow>
-                      <TableCell colSpan={11} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
                         <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2" />
                         {t('common.loading') || "Loading..."}
                       </TableCell>
                     </TableRow>
                   ) : listError ? (
                     <TableRow>
-                      <TableCell colSpan={11} className="text-center py-8 text-destructive">
+                      <TableCell colSpan={10} className="text-center py-8 text-destructive">
                         {listError.message}
                       </TableCell>
                     </TableRow>
                   ) : filteredCommunities.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={11} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
                         {t('communities.noCommunities') || "No communities found."}
                       </TableCell>
                     </TableRow>
@@ -479,11 +467,6 @@ export default function Communities() {
                         />
                       </TableCell>
                       <TableCell className="font-medium">{community.name}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className={community.type === "Embassy" ? "border-blue-500 text-blue-500" : ""}>
-                          {community.type}
-                        </Badge>
-                      </TableCell>
                       <TableCell>
                         <div className="flex flex-wrap gap-1">
                           {community.countriesServed.map((country) => (

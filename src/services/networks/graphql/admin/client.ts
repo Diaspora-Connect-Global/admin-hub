@@ -6,7 +6,7 @@ import {
   from,
   Observable,
 } from "@apollo/client";
-import { getAccessToken, getDevUserId, DEV_USER_ID_HEADER_KEY, clearSession } from "@/stores/session";
+import { getAccessToken, getDevUserId, DEV_USER_ID_HEADER_KEY } from "@/stores/session";
 import { logger } from "@/lib/logger";
 
 const adminGraphqlUrl =
@@ -24,17 +24,6 @@ const httpLink = new HttpLink({
 const log = logger.child("GraphQL");
 
 const TOKEN_OPTIONAL_OPERATIONS = new Set(["AdminLogin"]);
-
-function forceRelogin(reason: string) {
-  clearSession();
-  log.warn("Session cleared; redirecting to login", { reason });
-  if (typeof window !== "undefined") {
-    const onLoginPage = window.location.pathname.includes("/login");
-    if (!onLoginPage) {
-      window.location.href = "/login";
-    }
-  }
-}
 
 function getServiceName(operationType: string) {
   if (/event/i.test(operationType)) return "Events";
@@ -126,8 +115,7 @@ const errorLogLink = new ApolloLink((operation, forward) => {
               errors: response.errors.map(e => e.message),
               path: response.errors.map(e => e.path).filter(Boolean)
             });
-            console.warn(`🚫 ${service} permission denied for ${operationType}.`);
-            forceRelogin("forbidden-resource");
+            console.warn(`🚫 ${service} permission denied for ${operationType}. Session kept active.`);
           } else if (isUnauthenticated) {
             log.warn("GraphQL authentication error", {
               operation: operationType,
@@ -139,8 +127,7 @@ const errorLogLink = new ApolloLink((operation, forward) => {
               })),
             });
 
-            console.warn(`🔄 ${service} authentication expired for ${operationType}. Re-login required.`);
-            forceRelogin("unauthenticated");
+            console.warn(`🔄 ${service} authentication expired for ${operationType}. Session kept active (inactivity timer controls logout).`);
           } else {
             log.warn("GraphQL errors", {
               operation: operation.operationName,

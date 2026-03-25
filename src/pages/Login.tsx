@@ -15,19 +15,10 @@ import {
 import { Mail, Lock, Eye, EyeOff, Loader2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { login as authLogin } from "@/services/networks/graphql/admin";
-import { setAccessToken, setUserId, setUserEmail, setAdminProfile } from "@/stores/session";
+import { setAccessToken, setRefreshToken, setUserId, setUserEmail, setAdminProfile } from "@/stores/session";
 import { logLogin } from "@/services/core/audit";
 import { useSessionStore } from "@/stores/sessionStore";
 import { useEffect } from "react";
-
-function getJwtExpMs(accessToken: string): number | null {
-  try {
-    const payload = JSON.parse(atob(accessToken.split(".")[1])) as { exp?: number };
-    return typeof payload.exp === "number" ? payload.exp * 1000 : null;
-  } catch {
-    return null;
-  }
-}
 
 export default function Login() {
   const navigate = useNavigate();
@@ -81,23 +72,10 @@ export default function Login() {
     
     if (result.ok) {
       setAccessToken(result.data.accessToken);
+      setRefreshToken(result.data.refreshToken ?? null);
       setUserId(result.data.admin?.userId ?? null);
       setUserEmail(result.data.email ?? email);
       setAdminProfile(result.data.admin ?? null);
-
-      const expMs = getJwtExpMs(result.data.accessToken);
-      if (expMs) {
-        const warnInMs = expMs - Date.now() - 60_000;
-        if (warnInMs > 0) {
-          setTimeout(() => {
-            toast({
-              title: "Session expiring soon",
-              description: "Your admin session will expire in under 1 minute. Please re-login.",
-              variant: "destructive",
-            });
-          }, warnInMs);
-        }
-      }
 
       logLogin({
         actorId: result.data.email ?? email,
