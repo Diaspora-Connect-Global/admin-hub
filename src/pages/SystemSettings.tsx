@@ -57,6 +57,10 @@ import {
   useListAssociationTypes,
   useDeleteAssociationType,
 } from "@/hooks/admin/useEntityTypes";
+import {
+  useGetPlatformSettings,
+  useSetPlatformSetting,
+} from "@/hooks/admin";
 import { CreateCommunityTypeModal } from "@/components/admin/CreateCommunityTypeModal";
 import { CreateAssociationTypeModal } from "@/components/admin/CreateAssociationTypeModal";
 import type { CommunityType, AssociationType } from "@/services/networks/graphql/admin";
@@ -107,7 +111,89 @@ export default function SystemSettings() {
 
   const communityTypes = (commTypesData as any)?.listCommunityTypes ?? [];
   const associationTypes = (assocTypesData as any)?.listAssociationTypes ?? [];
-  
+
+  // Platform settings from GraphQL
+  const {
+    data: platformSettingsData,
+    loading: platformSettingsLoading,
+  } = useGetPlatformSettings();
+  const [setPlatformSetting, { loading: savingPlatformSetting }] = useSetPlatformSetting();
+
+  const platformSettings = platformSettingsData?.getPlatformSettings ?? [];
+
+  const getSetting = (key: string): string =>
+    platformSettings.find((s) => s.key === key)?.value ?? "";
+
+  // Security platform settings local state (initialised from live data once loaded)
+  const [securityPlatformSettings, setSecurityPlatformSettings] = useState<{
+    max_login_attempts: string;
+    session_timeout_hours: string;
+  }>({ max_login_attempts: "", session_timeout_hours: "" });
+
+  // Payment platform settings local state
+  const [paymentPlatformSettings, setPaymentPlatformSettings] = useState<{
+    default_commission_rate: string;
+    min_payout_amount: string;
+    kyc_required_for_payout: string;
+  }>({ default_commission_rate: "", min_payout_amount: "", kyc_required_for_payout: "" });
+
+  // System platform settings local state
+  const [systemPlatformSettings, setSystemPlatformSettings] = useState<{
+    maintenance_mode: string;
+    max_upload_size_mb: string;
+  }>({ maintenance_mode: "", max_upload_size_mb: "" });
+
+  // Seed local state once platform settings are fetched
+  useEffect(() => {
+    if (platformSettings.length === 0) return;
+    setSecurityPlatformSettings({
+      max_login_attempts: getSetting("max_login_attempts") || "5",
+      session_timeout_hours: getSetting("session_timeout_hours") || "24",
+    });
+    setPaymentPlatformSettings({
+      default_commission_rate: getSetting("default_commission_rate") || "10",
+      min_payout_amount: getSetting("min_payout_amount") || "10",
+      kyc_required_for_payout: getSetting("kyc_required_for_payout") || "false",
+    });
+    setSystemPlatformSettings({
+      maintenance_mode: getSetting("maintenance_mode") || "false",
+      max_upload_size_mb: getSetting("max_upload_size_mb") || "50",
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [platformSettingsData]);
+
+  const savePlatformSetting = async (key: string, value: string) => {
+    try {
+      await setPlatformSetting({ variables: { input: { key, value } } });
+      toast({ title: "Saved", description: `"${key}" updated successfully.` });
+    } catch (err) {
+      toast({
+        title: "Error",
+        description: (err as Error).message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleSavePlatformSettings = async (
+    keys: string[],
+    values: Record<string, string>,
+    section: string,
+  ) => {
+    try {
+      await Promise.all(
+        keys.map((key) => setPlatformSetting({ variables: { input: { key, value: values[key] } } })),
+      );
+      toast({ title: "Settings saved", description: `${section} platform settings saved.` });
+    } catch (err) {
+      toast({
+        title: "Error",
+        description: (err as Error).message,
+        variant: "destructive",
+      });
+    }
+  };
+
   // General settings state - initialize from localStorage
   const [generalSettings, setGeneralSettings] = useState(() => {
     const savedLanguage = localStorage.getItem('app-language') || 'en';
@@ -252,6 +338,61 @@ export default function SystemSettings() {
 
           {/* General Tab */}
           <TabsContent value="general" className="space-y-6">
+            {/* Live system platform settings */}
+            <Card className="bg-card border-border">
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  System Platform Settings
+                  {platformSettingsLoading && <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />}
+                </CardTitle>
+                <CardDescription>Live system-level settings stored in the platform backend.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <Label>Maintenance Mode</Label>
+                    <div className="flex items-center justify-between rounded-md border border-border bg-secondary px-3 h-10">
+                      <span className="text-sm text-muted-foreground">
+                        {systemPlatformSettings.maintenance_mode === "true"
+                          ? "Platform is in maintenance mode"
+                          : "Platform is live"}
+                      </span>
+                      <Switch
+                        checked={systemPlatformSettings.maintenance_mode === "true"}
+                        onCheckedChange={(checked) => {
+                          const value = checked ? "true" : "false";
+                          setSystemPlatformSettings((prev) => ({ ...prev, maintenance_mode: value }));
+                          savePlatformSetting("maintenance_mode", value);
+                        }}
+                        disabled={platformSettingsLoading || savingPlatformSetting}
+                      />
+                    </div>
+                    <p className="text-xs text-muted-foreground">When enabled, the platform shows a maintenance page to users.</p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="max_upload_size_mb">Max Upload Size (MB)</Label>
+                    <Input
+                      id="max_upload_size_mb"
+                      type="number"
+                      min={1}
+                      placeholder="50"
+                      value={systemPlatformSettings.max_upload_size_mb}
+                      onChange={(e) =>
+                        setSystemPlatformSettings((prev) => ({ ...prev, max_upload_size_mb: e.target.value }))
+                      }
+                      onBlur={() =>
+                        savePlatformSetting("max_upload_size_mb", systemPlatformSettings.max_upload_size_mb)
+                      }
+                      className="bg-secondary border-border"
+                      disabled={platformSettingsLoading}
+                    />
+                    <p className="text-xs text-muted-foreground">Maximum file size users can upload. Saves on blur.</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
             <Card className="bg-card border-border">
               <CardHeader>
                 <CardTitle className="text-lg">Platform Info</CardTitle>
@@ -361,6 +502,75 @@ export default function SystemSettings() {
 
           {/* Security Tab */}
           <TabsContent value="security" className="space-y-6">
+            {/* Live platform security settings */}
+            <Card className="bg-card border-border">
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  Platform Security Settings
+                  {platformSettingsLoading && <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />}
+                </CardTitle>
+                <CardDescription>Live settings stored in the platform backend.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="max_login_attempts">Max Login Attempts</Label>
+                    <Input
+                      id="max_login_attempts"
+                      type="number"
+                      min={1}
+                      placeholder="5"
+                      value={securityPlatformSettings.max_login_attempts}
+                      onChange={(e) =>
+                        setSecurityPlatformSettings((prev) => ({ ...prev, max_login_attempts: e.target.value }))
+                      }
+                      className="bg-secondary border-border"
+                      disabled={platformSettingsLoading}
+                    />
+                    <p className="text-xs text-muted-foreground">Number of failed login attempts before account lockout.</p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="session_timeout_hours">Session Timeout (hours)</Label>
+                    <Input
+                      id="session_timeout_hours"
+                      type="number"
+                      min={1}
+                      placeholder="24"
+                      value={securityPlatformSettings.session_timeout_hours}
+                      onChange={(e) =>
+                        setSecurityPlatformSettings((prev) => ({ ...prev, session_timeout_hours: e.target.value }))
+                      }
+                      className="bg-secondary border-border"
+                      disabled={platformSettingsLoading}
+                    />
+                    <p className="text-xs text-muted-foreground">Admin session lifetime in hours.</p>
+                  </div>
+                </div>
+
+                <div className="flex justify-end pt-4 border-t border-border">
+                  <Button
+                    onClick={() =>
+                      handleSavePlatformSettings(
+                        ["max_login_attempts", "session_timeout_hours"],
+                        securityPlatformSettings,
+                        "Security",
+                      )
+                    }
+                    disabled={platformSettingsLoading || savingPlatformSetting}
+                    className="gap-2"
+                  >
+                    {savingPlatformSetting ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Save className="w-4 h-4" />
+                    )}
+                    Save Platform Security
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <Card className="bg-card border-border">
                 <CardHeader>
@@ -373,15 +583,15 @@ export default function SystemSettings() {
                       <Label>Enable Two-Factor Authentication (2FA)</Label>
                       <p className="text-xs text-muted-foreground mt-1">If enabled, forces all admins to use 2FA.</p>
                     </div>
-                    <Switch 
+                    <Switch
                       checked={securitySettings.twoFactorEnabled}
                       onCheckedChange={(checked) => setSecuritySettings(prev => ({ ...prev, twoFactorEnabled: checked }))}
                     />
                   </div>
-                  
+
                   <div className="space-y-2">
                     <Label>Password Rules</Label>
-                    <Select 
+                    <Select
                       value={securitySettings.passwordRules}
                       onValueChange={(value) => setSecuritySettings(prev => ({ ...prev, passwordRules: value }))}
                     >
@@ -406,7 +616,7 @@ export default function SystemSettings() {
                 <CardContent className="space-y-6">
                   <div className="space-y-2">
                     <Label>Session Timeout</Label>
-                    <Select 
+                    <Select
                       value={securitySettings.sessionTimeout}
                       onValueChange={(value) => setSecuritySettings(prev => ({ ...prev, sessionTimeout: value }))}
                     >
@@ -422,13 +632,13 @@ export default function SystemSettings() {
                     </Select>
                     <p className="text-xs text-muted-foreground">Forces logout after inactivity.</p>
                   </div>
-                  
+
                   <div className="flex items-center justify-between">
                     <div>
                       <Label>Allow Multiple Device Logins</Label>
                       <p className="text-xs text-muted-foreground mt-1">Users can be logged in on multiple devices.</p>
                     </div>
-                    <Switch 
+                    <Switch
                       checked={securitySettings.multipleDeviceLogins}
                       onCheckedChange={(checked) => setSecuritySettings(prev => ({ ...prev, multipleDeviceLogins: checked }))}
                     />
@@ -436,7 +646,7 @@ export default function SystemSettings() {
                 </CardContent>
               </Card>
             </div>
-            
+
             <div className="flex justify-end">
               <Button onClick={() => handleSave("Security")} className="gap-2">
                 <Save className="w-4 h-4" />
@@ -447,6 +657,96 @@ export default function SystemSettings() {
 
           {/* Payments & Escrow Tab */}
           <TabsContent value="payments" className="space-y-6">
+            {/* Live platform payment settings */}
+            <Card className="bg-card border-border">
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  Platform Payment Settings
+                  {platformSettingsLoading && <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />}
+                </CardTitle>
+                <CardDescription>Live settings stored in the platform backend.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="default_commission_rate">Default Commission Rate (%)</Label>
+                    <Input
+                      id="default_commission_rate"
+                      type="number"
+                      min={0}
+                      max={100}
+                      placeholder="10"
+                      value={paymentPlatformSettings.default_commission_rate}
+                      onChange={(e) =>
+                        setPaymentPlatformSettings((prev) => ({ ...prev, default_commission_rate: e.target.value }))
+                      }
+                      className="bg-secondary border-border"
+                      disabled={platformSettingsLoading}
+                    />
+                    <p className="text-xs text-muted-foreground">Platform commission taken from each transaction (0–100).</p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="min_payout_amount">Minimum Payout Amount (USD)</Label>
+                    <Input
+                      id="min_payout_amount"
+                      type="number"
+                      min={0}
+                      placeholder="10"
+                      value={paymentPlatformSettings.min_payout_amount}
+                      onChange={(e) =>
+                        setPaymentPlatformSettings((prev) => ({ ...prev, min_payout_amount: e.target.value }))
+                      }
+                      className="bg-secondary border-border"
+                      disabled={platformSettingsLoading}
+                    />
+                    <p className="text-xs text-muted-foreground">Minimum balance required before a vendor can request a payout.</p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Require KYC Before Payout</Label>
+                    <div className="flex items-center justify-between rounded-md border border-border bg-secondary px-3 h-10">
+                      <span className="text-sm text-muted-foreground">
+                        {paymentPlatformSettings.kyc_required_for_payout === "true" ? "Enabled" : "Disabled"}
+                      </span>
+                      <Switch
+                        checked={paymentPlatformSettings.kyc_required_for_payout === "true"}
+                        onCheckedChange={(checked) =>
+                          setPaymentPlatformSettings((prev) => ({
+                            ...prev,
+                            kyc_required_for_payout: checked ? "true" : "false",
+                          }))
+                        }
+                        disabled={platformSettingsLoading}
+                      />
+                    </div>
+                    <p className="text-xs text-muted-foreground">Vendors must complete KYC before their first payout.</p>
+                  </div>
+                </div>
+
+                <div className="flex justify-end pt-4 border-t border-border">
+                  <Button
+                    onClick={() =>
+                      handleSavePlatformSettings(
+                        ["default_commission_rate", "min_payout_amount", "kyc_required_for_payout"],
+                        paymentPlatformSettings,
+                        "Payment",
+                      )
+                    }
+                    disabled={platformSettingsLoading || savingPlatformSetting}
+                    className="gap-2"
+                  >
+                    {savingPlatformSetting ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Save className="w-4 h-4" />
+                    )}
+                    Save Platform Payments
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <Card className="bg-card border-border">
                 <CardHeader>

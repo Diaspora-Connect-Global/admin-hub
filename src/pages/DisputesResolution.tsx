@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useAdminListDisputes, useAdminResolveDispute } from "@/hooks/admin";
 import { useTranslation } from "react-i18next";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import { Button } from "@/components/ui/button";
@@ -68,79 +69,6 @@ import {
   Shield,
 } from "lucide-react";
 
-// Mock data
-const mockDisputes = [
-  {
-    id: "DSP-001",
-    type: "Escrow",
-    title_summary: "Escrow funds not released after delivery confirmation",
-    status: "Open",
-    priority: "Critical",
-    raised_by: "John Doe",
-    raised_by_email: "john@example.com",
-    assigned_admin: "Admin Sarah",
-    related_entity: "TXN-45892",
-    created_at: "2024-11-30 10:15",
-    last_updated: "2024-11-30 14:32",
-    description: "I completed a transaction and the buyer confirmed delivery 5 days ago, but the escrow funds have not been released to my account. I have contacted support multiple times with no resolution.",
-  },
-  {
-    id: "DSP-002",
-    type: "Transaction",
-    title_summary: "Incorrect amount charged for service",
-    status: "In Review",
-    priority: "High",
-    raised_by: "Jane Smith",
-    raised_by_email: "jane@example.com",
-    assigned_admin: "Admin Mike",
-    related_entity: "TXN-45123",
-    created_at: "2024-11-29 16:45",
-    last_updated: "2024-11-30 09:20",
-    description: "I was charged $150 for a service that was listed at $100. The vendor claims it was a premium service but this was not disclosed.",
-  },
-  {
-    id: "DSP-003",
-    type: "Content",
-    title_summary: "Post removed without proper notification",
-    status: "Resolved",
-    priority: "Medium",
-    raised_by: "Bob Wilson",
-    raised_by_email: "bob@example.com",
-    assigned_admin: "Admin Lisa",
-    related_entity: "CNT-78234",
-    created_at: "2024-11-28 11:30",
-    last_updated: "2024-11-29 15:00",
-    description: "My community event post was removed without any notification or explanation. I believe it followed all community guidelines.",
-  },
-  {
-    id: "DSP-004",
-    type: "Vendor Issue",
-    title_summary: "Vendor delivered damaged goods",
-    status: "Escalated",
-    priority: "High",
-    raised_by: "Alice Brown",
-    raised_by_email: "alice@example.com",
-    assigned_admin: "System Admin",
-    related_entity: "V002 - ProServices Hub",
-    created_at: "2024-11-27 09:00",
-    last_updated: "2024-11-30 11:00",
-    description: "Received damaged products from vendor. Vendor refuses to provide refund or replacement. Escalated for mediation.",
-  },
-  {
-    id: "DSP-005",
-    type: "Community Issue",
-    title_summary: "Harassment from community member",
-    status: "Closed",
-    priority: "Critical",
-    raised_by: "Charlie Davis",
-    raised_by_email: "charlie@example.com",
-    assigned_admin: "Admin Sarah",
-    related_entity: "Belgian Ghanaians Community",
-    created_at: "2024-11-20 14:20",
-    last_updated: "2024-11-25 16:00",
-    description: "Reported harassment from another community member. Resolved with member being warned and content removed.",
-  },
-];
 
 const mockConversation = [
   {
@@ -194,9 +122,23 @@ export default function DisputesResolution() {
   const [priorityFilter, setPriorityFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
   const [selectedDisputes, setSelectedDisputes] = useState<string[]>([]);
-  const [selectedDispute, setSelectedDispute] = useState<typeof mockDisputes[0] | null>(null);
+  const [selectedDispute, setSelectedDispute] = useState<import("@/hooks/admin").AdminDispute | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [newMessage, setNewMessage] = useState("");
+
+  // Live data
+  const { data: disputesData, loading: disputesLoading, refetch: refetchDisputes } = useAdminListDisputes({
+    status: statusFilter !== "all" ? statusFilter : undefined,
+    limit: 50,
+  });
+  const disputes = disputesData?.adminListDisputes?.disputes ?? [];
+
+  // Resolve mutation
+  const [resolveDispute, { loading: resolveLoading }] = useAdminResolveDispute();
+
+  // Resolve form state
+  const [resolveOutcome, setResolveOutcome] = useState("RESOLVED");
+  const [resolveNotes, setResolveNotes] = useState("");
 
   // Modal states
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -221,7 +163,18 @@ export default function DisputesResolution() {
   const [escalateTo, setEscalateTo] = useState("System Admin");
   const [escalateReason, setEscalateReason] = useState("");
 
+  const normalizeStatus = (status: string) => {
+    const map: Record<string, string> = {
+      OPEN: "Open",
+      UNDER_REVIEW: "In Review",
+      RESOLVED: "Resolved",
+      CLOSED: "Closed",
+    };
+    return map[status] ?? status;
+  };
+
   const getStatusBadge = (status: string) => {
+    const display = normalizeStatus(status);
     const variants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
       Open: "secondary",
       "In Review": "default",
@@ -234,7 +187,7 @@ export default function DisputesResolution() {
       Resolved: "bg-green-600 hover:bg-green-600 text-white",
       Escalated: "bg-orange-500 hover:bg-orange-500",
     };
-    return <Badge variant={variants[status]} className={colors[status] || ""}>{status}</Badge>;
+    return <Badge variant={variants[display]} className={colors[display] || ""}>{display}</Badge>;
   };
 
   const getPriorityBadge = (priority: string) => {
@@ -264,7 +217,7 @@ export default function DisputesResolution() {
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
-      setSelectedDisputes(mockDisputes.map((d) => d.id));
+      setSelectedDisputes(disputes.map((d) => d.id));
     } else {
       setSelectedDisputes([]);
     }
@@ -278,7 +231,7 @@ export default function DisputesResolution() {
     }
   };
 
-  const openDisputeDetail = (dispute: typeof mockDisputes[0]) => {
+  const openDisputeDetail = (dispute: import("@/hooks/admin").AdminDispute) => {
     setSelectedDispute(dispute);
     setIsDetailOpen(true);
   };
@@ -308,9 +261,24 @@ export default function DisputesResolution() {
     setEscalateReason("");
   };
 
-  const handleCloseDispute = () => {
-    toast({ title: "Success", description: "Dispute closed successfully." });
-    setIsCloseModalOpen(false);
+  const handleCloseDispute = async () => {
+    if (!selectedDispute) return;
+    try {
+      await resolveDispute({
+        variables: {
+          disputeId: selectedDispute.id,
+          outcome: resolveOutcome,
+          notes: resolveNotes || undefined,
+        },
+      });
+      toast({ title: "Success", description: "Dispute resolved successfully." });
+      setIsCloseModalOpen(false);
+      setResolveNotes("");
+      refetchDisputes();
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to resolve dispute.";
+      toast({ title: "Error", description: message, variant: "destructive" });
+    }
   };
 
   const handleDeleteDispute = () => {

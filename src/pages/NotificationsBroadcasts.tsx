@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useGetBroadcastCampaigns, useSendBroadcast } from "@/hooks/admin";
 import { useTranslation } from "react-i18next";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -153,6 +154,30 @@ export default function NotificationsBroadcasts() {
   const [createTemplateModal, setCreateTemplateModal] = useState(false);
   const [viewBroadcastModal, setViewBroadcastModal] = useState<typeof broadcasts[0] | null>(null);
   const [viewTemplateModal, setViewTemplateModal] = useState<typeof templates[0] | null>(null);
+
+  // Broadcast form state
+  const [broadcastForm, setBroadcastForm] = useState({
+    title: "",
+    body: "",
+    targetAudience: "ALL_USERS" as "ALL_USERS" | "VENDORS" | "SPECIFIC_USERS",
+  });
+
+  const { data: broadcastsData, loading: broadcastsLoading, refetch: refetchBroadcasts } = useGetBroadcastCampaigns({ limit: 50 });
+  const [sendBroadcastMutation, { loading: sendingBroadcast }] = useSendBroadcast();
+
+  const liveBroadcasts = broadcastsData?.getBroadcastCampaigns?.campaigns ?? broadcasts;
+
+  const handleSendBroadcast = async () => {
+    if (!broadcastForm.title || !broadcastForm.body) return;
+    try {
+      await sendBroadcastMutation({ variables: { input: broadcastForm } });
+      setCreateBroadcastModal(false);
+      setBroadcastForm({ title: "", body: "", targetAudience: "ALL_USERS" });
+      refetchBroadcasts();
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -647,26 +672,32 @@ export default function NotificationsBroadcasts() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>ID</TableHead>
                       <TableHead>Title</TableHead>
-                      <TableHead>Type</TableHead>
                       <TableHead>Audience</TableHead>
                       <TableHead>Recipients</TableHead>
                       <TableHead>Status</TableHead>
-                      <TableHead>Scheduled</TableHead>
+                      <TableHead>Sent At</TableHead>
                       <TableHead className="w-[50px]">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {broadcasts.map((broadcast) => (
+                    {broadcastsLoading ? (
+                      <TableRow>
+                        <TableCell colSpan={6} className="text-center text-muted-foreground py-8">Loading...</TableCell>
+                      </TableRow>
+                    ) : liveBroadcasts.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={6} className="text-center text-muted-foreground py-8">No broadcasts yet</TableCell>
+                      </TableRow>
+                    ) : liveBroadcasts.map((broadcast) => (
                       <TableRow key={broadcast.id}>
-                        <TableCell className="font-mono text-sm">{broadcast.id}</TableCell>
                         <TableCell className="font-medium">{broadcast.title}</TableCell>
-                        <TableCell><Badge variant="outline">{broadcast.type}</Badge></TableCell>
-                        <TableCell className="text-muted-foreground">{broadcast.audience}</TableCell>
-                        <TableCell>{broadcast.audienceCount.toLocaleString()}</TableCell>
-                        <TableCell>{getStatusBadge(broadcast.status)}</TableCell>
-                        <TableCell className="text-muted-foreground">{broadcast.scheduledAt}</TableCell>
+                        <TableCell className="text-muted-foreground">{broadcast.targetAudience ?? (broadcast as any).audience}</TableCell>
+                        <TableCell>{(broadcast.recipientCount ?? (broadcast as any).audienceCount ?? 0).toLocaleString()}</TableCell>
+                        <TableCell>{getStatusBadge((broadcast.status ?? "").toLowerCase())}</TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {broadcast.sentAt ? new Date(broadcast.sentAt).toLocaleDateString() : (broadcast as any).scheduledAt ?? "—"}
+                        </TableCell>
                         <TableCell>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
@@ -675,24 +706,9 @@ export default function NotificationsBroadcasts() {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => setViewBroadcastModal(broadcast)}>
+                              <DropdownMenuItem>
                                 <Eye className="mr-2 h-4 w-4" /> View
                               </DropdownMenuItem>
-                              {broadcast.status === "draft" && (
-                                <DropdownMenuItem>
-                                  <Edit className="mr-2 h-4 w-4" /> Edit
-                                </DropdownMenuItem>
-                              )}
-                              {broadcast.status === "draft" && (
-                                <DropdownMenuItem>
-                                  <Send className="mr-2 h-4 w-4" /> Send Now
-                                </DropdownMenuItem>
-                              )}
-                              {broadcast.status === "scheduled" && (
-                                <DropdownMenuItem className="text-destructive">
-                                  <XCircle className="mr-2 h-4 w-4" /> Cancel
-                                </DropdownMenuItem>
-                              )}
                               <DropdownMenuItem>
                                 <Copy className="mr-2 h-4 w-4" /> Duplicate
                               </DropdownMenuItem>
@@ -1013,41 +1029,36 @@ export default function NotificationsBroadcasts() {
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label>Title</Label>
-              <Input placeholder="Enter broadcast title..." />
+              <Input
+                placeholder="Enter broadcast title..."
+                value={broadcastForm.title}
+                onChange={(e) => setBroadcastForm((f) => ({ ...f, title: e.target.value }))}
+              />
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Type</Label>
-                <Select>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="system">System</SelectItem>
-                    <SelectItem value="marketing">Marketing</SelectItem>
-                    <SelectItem value="legal">Legal</SelectItem>
-                    <SelectItem value="policy">Policy</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Target Audience</Label>
-                <Select>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select audience" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Users</SelectItem>
-                    <SelectItem value="active">Active Users</SelectItem>
-                    <SelectItem value="new">New Users (30 days)</SelectItem>
-                    <SelectItem value="flagged">Flagged Users</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+            <div className="space-y-2">
+              <Label>Target Audience</Label>
+              <Select
+                value={broadcastForm.targetAudience}
+                onValueChange={(v) => setBroadcastForm((f) => ({ ...f, targetAudience: v as typeof f.targetAudience }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select audience" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ALL_USERS">All Users</SelectItem>
+                  <SelectItem value="VENDORS">Vendors</SelectItem>
+                  <SelectItem value="SPECIFIC_USERS">Specific Users</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-2">
               <Label>Message Content</Label>
-              <Textarea placeholder="Enter your broadcast message..." rows={5} />
+              <Textarea
+                placeholder="Enter your broadcast message..."
+                rows={5}
+                value={broadcastForm.body}
+                onChange={(e) => setBroadcastForm((f) => ({ ...f, body: e.target.value }))}
+              />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -1083,8 +1094,12 @@ export default function NotificationsBroadcasts() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setCreateBroadcastModal(false)}>Cancel</Button>
-            <Button variant="secondary">Save as Draft</Button>
-            <Button>Send Broadcast</Button>
+            <Button
+              disabled={sendingBroadcast || !broadcastForm.title || !broadcastForm.body}
+              onClick={handleSendBroadcast}
+            >
+              {sendingBroadcast ? "Sending..." : "Send Broadcast"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

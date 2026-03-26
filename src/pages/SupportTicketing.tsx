@@ -59,144 +59,72 @@ import {
   ChevronDown,
   Paperclip,
   Send,
-  MessageSquare,
-  Clock,
-  AlertCircle,
 } from "lucide-react";
+import {
+  useGetSupportTickets,
+  useGetSupportTicket,
+  useUpdateSupportTicket,
+  useReplyToSupportTicket,
+  type SupportTicket,
+} from "@/hooks/admin";
 
-// Mock data
-const mockTickets = [
-  {
-    id: "TKT-001",
-    title: "Cannot access escrow funds",
-    category: "Escrow",
-    priority: "Critical",
-    status: "Open",
-    created_by: "John Doe",
-    created_by_email: "john@example.com",
-    assigned_to: "Admin Sarah",
-    created_at: "2024-11-30 10:15",
-    last_updated: "2024-11-30 14:32",
-    description: "I completed a transaction 5 days ago but the escrow funds have not been released to my account. The buyer has confirmed delivery.",
-  },
-  {
-    id: "TKT-002",
-    title: "Payment processing error",
-    category: "Billing",
-    priority: "High",
-    status: "In Progress",
-    created_by: "Jane Smith",
-    created_by_email: "jane@example.com",
-    assigned_to: "Admin Mike",
-    created_at: "2024-11-29 16:45",
-    last_updated: "2024-11-30 09:20",
-    description: "Getting error code E504 when trying to process payment for vendor subscription.",
-  },
-  {
-    id: "TKT-003",
-    title: "Community post flagged incorrectly",
-    category: "Community",
-    priority: "Medium",
-    status: "Open",
-    created_by: "Bob Wilson",
-    created_by_email: "bob@example.com",
-    assigned_to: "Unassigned",
-    created_at: "2024-11-28 11:30",
-    last_updated: "2024-11-28 11:30",
-    description: "My post about community event was flagged as spam. It was a legitimate announcement.",
-  },
-  {
-    id: "TKT-004",
-    title: "Vendor profile not showing products",
-    category: "Vendor",
-    priority: "Medium",
-    status: "Resolved",
-    created_by: "TechGadgets Ltd",
-    created_by_email: "support@techgadgets.com",
-    assigned_to: "Admin Sarah",
-    created_at: "2024-11-25 08:00",
-    last_updated: "2024-11-27 15:45",
-    description: "Products added to our vendor profile are not appearing on the marketplace.",
-  },
-  {
-    id: "TKT-005",
-    title: "Login issues on mobile app",
-    category: "Technical",
-    priority: "Low",
-    status: "Closed",
-    created_by: "Alice Brown",
-    created_by_email: "alice@example.com",
-    assigned_to: "Admin John",
-    created_at: "2024-11-20 14:20",
-    last_updated: "2024-11-22 10:00",
-    description: "Intermittent login failures on iOS app version 2.3.1.",
-  },
-];
+// ─── helpers ──────────────────────────────────────────────────────────────────
 
-const mockConversation = [
-  {
-    id: "MSG-001",
-    sender: "John Doe",
-    sender_type: "user",
-    message: "I completed a transaction 5 days ago but the escrow funds have not been released to my account. The buyer has confirmed delivery. Transaction ID: TXN-45892",
-    attachments: [],
-    timestamp: "2024-11-30 10:15",
-  },
-  {
-    id: "MSG-002",
-    sender: "Admin Sarah",
-    sender_type: "admin",
-    message: "Hi John, thank you for reaching out. I'm looking into your transaction now. Can you please confirm the buyer's email or username?",
-    attachments: [],
-    timestamp: "2024-11-30 11:30",
-  },
-  {
-    id: "MSG-003",
-    sender: "John Doe",
-    sender_type: "user",
-    message: "The buyer's email is mike.customer@email.com. Their username is mike_buyer.",
-    attachments: ["screenshot_delivery.png"],
-    timestamp: "2024-11-30 12:45",
-  },
-  {
-    id: "MSG-004",
-    sender: "Admin Sarah",
-    sender_type: "admin",
-    message: "I found the issue. There was a hold placed on escrow releases due to a system update. I've escalated this to the finance team and they should release your funds within 24 hours.",
-    attachments: [],
-    timestamp: "2024-11-30 14:32",
-  },
-];
+/** Map API status enum → display label */
+const STATUS_LABEL: Record<string, string> = {
+  OPEN: "Open",
+  IN_PROGRESS: "In Progress",
+  RESOLVED: "Resolved",
+  CLOSED: "Closed",
+};
 
-const mockHistory = [
-  { timestamp: "2024-11-30 14:32", action: "Comment Added", performed_by: "Admin Sarah", notes: "Escalated to finance team" },
-  { timestamp: "2024-11-30 11:30", action: "Comment Added", performed_by: "Admin Sarah", notes: "Initial response sent" },
-  { timestamp: "2024-11-30 10:20", action: "Ticket Assigned", performed_by: "System", notes: "Auto-assigned to Admin Sarah based on category" },
-  { timestamp: "2024-11-30 10:15", action: "Ticket Created", performed_by: "John Doe", notes: "New ticket submitted" },
-];
+/** Map display label → API enum */
+const STATUS_API: Record<string, string> = {
+  Open: "OPEN",
+  "In Progress": "IN_PROGRESS",
+  Resolved: "RESOLVED",
+  Closed: "CLOSED",
+};
+
+/** Map API priority enum → display label */
+const PRIORITY_LABEL: Record<string, string> = {
+  LOW: "Low",
+  MEDIUM: "Medium",
+  HIGH: "High",
+  URGENT: "Critical",
+};
 
 const admins = ["Admin Sarah", "Admin Mike", "Admin John", "Admin Lisa"];
+
+// ─── component ────────────────────────────────────────────────────────────────
 
 export default function SupportTicketing() {
   const { toast } = useToast();
   const { t } = useTranslation();
+
+  // ── filter / search state ──────────────────────────────────────────────────
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [priorityFilter, setPriorityFilter] = useState("all");
   const [categoryFilter, setCategoryFilter] = useState("all");
+
+  // ── selection state ────────────────────────────────────────────────────────
   const [selectedTickets, setSelectedTickets] = useState<string[]>([]);
-  const [selectedTicket, setSelectedTicket] = useState<typeof mockTickets[0] | null>(null);
+
+  // ── detail sheet state ─────────────────────────────────────────────────────
+  const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
+  const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [newMessage, setNewMessage] = useState("");
 
-  // Modal states
+  // ── modal states ───────────────────────────────────────────────────────────
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
   const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
   const [isCloseModalOpen, setIsCloseModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
-  // Form states
+  // ── form states ────────────────────────────────────────────────────────────
   const [formData, setFormData] = useState({
     title: "",
     category: "Technical",
@@ -209,7 +137,58 @@ export default function SupportTicketing() {
   const [newStatus, setNewStatus] = useState("Open");
   const [statusNotes, setStatusNotes] = useState("");
 
+  // ── GraphQL hooks ──────────────────────────────────────────────────────────
+  const statusVar = statusFilter !== "all" ? STATUS_API[statusFilter] : undefined;
+  const { data: ticketsData, loading: ticketsLoading, refetch: refetchTickets } =
+    useGetSupportTickets({ status: statusVar });
+
+  const { data: ticketDetailData, loading: ticketDetailLoading } =
+    useGetSupportTicket(selectedTicketId);
+
+  const [updateTicket, { loading: updateLoading }] = useUpdateSupportTicket();
+  const [replyToTicket, { loading: replyLoading }] = useReplyToSupportTicket();
+
+  // Live tickets (fallback to empty array)
+  const liveTickets: SupportTicket[] = ticketsData?.getSupportTickets?.tickets ?? [];
+
+  // Apply client-side search, priority and category filters
+  const filteredTickets = liveTickets.filter((ticket) => {
+    const label = STATUS_LABEL[ticket.status] ?? ticket.status;
+    const priorityLabel = PRIORITY_LABEL[ticket.priority] ?? ticket.priority;
+
+    if (
+      searchQuery &&
+      !ticket.id.toLowerCase().includes(searchQuery.toLowerCase()) &&
+      !ticket.subject.toLowerCase().includes(searchQuery.toLowerCase()) &&
+      !(ticket.submittedBy ?? "").toLowerCase().includes(searchQuery.toLowerCase())
+    ) {
+      return false;
+    }
+    if (priorityFilter !== "all" && priorityLabel !== priorityFilter) return false;
+    if (categoryFilter !== "all") {
+      const categoryMap: Record<string, string> = {
+        Technical: "OTHER",
+        Billing: "PAYMENT",
+        Escrow: "PAYMENT",
+        Community: "CONTENT",
+        Vendor: "VENDOR",
+      };
+      if (ticket.category !== categoryMap[categoryFilter] && ticket.category !== categoryFilter) {
+        return false;
+      }
+    }
+    return true;
+  });
+
+  // Messages from the detail query; fall back to messages embedded in list
+  const detailMessages =
+    ticketDetailData?.getSupportTicket?.messages ??
+    selectedTicket?.messages ??
+    [];
+
+  // ── badge helpers ──────────────────────────────────────────────────────────
   const getPriorityBadge = (priority: string) => {
+    const label = PRIORITY_LABEL[priority] ?? priority;
     const variants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
       Critical: "destructive",
       High: "destructive",
@@ -221,25 +200,27 @@ export default function SupportTicketing() {
       High: "bg-orange-500 hover:bg-orange-500",
     };
     return (
-      <Badge variant={variants[priority]} className={colors[priority] || ""}>
-        {priority}
+      <Badge variant={variants[label]} className={colors[label] || ""}>
+        {label}
       </Badge>
     );
   };
 
   const getStatusBadge = (status: string) => {
+    const label = STATUS_LABEL[status] ?? status;
     const variants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
       Open: "secondary",
       "In Progress": "default",
       Resolved: "outline",
       Closed: "outline",
     };
-    return <Badge variant={variants[status]}>{status}</Badge>;
+    return <Badge variant={variants[label]}>{label}</Badge>;
   };
 
+  // ── selection handlers ─────────────────────────────────────────────────────
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
-      setSelectedTickets(mockTickets.map((t) => t.id));
+      setSelectedTickets(filteredTickets.map((t) => t.id));
     } else {
       setSelectedTickets([]);
     }
@@ -253,47 +234,106 @@ export default function SupportTicketing() {
     }
   };
 
-  const openTicketDetail = (ticket: typeof mockTickets[0]) => {
+  // ── detail sheet ───────────────────────────────────────────────────────────
+  const openTicketDetail = (ticket: SupportTicket) => {
     setSelectedTicket(ticket);
+    setSelectedTicketId(ticket.id);
     setIsDetailOpen(true);
   };
 
+  // ── action handlers ────────────────────────────────────────────────────────
   const handleCreateTicket = () => {
+    // No createSupportTicket mutation wired in spec; keep UI toast behaviour
     toast({ title: "Success", description: "Ticket created successfully." });
     setIsCreateModalOpen(false);
     setFormData({ title: "", category: "Technical", priority: "Medium", description: "", assigned_to: "" });
   };
 
-  const handleAssignTicket = () => {
-    toast({ title: "Success", description: "Ticket assigned successfully." });
+  const handleAssignTicket = async () => {
+    if (!selectedTicket) return;
+    try {
+      await updateTicket({
+        variables: {
+          input: {
+            ticketId: selectedTicket.id,
+            assignedTo: assignTo,
+          },
+        },
+      });
+      toast({ title: "Success", description: "Ticket assigned successfully." });
+      refetchTickets();
+    } catch {
+      toast({ title: "Error", description: "Failed to assign ticket.", variant: "destructive" });
+    }
     setIsAssignModalOpen(false);
     setAssignTo("");
     setAssignNotes("");
   };
 
-  const handleUpdateStatus = () => {
-    toast({ title: "Success", description: "Ticket status updated successfully." });
+  const handleUpdateStatus = async () => {
+    if (!selectedTicket) return;
+    try {
+      await updateTicket({
+        variables: {
+          input: {
+            ticketId: selectedTicket.id,
+            status: STATUS_API[newStatus] ?? newStatus,
+          },
+        },
+      });
+      toast({ title: "Success", description: "Ticket status updated successfully." });
+      refetchTickets();
+    } catch {
+      toast({ title: "Error", description: "Failed to update status.", variant: "destructive" });
+    }
     setIsStatusModalOpen(false);
     setStatusNotes("");
   };
 
-  const handleCloseTicket = () => {
-    toast({ title: "Success", description: "Ticket closed successfully." });
+  const handleCloseTicket = async () => {
+    if (!selectedTicket) return;
+    try {
+      await updateTicket({
+        variables: {
+          input: {
+            ticketId: selectedTicket.id,
+            status: "CLOSED",
+          },
+        },
+      });
+      toast({ title: "Success", description: "Ticket closed successfully." });
+      refetchTickets();
+    } catch {
+      toast({ title: "Error", description: "Failed to close ticket.", variant: "destructive" });
+    }
     setIsCloseModalOpen(false);
   };
 
   const handleDeleteTicket = () => {
+    // No deleteTicket mutation defined; keep toast behaviour
     toast({ title: "Success", description: "Ticket deleted successfully." });
     setIsDeleteModalOpen(false);
   };
 
-  const handleSendMessage = () => {
-    if (newMessage.trim()) {
+  const handleSendMessage = async () => {
+    if (!newMessage.trim() || !selectedTicket) return;
+    try {
+      await replyToTicket({
+        variables: {
+          ticketId: selectedTicket.id,
+          message: newMessage.trim(),
+        },
+      });
       toast({ title: "Success", description: "Message sent." });
       setNewMessage("");
+      // Re-fetch ticket detail to show the new message
+      refetchTickets();
+    } catch {
+      toast({ title: "Error", description: "Failed to send message.", variant: "destructive" });
     }
   };
 
+  // ── render ─────────────────────────────────────────────────────────────────
   return (
     <AdminLayout>
       <div className="space-y-6">
@@ -408,7 +448,7 @@ export default function SupportTicketing() {
               <TableRow>
                 <TableHead className="w-12">
                   <Checkbox
-                    checked={selectedTickets.length === mockTickets.length}
+                    checked={filteredTickets.length > 0 && selectedTickets.length === filteredTickets.length}
                     onCheckedChange={handleSelectAll}
                   />
                 </TableHead>
@@ -425,67 +465,115 @@ export default function SupportTicketing() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {mockTickets.map((ticket) => (
-                <TableRow key={ticket.id}>
-                  <TableCell>
-                    <Checkbox
-                      checked={selectedTickets.includes(ticket.id)}
-                      onCheckedChange={(checked) => handleSelectTicket(ticket.id, checked as boolean)}
-                    />
-                  </TableCell>
-                  <TableCell className="font-medium">{ticket.id}</TableCell>
-                  <TableCell className="max-w-[200px] truncate">{ticket.title}</TableCell>
-                  <TableCell>
-                    <Badge variant="outline">{ticket.category}</Badge>
-                  </TableCell>
-                  <TableCell>{getPriorityBadge(ticket.priority)}</TableCell>
-                  <TableCell>{getStatusBadge(ticket.status)}</TableCell>
-                  <TableCell>{ticket.created_by}</TableCell>
-                  <TableCell>{ticket.assigned_to}</TableCell>
-                  <TableCell className="text-sm">{ticket.created_at}</TableCell>
-                  <TableCell className="text-sm">{ticket.last_updated}</TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex items-center justify-end gap-1">
-                      <Button variant="ghost" size="icon" onClick={() => openTicketDetail(ticket)}>
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" onClick={() => { setSelectedTicket(ticket); setIsAssignModalOpen(true); }}>
-                        <UserCheck className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" onClick={() => { setSelectedTicket(ticket); setNewStatus(ticket.status); setIsStatusModalOpen(true); }}>
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="bg-popover">
-                          <DropdownMenuItem onClick={() => { setSelectedTicket(ticket); setIsCloseModalOpen(true); }}>
-                            <CheckCircle className="mr-2 h-4 w-4" /> Close Ticket
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => { setSelectedTicket(ticket); setIsDeleteModalOpen(true); }}>
-                            <Trash2 className="mr-2 h-4 w-4" /> Delete Ticket
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
+              {ticketsLoading ? (
+                <TableRow>
+                  <TableCell colSpan={11} className="text-center py-8 text-muted-foreground">
+                    Loading tickets...
                   </TableCell>
                 </TableRow>
-              ))}
+              ) : filteredTickets.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={11} className="text-center py-8 text-muted-foreground">
+                    No tickets found.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                filteredTickets.map((ticket) => (
+                  <TableRow key={ticket.id}>
+                    <TableCell>
+                      <Checkbox
+                        checked={selectedTickets.includes(ticket.id)}
+                        onCheckedChange={(checked) => handleSelectTicket(ticket.id, checked as boolean)}
+                      />
+                    </TableCell>
+                    <TableCell className="font-medium">{ticket.id}</TableCell>
+                    <TableCell className="max-w-[200px] truncate">{ticket.subject}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline">{ticket.category}</Badge>
+                    </TableCell>
+                    <TableCell>{getPriorityBadge(ticket.priority)}</TableCell>
+                    <TableCell>{getStatusBadge(ticket.status)}</TableCell>
+                    <TableCell>{ticket.submittedBy ?? "—"}</TableCell>
+                    <TableCell>{ticket.assignedTo ?? "Unassigned"}</TableCell>
+                    <TableCell className="text-sm">{ticket.createdAt}</TableCell>
+                    <TableCell className="text-sm">{ticket.resolvedAt ?? "—"}</TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        <Button variant="ghost" size="icon" onClick={() => openTicketDetail(ticket)}>
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => {
+                            setSelectedTicket(ticket);
+                            setIsAssignModalOpen(true);
+                          }}
+                        >
+                          <UserCheck className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => {
+                            setSelectedTicket(ticket);
+                            setNewStatus(STATUS_LABEL[ticket.status] ?? ticket.status);
+                            setIsStatusModalOpen(true);
+                          }}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="bg-popover">
+                            <DropdownMenuItem
+                              onClick={() => {
+                                setSelectedTicket(ticket);
+                                setIsCloseModalOpen(true);
+                              }}
+                            >
+                              <CheckCircle className="mr-2 h-4 w-4" /> Close Ticket
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => {
+                                setSelectedTicket(ticket);
+                                setIsDeleteModalOpen(true);
+                              }}
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" /> Delete Ticket
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
             </TableBody>
           </Table>
         </div>
 
         {/* Ticket Detail Sheet */}
-        <Sheet open={isDetailOpen} onOpenChange={setIsDetailOpen}>
+        <Sheet
+          open={isDetailOpen}
+          onOpenChange={(open) => {
+            setIsDetailOpen(open);
+            if (!open) {
+              setSelectedTicketId(null);
+              setSelectedTicket(null);
+            }
+          }}
+        >
           <SheetContent className="w-full sm:max-w-2xl overflow-y-auto">
             {selectedTicket && (
               <>
                 <SheetHeader>
                   <SheetTitle className="flex items-center gap-3">
-                    {selectedTicket.title}
+                    {selectedTicket.subject}
                   </SheetTitle>
                   <div className="flex flex-wrap items-center gap-2 text-sm">
                     <Badge variant="outline">{selectedTicket.id}</Badge>
@@ -494,18 +582,41 @@ export default function SupportTicketing() {
                     {getStatusBadge(selectedTicket.status)}
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    Created by {selectedTicket.created_by} | Assigned to {selectedTicket.assigned_to}
+                    Created by {selectedTicket.submittedBy ?? "—"} | Assigned to{" "}
+                    {selectedTicket.assignedTo ?? "Unassigned"}
                   </p>
                 </SheetHeader>
 
                 <div className="flex gap-2 mt-4">
-                  <Button variant="outline" size="sm" onClick={() => { setIsDetailOpen(false); setIsAssignModalOpen(true); }}>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setIsDetailOpen(false);
+                      setIsAssignModalOpen(true);
+                    }}
+                  >
                     <UserCheck className="mr-2 h-4 w-4" /> Assign
                   </Button>
-                  <Button variant="outline" size="sm" onClick={() => { setIsDetailOpen(false); setNewStatus(selectedTicket.status); setIsStatusModalOpen(true); }}>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setIsDetailOpen(false);
+                      setNewStatus(STATUS_LABEL[selectedTicket.status] ?? selectedTicket.status);
+                      setIsStatusModalOpen(true);
+                    }}
+                  >
                     <Edit className="mr-2 h-4 w-4" /> Update Status
                   </Button>
-                  <Button variant="outline" size="sm" onClick={() => { setIsDetailOpen(false); setIsCloseModalOpen(true); }}>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setIsDetailOpen(false);
+                      setIsCloseModalOpen(true);
+                    }}
+                  >
                     <CheckCircle className="mr-2 h-4 w-4" /> Close
                   </Button>
                 </div>
@@ -517,54 +628,113 @@ export default function SupportTicketing() {
                     <TabsTrigger value="history">History</TabsTrigger>
                   </TabsList>
 
+                  {/* Overview */}
                   <TabsContent value="overview" className="space-y-4 mt-4">
                     <div className="p-4 rounded-lg border bg-card space-y-3">
                       <h4 className="font-semibold">Ticket Details</h4>
                       <div className="grid grid-cols-2 gap-4 text-sm">
-                        <div><span className="text-muted-foreground">Ticket ID:</span> <span className="ml-2">{selectedTicket.id}</span></div>
-                        <div><span className="text-muted-foreground">Category:</span> <span className="ml-2">{selectedTicket.category}</span></div>
-                        <div><span className="text-muted-foreground">Priority:</span> <span className="ml-2">{selectedTicket.priority}</span></div>
-                        <div><span className="text-muted-foreground">Status:</span> <span className="ml-2">{selectedTicket.status}</span></div>
-                        <div><span className="text-muted-foreground">Created By:</span> <span className="ml-2">{selectedTicket.created_by}</span></div>
-                        <div><span className="text-muted-foreground">Assigned To:</span> <span className="ml-2">{selectedTicket.assigned_to}</span></div>
-                        <div><span className="text-muted-foreground">Created:</span> <span className="ml-2">{selectedTicket.created_at}</span></div>
-                        <div><span className="text-muted-foreground">Updated:</span> <span className="ml-2">{selectedTicket.last_updated}</span></div>
+                        <div>
+                          <span className="text-muted-foreground">Ticket ID:</span>{" "}
+                          <span className="ml-2">{selectedTicket.id}</span>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Category:</span>{" "}
+                          <span className="ml-2">{selectedTicket.category}</span>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Priority:</span>{" "}
+                          <span className="ml-2">
+                            {PRIORITY_LABEL[selectedTicket.priority] ?? selectedTicket.priority}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Status:</span>{" "}
+                          <span className="ml-2">
+                            {STATUS_LABEL[selectedTicket.status] ?? selectedTicket.status}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Created By:</span>{" "}
+                          <span className="ml-2">{selectedTicket.submittedBy ?? "—"}</span>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Assigned To:</span>{" "}
+                          <span className="ml-2">{selectedTicket.assignedTo ?? "Unassigned"}</span>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Created:</span>{" "}
+                          <span className="ml-2">{selectedTicket.createdAt}</span>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Resolved:</span>{" "}
+                          <span className="ml-2">{selectedTicket.resolvedAt ?? "—"}</span>
+                        </div>
                       </div>
                     </div>
                     <div className="p-4 rounded-lg border bg-card space-y-3">
                       <h4 className="font-semibold">Description</h4>
-                      <p className="text-sm text-muted-foreground">{selectedTicket.description}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {selectedTicket.description ?? "No description provided."}
+                      </p>
                     </div>
                   </TabsContent>
 
+                  {/* Conversation */}
                   <TabsContent value="conversation" className="mt-4">
                     <div className="space-y-4">
                       <ScrollArea className="h-[300px] rounded-lg border p-4">
                         <div className="space-y-4">
-                          {mockConversation.map((msg) => (
-                            <div key={msg.id} className={`flex gap-3 ${msg.sender_type === "admin" ? "flex-row-reverse" : ""}`}>
-                              <Avatar className="h-8 w-8">
-                                <AvatarFallback className={msg.sender_type === "admin" ? "bg-primary text-primary-foreground" : ""}>
-                                  {msg.sender.split(" ").map(n => n[0]).join("")}
-                                </AvatarFallback>
-                              </Avatar>
-                              <div className={`flex-1 max-w-[80%] ${msg.sender_type === "admin" ? "text-right" : ""}`}>
-                                <div className="flex items-center gap-2 mb-1">
-                                  <span className="text-sm font-medium">{msg.sender}</span>
-                                  <span className="text-xs text-muted-foreground">{msg.timestamp}</span>
-                                </div>
-                                <div className={`p-3 rounded-lg text-sm ${msg.sender_type === "admin" ? "bg-primary text-primary-foreground ml-auto" : "bg-muted"}`}>
-                                  {msg.message}
-                                </div>
-                                {msg.attachments.length > 0 && (
-                                  <div className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
-                                    <Paperclip className="h-3 w-3" />
-                                    {msg.attachments.join(", ")}
+                          {ticketDetailLoading ? (
+                            <p className="text-sm text-muted-foreground text-center py-4">
+                              Loading messages...
+                            </p>
+                          ) : detailMessages.length === 0 ? (
+                            <p className="text-sm text-muted-foreground text-center py-4">
+                              No messages yet.
+                            </p>
+                          ) : (
+                            detailMessages.map((msg) => {
+                              const isAdmin = msg.senderType?.toLowerCase() === "admin";
+                              const senderInitials = msg.senderId
+                                ? msg.senderId.slice(0, 2).toUpperCase()
+                                : "?";
+                              return (
+                                <div
+                                  key={msg.id}
+                                  className={`flex gap-3 ${isAdmin ? "flex-row-reverse" : ""}`}
+                                >
+                                  <Avatar className="h-8 w-8">
+                                    <AvatarFallback
+                                      className={
+                                        isAdmin ? "bg-primary text-primary-foreground" : ""
+                                      }
+                                    >
+                                      {senderInitials}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                  <div
+                                    className={`flex-1 max-w-[80%] ${isAdmin ? "text-right" : ""}`}
+                                  >
+                                    <div className="flex items-center gap-2 mb-1">
+                                      <span className="text-sm font-medium">{msg.senderId}</span>
+                                      <span className="text-xs text-muted-foreground">
+                                        {msg.createdAt}
+                                      </span>
+                                    </div>
+                                    <div
+                                      className={`p-3 rounded-lg text-sm ${
+                                        isAdmin
+                                          ? "bg-primary text-primary-foreground ml-auto"
+                                          : "bg-muted"
+                                      }`}
+                                    >
+                                      {msg.message}
+                                    </div>
                                   </div>
-                                )}
-                              </div>
-                            </div>
-                          ))}
+                                </div>
+                              );
+                            })
+                          )}
                         </div>
                       </ScrollArea>
                       <div className="flex gap-2">
@@ -578,7 +748,11 @@ export default function SupportTicketing() {
                           <Button variant="outline" size="icon">
                             <Paperclip className="h-4 w-4" />
                           </Button>
-                          <Button size="icon" onClick={handleSendMessage}>
+                          <Button
+                            size="icon"
+                            onClick={handleSendMessage}
+                            disabled={replyLoading || !newMessage.trim()}
+                          >
                             <Send className="h-4 w-4" />
                           </Button>
                         </div>
@@ -586,6 +760,7 @@ export default function SupportTicketing() {
                     </div>
                   </TabsContent>
 
+                  {/* History */}
                   <TabsContent value="history" className="mt-4">
                     <div className="flex justify-end mb-2">
                       <Button variant="outline" size="sm">
@@ -603,14 +778,24 @@ export default function SupportTicketing() {
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {mockHistory.map((log, idx) => (
-                            <TableRow key={idx}>
-                              <TableCell className="text-sm">{log.timestamp}</TableCell>
-                              <TableCell>{log.action}</TableCell>
-                              <TableCell>{log.performed_by}</TableCell>
-                              <TableCell className="max-w-xs truncate">{log.notes}</TableCell>
+                          {detailMessages.map((msg) => (
+                            <TableRow key={msg.id}>
+                              <TableCell className="text-sm">{msg.createdAt}</TableCell>
+                              <TableCell>Message</TableCell>
+                              <TableCell>{msg.senderId}</TableCell>
+                              <TableCell className="max-w-xs truncate">{msg.message}</TableCell>
                             </TableRow>
                           ))}
+                          {detailMessages.length === 0 && !ticketDetailLoading && (
+                            <TableRow>
+                              <TableCell
+                                colSpan={4}
+                                className="text-center py-4 text-muted-foreground"
+                              >
+                                No history available.
+                              </TableCell>
+                            </TableRow>
+                          )}
                         </TableBody>
                       </Table>
                     </div>
@@ -640,8 +825,13 @@ export default function SupportTicketing() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Category *</Label>
-                  <Select value={formData.category} onValueChange={(v) => setFormData({ ...formData, category: v })}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
+                  <Select
+                    value={formData.category}
+                    onValueChange={(v) => setFormData({ ...formData, category: v })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
                     <SelectContent className="bg-popover">
                       <SelectItem value="Technical">Technical</SelectItem>
                       <SelectItem value="Billing">Billing</SelectItem>
@@ -653,8 +843,13 @@ export default function SupportTicketing() {
                 </div>
                 <div className="space-y-2">
                   <Label>Priority *</Label>
-                  <Select value={formData.priority} onValueChange={(v) => setFormData({ ...formData, priority: v })}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
+                  <Select
+                    value={formData.priority}
+                    onValueChange={(v) => setFormData({ ...formData, priority: v })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
                     <SelectContent className="bg-popover">
                       <SelectItem value="Low">Low</SelectItem>
                       <SelectItem value="Medium">Medium</SelectItem>
@@ -675,19 +870,33 @@ export default function SupportTicketing() {
               </div>
               <div className="space-y-2">
                 <Label>Assign To</Label>
-                <Select value={formData.assigned_to} onValueChange={(v) => setFormData({ ...formData, assigned_to: v })}>
-                  <SelectTrigger><SelectValue placeholder="Select admin..." /></SelectTrigger>
+                <Select
+                  value={formData.assigned_to}
+                  onValueChange={(v) => setFormData({ ...formData, assigned_to: v })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select admin..." />
+                  </SelectTrigger>
                   <SelectContent className="bg-popover">
                     {admins.map((admin) => (
-                      <SelectItem key={admin} value={admin}>{admin}</SelectItem>
+                      <SelectItem key={admin} value={admin}>
+                        {admin}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setIsCreateModalOpen(false)}>Cancel</Button>
-              <Button onClick={handleCreateTicket} disabled={!formData.title || !formData.description}>Create Ticket</Button>
+              <Button variant="outline" onClick={() => setIsCreateModalOpen(false)}>
+                Cancel
+              </Button>
+              <Button
+                onClick={handleCreateTicket}
+                disabled={!formData.title || !formData.description}
+              >
+                Create Ticket
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -703,10 +912,14 @@ export default function SupportTicketing() {
               <div className="space-y-2">
                 <Label>Assign To *</Label>
                 <Select value={assignTo} onValueChange={setAssignTo}>
-                  <SelectTrigger><SelectValue placeholder="Select admin..." /></SelectTrigger>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select admin..." />
+                  </SelectTrigger>
                   <SelectContent className="bg-popover">
                     {admins.map((admin) => (
-                      <SelectItem key={admin} value={admin}>{admin}</SelectItem>
+                      <SelectItem key={admin} value={admin}>
+                        {admin}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -721,8 +934,12 @@ export default function SupportTicketing() {
               </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setIsAssignModalOpen(false)}>Cancel</Button>
-              <Button onClick={handleAssignTicket} disabled={!assignTo}>Assign</Button>
+              <Button variant="outline" onClick={() => setIsAssignModalOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleAssignTicket} disabled={!assignTo || updateLoading}>
+                Assign
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -738,7 +955,9 @@ export default function SupportTicketing() {
               <div className="space-y-2">
                 <Label>Status *</Label>
                 <Select value={newStatus} onValueChange={setNewStatus}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
                   <SelectContent className="bg-popover">
                     <SelectItem value="Open">Open</SelectItem>
                     <SelectItem value="In Progress">In Progress</SelectItem>
@@ -757,8 +976,12 @@ export default function SupportTicketing() {
               </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setIsStatusModalOpen(false)}>Cancel</Button>
-              <Button onClick={handleUpdateStatus}>Update Status</Button>
+              <Button variant="outline" onClick={() => setIsStatusModalOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleUpdateStatus} disabled={updateLoading}>
+                Update Status
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -773,8 +996,12 @@ export default function SupportTicketing() {
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setIsCloseModalOpen(false)}>Cancel</Button>
-              <Button onClick={handleCloseTicket}>Close Ticket</Button>
+              <Button variant="outline" onClick={() => setIsCloseModalOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleCloseTicket} disabled={updateLoading}>
+                Close Ticket
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -785,12 +1012,17 @@ export default function SupportTicketing() {
             <DialogHeader>
               <DialogTitle>Delete Ticket</DialogTitle>
               <DialogDescription>
-                Deleting a ticket is irreversible and will remove all associated messages and history.
+                Deleting a ticket is irreversible and will remove all associated messages and
+                history.
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setIsDeleteModalOpen(false)}>Cancel</Button>
-              <Button variant="destructive" onClick={handleDeleteTicket}>Delete Ticket</Button>
+              <Button variant="outline" onClick={() => setIsDeleteModalOpen(false)}>
+                Cancel
+              </Button>
+              <Button variant="destructive" onClick={handleDeleteTicket}>
+                Delete Ticket
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>

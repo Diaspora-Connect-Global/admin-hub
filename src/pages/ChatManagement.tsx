@@ -1,5 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
+import {
+  useGetFlaggedConversations,
+  useGetChatSettings,
+  useReviewConversation,
+  useUpdateChatSetting,
+} from "@/hooks/admin";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -109,12 +115,6 @@ const groupChats = [
   { groupId: "GRP-004", name: "Business Network", creator: "Emily Davis", memberCount: 67, messageCount: 892, lastActive: "2024-01-15 12:10", flagCount: 3, visibility: "Private" },
 ];
 
-const flaggedChats = [
-  { chatId: "DM-002", chatType: "DM", flagReason: "User report - Harassment", reportCount: 2, lastFlagged: "2024-01-15 14:22" },
-  { chatId: "GRP-002", chatType: "Group", flagReason: "AI Safety - Spam content", reportCount: 5, lastFlagged: "2024-01-15 13:30" },
-  { chatId: "GRP-004", chatType: "Group", flagReason: "Multiple user reports", reportCount: 8, lastFlagged: "2024-01-15 12:45" },
-  { chatId: "DM-004", chatType: "DM", flagReason: "Suspicious metadata patterns", reportCount: 3, lastFlagged: "2024-01-15 11:20" },
-];
 
 const groupMembers = [
   { id: "M1", name: "John Smith", role: "Admin", joinedAt: "2024-01-01" },
@@ -129,12 +129,75 @@ const chartConfig = {
   group: { label: "Group Chats", color: "hsl(var(--chart-2))" },
 };
 
+// Settings key constants
+const SETTING_KEYS = {
+  CHAT_ENABLED: "chat_enabled",
+  GROUP_CHAT_ENABLED: "group_chat_enabled",
+  MAX_MESSAGE_LENGTH: "max_message_length",
+  MESSAGE_RETENTION_DAYS: "message_retention_days",
+} as const;
+
 export default function ChatManagement() {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState("dashboard");
   const [dmMetadataModal, setDmMetadataModal] = useState<typeof dmConversations[0] | null>(null);
   const [groupDetailModal, setGroupDetailModal] = useState<typeof groupChats[0] | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+
+  // --- Flagged Chats live data ---
+  const {
+    data: flaggedData,
+    loading: flaggedLoading,
+    refetch: refetchFlagged,
+  } = useGetFlaggedConversations({ page: 1, limit: 50 });
+  const flaggedConversations = flaggedData?.getFlaggedConversations?.conversations ?? [];
+
+  const [reviewConversation, { loading: reviewLoading }] = useReviewConversation();
+
+  const handleReviewAction = async (id: string, newStatus: string) => {
+    await reviewConversation({ variables: { id, newStatus } });
+    refetchFlagged();
+  };
+
+  // --- Settings live data ---
+  const { data: settingsData, loading: settingsLoading } = useGetChatSettings();
+  const [updateChatSetting] = useUpdateChatSetting();
+
+  // Controlled state for settings fields
+  const [chatEnabled, setChatEnabled] = useState(true);
+  const [groupChatEnabled, setGroupChatEnabled] = useState(true);
+  const [maxMessageLength, setMaxMessageLength] = useState("1000");
+  const [messageRetentionDays, setMessageRetentionDays] = useState("365");
+
+  // Populate settings state from API response
+  useEffect(() => {
+    if (!settingsData?.getChatSettings) return;
+    for (const setting of settingsData.getChatSettings) {
+      switch (setting.key) {
+        case SETTING_KEYS.CHAT_ENABLED:
+          setChatEnabled(setting.value === "true");
+          break;
+        case SETTING_KEYS.GROUP_CHAT_ENABLED:
+          setGroupChatEnabled(setting.value === "true");
+          break;
+        case SETTING_KEYS.MAX_MESSAGE_LENGTH:
+          setMaxMessageLength(setting.value);
+          break;
+        case SETTING_KEYS.MESSAGE_RETENTION_DAYS:
+          setMessageRetentionDays(setting.value);
+          break;
+      }
+    }
+  }, [settingsData]);
+
+  const handleSaveSettings = async () => {
+    await Promise.all([
+      updateChatSetting({ variables: { input: { key: SETTING_KEYS.CHAT_ENABLED, value: String(chatEnabled) } } }),
+      updateChatSetting({ variables: { input: { key: SETTING_KEYS.GROUP_CHAT_ENABLED, value: String(groupChatEnabled) } } }),
+      updateChatSetting({ variables: { input: { key: SETTING_KEYS.MAX_MESSAGE_LENGTH, value: maxMessageLength } } }),
+      updateChatSetting({ variables: { input: { key: SETTING_KEYS.MESSAGE_RETENTION_DAYS, value: messageRetentionDays } } }),
+    ]);
+  };
 
   return (
     <AdminLayout>
@@ -491,118 +554,166 @@ export default function ChatManagement() {
                 </div>
 
                 {/* Table */}
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Chat ID</TableHead>
-                      <TableHead>Type</TableHead>
-                      <TableHead>Flag Reason</TableHead>
-                      <TableHead>Reports</TableHead>
-                      <TableHead>Last Flagged</TableHead>
-                      <TableHead className="w-[50px]">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {flaggedChats.map((chat) => (
-                      <TableRow key={chat.chatId}>
-                        <TableCell className="font-mono text-sm">{chat.chatId}</TableCell>
-                        <TableCell>
-                          <Badge variant={chat.chatType === "DM" ? "secondary" : "outline"}>
-                            {chat.chatType}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>{chat.flagReason}</TableCell>
-                        <TableCell>
-                          <Badge variant="destructive">{chat.reportCount}</Badge>
-                        </TableCell>
-                        <TableCell className="text-muted-foreground">{chat.lastFlagged}</TableCell>
-                        <TableCell>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon">
-                                <MoreHorizontal className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem>
-                                <Info className="mr-2 h-4 w-4" /> View Metadata
-                              </DropdownMenuItem>
-                              <DropdownMenuItem>
-                                <Mail className="mr-2 h-4 w-4" /> Contact Participants
-                              </DropdownMenuItem>
-                              <DropdownMenuItem className="text-destructive">
-                                <Archive className="mr-2 h-4 w-4" /> Archive Chat
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
+                {flaggedLoading ? (
+                  <p className="text-muted-foreground text-center py-8">Loading flagged chats…</p>
+                ) : flaggedConversations.length === 0 ? (
+                  <p className="text-muted-foreground text-center py-8">No flagged chats found.</p>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Conversation ID</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Flag Reason</TableHead>
+                        <TableHead>Flagged By</TableHead>
+                        <TableHead>Created At</TableHead>
+                        <TableHead className="w-[50px]">Actions</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {flaggedConversations.map((chat) => (
+                        <TableRow key={chat.id}>
+                          <TableCell className="font-mono text-sm">{chat.conversationId}</TableCell>
+                          <TableCell>
+                            <Badge
+                              variant={
+                                chat.status === "SUSPENDED"
+                                  ? "destructive"
+                                  : chat.status === "REVIEWED"
+                                  ? "secondary"
+                                  : "outline"
+                              }
+                            >
+                              {chat.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>{chat.flagReason}</TableCell>
+                          <TableCell className="text-muted-foreground">{chat.flaggedBy ?? "—"}</TableCell>
+                          <TableCell className="text-muted-foreground">
+                            {chat.createdAt ? new Date(chat.createdAt).toLocaleString() : "—"}
+                          </TableCell>
+                          <TableCell>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" disabled={reviewLoading}>
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem
+                                  onClick={() => handleReviewAction(chat.id, "REVIEWED")}
+                                >
+                                  <Eye className="mr-2 h-4 w-4" /> Mark Reviewed
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => handleReviewAction(chat.id, "ACTIVE")}
+                                >
+                                  <Shield className="mr-2 h-4 w-4" /> Approve (Set Active)
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  className="text-destructive"
+                                  onClick={() => handleReviewAction(chat.id, "SUSPENDED")}
+                                >
+                                  <Archive className="mr-2 h-4 w-4" /> Suspend Chat
+                                </DropdownMenuItem>
+                                <DropdownMenuItem>
+                                  <Mail className="mr-2 h-4 w-4" /> Contact Participants
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
 
           {/* Settings Tab */}
           <TabsContent value="settings" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>General Chat Settings</CardTitle>
-                <CardDescription>Configure global chat system settings</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label>Enable Direct Messaging</Label>
-                    <p className="text-sm text-muted-foreground">Globally enable or disable DM for all users.</p>
-                  </div>
-                  <Switch defaultChecked />
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label>Enable Group Chats</Label>
-                    <p className="text-sm text-muted-foreground">Allow creation of new group chats.</p>
-                  </div>
-                  <Switch defaultChecked />
-                </div>
-              </CardContent>
-            </Card>
+            {settingsLoading ? (
+              <p className="text-muted-foreground text-center py-8">Loading settings…</p>
+            ) : (
+              <>
+                <Card>
+                  <CardHeader>
+                    <CardTitle>General Chat Settings</CardTitle>
+                    <CardDescription>Configure global chat system settings</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-0.5">
+                        <Label htmlFor="setting-chat-enabled">Enable Direct Messaging</Label>
+                        <p className="text-sm text-muted-foreground">Globally enable or disable DM for all users.</p>
+                      </div>
+                      <Switch
+                        id="setting-chat-enabled"
+                        checked={chatEnabled}
+                        onCheckedChange={setChatEnabled}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-0.5">
+                        <Label htmlFor="setting-group-chat-enabled">Enable Group Chats</Label>
+                        <p className="text-sm text-muted-foreground">Allow creation of new group chats.</p>
+                      </div>
+                      <Switch
+                        id="setting-group-chat-enabled"
+                        checked={groupChatEnabled}
+                        onCheckedChange={setGroupChatEnabled}
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Security & Encryption</CardTitle>
-                <CardDescription>Encryption and retention policies</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label>E2E Encryption</Label>
-                    <p className="text-sm text-muted-foreground">End-to-end encryption status</p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Lock className="h-4 w-4 text-green-500" />
-                    <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-500/20">
-                      Mandatory
-                    </Badge>
-                  </div>
-                </div>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label>Metadata Retention (Days)</Label>
-                    <Input type="number" defaultValue={365} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Auto-Archive Inactive Chats (Days)</Label>
-                    <Input type="number" defaultValue={90} />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Security & Encryption</CardTitle>
+                    <CardDescription>Encryption and retention policies</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-0.5">
+                        <Label>E2E Encryption</Label>
+                        <p className="text-sm text-muted-foreground">End-to-end encryption status</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Lock className="h-4 w-4 text-green-500" />
+                        <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-500/20">
+                          Mandatory
+                        </Badge>
+                      </div>
+                    </div>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <div className="space-y-2">
+                        <Label htmlFor="setting-retention-days">Metadata Retention (Days)</Label>
+                        <Input
+                          id="setting-retention-days"
+                          type="number"
+                          value={messageRetentionDays}
+                          onChange={(e) => setMessageRetentionDays(e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="setting-max-msg-length">Max Message Length (Characters)</Label>
+                        <Input
+                          id="setting-max-msg-length"
+                          type="number"
+                          value={maxMessageLength}
+                          onChange={(e) => setMaxMessageLength(e.target.value)}
+                        />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
 
-            <div className="flex justify-end">
-              <Button>Save Settings</Button>
-            </div>
+                <div className="flex justify-end">
+                  <Button onClick={handleSaveSettings}>Save Settings</Button>
+                </div>
+              </>
+            )}
           </TabsContent>
         </Tabs>
 

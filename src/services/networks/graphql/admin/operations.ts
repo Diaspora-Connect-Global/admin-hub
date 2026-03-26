@@ -1504,3 +1504,486 @@ export const DELETE_ENTITY_IMAGE = gql`
     }
   }
 `;
+
+// ─── Dispute & Escrow Management ──────────────────────────────────────────────
+
+export interface AdminDispute {
+  id: string;
+  paymentIntentId?: string;
+  escrowId?: string;
+  status: "OPEN" | "UNDER_REVIEW" | "RESOLVED" | "CLOSED";
+  reason?: string;
+  description?: string;
+  resolution?: string;
+  raisedBy?: string;
+  resolvedBy?: string;
+  createdAt: string;
+  resolvedAt?: string;
+}
+
+export interface AdminEscrow {
+  id: string;
+  paymentIntentId?: string;
+  status: "HELD" | "RELEASED" | "FROZEN" | "REFUNDED";
+  totalAmount: number;
+  releasedAmount?: number;
+  remainingAmount?: number;
+  currency?: string;
+  releaseMode?: string;
+  disputeId?: string;
+  frozenAt?: string;
+  createdAt: string;
+}
+
+export const ADMIN_LIST_DISPUTES = gql`
+  query AdminListDisputes($status: String, $page: Int, $limit: Int) {
+    adminListDisputes(status: $status, page: $page, limit: $limit) {
+      disputes {
+        id
+        paymentIntentId
+        escrowId
+        status
+        reason
+        description
+        resolution
+        raisedBy
+        resolvedBy
+        createdAt
+        resolvedAt
+      }
+      total
+    }
+  }
+`;
+
+export const ADMIN_LIST_ESCROWS = gql`
+  query AdminListEscrows($status: String, $page: Int, $limit: Int) {
+    adminListEscrows(status: $status, page: $page, limit: $limit) {
+      escrows {
+        id
+        paymentIntentId
+        status
+        totalAmount
+        releasedAmount
+        remainingAmount
+        currency
+        releaseMode
+        disputeId
+        frozenAt
+        createdAt
+      }
+      total
+    }
+  }
+`;
+
+export const ADMIN_FREEZE_ESCROW = gql`
+  mutation AdminFreezeEscrow($escrowId: ID!, $disputeId: ID!, $reason: String!) {
+    adminFreezeEscrow(escrowId: $escrowId, disputeId: $disputeId, reason: $reason) {
+      success
+      message
+    }
+  }
+`;
+
+export const ADMIN_UNFREEZE_ESCROW = gql`
+  mutation AdminUnfreezeEscrow($escrowId: ID!, $disputeId: ID!) {
+    adminUnfreezeEscrow(escrowId: $escrowId, disputeId: $disputeId) {
+      success
+      message
+    }
+  }
+`;
+
+export const ADMIN_UNBAN_USER = gql`
+  mutation AdminUnbanUser($userId: ID!, $reason: String) {
+    adminUnbanUser(userId: $userId, reason: $reason) {
+      success
+      message
+    }
+  }
+`;
+
+// ─── Dashboard Stats & System Health ─────────────────────────────────────────
+
+export interface DashboardStats {
+  totalUsers: number;
+  activeUsers: number;
+  totalVendors: number;
+  activeVendors: number;
+  totalOrders: number;
+  pendingOrders: number;
+  openDisputes: number;
+  pendingEscrows: number;
+  totalCommunities: number;
+  activeModerationCases: number;
+  pendingBanAppeals: number;
+  generatedAt: string;
+}
+
+export interface SystemHealthService {
+  service: string;
+  status: "healthy" | "down";
+  latencyMs?: number;
+  error?: string;
+}
+
+export interface SystemHealth {
+  overallStatus: "healthy" | "degraded";
+  services: SystemHealthService[];
+  checkedAt: string;
+}
+
+export interface AnalyticsDayPoint {
+  date: string;
+  value: number;
+}
+
+export interface PlatformAnalytics {
+  period: string;
+  contentRemovedCount: number;
+  usersBanned: number;
+  registrationsByDay: AnalyticsDayPoint[];
+  ordersByDay: AnalyticsDayPoint[];
+  generatedAt: string;
+}
+
+export const GET_DASHBOARD_STATS = gql`
+  query GetDashboardStats {
+    getDashboardStats {
+      totalUsers
+      activeUsers
+      totalVendors
+      activeVendors
+      totalOrders
+      pendingOrders
+      openDisputes
+      pendingEscrows
+      totalCommunities
+      activeModerationCases
+      pendingBanAppeals
+      generatedAt
+    }
+  }
+`;
+
+export const GET_SYSTEM_HEALTH = gql`
+  query GetSystemHealth {
+    getSystemHealth {
+      overallStatus
+      services {
+        service
+        status
+        latencyMs
+        error
+      }
+      checkedAt
+    }
+  }
+`;
+
+export const GET_PLATFORM_ANALYTICS = gql`
+  query GetPlatformAnalytics($period: String) {
+    getPlatformAnalytics(period: $period) {
+      period
+      contentRemovedCount
+      usersBanned
+      registrationsByDay {
+        date
+        value
+      }
+      ordersByDay {
+        date
+        value
+      }
+      generatedAt
+    }
+  }
+`;
+
+// ─── Platform Settings ────────────────────────────────────────────────────────
+
+export interface PlatformSetting {
+  key: string;
+  value: string;
+  category: string;
+  description?: string;
+  updatedBy?: string;
+  updatedAt?: string;
+}
+
+export interface SetPlatformSettingInput {
+  key: string;
+  value: string;
+}
+
+export const GET_PLATFORM_SETTINGS = gql`
+  query GetPlatformSettings($category: String) {
+    getPlatformSettings(category: $category) {
+      key
+      value
+      category
+      description
+      updatedBy
+      updatedAt
+    }
+  }
+`;
+
+export const SET_PLATFORM_SETTING = gql`
+  mutation SetPlatformSetting($input: SetPlatformSettingInput!) {
+    setPlatformSetting(input: $input) {
+      key
+      value
+      category
+      updatedBy
+      updatedAt
+    }
+  }
+`;
+
+// ─── Broadcast / Campaign Notifications ──────────────────────────────────────
+
+export interface BroadcastCampaign {
+  id: string;
+  title: string;
+  body: string;
+  targetAudience: "ALL_USERS" | "VENDORS" | "SPECIFIC_USERS";
+  status: "DRAFT" | "SENT" | "FAILED";
+  sentBy?: string;
+  recipientCount?: number;
+  createdAt: string;
+  sentAt?: string;
+}
+
+export interface SendBroadcastInput {
+  title: string;
+  body: string;
+  targetAudience: "ALL_USERS" | "VENDORS" | "SPECIFIC_USERS";
+  targetUserIds?: string[];
+}
+
+export const GET_BROADCAST_CAMPAIGNS = gql`
+  query GetBroadcastCampaigns($page: Int, $limit: Int) {
+    getBroadcastCampaigns(page: $page, limit: $limit) {
+      campaigns {
+        id
+        title
+        body
+        targetAudience
+        status
+        sentBy
+        recipientCount
+        createdAt
+        sentAt
+      }
+      total
+    }
+  }
+`;
+
+export const SEND_BROADCAST = gql`
+  mutation SendBroadcast($input: SendBroadcastInput!) {
+    sendBroadcast(input: $input) {
+      id
+      title
+      body
+      targetAudience
+      status
+      sentBy
+      recipientCount
+      createdAt
+    }
+  }
+`;
+
+// ─── Support Ticketing ────────────────────────────────────────────────────────
+
+export interface TicketMessage {
+  id: string;
+  ticketId?: string;
+  senderId: string;
+  senderType: string;
+  message: string;
+  createdAt: string;
+}
+
+export interface SupportTicket {
+  id: string;
+  subject: string;
+  description?: string;
+  status: "OPEN" | "IN_PROGRESS" | "RESOLVED" | "CLOSED";
+  priority: "LOW" | "MEDIUM" | "HIGH" | "URGENT";
+  category: "GENERAL" | "PAYMENT" | "ACCOUNT" | "VENDOR" | "CONTENT" | "OTHER";
+  submittedBy?: string;
+  assignedTo?: string;
+  createdAt: string;
+  resolvedAt?: string;
+  messages?: TicketMessage[];
+}
+
+export interface CreateSupportTicketInput {
+  subject: string;
+  description: string;
+  category?: string;
+  priority?: string;
+}
+
+export interface UpdateSupportTicketInput {
+  ticketId: string;
+  status?: string;
+  priority?: string;
+  assignedTo?: string;
+}
+
+export const GET_SUPPORT_TICKETS = gql`
+  query GetSupportTickets($status: String, $page: Int, $limit: Int) {
+    getSupportTickets(status: $status, page: $page, limit: $limit) {
+      tickets {
+        id
+        subject
+        description
+        status
+        priority
+        category
+        submittedBy
+        assignedTo
+        createdAt
+        resolvedAt
+        messages { id ticketId senderId senderType message createdAt }
+      }
+      total
+    }
+  }
+`;
+
+export const GET_SUPPORT_TICKET = gql`
+  query GetSupportTicket($ticketId: ID!) {
+    getSupportTicket(ticketId: $ticketId) {
+      id
+      subject
+      description
+      status
+      priority
+      category
+      submittedBy
+      assignedTo
+      createdAt
+      resolvedAt
+      messages { id senderId senderType message createdAt }
+    }
+  }
+`;
+
+export const CREATE_SUPPORT_TICKET = gql`
+  mutation CreateSupportTicket($input: CreateSupportTicketInput!) {
+    createSupportTicket(input: $input) {
+      id
+      subject
+      status
+      priority
+      category
+      createdAt
+    }
+  }
+`;
+
+export const UPDATE_SUPPORT_TICKET = gql`
+  mutation UpdateSupportTicket($input: UpdateSupportTicketInput!) {
+    updateSupportTicket(input: $input) {
+      success
+      message
+    }
+  }
+`;
+
+export const REPLY_TO_SUPPORT_TICKET = gql`
+  mutation ReplyToSupportTicket($ticketId: ID!, $message: String!) {
+    replyToSupportTicket(ticketId: $ticketId, message: $message) {
+      id
+      ticketId
+      senderId
+      senderType
+      message
+      createdAt
+    }
+  }
+`;
+
+// ─── Chat Management ──────────────────────────────────────────────────────────
+
+export interface FlaggedConversation {
+  id: string;
+  conversationId: string;
+  status: "FLAGGED" | "REVIEWED" | "SUSPENDED" | "ACTIVE";
+  flaggedBy?: string;
+  flagReason?: string;
+  reviewedBy?: string;
+  reviewedAt?: string;
+  createdAt: string;
+}
+
+export interface ChatSetting {
+  key: string;
+  value: string;
+  description?: string;
+  updatedBy?: string;
+}
+
+export const GET_FLAGGED_CONVERSATIONS = gql`
+  query GetFlaggedConversations($status: String, $page: Int, $limit: Int) {
+    getFlaggedConversations(status: $status, page: $page, limit: $limit) {
+      conversations {
+        id
+        conversationId
+        status
+        flaggedBy
+        flagReason
+        reviewedBy
+        reviewedAt
+        createdAt
+      }
+      total
+    }
+  }
+`;
+
+export const GET_CHAT_SETTINGS = gql`
+  query GetChatSettings {
+    getChatSettings {
+      key
+      value
+      description
+      updatedBy
+    }
+  }
+`;
+
+export const FLAG_CONVERSATION = gql`
+  mutation FlagConversation($conversationId: ID!, $reason: String!) {
+    flagConversation(conversationId: $conversationId, reason: $reason) {
+      success
+      message
+    }
+  }
+`;
+
+export const REVIEW_CONVERSATION = gql`
+  mutation ReviewConversation($id: ID!, $newStatus: String!) {
+    reviewConversation(id: $id, newStatus: $newStatus) {
+      success
+      message
+    }
+  }
+`;
+
+export const UPDATE_CHAT_SETTING = gql`
+  mutation UpdateChatSetting($input: UpdateChatSettingAdminInput!) {
+    updateChatSetting(input: $input) {
+      key
+      value
+      description
+      updatedBy
+    }
+  }
+`;

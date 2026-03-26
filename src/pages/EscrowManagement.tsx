@@ -50,89 +50,21 @@ import {
   Eye,
   CheckCircle,
   AlertCircle,
-  XCircle,
+  Lock,
+  Unlock,
   FileText,
   Upload,
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-
-interface EscrowTransaction {
-  id: string;
-  transactionId: string;
-  createdBy: string;
-  recipient: string;
-  type: "Project Payment" | "Product Purchase" | "Service Payment";
-  amount: number;
-  status: "Pending Funding" | "Funded" | "In Progress" | "Released" | "Disputed" | "Cancelled";
-  createdAt: string;
-  lastUpdated: string;
-  description?: string;
-}
-
-const mockTransactions: EscrowTransaction[] = [
-  {
-    id: "1",
-    transactionId: "ESC-2024-001",
-    createdBy: "John Doe",
-    recipient: "ABC Contractors",
-    type: "Project Payment",
-    amount: 15000,
-    status: "Funded",
-    createdAt: "2024-01-15T10:30:00Z",
-    lastUpdated: "2024-01-15T10:30:00Z",
-    description: "Community center renovation project - Phase 1",
-  },
-  {
-    id: "2",
-    transactionId: "ESC-2024-002",
-    createdBy: "Jane Smith",
-    recipient: "XYZ Supplies",
-    type: "Product Purchase",
-    amount: 3500,
-    status: "In Progress",
-    createdAt: "2024-01-14T14:20:00Z",
-    lastUpdated: "2024-01-16T09:15:00Z",
-    description: "Office equipment purchase for community hall",
-  },
-  {
-    id: "3",
-    transactionId: "ESC-2024-003",
-    createdBy: "Mike Johnson",
-    recipient: "Green Gardens LLC",
-    type: "Service Payment",
-    amount: 8000,
-    status: "Disputed",
-    createdAt: "2024-01-10T08:00:00Z",
-    lastUpdated: "2024-01-17T11:45:00Z",
-    description: "Landscaping services for common areas",
-  },
-  {
-    id: "4",
-    transactionId: "ESC-2024-004",
-    createdBy: "Sarah Williams",
-    recipient: "Tech Solutions Inc",
-    type: "Service Payment",
-    amount: 12000,
-    status: "Released",
-    createdAt: "2024-01-08T16:00:00Z",
-    lastUpdated: "2024-01-18T10:00:00Z",
-    description: "IT infrastructure setup",
-  },
-  {
-    id: "5",
-    transactionId: "ESC-2024-005",
-    createdBy: "Tom Brown",
-    recipient: "Security First Co",
-    type: "Project Payment",
-    amount: 25000,
-    status: "Pending Funding",
-    createdAt: "2024-01-18T09:30:00Z",
-    lastUpdated: "2024-01-18T09:30:00Z",
-    description: "Security system installation project",
-  },
-];
+import {
+  useAdminListEscrows,
+  useAdminForceReleaseEscrow,
+  useAdminFreezeEscrow,
+  useAdminUnfreezeEscrow,
+  type AdminEscrow,
+} from "@/hooks/admin";
 
 const mockHistory = [
   { timestamp: "2024-01-18 10:00", action: "Funds Released", performedBy: "Admin User", notes: "Full release approved" },
@@ -147,47 +79,77 @@ const mockAttachments = [
   { name: "delivery_proof.jpg", uploadedBy: "ABC Contractors", uploadedAt: "2024-01-17", size: "856 KB" },
 ];
 
+// Map API uppercase statuses to display labels
+const STATUS_DISPLAY: Record<AdminEscrow["status"], string> = {
+  HELD: "Held",
+  RELEASED: "Released",
+  FROZEN: "Frozen",
+  REFUNDED: "Refunded",
+};
+
 export default function EscrowManagement() {
   const { toast } = useToast();
   const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [typeFilter, setTypeFilter] = useState<string>("all");
+  const [page, setPage] = useState(1);
+  const LIMIT = 20;
+
   const [selectedTransactions, setSelectedTransactions] = useState<string[]>([]);
-  const [selectedTransaction, setSelectedTransaction] = useState<EscrowTransaction | null>(null);
+  const [selectedEscrow, setSelectedEscrow] = useState<AdminEscrow | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const [releaseModalOpen, setReleaseModalOpen] = useState(false);
-  const [disputeModalOpen, setDisputeModalOpen] = useState(false);
-  const [cancelModalOpen, setCancelModalOpen] = useState(false);
-  const [releaseAmount, setReleaseAmount] = useState("");
+  const [freezeModalOpen, setFreezeModalOpen] = useState(false);
+  const [unfreezeModalOpen, setUnfreezeModalOpen] = useState(false);
   const [releaseNotes, setReleaseNotes] = useState("");
-  const [disputeReason, setDisputeReason] = useState("");
-  const [cancelReason, setCancelReason] = useState("");
+  const [freezeReason, setFreezeReason] = useState("");
+  const [freezeDisputeId, setFreezeDisputeId] = useState("");
 
-  const getStatusBadge = (status: EscrowTransaction["status"]) => {
-    const variants: Record<EscrowTransaction["status"], { variant: "default" | "secondary" | "destructive" | "outline"; className: string }> = {
-      "Pending Funding": { variant: "outline", className: "border-yellow-500/50 text-yellow-400" },
-      "Funded": { variant: "default", className: "bg-blue-500/20 text-blue-400 border-blue-500/50" },
-      "In Progress": { variant: "default", className: "bg-cyan-500/20 text-cyan-400 border-cyan-500/50" },
-      "Released": { variant: "default", className: "bg-emerald-500/20 text-emerald-400 border-emerald-500/50" },
-      "Disputed": { variant: "destructive", className: "bg-red-500/20 text-red-400 border-red-500/50" },
-      "Cancelled": { variant: "secondary", className: "bg-muted text-muted-foreground" },
+  // Live data
+  const { data, loading, refetch } = useAdminListEscrows({
+    status: statusFilter === "all" ? undefined : statusFilter,
+    page,
+    limit: LIMIT,
+  });
+
+  const [forceRelease, { loading: releasing }] = useAdminForceReleaseEscrow();
+  const [freezeEscrow, { loading: freezing }] = useAdminFreezeEscrow();
+  const [unfreezeEscrow, { loading: unfreezing }] = useAdminUnfreezeEscrow();
+
+  const escrows: AdminEscrow[] = data?.adminListEscrows?.escrows ?? [];
+  const total: number = data?.adminListEscrows?.total ?? 0;
+  const totalPages = Math.max(1, Math.ceil(total / LIMIT));
+
+  // Client-side search filter (id / paymentIntentId)
+  const filteredEscrows = escrows.filter((e) => {
+    if (!searchQuery) return true;
+    const q = searchQuery.toLowerCase();
+    return (
+      e.id.toLowerCase().includes(q) ||
+      (e.paymentIntentId ?? "").toLowerCase().includes(q) ||
+      (e.disputeId ?? "").toLowerCase().includes(q)
+    );
+  });
+
+  const getStatusBadge = (status: AdminEscrow["status"]) => {
+    const variants: Record<AdminEscrow["status"], string> = {
+      HELD: "bg-blue-500/20 text-blue-400 border-blue-500/50",
+      RELEASED: "bg-emerald-500/20 text-emerald-400 border-emerald-500/50",
+      FROZEN: "bg-cyan-500/20 text-cyan-400 border-cyan-500/50",
+      REFUNDED: "bg-muted text-muted-foreground",
     };
-    const { className } = variants[status];
-    return <Badge variant="outline" className={className}>{status}</Badge>;
+    return (
+      <Badge variant="outline" className={variants[status]}>
+        {STATUS_DISPLAY[status]}
+      </Badge>
+    );
   };
 
-  const getTypeBadge = (type: EscrowTransaction["type"]) => {
-    const colors: Record<EscrowTransaction["type"], string> = {
-      "Project Payment": "bg-purple-500/20 text-purple-400 border-purple-500/50",
-      "Product Purchase": "bg-orange-500/20 text-orange-400 border-orange-500/50",
-      "Service Payment": "bg-teal-500/20 text-teal-400 border-teal-500/50",
-    };
-    return <Badge variant="outline" className={colors[type]}>{type}</Badge>;
-  };
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(amount);
+  const formatCurrency = (amount: number, currency?: string) => {
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: currency ?? "USD",
+    }).format(amount);
   };
 
   const formatDate = (dateString: string) => {
@@ -201,7 +163,7 @@ export default function EscrowManagement() {
   };
 
   const handleSelectAll = (checked: boolean) => {
-    setSelectedTransactions(checked ? mockTransactions.map((t) => t.id) : []);
+    setSelectedTransactions(checked ? filteredEscrows.map((e) => e.id) : []);
   };
 
   const handleSelectTransaction = (id: string, checked: boolean) => {
@@ -210,54 +172,98 @@ export default function EscrowManagement() {
     );
   };
 
-  const openDetail = (transaction: EscrowTransaction) => {
-    setSelectedTransaction(transaction);
+  const openDetail = (escrow: AdminEscrow) => {
+    setSelectedEscrow(escrow);
     setDetailOpen(true);
   };
 
-  const openReleaseModal = (transaction: EscrowTransaction) => {
-    setSelectedTransaction(transaction);
-    setReleaseAmount(transaction.amount.toString());
+  const openReleaseModal = (escrow: AdminEscrow) => {
+    setSelectedEscrow(escrow);
     setReleaseModalOpen(true);
   };
 
-  const openDisputeModal = (transaction: EscrowTransaction) => {
-    setSelectedTransaction(transaction);
-    setDisputeModalOpen(true);
+  const openFreezeModal = (escrow: AdminEscrow) => {
+    setSelectedEscrow(escrow);
+    setFreezeDisputeId(escrow.disputeId ?? "");
+    setFreezeModalOpen(true);
   };
 
-  const openCancelModal = (transaction: EscrowTransaction) => {
-    setSelectedTransaction(transaction);
-    setCancelModalOpen(true);
+  const openUnfreezeModal = (escrow: AdminEscrow) => {
+    setSelectedEscrow(escrow);
+    setUnfreezeModalOpen(true);
   };
 
-  const handleReleaseFunds = () => {
-    toast({
-      title: "Funds Released",
-      description: `${formatCurrency(parseFloat(releaseAmount))} has been released for ${selectedTransaction?.transactionId}`,
-    });
-    setReleaseModalOpen(false);
-    setReleaseAmount("");
-    setReleaseNotes("");
+  const handleForceRelease = async () => {
+    if (!selectedEscrow) return;
+    try {
+      await forceRelease({
+        variables: { escrowId: selectedEscrow.id, reason: releaseNotes },
+      });
+      toast({
+        title: "Funds Force-Released",
+        description: `Escrow ${selectedEscrow.id} has been force-released.`,
+      });
+      setReleaseModalOpen(false);
+      setReleaseNotes("");
+      refetch();
+    } catch (err: unknown) {
+      toast({
+        title: "Release Failed",
+        description: err instanceof Error ? err.message : "An error occurred",
+        variant: "destructive",
+      });
+    }
   };
 
-  const handleRaiseDispute = () => {
-    toast({
-      title: "Dispute Raised",
-      description: `A dispute has been raised for ${selectedTransaction?.transactionId}`,
-      variant: "destructive",
-    });
-    setDisputeModalOpen(false);
-    setDisputeReason("");
+  const handleFreeze = async () => {
+    if (!selectedEscrow) return;
+    try {
+      await freezeEscrow({
+        variables: {
+          escrowId: selectedEscrow.id,
+          disputeId: freezeDisputeId,
+          reason: freezeReason,
+        },
+      });
+      toast({
+        title: "Escrow Frozen",
+        description: `Escrow ${selectedEscrow.id} has been frozen.`,
+      });
+      setFreezeModalOpen(false);
+      setFreezeReason("");
+      setFreezeDisputeId("");
+      refetch();
+    } catch (err: unknown) {
+      toast({
+        title: "Freeze Failed",
+        description: err instanceof Error ? err.message : "An error occurred",
+        variant: "destructive",
+      });
+    }
   };
 
-  const handleCancelTransaction = () => {
-    toast({
-      title: "Transaction Cancelled",
-      description: `${selectedTransaction?.transactionId} has been cancelled`,
-    });
-    setCancelModalOpen(false);
-    setCancelReason("");
+  const handleUnfreeze = async () => {
+    if (!selectedEscrow) return;
+    try {
+      await unfreezeEscrow({
+        variables: {
+          escrowId: selectedEscrow.id,
+          disputeId: selectedEscrow.disputeId ?? "",
+        },
+      });
+      toast({
+        title: "Escrow Unfrozen",
+        description: `Escrow ${selectedEscrow.id} has been unfrozen.`,
+      });
+      setUnfreezeModalOpen(false);
+      refetch();
+    } catch (err: unknown) {
+      toast({
+        title: "Unfreeze Failed",
+        description: err instanceof Error ? err.message : "An error occurred",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleExport = () => {
@@ -266,16 +272,6 @@ export default function EscrowManagement() {
       description: "Your escrow transactions export is being prepared",
     });
   };
-
-  const filteredTransactions = mockTransactions.filter((transaction) => {
-    const matchesSearch =
-      transaction.transactionId.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      transaction.createdBy.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      transaction.recipient.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = statusFilter === "all" || transaction.status === statusFilter;
-    const matchesType = typeFilter === "all" || transaction.type === typeFilter;
-    return matchesSearch && matchesStatus && matchesType;
-  });
 
   return (
     <AdminLayout>
@@ -292,35 +288,28 @@ export default function EscrowManagement() {
             <div className="relative flex-1 min-w-[240px] max-w-md">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Transaction ID, user, vendor, association..."
+                placeholder="Escrow ID, payment intent, dispute ID..."
                 className="pl-10 bg-card border-border"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <Select
+              value={statusFilter}
+              onValueChange={(val) => {
+                setStatusFilter(val);
+                setPage(1);
+              }}
+            >
               <SelectTrigger className="w-[160px] bg-card border-border">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Statuses</SelectItem>
-                <SelectItem value="Pending Funding">Pending Funding</SelectItem>
-                <SelectItem value="Funded">Funded</SelectItem>
-                <SelectItem value="In Progress">In Progress</SelectItem>
-                <SelectItem value="Released">Released</SelectItem>
-                <SelectItem value="Disputed">Disputed</SelectItem>
-                <SelectItem value="Cancelled">Cancelled</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={typeFilter} onValueChange={setTypeFilter}>
-              <SelectTrigger className="w-[170px] bg-card border-border">
-                <SelectValue placeholder="Type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Types</SelectItem>
-                <SelectItem value="Project Payment">Project Payment</SelectItem>
-                <SelectItem value="Product Purchase">Product Purchase</SelectItem>
-                <SelectItem value="Service Payment">Service Payment</SelectItem>
+                <SelectItem value="HELD">Held</SelectItem>
+                <SelectItem value="RELEASED">Released</SelectItem>
+                <SelectItem value="FROZEN">Frozen</SelectItem>
+                <SelectItem value="REFUNDED">Refunded</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -337,38 +326,72 @@ export default function EscrowManagement() {
               <TableRow className="border-border hover:bg-transparent">
                 <TableHead className="w-12">
                   <Checkbox
-                    checked={selectedTransactions.length === mockTransactions.length}
+                    checked={filteredEscrows.length > 0 && selectedTransactions.length === filteredEscrows.length}
                     onCheckedChange={handleSelectAll}
                   />
                 </TableHead>
-                <TableHead>Transaction ID</TableHead>
-                <TableHead>Created By</TableHead>
-                <TableHead>Recipient</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Amount</TableHead>
+                <TableHead>Escrow ID</TableHead>
+                <TableHead>Payment Intent</TableHead>
+                <TableHead>Total Amount</TableHead>
+                <TableHead>Released</TableHead>
+                <TableHead>Remaining</TableHead>
+                <TableHead>Currency</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Created At</TableHead>
-                <TableHead>Last Updated</TableHead>
                 <TableHead className="w-12">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredTransactions.map((transaction) => (
-                <TableRow key={transaction.id} className="border-border">
+              {loading && (
+                <TableRow>
+                  <TableCell colSpan={10} className="text-center py-10 text-muted-foreground">
+                    Loading escrows...
+                  </TableCell>
+                </TableRow>
+              )}
+              {!loading && filteredEscrows.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={10} className="text-center py-10 text-muted-foreground">
+                    No escrow transactions found.
+                  </TableCell>
+                </TableRow>
+              )}
+              {!loading && filteredEscrows.map((escrow) => (
+                <TableRow key={escrow.id} className="border-border">
                   <TableCell>
                     <Checkbox
-                      checked={selectedTransactions.includes(transaction.id)}
-                      onCheckedChange={(checked) => handleSelectTransaction(transaction.id, checked as boolean)}
+                      checked={selectedTransactions.includes(escrow.id)}
+                      onCheckedChange={(checked) =>
+                        handleSelectTransaction(escrow.id, checked as boolean)
+                      }
                     />
                   </TableCell>
-                  <TableCell className="font-medium text-foreground">{transaction.transactionId}</TableCell>
-                  <TableCell className="text-muted-foreground">{transaction.createdBy}</TableCell>
-                  <TableCell className="text-muted-foreground">{transaction.recipient}</TableCell>
-                  <TableCell>{getTypeBadge(transaction.type)}</TableCell>
-                  <TableCell className="font-semibold text-foreground">{formatCurrency(transaction.amount)}</TableCell>
-                  <TableCell>{getStatusBadge(transaction.status)}</TableCell>
-                  <TableCell className="text-muted-foreground text-sm">{formatDate(transaction.createdAt)}</TableCell>
-                  <TableCell className="text-muted-foreground text-sm">{formatDate(transaction.lastUpdated)}</TableCell>
+                  <TableCell className="font-medium text-foreground font-mono text-xs">
+                    {escrow.id}
+                  </TableCell>
+                  <TableCell className="text-muted-foreground font-mono text-xs">
+                    {escrow.paymentIntentId ?? "—"}
+                  </TableCell>
+                  <TableCell className="font-semibold text-foreground">
+                    {formatCurrency(escrow.totalAmount, escrow.currency)}
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {escrow.releasedAmount != null
+                      ? formatCurrency(escrow.releasedAmount, escrow.currency)
+                      : "—"}
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {escrow.remainingAmount != null
+                      ? formatCurrency(escrow.remainingAmount, escrow.currency)
+                      : "—"}
+                  </TableCell>
+                  <TableCell className="text-muted-foreground uppercase text-xs">
+                    {escrow.currency ?? "USD"}
+                  </TableCell>
+                  <TableCell>{getStatusBadge(escrow.status)}</TableCell>
+                  <TableCell className="text-muted-foreground text-sm">
+                    {formatDate(escrow.createdAt)}
+                  </TableCell>
                   <TableCell>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -377,22 +400,22 @@ export default function EscrowManagement() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="bg-card border-border">
-                        <DropdownMenuItem onClick={() => openDetail(transaction)}>
-                          <Eye className="h-4 w-4 mr-2" /> View Transaction
+                        <DropdownMenuItem onClick={() => openDetail(escrow)}>
+                          <Eye className="h-4 w-4 mr-2" /> View Details
                         </DropdownMenuItem>
-                        {transaction.status !== "Released" && transaction.status !== "Cancelled" && (
-                          <DropdownMenuItem onClick={() => openReleaseModal(transaction)}>
-                            <CheckCircle className="h-4 w-4 mr-2" /> Release Funds
+                        {escrow.status !== "RELEASED" && escrow.status !== "REFUNDED" && (
+                          <DropdownMenuItem onClick={() => openReleaseModal(escrow)}>
+                            <CheckCircle className="h-4 w-4 mr-2" /> Force Release
                           </DropdownMenuItem>
                         )}
-                        {transaction.status !== "Disputed" && transaction.status !== "Cancelled" && (
-                          <DropdownMenuItem onClick={() => openDisputeModal(transaction)}>
-                            <AlertCircle className="h-4 w-4 mr-2" /> Raise Dispute
+                        {escrow.status === "HELD" && (
+                          <DropdownMenuItem onClick={() => openFreezeModal(escrow)}>
+                            <Lock className="h-4 w-4 mr-2" /> Freeze Escrow
                           </DropdownMenuItem>
                         )}
-                        {transaction.status !== "Released" && transaction.status !== "Cancelled" && (
-                          <DropdownMenuItem onClick={() => openCancelModal(transaction)} className="text-destructive">
-                            <XCircle className="h-4 w-4 mr-2" /> Cancel Transaction
+                        {escrow.status === "FROZEN" && (
+                          <DropdownMenuItem onClick={() => openUnfreezeModal(escrow)}>
+                            <Unlock className="h-4 w-4 mr-2" /> Unfreeze Escrow
                           </DropdownMenuItem>
                         )}
                       </DropdownMenuContent>
@@ -406,29 +429,49 @@ export default function EscrowManagement() {
           {/* Pagination */}
           <div className="flex items-center justify-between px-4 py-3 border-t border-border">
             <p className="text-sm text-muted-foreground">
-              Showing {filteredTransactions.length} of {mockTransactions.length} transactions
+              Showing {filteredEscrows.length} of {total} escrows
             </p>
             <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" disabled>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={page <= 1}
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+              >
                 <ChevronLeft className="h-4 w-4" />
               </Button>
-              <Button variant="outline" size="sm" className="bg-primary/10 border-primary/50">1</Button>
-              <Button variant="outline" size="sm">2</Button>
-              <Button variant="outline" size="sm">
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+                <Button
+                  key={p}
+                  variant="outline"
+                  size="sm"
+                  className={p === page ? "bg-primary/10 border-primary/50" : ""}
+                  onClick={() => setPage(p)}
+                >
+                  {p}
+                </Button>
+              ))}
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={page >= totalPages}
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              >
                 <ChevronRight className="h-4 w-4" />
               </Button>
             </div>
           </div>
         </div>
 
-        {/* Transaction Detail Sheet */}
+        {/* Escrow Detail Sheet */}
         <Sheet open={detailOpen} onOpenChange={setDetailOpen}>
           <SheetContent className="w-full sm:max-w-2xl bg-card border-border overflow-y-auto">
             <SheetHeader>
-              <SheetTitle className="text-foreground">{selectedTransaction?.transactionId}</SheetTitle>
+              <SheetTitle className="text-foreground font-mono text-sm">
+                {selectedEscrow?.id}
+              </SheetTitle>
               <div className="flex flex-wrap gap-2 pt-2">
-                {selectedTransaction && getTypeBadge(selectedTransaction.type)}
-                {selectedTransaction && getStatusBadge(selectedTransaction.status)}
+                {selectedEscrow && getStatusBadge(selectedEscrow.status)}
               </div>
             </SheetHeader>
 
@@ -442,48 +485,108 @@ export default function EscrowManagement() {
               <TabsContent value="overview" className="space-y-4 mt-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1">
-                    <Label className="text-muted-foreground text-xs">Transaction ID</Label>
-                    <p className="text-foreground font-medium">{selectedTransaction?.transactionId}</p>
+                    <Label className="text-muted-foreground text-xs">Escrow ID</Label>
+                    <p className="text-foreground font-medium font-mono text-xs break-all">
+                      {selectedEscrow?.id}
+                    </p>
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-muted-foreground text-xs">Amount</Label>
-                    <p className="text-foreground font-semibold">{selectedTransaction && formatCurrency(selectedTransaction.amount)}</p>
+                    <Label className="text-muted-foreground text-xs">Payment Intent ID</Label>
+                    <p className="text-foreground font-mono text-xs break-all">
+                      {selectedEscrow?.paymentIntentId ?? "—"}
+                    </p>
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-muted-foreground text-xs">Created By</Label>
-                    <p className="text-foreground">{selectedTransaction?.createdBy}</p>
+                    <Label className="text-muted-foreground text-xs">Total Amount</Label>
+                    <p className="text-foreground font-semibold">
+                      {selectedEscrow &&
+                        formatCurrency(selectedEscrow.totalAmount, selectedEscrow.currency)}
+                    </p>
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-muted-foreground text-xs">Recipient</Label>
-                    <p className="text-foreground">{selectedTransaction?.recipient}</p>
+                    <Label className="text-muted-foreground text-xs">Released Amount</Label>
+                    <p className="text-foreground">
+                      {selectedEscrow?.releasedAmount != null
+                        ? formatCurrency(selectedEscrow.releasedAmount, selectedEscrow.currency)
+                        : "—"}
+                    </p>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-muted-foreground text-xs">Remaining Amount</Label>
+                    <p className="text-foreground">
+                      {selectedEscrow?.remainingAmount != null
+                        ? formatCurrency(selectedEscrow.remainingAmount, selectedEscrow.currency)
+                        : "—"}
+                    </p>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-muted-foreground text-xs">Currency</Label>
+                    <p className="text-foreground uppercase">
+                      {selectedEscrow?.currency ?? "USD"}
+                    </p>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-muted-foreground text-xs">Release Mode</Label>
+                    <p className="text-foreground">{selectedEscrow?.releaseMode ?? "—"}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-muted-foreground text-xs">Dispute ID</Label>
+                    <p className="text-foreground font-mono text-xs">
+                      {selectedEscrow?.disputeId ?? "—"}
+                    </p>
                   </div>
                   <div className="space-y-1">
                     <Label className="text-muted-foreground text-xs">Created At</Label>
-                    <p className="text-muted-foreground text-sm">{selectedTransaction && formatDate(selectedTransaction.createdAt)}</p>
+                    <p className="text-muted-foreground text-sm">
+                      {selectedEscrow && formatDate(selectedEscrow.createdAt)}
+                    </p>
                   </div>
-                  <div className="space-y-1">
-                    <Label className="text-muted-foreground text-xs">Last Updated</Label>
-                    <p className="text-muted-foreground text-sm">{selectedTransaction && formatDate(selectedTransaction.lastUpdated)}</p>
-                  </div>
-                </div>
-                <div className="space-y-1 pt-4 border-t border-border">
-                  <Label className="text-muted-foreground text-xs">Description / Notes</Label>
-                  <p className="text-foreground">{selectedTransaction?.description || "No description provided"}</p>
+                  {selectedEscrow?.frozenAt && (
+                    <div className="space-y-1">
+                      <Label className="text-muted-foreground text-xs">Frozen At</Label>
+                      <p className="text-muted-foreground text-sm">
+                        {formatDate(selectedEscrow.frozenAt)}
+                      </p>
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex gap-2 pt-4">
-                  {selectedTransaction?.status !== "Released" && selectedTransaction?.status !== "Cancelled" && (
-                    <>
-                      <Button onClick={() => { setDetailOpen(false); openReleaseModal(selectedTransaction!); }} className="bg-emerald-600 hover:bg-emerald-700">
-                        <CheckCircle className="h-4 w-4 mr-2" /> Release Funds
+                  {selectedEscrow?.status !== "RELEASED" &&
+                    selectedEscrow?.status !== "REFUNDED" && (
+                      <Button
+                        onClick={() => {
+                          setDetailOpen(false);
+                          openReleaseModal(selectedEscrow!);
+                        }}
+                        className="bg-emerald-600 hover:bg-emerald-700"
+                      >
+                        <CheckCircle className="h-4 w-4 mr-2" /> Force Release
                       </Button>
-                      <Button variant="outline" onClick={() => { setDetailOpen(false); openDisputeModal(selectedTransaction!); }} className="border-yellow-500/50 text-yellow-400 hover:bg-yellow-500/10">
-                        <AlertCircle className="h-4 w-4 mr-2" /> Raise Dispute
-                      </Button>
-                      <Button variant="outline" onClick={() => { setDetailOpen(false); openCancelModal(selectedTransaction!); }} className="border-destructive/50 text-destructive hover:bg-destructive/10">
-                        <XCircle className="h-4 w-4 mr-2" /> Cancel
-                      </Button>
-                    </>
+                    )}
+                  {selectedEscrow?.status === "HELD" && (
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setDetailOpen(false);
+                        openFreezeModal(selectedEscrow!);
+                      }}
+                      className="border-yellow-500/50 text-yellow-400 hover:bg-yellow-500/10"
+                    >
+                      <Lock className="h-4 w-4 mr-2" /> Freeze
+                    </Button>
+                  )}
+                  {selectedEscrow?.status === "FROZEN" && (
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setDetailOpen(false);
+                        openUnfreezeModal(selectedEscrow!);
+                      }}
+                      className="border-cyan-500/50 text-cyan-400 hover:bg-cyan-500/10"
+                    >
+                      <Unlock className="h-4 w-4 mr-2" /> Unfreeze
+                    </Button>
                   )}
                 </div>
               </TabsContent>
@@ -509,10 +612,16 @@ export default function EscrowManagement() {
                       <TableBody>
                         {mockHistory.map((entry, index) => (
                           <TableRow key={index} className="border-border">
-                            <TableCell className="text-muted-foreground text-sm">{entry.timestamp}</TableCell>
+                            <TableCell className="text-muted-foreground text-sm">
+                              {entry.timestamp}
+                            </TableCell>
                             <TableCell className="text-foreground">{entry.action}</TableCell>
-                            <TableCell className="text-muted-foreground">{entry.performedBy}</TableCell>
-                            <TableCell className="text-muted-foreground text-sm">{entry.notes}</TableCell>
+                            <TableCell className="text-muted-foreground">
+                              {entry.performedBy}
+                            </TableCell>
+                            <TableCell className="text-muted-foreground text-sm">
+                              {entry.notes}
+                            </TableCell>
                           </TableRow>
                         ))}
                       </TableBody>
@@ -531,12 +640,17 @@ export default function EscrowManagement() {
                   </div>
                   <div className="space-y-2">
                     {mockAttachments.map((file, index) => (
-                      <div key={index} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg border border-border">
+                      <div
+                        key={index}
+                        className="flex items-center justify-between p-3 bg-muted/30 rounded-lg border border-border"
+                      >
                         <div className="flex items-center gap-3">
                           <FileText className="h-5 w-5 text-muted-foreground" />
                           <div>
                             <p className="text-foreground text-sm font-medium">{file.name}</p>
-                            <p className="text-muted-foreground text-xs">Uploaded by {file.uploadedBy} on {file.uploadedAt} • {file.size}</p>
+                            <p className="text-muted-foreground text-xs">
+                              Uploaded by {file.uploadedBy} on {file.uploadedAt} • {file.size}
+                            </p>
                           </div>
                         </div>
                         <Button variant="ghost" size="sm">
@@ -551,108 +665,122 @@ export default function EscrowManagement() {
           </SheetContent>
         </Sheet>
 
-        {/* Release Funds Modal */}
+        {/* Force Release Modal */}
         <Dialog open={releaseModalOpen} onOpenChange={setReleaseModalOpen}>
           <DialogContent className="bg-card border-border">
             <DialogHeader>
-              <DialogTitle>Release Escrow Funds</DialogTitle>
+              <DialogTitle>Force Release Escrow</DialogTitle>
               <DialogDescription>
-                Release funds for {selectedTransaction?.transactionId} to {selectedTransaction?.recipient}
+                Force-release funds for escrow{" "}
+                <span className="font-mono text-xs">{selectedEscrow?.id}</span>.
+                Total:{" "}
+                {selectedEscrow &&
+                  formatCurrency(selectedEscrow.totalAmount, selectedEscrow.currency)}
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-4">
               <div className="space-y-2">
-                <Label htmlFor="releaseAmount">Release Amount *</Label>
-                <Input
-                  id="releaseAmount"
-                  type="number"
-                  value={releaseAmount}
-                  onChange={(e) => setReleaseAmount(e.target.value)}
-                  placeholder="Enter amount"
-                  max={selectedTransaction?.amount}
-                />
-                <p className="text-xs text-muted-foreground">Max: {selectedTransaction && formatCurrency(selectedTransaction.amount)}</p>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="releaseNotes">Notes / Confirmation</Label>
+                <Label htmlFor="releaseNotes">Reason for Release *</Label>
                 <Textarea
                   id="releaseNotes"
                   value={releaseNotes}
                   onChange={(e) => setReleaseNotes(e.target.value)}
-                  placeholder="Add notes for this release..."
-                  rows={3}
-                />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setReleaseModalOpen(false)}>Cancel</Button>
-              <Button onClick={handleReleaseFunds} className="bg-emerald-600 hover:bg-emerald-700">Release Funds</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-
-        {/* Raise Dispute Modal */}
-        <Dialog open={disputeModalOpen} onOpenChange={setDisputeModalOpen}>
-          <DialogContent className="bg-card border-border">
-            <DialogHeader>
-              <DialogTitle>Raise Dispute</DialogTitle>
-              <DialogDescription>
-                Raise a dispute for {selectedTransaction?.transactionId}
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="disputeReason">Reason for Dispute *</Label>
-                <Textarea
-                  id="disputeReason"
-                  value={disputeReason}
-                  onChange={(e) => setDisputeReason(e.target.value)}
-                  placeholder="Describe the reason for this dispute..."
-                  rows={4}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Attachments</Label>
-                <div className="border-2 border-dashed border-border rounded-lg p-6 text-center">
-                  <Upload className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
-                  <p className="text-sm text-muted-foreground">Drag and drop files or click to upload</p>
-                  <p className="text-xs text-muted-foreground mt-1">Max 5 files</p>
-                </div>
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setDisputeModalOpen(false)}>Cancel</Button>
-              <Button onClick={handleRaiseDispute} variant="destructive" className="bg-yellow-600 hover:bg-yellow-700">Submit Dispute</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-
-        {/* Cancel Transaction Modal */}
-        <Dialog open={cancelModalOpen} onOpenChange={setCancelModalOpen}>
-          <DialogContent className="bg-card border-border">
-            <DialogHeader>
-              <DialogTitle>Cancel Escrow Transaction</DialogTitle>
-              <DialogDescription>
-                Are you sure you want to cancel {selectedTransaction?.transactionId}? Funds already released cannot be reversed.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="cancelReason">Reason *</Label>
-                <Textarea
-                  id="cancelReason"
-                  value={cancelReason}
-                  onChange={(e) => setCancelReason(e.target.value)}
-                  placeholder="Provide reason for cancellation..."
+                  placeholder="Provide the reason for force-releasing these funds..."
                   rows={3}
                   required
                 />
               </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setCancelModalOpen(false)}>Cancel</Button>
-              <Button onClick={handleCancelTransaction} variant="destructive">Cancel Transaction</Button>
+              <Button variant="outline" onClick={() => setReleaseModalOpen(false)}>
+                Cancel
+              </Button>
+              <Button
+                onClick={handleForceRelease}
+                disabled={!releaseNotes.trim() || releasing}
+                className="bg-emerald-600 hover:bg-emerald-700"
+              >
+                {releasing ? "Releasing..." : "Force Release"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Freeze Escrow Modal */}
+        <Dialog open={freezeModalOpen} onOpenChange={setFreezeModalOpen}>
+          <DialogContent className="bg-card border-border">
+            <DialogHeader>
+              <DialogTitle>Freeze Escrow</DialogTitle>
+              <DialogDescription>
+                Freeze escrow{" "}
+                <span className="font-mono text-xs">{selectedEscrow?.id}</span>.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="freezeDisputeId">Dispute ID *</Label>
+                <Input
+                  id="freezeDisputeId"
+                  value={freezeDisputeId}
+                  onChange={(e) => setFreezeDisputeId(e.target.value)}
+                  placeholder="Enter the associated dispute ID"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="freezeReason">Reason *</Label>
+                <Textarea
+                  id="freezeReason"
+                  value={freezeReason}
+                  onChange={(e) => setFreezeReason(e.target.value)}
+                  placeholder="Describe the reason for freezing this escrow..."
+                  rows={3}
+                  required
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setFreezeModalOpen(false)}>
+                Cancel
+              </Button>
+              <Button
+                onClick={handleFreeze}
+                disabled={!freezeReason.trim() || !freezeDisputeId.trim() || freezing}
+                className="bg-yellow-600 hover:bg-yellow-700"
+              >
+                {freezing ? "Freezing..." : "Freeze Escrow"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Unfreeze Escrow Modal */}
+        <Dialog open={unfreezeModalOpen} onOpenChange={setUnfreezeModalOpen}>
+          <DialogContent className="bg-card border-border">
+            <DialogHeader>
+              <DialogTitle>Unfreeze Escrow</DialogTitle>
+              <DialogDescription>
+                Are you sure you want to unfreeze escrow{" "}
+                <span className="font-mono text-xs">{selectedEscrow?.id}</span>?{" "}
+                {selectedEscrow?.disputeId && (
+                  <>
+                    Linked dispute:{" "}
+                    <span className="font-mono text-xs">{selectedEscrow.disputeId}</span>
+                  </>
+                )}
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setUnfreezeModalOpen(false)}>
+                Cancel
+              </Button>
+              <Button
+                onClick={handleUnfreeze}
+                disabled={unfreezing}
+                className="bg-cyan-600 hover:bg-cyan-700"
+              >
+                {unfreezing ? "Unfreezing..." : "Unfreeze Escrow"}
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>

@@ -293,6 +293,72 @@ export function useAdminClient() {
 }
 
 export {
+  useGetDashboardStats,
+  useGetSystemHealth,
+  useGetPlatformAnalytics,
+  useAdminListDisputes,
+  useAdminListEscrows,
+  useAdminFreezeEscrow,
+  useAdminUnfreezeEscrow,
+  useAdminForceReleaseEscrow,
+  useAdminResolveDispute,
+  type DashboardStats,
+  type SystemHealth,
+  type PlatformAnalytics,
+  type AdminDispute,
+  type AdminEscrow,
+} from "./useDashboard";
+
+export {
+  useGetPlatformSettings,
+  useSetPlatformSetting,
+  type PlatformSetting,
+} from "./usePlatformSettings";
+
+export {
+  useGetBroadcastCampaigns,
+  useSendBroadcast,
+  type BroadcastCampaign,
+} from "./useBroadcast";
+
+export {
+  useGetSupportTickets,
+  useGetSupportTicket,
+  useCreateSupportTicket,
+  useUpdateSupportTicket,
+  useReplyToSupportTicket,
+  type SupportTicket,
+  type TicketMessage,
+} from "./useSupportTickets";
+
+export {
+  useGetFlaggedConversations,
+  useGetChatSettings,
+  useFlagConversation,
+  useReviewConversation,
+  useUpdateChatSetting,
+  type FlaggedConversation,
+  type ChatSetting,
+} from "./useChatManagement";
+
+export {
+  useCreateAdmin,
+  useGetAdminById,
+  useListAdmins,
+  useUpdateAdminStatus,
+  useAssignAdminRole as useAssignAdminRoleMutation,
+  useRevokeAdminRole as useRevokeAdminRoleMutation,
+  useAdminBanUser,
+  useAdminUnbanUser,
+  useAdminBanVendor,
+  useAdminRemoveContent,
+  useBulkBanUsers,
+  useBulkRemoveContent,
+  useGetRoleDefinitions,
+  useCreateRoleDefinition,
+} from "./useAdminAccounts";
+
+export {
   useUpdateCommunity,
   useUpdateCommunityVisibility,
   useUpdateCommunityJoinPolicy,

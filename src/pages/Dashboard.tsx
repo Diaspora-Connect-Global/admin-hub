@@ -5,7 +5,6 @@ import {
   Users,
   Layers,
   Briefcase,
-  MessageCircle,
   ShoppingCart,
   Wallet,
   AlertTriangle,
@@ -51,59 +50,13 @@ import {
   Legend,
 } from "recharts";
 import { useToast } from "@/hooks/use-toast";
-
-// Mock data for charts
-const userActivityData = [
-  { date: "Jan 1", newUsers: 120, activeUsers: 1850 },
-  { date: "Jan 5", newUsers: 145, activeUsers: 1920 },
-  { date: "Jan 10", newUsers: 132, activeUsers: 1980 },
-  { date: "Jan 15", newUsers: 178, activeUsers: 2100 },
-  { date: "Jan 20", newUsers: 165, activeUsers: 2250 },
-  { date: "Jan 25", newUsers: 198, activeUsers: 2380 },
-  { date: "Jan 30", newUsers: 210, activeUsers: 2520 },
-];
-
-const postsReactionsData = [
-  { date: "Jan 1", posts: 45, reactions: 380 },
-  { date: "Jan 5", posts: 52, reactions: 420 },
-  { date: "Jan 10", posts: 48, reactions: 390 },
-  { date: "Jan 15", posts: 65, reactions: 520 },
-  { date: "Jan 20", posts: 72, reactions: 580 },
-  { date: "Jan 25", posts: 68, reactions: 610 },
-  { date: "Jan 30", posts: 85, reactions: 720 },
-];
-
-const chatActivityData = [
-  { date: "Jan 1", dm: 1200, group: 450 },
-  { date: "Jan 5", dm: 1350, group: 520 },
-  { date: "Jan 10", dm: 1280, group: 480 },
-  { date: "Jan 15", dm: 1520, group: 610 },
-  { date: "Jan 20", dm: 1680, group: 720 },
-  { date: "Jan 25", dm: 1590, group: 680 },
-  { date: "Jan 30", dm: 1850, group: 790 },
-];
-
-const systemHealthData = [
-  { name: "Healthy", value: 85, color: "hsl(142, 72%, 42%)" },
-  { name: "Warning", value: 10, color: "hsl(38, 92%, 50%)" },
-  { name: "Critical", value: 5, color: "hsl(0, 72%, 51%)" },
-];
-
-const recentEscrowTransactions = [
-  { id: "ESC-2024-001", createdBy: "John Doe", recipient: "ABC Contractors", amount: 15000, status: "Funded", createdAt: "2024-01-15" },
-  { id: "ESC-2024-002", createdBy: "Jane Smith", recipient: "XYZ Supplies", amount: 3500, status: "In Progress", createdAt: "2024-01-14" },
-  { id: "ESC-2024-003", createdBy: "Mike Johnson", recipient: "Green Gardens LLC", amount: 8000, status: "Disputed", createdAt: "2024-01-10" },
-  { id: "ESC-2024-004", createdBy: "Sarah Williams", recipient: "Tech Solutions", amount: 12000, status: "Released", createdAt: "2024-01-08" },
-  { id: "ESC-2024-005", createdBy: "Tom Brown", recipient: "Security First", amount: 25000, status: "Pending Funding", createdAt: "2024-01-18" },
-];
-
-const recentDisputes = [
-  { id: "DSP-001", type: "Escrow", status: "Open", priority: "High", createdBy: "Mike Johnson", assignedAdmin: "Admin User", createdAt: "2024-01-17" },
-  { id: "DSP-002", type: "Content", status: "In Review", priority: "Medium", createdBy: "Lisa Chen", assignedAdmin: "Support Admin", createdAt: "2024-01-16" },
-  { id: "DSP-003", type: "Vendor Issue", status: "Escalated", priority: "Critical", createdBy: "David Park", assignedAdmin: "System Admin", createdAt: "2024-01-15" },
-  { id: "DSP-004", type: "Transaction", status: "Resolved", priority: "Low", createdBy: "Emma White", assignedAdmin: "Admin User", createdAt: "2024-01-12" },
-  { id: "DSP-005", type: "Community Issue", status: "Open", priority: "Medium", createdBy: "James Lee", assignedAdmin: "Unassigned", createdAt: "2024-01-18" },
-];
+import {
+  useGetDashboardStats,
+  useGetSystemHealth,
+  useGetPlatformAnalytics,
+  useAdminListDisputes,
+  useAdminListEscrows,
+} from "@/hooks/admin";
 
 interface MetricCardProps {
   title: string;
@@ -148,7 +101,49 @@ export default function Dashboard() {
   const [dateRange, setDateRange] = useState("30");
   const [searchQuery, setSearchQuery] = useState("");
 
+  const { data: statsData, refetch: refetchStats } = useGetDashboardStats();
+  const { data: healthData, refetch: refetchHealth } = useGetSystemHealth();
+  const { data: analyticsData, refetch: refetchAnalytics } = useGetPlatformAnalytics(
+    dateRange === "7" ? "last_7_days" : dateRange === "90" ? "last_90_days" : "last_30_days"
+  );
+  const { data: escrowData } = useAdminListEscrows({ limit: 5 });
+  const { data: disputesData } = useAdminListDisputes({ limit: 5 });
+
+  const stats = statsData?.getDashboardStats;
+  const health = healthData?.getSystemHealth;
+  const analytics = analyticsData?.getPlatformAnalytics;
+  const recentEscrows = escrowData?.adminListEscrows?.escrows ?? [];
+  const recentDisputes = disputesData?.adminListDisputes?.disputes ?? [];
+
+  const systemHealthChartData = health
+    ? [
+        {
+          name: "Healthy",
+          value: health.services.filter((s) => s.status === "healthy").length,
+          color: "hsl(142, 72%, 42%)",
+        },
+        {
+          name: "Down",
+          value: health.services.filter((s) => s.status === "down").length,
+          color: "hsl(0, 72%, 51%)",
+        },
+      ].filter((d) => d.value > 0)
+    : [{ name: "Healthy", value: 1, color: "hsl(142, 72%, 42%)" }];
+
+  const registrationsChartData = analytics?.registrationsByDay?.map((p) => ({
+    date: p.date,
+    newUsers: p.value,
+  })) ?? [];
+
+  const ordersChartData = analytics?.ordersByDay?.map((p) => ({
+    date: p.date,
+    orders: p.value,
+  })) ?? [];
+
   const handleRefresh = () => {
+    refetchStats();
+    refetchHealth();
+    refetchAnalytics();
     toast({
       title: "Dashboard Refreshed",
       description: "All metrics have been updated.",
@@ -227,57 +222,55 @@ export default function Dashboard() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8 gap-4">
           <MetricCard
             title={t('dashboard.totalUsers')}
-            value="12,847"
-            trend={{ label: "New Users", value: "+8.5%", direction: "up" }}
+            value={stats?.totalUsers?.toLocaleString() ?? "—"}
+            trend={{ label: "Active Users", value: stats?.activeUsers?.toLocaleString() ?? "—", direction: "up" }}
             icon={<Users className="w-5 h-5" />}
             onClick={() => navigate("/users")}
           />
           <MetricCard
             title={t('nav.communities')}
-            value="48"
-            trend={{ label: "New Communities", value: "+12.3%", direction: "up" }}
+            value={stats?.totalCommunities?.toLocaleString() ?? "—"}
+            trend={{ label: "Moderation Cases", value: stats?.activeModerationCases?.toLocaleString() ?? "—", direction: "neutral" }}
             icon={<Layers className="w-5 h-5" />}
             onClick={() => navigate("/communities")}
           />
           <MetricCard
             title={t('nav.associations')}
-            value="156"
-            trend={{ label: "New Associations", value: "+5.7%", direction: "up" }}
+            value="—"
             icon={<Briefcase className="w-5 h-5" />}
             onClick={() => navigate("/associations")}
           />
           <MetricCard
-            title="Posts & Engagement"
-            value="2,340"
-            trend={{ label: "Reactions (Likes, Comments)", value: "15.2K", direction: "neutral" }}
-            icon={<MessageCircle className="w-5 h-5" />}
+            title="Moderation Cases"
+            value={stats?.activeModerationCases?.toLocaleString() ?? "—"}
+            trend={{ label: "Pending Ban Appeals", value: stats?.pendingBanAppeals?.toLocaleString() ?? "—", direction: "neutral" }}
+            icon={<MessageSquare className="w-5 h-5" />}
             onClick={() => navigate("/moderation")}
           />
           <MetricCard
-            title={t('dashboard.activeChats')}
-            value="3,421"
-            trend={{ label: "DM + Groups", value: "+12.8%", direction: "up" }}
-            icon={<MessageSquare className="w-5 h-5" />}
-            onClick={() => navigate("/chats")}
-          />
-          <MetricCard
-            title={t('nav.vendors')}
-            value="89"
-            trend={{ label: "New Registrations", value: "+18.2%", direction: "up" }}
+            title="Total Orders"
+            value={stats?.totalOrders?.toLocaleString() ?? "—"}
+            trend={{ label: "Pending", value: stats?.pendingOrders?.toLocaleString() ?? "—", direction: "neutral" }}
             icon={<ShoppingCart className="w-5 h-5" />}
             onClick={() => navigate("/vendors")}
           />
           <MetricCard
-            title={t('dashboard.escrowBalance')}
-            value="$2.4M"
-            trend={{ label: "Active Escrow", value: "$580K", direction: "up" }}
+            title={t('nav.vendors')}
+            value={stats?.totalVendors?.toLocaleString() ?? "—"}
+            trend={{ label: "Active", value: stats?.activeVendors?.toLocaleString() ?? "—", direction: "up" }}
+            icon={<ShoppingCart className="w-5 h-5" />}
+            onClick={() => navigate("/vendors")}
+          />
+          <MetricCard
+            title="Pending Escrows"
+            value={stats?.pendingEscrows?.toLocaleString() ?? "—"}
             icon={<Wallet className="w-5 h-5" />}
             onClick={() => navigate("/escrow")}
           />
           <MetricCard
             title={t('dashboard.activeDisputes')}
-            value="23"
-            trend={{ label: "Open / In-Review", value: "12", direction: "down" }}
+            value={stats?.openDisputes?.toLocaleString() ?? "—"}
+            trend={{ label: "Open Disputes", value: stats?.openDisputes?.toLocaleString() ?? "—", direction: "down" }}
             icon={<AlertTriangle className="w-5 h-5" />}
             onClick={() => navigate("/disputes")}
           />
@@ -285,13 +278,13 @@ export default function Dashboard() {
 
         {/* Charts Row */}
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* Chat Activity Trend */}
+          {/* New Registrations Trend */}
           <div className="glass rounded-xl p-5 lg:col-span-1">
-            <h3 className="font-semibold text-foreground mb-1">Chat Activity</h3>
-            <p className="text-sm text-muted-foreground mb-4">DM vs Group Messages</p>
+            <h3 className="font-semibold text-foreground mb-1">New Registrations</h3>
+            <p className="text-sm text-muted-foreground mb-4">Daily user sign-ups</p>
             <div className="h-[220px]">
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={chatActivityData}>
+                <LineChart data={registrationsChartData}>
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(222, 30%, 18%)" />
                   <XAxis dataKey="date" tick={{ fill: "hsl(215, 20%, 55%)", fontSize: 11 }} />
                   <YAxis tick={{ fill: "hsl(215, 20%, 55%)", fontSize: 11 }} />
@@ -302,20 +295,19 @@ export default function Dashboard() {
                       borderRadius: "8px",
                     }}
                   />
-                  <Line type="monotone" dataKey="dm" stroke="hsl(262, 83%, 58%)" strokeWidth={2} dot={false} name="Direct Messages" />
-                  <Line type="monotone" dataKey="group" stroke="hsl(38, 92%, 50%)" strokeWidth={2} dot={false} name="Group Chats" />
+                  <Line type="monotone" dataKey="newUsers" stroke="hsl(174, 72%, 46%)" strokeWidth={2} dot={false} name="New Users" />
                 </LineChart>
               </ResponsiveContainer>
             </div>
           </div>
 
-          {/* User Activity Trend */}
+          {/* Orders Trend */}
           <div className="glass rounded-xl p-5 lg:col-span-1">
-            <h3 className="font-semibold text-foreground mb-1">User Activity Trend</h3>
-            <p className="text-sm text-muted-foreground mb-4">New vs Active Users</p>
+            <h3 className="font-semibold text-foreground mb-1">Orders Trend</h3>
+            <p className="text-sm text-muted-foreground mb-4">Daily order activity</p>
             <div className="h-[220px]">
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={userActivityData}>
+                <LineChart data={ordersChartData}>
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(222, 30%, 18%)" />
                   <XAxis dataKey="date" tick={{ fill: "hsl(215, 20%, 55%)", fontSize: 11 }} />
                   <YAxis tick={{ fill: "hsl(215, 20%, 55%)", fontSize: 11 }} />
@@ -326,46 +318,47 @@ export default function Dashboard() {
                       borderRadius: "8px",
                     }}
                   />
-                  <Line type="monotone" dataKey="newUsers" stroke="hsl(174, 72%, 46%)" strokeWidth={2} dot={false} />
-                  <Line type="monotone" dataKey="activeUsers" stroke="hsl(142, 72%, 42%)" strokeWidth={2} dot={false} />
+                  <Line type="monotone" dataKey="orders" stroke="hsl(262, 83%, 58%)" strokeWidth={2} dot={false} name="Orders" />
                 </LineChart>
               </ResponsiveContainer>
             </div>
           </div>
 
-          {/* Posts & Reactions Trend */}
+          {/* Analytics Summary */}
           <div className="glass rounded-xl p-5 lg:col-span-1">
-            <h3 className="font-semibold text-foreground mb-1">Posts & Reactions Trend</h3>
-            <p className="text-sm text-muted-foreground mb-4">Daily engagement metrics</p>
-            <div className="h-[220px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={postsReactionsData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(222, 30%, 18%)" />
-                  <XAxis dataKey="date" tick={{ fill: "hsl(215, 20%, 55%)", fontSize: 11 }} />
-                  <YAxis tick={{ fill: "hsl(215, 20%, 55%)", fontSize: 11 }} />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: "hsl(222, 47%, 10%)",
-                      border: "1px solid hsl(222, 30%, 18%)",
-                      borderRadius: "8px",
-                    }}
-                  />
-                  <Line type="monotone" dataKey="posts" stroke="hsl(262, 83%, 58%)" strokeWidth={2} dot={false} />
-                  <Line type="monotone" dataKey="reactions" stroke="hsl(38, 92%, 50%)" strokeWidth={2} dot={false} />
-                </LineChart>
-              </ResponsiveContainer>
+            <h3 className="font-semibold text-foreground mb-1">Enforcement Summary</h3>
+            <p className="text-sm text-muted-foreground mb-4">Period: {analytics?.period ?? "—"}</p>
+            <div className="space-y-4 mt-6">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Content Removed</span>
+                <span className="text-lg font-bold text-foreground">{analytics?.contentRemovedCount?.toLocaleString() ?? "—"}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Users Banned</span>
+                <span className="text-lg font-bold text-foreground">{analytics?.usersBanned?.toLocaleString() ?? "—"}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Generated At</span>
+                <span className="text-xs text-muted-foreground">
+                  {analytics?.generatedAt ? new Date(analytics.generatedAt).toLocaleTimeString() : "—"}
+                </span>
+              </div>
             </div>
           </div>
 
           {/* System Health Overview */}
           <div className="glass rounded-xl p-5 lg:col-span-1">
-            <h3 className="font-semibold text-foreground mb-1">System Health Overview</h3>
-            <p className="text-sm text-muted-foreground mb-4">Service status distribution</p>
-            <div className="h-[220px]">
+            <h3 className="font-semibold text-foreground mb-1">System Health</h3>
+            <p className="text-sm text-muted-foreground mb-1">
+              Status: <span className={health?.overallStatus === "healthy" ? "text-emerald-400" : "text-red-400"}>
+                {health?.overallStatus ?? "—"}
+              </span>
+            </p>
+            <div className="h-[180px]">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
-                    data={systemHealthData}
+                    data={systemHealthChartData}
                     cx="50%"
                     cy="50%"
                     innerRadius={50}
@@ -373,7 +366,7 @@ export default function Dashboard() {
                     paddingAngle={2}
                     dataKey="value"
                   >
-                    {systemHealthData.map((entry, index) => (
+                    {systemHealthChartData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
                   </Pie>
@@ -383,7 +376,7 @@ export default function Dashboard() {
                       border: "1px solid hsl(222, 30%, 18%)",
                       borderRadius: "8px",
                     }}
-                    formatter={(value) => [`${value}%`, ""]}
+                    formatter={(value) => [`${value} services`, ""]}
                   />
                   <Legend
                     verticalAlign="bottom"
@@ -400,12 +393,12 @@ export default function Dashboard() {
 
         {/* Tables Row */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Recent Escrow Transactions */}
+          {/* Recent Escrows */}
           <div className="glass rounded-xl p-5">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h3 className="font-semibold text-foreground">Recent Escrow Transactions</h3>
-                <p className="text-sm text-muted-foreground">Latest transactions on the platform</p>
+                <h3 className="font-semibold text-foreground">Recent Escrows</h3>
+                <p className="text-sm text-muted-foreground">Latest escrow transactions on the platform</p>
               </div>
               <Button variant="outline" size="sm" onClick={() => navigate("/escrow")}>
                 View All
@@ -415,20 +408,24 @@ export default function Dashboard() {
               <Table>
                 <TableHeader>
                   <TableRow className="border-border hover:bg-transparent">
-                    <TableHead>Transaction ID</TableHead>
-                    <TableHead>Created By</TableHead>
+                    <TableHead>Escrow ID</TableHead>
                     <TableHead>Amount</TableHead>
+                    <TableHead>Currency</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="w-10"></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {recentEscrowTransactions.slice(0, 5).map((tx) => (
-                    <TableRow key={tx.id} className="border-border">
-                      <TableCell className="font-medium text-foreground">{tx.id}</TableCell>
-                      <TableCell className="text-muted-foreground">{tx.createdBy}</TableCell>
-                      <TableCell className="font-semibold text-foreground">{formatCurrency(tx.amount)}</TableCell>
-                      <TableCell>{getStatusBadge(tx.status)}</TableCell>
+                  {recentEscrows.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center text-muted-foreground py-6">No escrow data</TableCell>
+                    </TableRow>
+                  ) : recentEscrows.map((escrow) => (
+                    <TableRow key={escrow.id} className="border-border">
+                      <TableCell className="font-medium text-foreground font-mono text-xs">{escrow.id.slice(0, 12)}…</TableCell>
+                      <TableCell className="font-semibold text-foreground">{formatCurrency(escrow.totalAmount)}</TableCell>
+                      <TableCell className="text-muted-foreground">{escrow.currency ?? "USD"}</TableCell>
+                      <TableCell>{getStatusBadge(escrow.status)}</TableCell>
                       <TableCell>
                         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => navigate("/escrow")}>
                           <Eye className="h-4 w-4" />
@@ -457,19 +454,25 @@ export default function Dashboard() {
                 <TableHeader>
                   <TableRow className="border-border hover:bg-transparent">
                     <TableHead>Dispute ID</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Priority</TableHead>
                     <TableHead>Status</TableHead>
+                    <TableHead>Raised By</TableHead>
+                    <TableHead>Created</TableHead>
                     <TableHead className="w-10"></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {recentDisputes.slice(0, 5).map((dispute) => (
+                  {recentDisputes.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center text-muted-foreground py-6">No disputes</TableCell>
+                    </TableRow>
+                  ) : recentDisputes.map((dispute) => (
                     <TableRow key={dispute.id} className="border-border">
-                      <TableCell className="font-medium text-foreground">{dispute.id}</TableCell>
-                      <TableCell className="text-muted-foreground">{dispute.type}</TableCell>
-                      <TableCell>{getPriorityBadge(dispute.priority)}</TableCell>
+                      <TableCell className="font-medium text-foreground font-mono text-xs">{dispute.id.slice(0, 12)}…</TableCell>
                       <TableCell>{getStatusBadge(dispute.status)}</TableCell>
+                      <TableCell className="text-muted-foreground">{dispute.raisedBy ?? "—"}</TableCell>
+                      <TableCell className="text-muted-foreground text-xs">
+                        {new Date(dispute.createdAt).toLocaleDateString()}
+                      </TableCell>
                       <TableCell>
                         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => navigate("/disputes")}>
                           <Eye className="h-4 w-4" />

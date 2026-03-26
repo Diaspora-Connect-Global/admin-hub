@@ -7,6 +7,7 @@ import {
   ASSIGN_ADMIN_ROLE_MUTATION,
   REVOKE_ADMIN_ROLE_MUTATION,
   ADMIN_BAN_USER,
+  ADMIN_UNBAN_USER,
   ADMIN_BAN_VENDOR,
   ADMIN_REMOVE_CONTENT,
   ADMIN_FORCE_RELEASE_ESCROW,
@@ -98,6 +99,13 @@ export function useAdminBanUser() {
     { adminBanUser: { success: boolean; error?: string } },
     { userId: string; reason: string; permanent?: boolean }
   >(ADMIN_BAN_USER);
+}
+
+export function useAdminUnbanUser() {
+  return useMutation<
+    { adminUnbanUser: { success: boolean; message?: string } },
+    { userId: string; reason?: string }
+  >(ADMIN_UNBAN_USER);
 }
 
 export function useAdminBanVendor() {
