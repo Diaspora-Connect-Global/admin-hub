@@ -1,4 +1,4 @@
-import { useState, useEffect, useId, useCallback } from "react";
+import { useState, useEffect, useId, useCallback, useRef } from "react";
 import { format } from "date-fns";
 import { Event, EventFormData, EventType } from "@/types/events";
 import {
@@ -28,9 +28,34 @@ import { EVENT_BANNER_MAX_BYTES } from "@/lib/eventBannerUpload";
 import { useT } from "@/hooks/useT";
 import { toast } from "@/hooks/use-toast";
 
+const EMPTY_EVENT_FORM: EventFormData = {
+  title: "",
+  description: "",
+  bannerImage: null,
+  date: undefined,
+  startTime: "",
+  endTime: "",
+  eventType: "in-person",
+  venue: "",
+  address: "",
+  city: "",
+  country: "",
+  virtualLink: "",
+  isPaid: false,
+  ticketPrice: 0,
+  currency: "USD",
+  hasParticipantLimit: false,
+  maxParticipants: 100,
+  publishNow: false,
+  notifyMembers: true,
+  allowComments: true,
+};
+
 interface CreateEditEventModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** True when creating a new event (not editing). Used to reset form each time the create dialog opens. */
+  isCreatingNew: boolean;
   event?: Event | null;
   onSubmit: (data: EventFormData) => void | Promise<void>;
 }
@@ -38,44 +63,42 @@ interface CreateEditEventModalProps {
 export function CreateEditEventModal({
   open,
   onOpenChange,
+  isCreatingNew,
   event,
   onSubmit,
 }: CreateEditEventModalProps) {
   const t = useT("events");
   const [currentStep, setCurrentStep] = useState(1);
-  const defaultForm: EventFormData = {
-    title: "",
-    description: "",
-    bannerImage: null,
-    date: undefined,
-    startTime: "",
-    endTime: "",
-    eventType: "in-person",
-    venue: "",
-    address: "",
-    city: "",
-    country: "",
-    virtualLink: "",
-    isPaid: false,
-    ticketPrice: 0,
-    currency: "USD",
-    hasParticipantLimit: false,
-    maxParticipants: 100,
-    publishNow: false,
-    notifyMembers: true,
-    allowComments: true,
-  };
-  const [formData, setFormData] = useState<EventFormData>(defaultForm);
+  const [formData, setFormData] = useState<EventFormData>(EMPTY_EVENT_FORM);
+  const prevOpenRef = useRef(false);
 
   useEffect(() => {
-    if (!event) {
-      setFormData(defaultForm);
+    if (!open) {
+      prevOpenRef.current = false;
       return;
     }
+
+    const justOpened = !prevOpenRef.current;
+    prevOpenRef.current = true;
+
+    if (isCreatingNew && justOpened) {
+      setFormData(EMPTY_EVENT_FORM);
+      setCurrentStep(1);
+      return;
+    }
+
+    if (isCreatingNew) {
+      return;
+    }
+
+    if (!event) {
+      return;
+    }
+
     const eventType: EventType =
       event.locationType === "PHYSICAL" ? "in-person" : event.locationType === "VIRTUAL" ? "virtual" : "hybrid";
     setFormData({
-      ...defaultForm,
+      ...EMPTY_EVENT_FORM,
       title: event.title,
       description: event.description,
       date: event.startAt ? new Date(event.startAt) : undefined,
@@ -92,7 +115,7 @@ export function CreateEditEventModal({
       hasParticipantLimit: event.availableSpots != null && event.availableSpots > 0,
       maxParticipants: event.availableSpots ?? 100,
     });
-  }, [event?.id]);
+  }, [open, isCreatingNew, event?.id]);
 
   const steps = [
     { id: 1, title: t.basicInformation },
@@ -502,6 +525,11 @@ export function CreateEditEventModal({
                   <p className="text-sm text-muted-foreground">
                     {t.setMaxAttendees}
                   </p>
+                  {!formData.isPaid && (
+                    <p className="text-sm text-amber-600 dark:text-amber-500 mt-1">
+                      {t.limitRequiresPaid}
+                    </p>
+                  )}
                 </div>
                 <Switch
                   checked={formData.hasParticipantLimit}

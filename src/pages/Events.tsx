@@ -223,6 +223,16 @@ export default function Events() {
       }
     }
 
+    if (data.hasParticipantLimit === true && data.isPaid !== true) {
+      toast({
+        title: "Participant limit needs a paid event",
+        description:
+          "The API only accepts a capacity for paid events. Turn on “Paid event” (and set a ticket price), or turn off “Limit participants”.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     const locationType =
       data.eventType === "in-person" ? "physical" : data.eventType === "virtual" ? "virtual" : "hybrid";
     const locationDetails = buildEventLocationPayload(data);
@@ -444,6 +454,7 @@ export default function Events() {
       {/* Modals & Drawers */}
       <CreateEditEventModal
         open={createModalOpen}
+        isCreatingNew={!editingEventId}
         onOpenChange={(open) => {
           setCreateModalOpen(open);
           if (!open) setEditingEventId(null);
