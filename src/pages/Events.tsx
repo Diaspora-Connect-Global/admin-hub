@@ -14,6 +14,9 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CalendarPlus, Search, Calendar, BarChart3 } from "lucide-react";
 import { Event, EventFormData } from "@/types/events";
+import { buildEventLocationPayload, requiresPhysicalLocation } from "@/lib/eventLocationPayload";
+import { buildEventCapacityPayload } from "@/lib/eventCapacityPayload";
+import { DEFAULT_EVENT_VISIBILITY, resolveEventTimezone } from "@/lib/eventSchedulePayload";
 import { EventCard } from "@/components/events/EventCard";
 import { CreateEditEventModal } from "@/components/events/CreateEditEventModal";
 import { EventDetailsModal } from "@/components/events/EventDetailsModal";
@@ -28,7 +31,10 @@ import {
   useUpdateEvent,
   useDeleteEvent,
   usePublishEvent,
+  useUnpublishEvent,
+  useGetUploadUrl,
 } from "@/hooks/events";
+import { uploadEventBannerToStorage } from "@/lib/eventBannerUpload";
 import { getUserId } from "@/stores/session";
 import { useSessionStore } from "@/stores/sessionStore";
 
@@ -59,8 +65,10 @@ export default function Events() {
 
   const [createEvent] = useCreateEvent();
   const [updateEvent] = useUpdateEvent();
+  const [fetchUploadUrl] = useGetUploadUrl();
   const [deleteEvent] = useDeleteEvent();
   const [publishEvent] = usePublishEvent();
+  const [unpublishEvent] = useUnpublishEvent();
 
   const adminProfile = useSessionStore((state) => state.adminProfile);
   const adminRoleName = adminProfile?.role?.name ?? "UNKNOWN_ROLE";
@@ -201,13 +209,35 @@ export default function Events() {
     const endAt = data.date && data.endTime
       ? new Date(`${data.date.toISOString().slice(0, 10)}T${data.endTime}`).toISOString()
       : new Date().toISOString();
-    const locationType = data.eventType === "in-person" ? "physical" : data.eventType === "virtual" ? "virtual" : "hybrid";
-    const locationDetails = data.eventType === "virtual"
-      ? { type: locationType, virtualLink: data.virtualLink || undefined, platform: "Zoom" }
-      : { type: locationType, address: data.location, venue: data.location };
+
+    if (requiresPhysicalLocation(data.eventType)) {
+      const missing =
+        !data.venue.trim() || !data.address.trim() || !data.city.trim() || !data.country.trim();
+      if (missing) {
+        toast({
+          title: "Location required",
+          description: "Physical events require venue, address, city, and country.",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+
+    const locationType =
+      data.eventType === "in-person" ? "physical" : data.eventType === "virtual" ? "virtual" : "hybrid";
+    const locationDetails = buildEventLocationPayload(data);
+    const capacityPayload = buildEventCapacityPayload(data);
+    const timezone = resolveEventTimezone(data.eventType);
+    const ownerType = data.ownerType === "COMMUNITY" ? "COMMUNITY" : "USER";
 
     try {
       if (editingEventId) {
+        let coverImageUrl: string | undefined;
+        if (data.bannerImage) {
+          coverImageUrl = await uploadEventBannerToStorage(data.bannerImage, (opts) =>
+            fetchUploadUrl(opts),
+          );
+        }
         await updateEvent({
           variables: {
             id: editingEventId,
@@ -215,28 +245,43 @@ export default function Events() {
               title: data.title,
               description: data.description,
               locationType,
-              locationDetails,
+              ...(locationDetails != null ? { locationDetails } : {}),
               startAt,
               endAt,
               tags: [],
+              isPaid: data.isPaid,
+              ...capacityPayload,
+              ...(coverImageUrl != null ? { coverImageUrl } : {}),
             },
           },
         });
         toast({ title: "Event Updated", description: "Your changes have been saved." });
       } else {
+        let coverImageUrl: string | undefined;
+        if (data.bannerImage) {
+          coverImageUrl = await uploadEventBannerToStorage(data.bannerImage, (opts) =>
+            fetchUploadUrl(opts),
+          );
+        }
+
         const createResult = await createEvent({
           variables: {
             input: {
-              ownerType: "USER",
+              ownerType,
               ownerId,
               title: data.title,
               description: data.description,
               eventCategory: data.eventCategory ?? "OTHER",
               locationType,
-              locationDetails,
+              ...(locationDetails != null ? { locationDetails } : {}),
               startAt,
               endAt,
               isPaid: data.isPaid,
+              ...capacityPayload,
+              visibility: DEFAULT_EVENT_VISIBILITY,
+              timezone,
+              tags: [],
+              ...(coverImageUrl != null ? { coverImageUrl } : {}),
             },
           },
         });
@@ -253,6 +298,7 @@ export default function Events() {
       refetch();
     } catch (e) {
       toast({ title: "Error", description: (e as Error).message, variant: "destructive" });
+      throw e;
     }
   };
 
@@ -387,7 +433,11 @@ export default function Events() {
         </TabsContent>
 
         <TabsContent value="analytics">
-          <EventAnalyticsWidget />
+          <EventAnalyticsWidget
+            events={filteredEvents}
+            loading={listLoading}
+            error={listError ?? undefined}
+          />
         </TabsContent>
       </Tabs>
 

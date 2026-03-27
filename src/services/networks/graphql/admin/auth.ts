@@ -4,8 +4,9 @@
  */
 
 import { adminClient } from "./client";
-import { ADMIN_LOGIN, REFRESH_TOKEN, LOGOUT } from "./operations";
-import { getAccessToken, getRefreshToken, setAccessToken, setRefreshToken, clearSession } from "@/stores/session";
+import { ADMIN_LOGIN, LOGOUT } from "./operations";
+import { exchangeRefreshTokenForSession } from "./refreshAccessToken";
+import { getAccessToken, clearSession } from "@/stores/session";
 
 type JwtPayload = {
   role?: string;
@@ -57,14 +58,6 @@ function logTokenRoleDiagnostics(accessToken: string, admin: AdminUserInfo | nul
       tokenScopeType,
     });
   }
-}
-
-interface RefreshTokenMutationData {
-  refreshToken: {
-    accessToken: string;
-    refreshToken: string;
-    sessionToken?: string;
-  };
 }
 
 interface LogoutMutationData {
@@ -170,43 +163,14 @@ export async function login(
 }
 
 /**
- * Refresh session token when it expires
+ * Refresh session when the access token expires (fetch-based; safe from Apollo link cycles).
  */
-export async function refreshSession(): Promise<{ ok: true; data: { accessToken: string; refreshToken: string } } | { ok: false; error: LoginError }> {
-  try {
-    const refreshToken = getRefreshToken();
-    if (!refreshToken) {
-      return { ok: false, error: { code: "NO_REFRESH_TOKEN", message: "No refresh token available" } };
-    }
-
-    const result = await adminClient.mutate<RefreshTokenMutationData>({
-      mutation: REFRESH_TOKEN,
-      variables: { input: { refreshToken } },
-    });
-
-    const data = result.data?.refreshToken;
-    if (!data?.accessToken) {
-      return { ok: false, error: { code: "REFRESH_FAILED", message: "Failed to refresh token" } };
-    }
-
-    // Update stored tokens
-    setAccessToken(data.accessToken);
-    if (data.refreshToken) {
-      setRefreshToken(data.refreshToken);
-    }
-
-    return {
-      ok: true,
-      data: {
-        accessToken: data.accessToken,
-        refreshToken: data.refreshToken || refreshToken,
-      },
-    };
-  } catch (e) {
-    const err = e as { graphQLErrors?: Array<{ message: string }>; message?: string };
-    const message = err.graphQLErrors?.[0]?.message ?? err.message ?? "Refresh failed";
-    return { ok: false, error: { code: "REFRESH_FAILED", message } };
-  }
+export async function refreshSession(): Promise<
+  { ok: true; data: { accessToken: string; refreshToken: string } } | { ok: false; error: LoginError }
+> {
+  const result = await exchangeRefreshTokenForSession();
+  if (result.ok) return result;
+  return { ok: false, error: result.error };
 }
 
 /**

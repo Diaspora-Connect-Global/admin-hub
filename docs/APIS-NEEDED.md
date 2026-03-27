@@ -22,7 +22,7 @@ This document tracks **GraphQL (or REST) APIs that the admin hub UI is built to 
 
 | Area | Provided | Wired in admin hub | What’s left |
 |------|----------|--------------------|-------------|
-| **Events** | All except `unpublishEvent`, `resendEventTicket` | Yes — list, get, create, update, delete, publish, registrations, check-in, remove | Backend: optional unpublish/resend. Hub: use real `ownerId` for create. |
+| **Events** | All except `resendEventTicket` | Yes — list, get, create, update, delete, publish, unpublish, registrations, check-in, remove, cover via `getUploadUrl` | Backend: optional resend ticket. Hub: use real `ownerId` for create. |
 | **Opportunities** | All | Partially — list + applicants only | Hub: wire Create/Edit, Publish/Close/Delete, Accept/Reject, set priority. |
 | **Communities** | list, get, create | Yes — list, get, create | Backend: getCommunityStats, update, delete, suspend, link association, discoverAssociations. |
 
@@ -192,7 +192,6 @@ See each section’s **“What’s left to do”** subsection for details.
 | Item | Status | Action |
 |------|--------|--------|
 | **Backend** | | |
-| `unpublishEvent` | Not provided | Optional. Use `updateEvent` to set status to draft if backend supports. |
 | `resendEventTicket` | Not provided | Optional. Add when backend supports resending ticket/email. |
 | **Admin hub** | | |
 | Create event `ownerId` | Placeholder | Replace `"current-user-id"` in createEvent input with real admin/user id from session when available. |
@@ -210,7 +209,8 @@ See each section’s **“What’s left to do”** subsection for details.
 | `updateEvent` | Mutation | Required | **Provided** |
 | `deleteEvent` | Mutation | Required | **Provided** |
 | `publishEvent` | Mutation | Optional | **Provided** |
-| `unpublishEvent` | Mutation | Optional | **Not provided** |
+| `unpublishEvent` | Mutation | Optional | **Provided** |
+| `getUploadUrl` | Query | Required for banners | **Provided** (`category: event_cover`) |
 | `markRegistrationCheckedIn` | Mutation | Optional | **Provided** |
 | `resendEventTicket` | Mutation | Optional | **Not provided** |
 | `removeEventRegistration` | Mutation | Optional | **Provided** |

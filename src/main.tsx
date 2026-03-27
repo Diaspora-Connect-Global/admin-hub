@@ -2,6 +2,7 @@ import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
 import { logger } from "@/lib/logger";
+import { RootErrorBoundary } from "@/components/RootErrorBoundary";
 
 const log = logger.child("App");
 
@@ -14,4 +15,13 @@ if (typeof window !== "undefined") {
   });
 }
 
-createRoot(document.getElementById("root")!).render(<App />);
+const rootEl = document.getElementById("root");
+if (!rootEl) {
+  throw new Error('Missing #root element in index.html');
+}
+
+createRoot(rootEl).render(
+  <RootErrorBoundary>
+    <App />
+  </RootErrorBoundary>,
+);

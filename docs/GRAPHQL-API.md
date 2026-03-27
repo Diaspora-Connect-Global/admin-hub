@@ -85,7 +85,7 @@ This document lists all **queries** and **mutations** implemented in the admin h
 | **MarkRegistrationCheckedIn** | `registrationId: ID!` | Mark one registration as checked in. Returns `{ id, status }`. |
 | **RemoveEventRegistration** | `registrationId: ID!` | Remove a registration. Returns `{ success, message }`. |
 
-**Not in schema:** `unpublishEvent`, `resendEventTicket` — see [APIS-NEEDED.md](./APIS-NEEDED.md).
+**Optional / not in all environments:** `resendEventTicket` — see [APIS-NEEDED.md](./APIS-NEEDED.md). Event **unpublish** uses `unpublishEvent` when available.
 
 ---
 

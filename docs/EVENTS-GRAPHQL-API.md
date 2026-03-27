@@ -160,6 +160,10 @@ input CreateEventInput {
 
 ### CreateEventLocationInput
 
+**Physical** events require `venue`, `address`, `city`, and `country` in `locationDetails` with `type: "physical"`.
+
+**Virtual** events: set `locationType: "virtual"` only, or add optional `locationDetails: { type: "virtual", virtualLink, platform }` when you have a meeting link.
+
 ```graphql
 input CreateEventLocationInput {
   type: String!
@@ -298,16 +302,15 @@ query GetEventRegistrations(
 
 ## 5. Mutations
 
-### createEvent (returns full Event, not ID)
+### createEvent
+
+Returns at least `id` and `status`. Pass `coverImageUrl` in `input` when the banner was uploaded first (see `getUploadUrl` below).
 
 ```graphql
 mutation CreateEvent($input: CreateEventInput!) {
   createEvent(input: $input) {
     id
-    title
     status
-    startAt
-    endAt
   }
 }
 ```
@@ -324,6 +327,21 @@ mutation UpdateEvent($id: ID!, $input: UpdateEventInput!) {
     endAt
     coverImageUrl
     tags
+  }
+}
+```
+
+### getUploadUrl (event cover — same flow as profile image)
+
+1. Query `getUploadUrl` with `contentType` (e.g. `image/jpeg`) and `category: "event_cover"`.
+2. `PUT` the raw file bytes to `uploadUrl` from the **client** (no `Authorization` header on that request).
+3. Pass `publicUrl` as `coverImageUrl` on `createEvent` or `updateEvent`.
+
+```graphql
+query GetUploadUrl($contentType: String!, $category: String!) {
+  getUploadUrl(contentType: $contentType, category: $category) {
+    uploadUrl
+    publicUrl
   }
 }
 ```
@@ -346,7 +364,19 @@ mutation PublishEvent($id: ID!) {
   publishEvent(id: $id) {
     id
     status
-    title
+  }
+}
+```
+
+### unpublishEvent
+
+Reverts a published event to draft.
+
+```graphql
+mutation UnpublishEvent($id: ID!) {
+  unpublishEvent(id: $id) {
+    id
+    status
   }
 }
 ```
@@ -397,14 +427,16 @@ These remain as in the existing schema; not redefined above.
 | `listEvents` | Query | Events list with filters, pagination (ListEventsInput). |
 | `getEvent` | Query | Single event (detail / edit). Replaces `event(id)`. |
 | `getEventRegistrations` | Query | Registrations for one event (drawer). |
-| `createEvent` | Mutation | Create event; returns full Event. |
+| `getUploadUrl` | Query | Signed URL for uploads; use `category: "event_cover"` for event banners. |
+| `createEvent` | Mutation | Create event; returns `id`, `status`; optional `coverImageUrl` in input. |
 | `updateEvent` | Mutation | Update event (id + UpdateEventInput). |
-| `deleteEvent` | Mutation | Delete event (DeleteEventResult). |
-| `publishEvent` | Mutation | Publish event. |
+| `deleteEvent` | Mutation | Delete event (`success`, `message`). |
+| `publishEvent` | Mutation | Publish event (`id`, `status`). |
+| `unpublishEvent` | Mutation | Draft again (`id`, `status`). |
 | `markRegistrationCheckedIn` | Mutation | Check-in in registrations drawer. |
 | `removeEventRegistration` | Mutation | Remove attendee in drawer. |
 
-**Not in provided schema:** `unpublishEvent`, `resendEventTicket` (see [APIS-NEEDED.md](./APIS-NEEDED.md)).
+**Optional / not wired here:** `resendEventTicket` (see [APIS-NEEDED.md](./APIS-NEEDED.md)).
 
 ---
 
@@ -413,7 +445,8 @@ These remain as in the existing schema; not redefined above.
 | Old | New |
 |-----|-----|
 | `event(id)` | `getEvent(id)` |
-| `createEvent` returned ID | `createEvent` returns full `Event` |
+| `getEventCoverUploadUrl` | `getUploadUrl` + `category: "event_cover"` + `publicUrl` as `coverImageUrl` |
+| N/A | `unpublishEvent` for publish → draft |
 
 ---
 

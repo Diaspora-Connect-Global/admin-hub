@@ -9,7 +9,6 @@ Full tracking (including Provided and Wired status) is in [APIS-NEEDED.md](./API
 
 | Operation | Type | Priority | Notes |
 |-----------|------|----------|--------|
-| `unpublishEvent` | Mutation | Optional | Event card “Unpublish”. Variables: `id: ID!`. Can use `updateEvent` to set status to draft if backend supports. |
 | `resendEventTicket` | Mutation | Optional | Registrations drawer “Resend ticket”. Variables: `registrationId: ID!`. |
 
 ---

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -19,19 +19,36 @@ import { setAccessToken, setRefreshToken, setUserId, setUserEmail, setAdminProfi
 import { logLogin } from "@/services/core/audit";
 import { useSessionStore } from "@/stores/sessionStore";
 import { useEffect } from "react";
+import { useSessionStoreHydrated } from "@/hooks/useSessionStoreHydrated";
+import { SessionHydrationFallback } from "@/components/auth/SessionHydrationFallback";
 
 export default function Login() {
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const sessionHydrated = useSessionStoreHydrated();
   const sessionId = useSessionStore((s) => s.sessionId);
 
-  // If already authenticated, redirect to intended page or home
   useEffect(() => {
-    if (sessionId) {
-      const from = (location.state as { from?: { pathname: string } })?.from?.pathname;
-      navigate(from ?? "/", { replace: true });
+    if (searchParams.get("expired") === "1") {
+      toast({
+        title: "Session expired",
+        description: "Your session could not be refreshed. Please sign in again.",
+        variant: "destructive",
+      });
+      const next = new URLSearchParams(searchParams);
+      next.delete("expired");
+      setSearchParams(next, { replace: true });
     }
-  }, [sessionId, location.state, navigate]);
+  }, [searchParams, setSearchParams]);
+
+  // If already authenticated, redirect to intended page or home (after persist rehydration)
+  useEffect(() => {
+    if (!sessionHydrated || !sessionId) return;
+    const from = (location.state as { from?: { pathname: string } })?.from?.pathname;
+    navigate(from ?? "/", { replace: true });
+  }, [sessionHydrated, sessionId, location.state, navigate]);
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -107,8 +124,8 @@ export default function Login() {
     }
   };
 
-  if (sessionId) {
-    return null;
+  if (!sessionHydrated || sessionId) {
+    return <SessionHydrationFallback />;
   }
 
   const handleForgotPassword = async (e: React.FormEvent) => {

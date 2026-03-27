@@ -8,15 +8,40 @@
 import { useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { getAccessToken, clearSession } from "@/stores/session";
+import { useSessionStore } from "@/stores/sessionStore";
+import { exchangeRefreshTokenForSession } from "@/services/networks/graphql/admin/refreshAccessToken";
 import { toast } from "@/hooks/use-toast";
 
 const INACTIVITY_TIMEOUT_MS = 15 * 60 * 1000; // 15 minutes of no interaction
 const WARN_BEFORE_MS = 60 * 1000;              // warn 60 s before that
+/** Refresh access token this long before JWT exp to avoid bursts of 401s. */
+const PROACTIVE_REFRESH_BEFORE_EXP_MS = 120_000;
 
 const ACTIVITY_EVENTS = ["mousedown", "mousemove", "keydown", "scroll", "touchstart", "click"] as const;
 
+function getTokenExpMs(token: string): number | null {
+  try {
+    const payload = JSON.parse(atob(token.split(".")[1])) as { exp?: number };
+    return typeof payload.exp === "number" ? payload.exp * 1000 : null;
+  } catch {
+    return null;
+  }
+}
+
+function maybeRefreshAccessTokenSoon(): void {
+  const token = getAccessToken();
+  if (!token) return;
+  const expMs = getTokenExpMs(token);
+  if (!expMs) return;
+  const msLeft = expMs - Date.now();
+  if (msLeft > 0 && msLeft <= PROACTIVE_REFRESH_BEFORE_EXP_MS) {
+    void exchangeRefreshTokenForSession();
+  }
+}
+
 export function useTokenExpiry() {
   const navigate = useNavigate();
+  const sessionId = useSessionStore((s) => s.sessionId);
   const expiryTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const warningTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const warningToastShown = useRef(false);
@@ -58,7 +83,16 @@ export function useTokenExpiry() {
 
     // Log out after full inactivity window
     expiryTimer.current = setTimeout(logout, INACTIVITY_TIMEOUT_MS);
+
+    maybeRefreshAccessTokenSoon();
   }, [clearTimers, logout]);
+
+  useEffect(() => {
+    if (!sessionId) return;
+    const id = setInterval(maybeRefreshAccessTokenSoon, 60_000);
+    maybeRefreshAccessTokenSoon();
+    return () => clearInterval(id);
+  }, [sessionId]);
 
   useEffect(() => {
     if (!getAccessToken()) return;
@@ -79,15 +113,6 @@ export function useTokenExpiry() {
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-}
-
-function getTokenExpMs(token: string): number | null {
-  try {
-    const payload = JSON.parse(atob(token.split(".")[1])) as { exp?: number };
-    return typeof payload.exp === "number" ? payload.exp * 1000 : null;
-  } catch {
-    return null;
-  }
 }
 
 /**

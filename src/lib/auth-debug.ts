@@ -131,7 +131,7 @@ export function debugAuthState(): void {
     console.log('📋 Authentication Facts:');
     console.log('• adminLogin returns JWT accessToken (15 min expiry)');
     console.log('• Backend auth guard validates Bearer JWT');
-    console.log('• No refresh endpoint: re-login when token expires');
+    console.log('• refreshToken mutation + Apollo ErrorLink retry + proactive refresh before JWT exp');
     console.log('• All services use the same authentication now');
   } else {
     console.log('❌ No access token found - use adminLogin mutation to get JWT');

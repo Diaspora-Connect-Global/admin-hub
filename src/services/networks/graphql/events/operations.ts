@@ -133,15 +133,23 @@ export const GET_EVENT_REGISTRATIONS = gql`
   }
 `;
 
-/** Create event. Returns full Event. */
+/** Create event (include coverImageUrl in input when banner was uploaded first). */
 export const CREATE_EVENT = gql`
   mutation CreateEvent($input: CreateEventInput!) {
     createEvent(input: $input) {
       id
       title
+      description
       status
+      visibility
+      locationType
       startAt
       endAt
+      timezone
+      coverImageUrl
+      tags
+      isPaid
+      capacity
     }
   }
 `;
@@ -157,6 +165,19 @@ export const UPDATE_EVENT = gql`
       endAt
       coverImageUrl
       tags
+    }
+  }
+`;
+
+/**
+ * Signed upload URL for event cover (same flow as profile image).
+ * PUT file to uploadUrl without Authorization; use publicUrl as coverImageUrl on createEvent/updateEvent.
+ */
+export const GET_UPLOAD_URL = gql`
+  query GetUploadUrl($contentType: String!, $category: String!) {
+    getUploadUrl(contentType: $contentType, category: $category) {
+      uploadUrl
+      publicUrl
     }
   }
 `;
@@ -177,7 +198,16 @@ export const PUBLISH_EVENT = gql`
     publishEvent(id: $id) {
       id
       status
-      title
+    }
+  }
+`;
+
+/** Revert published event to draft. */
+export const UNPUBLISH_EVENT = gql`
+  mutation UnpublishEvent($id: ID!) {
+    unpublishEvent(id: $id) {
+      id
+      status
     }
   }
 `;

@@ -8,14 +8,11 @@ import {
 } from "@apollo/client";
 import { getAccessToken, getDevUserId, DEV_USER_ID_HEADER_KEY } from "@/stores/session";
 import { logger } from "@/lib/logger";
-
-const adminGraphqlUrl =
-  typeof import.meta !== "undefined" && import.meta.env?.VITE_ADMIN_GRAPHQL_URL
-    ? import.meta.env.VITE_ADMIN_GRAPHQL_URL
-    : "https://api.diaspoplug.net/graphql";
+import { ADMIN_GRAPHQL_HTTP_URI } from "./constants";
+import { createTokenRefreshErrorLink } from "./tokenRefreshLink";
 
 const httpLink = new HttpLink({
-  uri: adminGraphqlUrl,
+  uri: ADMIN_GRAPHQL_HTTP_URI,
   headers: {
     "Content-Type": "application/json",
   },
@@ -84,6 +81,8 @@ const authLink = new ApolloLink((operation, forward) => {
   return forward(operation);
 });
 
+const tokenRefreshErrorLink = createTokenRefreshErrorLink();
+
 const errorLogLink = new ApolloLink((operation, forward) => {
   return new Observable((observer) => {
     forward(operation).subscribe({
@@ -144,7 +143,7 @@ const errorLogLink = new ApolloLink((operation, forward) => {
 });
 
 export const adminClient = new ApolloClient({
-  link: from([authLink, errorLogLink, httpLink]),
+  link: from([authLink, tokenRefreshErrorLink, errorLogLink, httpLink]),
   cache: new InMemoryCache(),
   defaultOptions: {
     watchQuery: { errorPolicy: "all" },

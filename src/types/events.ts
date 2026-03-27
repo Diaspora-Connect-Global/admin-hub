@@ -72,7 +72,11 @@ export interface EventFormData {
   startTime: string;
   endTime: string;
   eventType: EventType;
-  location: string;
+  /** Physical / hybrid — required by API for non-virtual events */
+  venue: string;
+  address: string;
+  city: string;
+  country: string;
   virtualLink: string;
   isPaid: boolean;
   ticketPrice: number;

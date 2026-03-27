@@ -1,6 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
+import { useApolloClient } from "@apollo/client/react";
 import { format } from "date-fns";
 import { Event, EventRegistration } from "@/types/events";
+import { GET_PROFILE } from "@/services/networks/graphql/user";
 import {
   Sheet,
   SheetContent,
@@ -39,6 +41,15 @@ import {
   useRemoveEventRegistration,
 } from "@/hooks/events";
 
+function displayNameFromProfile(p: {
+  firstName?: string | null;
+  middleName?: string | null;
+  lastName?: string | null;
+} | null | undefined): string {
+  if (!p) return "";
+  return [p.firstName, p.middleName, p.lastName].filter(Boolean).join(" ").trim();
+}
+
 interface RegistrationsDrawerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -52,8 +63,11 @@ export function RegistrationsDrawer({
   event,
   onRefetch,
 }: RegistrationsDrawerProps) {
+  const client = useApolloClient();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [nameByUserId, setNameByUserId] = useState<Record<string, string>>({});
+  const [namesResolving, setNamesResolving] = useState(false);
   const t = useT("events");
 
   const { data, loading, refetch } = useGetEventRegistrations(
@@ -65,10 +79,54 @@ export function RegistrationsDrawer({
   const registrations: EventRegistration[] = data?.getEventRegistrations?.registrations ?? [];
   const total = data?.getEventRegistrations?.total ?? 0;
 
+  const uniqueUserIdsKey = useMemo(
+    () => [...new Set(registrations.map((r) => r.userId))].sort().join(","),
+    [registrations],
+  );
+
+  useEffect(() => {
+    if (!open || !uniqueUserIdsKey) {
+      setNameByUserId({});
+      setNamesResolving(false);
+      return;
+    }
+    const ids = uniqueUserIdsKey.split(",").filter(Boolean);
+    let cancelled = false;
+    setNamesResolving(true);
+    (async () => {
+      const next: Record<string, string> = {};
+      await Promise.all(
+        ids.map(async (userId) => {
+          try {
+            const { data: profileData } = await client.query({
+              query: GET_PROFILE,
+              variables: { userId },
+              fetchPolicy: "cache-first",
+            });
+            const name = displayNameFromProfile(profileData?.getProfile);
+            next[userId] = name || userId;
+          } catch {
+            next[userId] = userId;
+          }
+        }),
+      );
+      if (!cancelled) {
+        setNameByUserId(next);
+        setNamesResolving(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [open, client, uniqueUserIdsKey]);
+
   const filteredRegistrations = registrations.filter((reg) => {
+    const q = searchQuery.toLowerCase();
+    const display = (nameByUserId[reg.userId] ?? reg.userId).toLowerCase();
     const matchesSearch =
-      reg.userId.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (reg.totalAmount ?? "").toLowerCase().includes(searchQuery.toLowerCase());
+      display.includes(q) ||
+      reg.userId.toLowerCase().includes(q) ||
+      (reg.totalAmount ?? "").toLowerCase().includes(q);
     return matchesSearch;
   });
 
@@ -138,7 +196,7 @@ export function RegistrationsDrawer({
               <Table>
                 <TableHeader>
                   <TableRow className="bg-muted/50">
-                    <TableHead>User ID</TableHead>
+                    <TableHead>{t.attendee}</TableHead>
                     <TableHead>Quantity</TableHead>
                     {event.isPaid && <TableHead>{t.payment}</TableHead>}
                     <TableHead>{t.status}</TableHead>
@@ -149,7 +207,18 @@ export function RegistrationsDrawer({
                 <TableBody>
                   {filteredRegistrations.map((registration) => (
                     <TableRow key={registration.id}>
-                      <TableCell className="font-medium">{registration.userId}</TableCell>
+                      <TableCell
+                        className="font-medium max-w-[220px] truncate"
+                        title={
+                          nameByUserId[registration.userId]
+                            ? `${nameByUserId[registration.userId]} (${registration.userId})`
+                            : registration.userId
+                        }
+                      >
+                        {namesResolving && !nameByUserId[registration.userId]
+                          ? "…"
+                          : nameByUserId[registration.userId] ?? registration.userId}
+                      </TableCell>
                       <TableCell>{registration.quantity}</TableCell>
                       {event.isPaid && (
                         <TableCell>{registration.totalAmount ?? "—"}</TableCell>
