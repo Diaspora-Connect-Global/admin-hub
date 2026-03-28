@@ -149,7 +149,6 @@ export const CREATE_EVENT = gql`
       coverImageUrl
       tags
       isPaid
-      capacity
     }
   }
 `;
@@ -165,6 +164,7 @@ export const UPDATE_EVENT = gql`
       endAt
       coverImageUrl
       tags
+      isPaid
     }
   }
 `;

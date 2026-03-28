@@ -525,11 +525,6 @@ export function CreateEditEventModal({
                   <p className="text-sm text-muted-foreground">
                     {t.setMaxAttendees}
                   </p>
-                  {!formData.isPaid && (
-                    <p className="text-sm text-amber-600 dark:text-amber-500 mt-1">
-                      {t.limitRequiresPaid}
-                    </p>
-                  )}
                 </div>
                 <Switch
                   checked={formData.hasParticipantLimit}

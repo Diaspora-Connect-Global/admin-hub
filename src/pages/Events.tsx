@@ -15,7 +15,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CalendarPlus, Search, Calendar, BarChart3 } from "lucide-react";
 import { Event, EventFormData } from "@/types/events";
 import { buildEventLocationPayload, requiresPhysicalLocation } from "@/lib/eventLocationPayload";
-import { buildEventCapacityPayload } from "@/lib/eventCapacityPayload";
+import { resolveEventCapacity } from "@/lib/eventCapacityPayload";
+import { buildPaidEventTicketFields } from "@/lib/eventTicketsPayload";
+import { throwIfGraphQLErrors } from "@/lib/graphqlErrors";
+import {
+  logEventFormSnapshot,
+  logEventMutation,
+} from "@/lib/debugEventsGraphQL";
 import { DEFAULT_EVENT_VISIBILITY, resolveEventTimezone } from "@/lib/eventSchedulePayload";
 import { EventCard } from "@/components/events/EventCard";
 import { CreateEditEventModal } from "@/components/events/CreateEditEventModal";
@@ -223,22 +229,14 @@ export default function Events() {
       }
     }
 
-    if (data.hasParticipantLimit === true && data.isPaid !== true) {
-      toast({
-        title: "Participant limit needs a paid event",
-        description:
-          "The API only accepts a capacity for paid events. Turn on “Paid event” (and set a ticket price), or turn off “Limit participants”.",
-        variant: "destructive",
-      });
-      return;
-    }
-
     const locationType =
       data.eventType === "in-person" ? "physical" : data.eventType === "virtual" ? "virtual" : "hybrid";
     const locationDetails = buildEventLocationPayload(data);
-    const capacityPayload = buildEventCapacityPayload(data);
+    const capacityValue = resolveEventCapacity(data);
     const timezone = resolveEventTimezone(data.eventType);
     const ownerType = data.ownerType === "COMMUNITY" ? "COMMUNITY" : "USER";
+
+    logEventFormSnapshot(data);
 
     try {
       if (editingEventId) {
@@ -248,23 +246,27 @@ export default function Events() {
             fetchUploadUrl(opts),
           );
         }
-        await updateEvent({
-          variables: {
-            id: editingEventId,
-            input: {
-              title: data.title,
-              description: data.description,
-              locationType,
-              ...(locationDetails != null ? { locationDetails } : {}),
-              startAt,
-              endAt,
-              tags: [],
-              isPaid: data.isPaid,
-              ...capacityPayload,
-              ...(coverImageUrl != null ? { coverImageUrl } : {}),
-            },
+        const updateVariables = {
+          id: editingEventId,
+          input: {
+            title: data.title,
+            description: data.description,
+            locationType,
+            ...(locationDetails != null ? { locationDetails } : {}),
+            startAt,
+            endAt,
+            tags: [],
+            isPaid: data.isPaid,
+            ...buildPaidEventTicketFields(data),
+            ...(capacityValue != null ? { capacity: capacityValue } : {}),
+            ...(coverImageUrl != null ? { coverImageUrl } : {}),
           },
+        };
+        logEventMutation("UpdateEvent (edit)", updateVariables);
+        const updateRes = await updateEvent({
+          variables: updateVariables,
         });
+        throwIfGraphQLErrors(updateRes, "UpdateEvent");
         toast({ title: "Event Updated", description: "Your changes have been saved." });
       } else {
         let coverImageUrl: string | undefined;
@@ -274,31 +276,64 @@ export default function Events() {
           );
         }
 
-        const createResult = await createEvent({
-          variables: {
-            input: {
-              ownerType,
-              ownerId,
-              title: data.title,
-              description: data.description,
-              eventCategory: data.eventCategory ?? "OTHER",
-              locationType,
-              ...(locationDetails != null ? { locationDetails } : {}),
-              startAt,
-              endAt,
-              isPaid: data.isPaid,
-              ...capacityPayload,
-              visibility: DEFAULT_EVENT_VISIBILITY,
-              timezone,
-              tags: [],
-              ...(coverImageUrl != null ? { coverImageUrl } : {}),
-            },
+        const createVariables = {
+          input: {
+            ownerType,
+            ownerId,
+            title: data.title,
+            description: data.description,
+            eventCategory: data.eventCategory ?? "OTHER",
+            locationType,
+            ...(locationDetails != null ? { locationDetails } : {}),
+            startAt,
+            endAt,
+            isPaid: data.isPaid,
+            ...buildPaidEventTicketFields(data),
+            visibility: DEFAULT_EVENT_VISIBILITY,
+            timezone,
+            tags: [],
+            ...(coverImageUrl != null ? { coverImageUrl } : {}),
           },
+        };
+        logEventMutation("CreateEvent", createVariables);
+        logEventMutation("CreateEvent — derived fields", {
+          capacityValue,
+          timezone,
+          locationType,
+          ownerType,
+          ownerId,
         });
 
-        const createdId = createResult?.data?.createEvent?.id as string | undefined;
+        const createResult = await createEvent({
+          variables: createVariables,
+        });
+        throwIfGraphQLErrors(createResult, "CreateEvent");
+
+        const createdId = createResult.data?.createEvent?.id as string | undefined;
+
+        // Do not send `capacity` on create (API rejects it for default-unlimited events). Patch paid/tickets/capacity
+        // in one update so flags persist even if create ignores nested fields.
+        if (createdId && (data.isPaid || capacityValue != null)) {
+          const followUpInput: Record<string, unknown> = {
+            isPaid: data.isPaid,
+            ...buildPaidEventTicketFields(data),
+          };
+          if (capacityValue != null) {
+            followUpInput.capacity = capacityValue;
+          }
+          const patchVariables = { id: createdId, input: followUpInput };
+          logEventMutation("UpdateEvent (post-create patch)", patchVariables);
+          const patchRes = await updateEvent({
+            variables: patchVariables,
+          });
+          throwIfGraphQLErrors(patchRes, "UpdateEvent");
+        }
+
         if (data.publishNow && createdId) {
-          await publishEvent({ variables: { id: createdId } });
+          const publishVariables = { id: createdId };
+          logEventMutation("PublishEvent", publishVariables);
+          const pubRes = await publishEvent({ variables: publishVariables });
+          throwIfGraphQLErrors(pubRes, "PublishEvent");
         }
 
         toast({ title: "Event Created", description: data.publishNow ? "Your event is now live!" : "Event saved as draft." });

@@ -1,22 +1,18 @@
 import type { EventFormData } from "@/types/events";
 
 /**
- * Maps participant-cap UI to CreateEventInput / UpdateEventInput `capacity`.
- * The API treats free events (`isPaid: false`) as unlimited-capacity and rejects any `capacity` value.
- * Only send `capacity` for paid events with the limit switch on and a valid positive integer.
+ * Participant cap as a positive integer for UpdateEventInput (and post-create patch).
+ * Does not depend on paid vs free.
  */
-export function buildEventCapacityPayload(
-  data: Pick<EventFormData, "isPaid" | "hasParticipantLimit" | "maxParticipants">,
-): { capacity?: number } {
-  if (data.isPaid !== true) {
-    return {};
-  }
+export function resolveEventCapacity(
+  data: Pick<EventFormData, "hasParticipantLimit" | "maxParticipants">,
+): number | undefined {
   if (data.hasParticipantLimit !== true) {
-    return {};
+    return undefined;
   }
   const n = Number(data.maxParticipants);
   if (!Number.isFinite(n) || n < 1) {
-    return {};
+    return undefined;
   }
-  return { capacity: Math.floor(n) };
+  return Math.floor(n);
 }

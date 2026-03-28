@@ -455,7 +455,6 @@
     "ticketPrice": "Ticket price",
     "limitParticipants": "Limit participants",
     "setMaxAttendees": "Set max attendees",
-    "limitRequiresPaid": "Capacity limits only apply to paid events. Enable “Paid event” above to set a cap.",
     "maxParticipants": "Max participants",
     "publishEventNow": "Publish now",
     "makeEventVisible": "Make event visible to members",
