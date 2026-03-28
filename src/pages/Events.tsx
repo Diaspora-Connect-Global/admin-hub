@@ -16,7 +16,6 @@ import { CalendarPlus, Search, Calendar, BarChart3 } from "lucide-react";
 import { Event, EventFormData } from "@/types/events";
 import { buildEventLocationPayload, requiresPhysicalLocation } from "@/lib/eventLocationPayload";
 import { resolveEventCapacity } from "@/lib/eventCapacityPayload";
-import { buildPaidEventTicketFields } from "@/lib/eventTicketsPayload";
 import { throwIfGraphQLErrors } from "@/lib/graphqlErrors";
 import {
   logEventFormSnapshot,
@@ -48,12 +47,12 @@ export default function Events() {
   const location = useLocation();
   const t = useT("events");
 
-  const [listInput, setListInput] = useState<{ limit?: number; offset?: number; searchTerm?: string; status?: "DRAFT" | "PUBLISHED" | "CANCELLED" | "COMPLETED" }>({ limit: 20, offset: 0, status: "PUBLISHED" });
+  const [listInput, setListInput] = useState<{ limit?: number; offset?: number; searchTerm?: string; status?: "DRAFT" | "PUBLISHED" | "CANCELLED" | "COMPLETED" }>({ limit: 20, offset: 0 });
   const { data: listData, loading: listLoading, error: listError, refetch: refetchList } = useListEvents(listInput);
   const events: Event[] = Array.isArray(listData?.listEvents?.events) ? listData.listEvents.events : [];
   const totalEvents = listData?.listEvents?.total ?? 0;
   const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("PUBLISHED");
+  const [statusFilter, setStatusFilter] = useState<string>("ALL");
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [sortBy, setSortBy] = useState<string>("newest");
 
@@ -128,9 +127,8 @@ export default function Events() {
       }
     });
 
-  const upcomingCount = events.filter((e) => e.status === "PUBLISHED" || e.status === "DRAFT").length;
+  const upcomingCount = events.filter((e) => e.status === "PUBLISHED").length;
   const totalRegistrations = events.reduce((sum, e) => sum + e.registrationCount, 0);
-  const totalRevenue = 0;
   const avgAttendance =
     events.length > 0 && events.some((e) => e.availableSpots != null && e.availableSpots > 0)
       ? Math.round(
@@ -164,7 +162,13 @@ export default function Events() {
     if (!ensureSystemAdmin("Publishing events")) return;
 
     if (event.status === "PUBLISHED") {
-      toast({ title: "Unpublish", description: "Use edit to change status to draft." });
+      try {
+        await unpublishEvent({ variables: { id: event.id } });
+        toast({ title: "Event Unpublished", description: "Event reverted to draft." });
+        refetch();
+      } catch (e) {
+        toast({ title: "Error", description: (e as Error).message, variant: "destructive" });
+      }
       return;
     }
     try {
@@ -209,11 +213,14 @@ export default function Events() {
       return;
     }
 
-    const startAt = data.date && data.startTime
-      ? new Date(`${data.date.toISOString().slice(0, 10)}T${data.startTime}`).toISOString()
+    const localDateStr = data.date
+      ? `${data.date.getFullYear()}-${String(data.date.getMonth() + 1).padStart(2, "0")}-${String(data.date.getDate()).padStart(2, "0")}`
+      : null;
+    const startAt = localDateStr && data.startTime
+      ? new Date(`${localDateStr}T${data.startTime}`).toISOString()
       : new Date().toISOString();
-    const endAt = data.date && data.endTime
-      ? new Date(`${data.date.toISOString().slice(0, 10)}T${data.endTime}`).toISOString()
+    const endAt = localDateStr && data.endTime
+      ? new Date(`${localDateStr}T${data.endTime}`).toISOString()
       : new Date().toISOString();
 
     if (requiresPhysicalLocation(data.eventType)) {
@@ -256,8 +263,6 @@ export default function Events() {
             startAt,
             endAt,
             tags: [],
-            isPaid: data.isPaid,
-            ...buildPaidEventTicketFields(data),
             ...(capacityValue != null ? { capacity: capacityValue } : {}),
             ...(coverImageUrl != null ? { coverImageUrl } : {}),
           },
@@ -288,7 +293,6 @@ export default function Events() {
             startAt,
             endAt,
             isPaid: data.isPaid,
-            ...buildPaidEventTicketFields(data),
             visibility: DEFAULT_EVENT_VISIBILITY,
             timezone,
             tags: [],
@@ -311,18 +315,10 @@ export default function Events() {
 
         const createdId = createResult.data?.createEvent?.id as string | undefined;
 
-        // Do not send `capacity` on create (API rejects it for default-unlimited events). Patch paid/tickets/capacity
-        // in one update so flags persist even if create ignores nested fields.
-        if (createdId && (data.isPaid || capacityValue != null)) {
-          const followUpInput: Record<string, unknown> = {
-            isPaid: data.isPaid,
-            ...buildPaidEventTicketFields(data),
-          };
-          if (capacityValue != null) {
-            followUpInput.capacity = capacityValue;
-          }
-          const patchVariables = { id: createdId, input: followUpInput };
-          logEventMutation("UpdateEvent (post-create patch)", patchVariables);
+        // capacity is not accepted on create — patch it separately via UpdateEventInput.
+        if (createdId && capacityValue != null) {
+          const patchVariables = { id: createdId, input: { capacity: capacityValue } };
+          logEventMutation("UpdateEvent (post-create capacity patch)", patchVariables);
           const patchRes = await updateEvent({
             variables: patchVariables,
           });
@@ -370,6 +366,7 @@ export default function Events() {
               <SelectValue placeholder={t.statusPlaceholder} />
             </SelectTrigger>
             <SelectContent>
+              <SelectItem value="ALL">All Statuses</SelectItem>
               <SelectItem value="PUBLISHED">Published</SelectItem>
               <SelectItem value="DRAFT">Draft</SelectItem>
               <SelectItem value="COMPLETED">Completed</SelectItem>
@@ -398,14 +395,14 @@ export default function Events() {
             </SelectContent>
           </Select>
         </div>
-        <Button onClick={() => setCreateModalOpen(true)}>
+        <Button onClick={() => { setEditingEventId(null); setCreateModalOpen(true); }}>
           <CalendarPlus className="h-4 w-4 mr-2" />
           {t.createEvent}
         </Button>
       </div>
 
       {/* Stats */}
-      <div className="mb-6 grid gap-4 sm:grid-cols-4">
+      <div className="mb-6 grid gap-4 sm:grid-cols-3">
         <div className="rounded-lg border border-border bg-card p-4">
           <p className="text-sm text-foreground/80">{t.upcomingEvents}</p>
           <p className="text-2xl font-bold text-foreground">{upcomingCount}</p>
@@ -413,10 +410,6 @@ export default function Events() {
         <div className="rounded-lg border border-border bg-card p-4">
           <p className="text-sm text-foreground/80">{t.totalRegistrations}</p>
           <p className="text-2xl font-bold text-foreground">{totalRegistrations.toLocaleString()}</p>
-        </div>
-        <div className="rounded-lg border border-border bg-card p-4">
-          <p className="text-sm text-foreground/80">{t.ticketRevenue}</p>
-          <p className="text-2xl font-bold text-foreground">${totalRevenue.toLocaleString()}</p>
         </div>
         <div className="rounded-lg border border-border bg-card p-4">
           <p className="text-sm text-foreground/80">{t.avgAttendance}</p>
@@ -469,7 +462,7 @@ export default function Events() {
               <p className="text-muted-foreground mb-4">
                 Start by creating your first event for your association.
               </p>
-              <Button onClick={() => setCreateModalOpen(true)}>
+              <Button onClick={() => { setEditingEventId(null); setCreateModalOpen(true); }}>
                 <CalendarPlus className="h-4 w-4 mr-2" />
                 Create Event
               </Button>

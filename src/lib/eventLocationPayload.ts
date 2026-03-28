@@ -27,7 +27,6 @@ export function buildEventLocationPayload(data: EventFormData): EventLocationInp
     return {
       type: "virtual",
       virtualLink: link,
-      platform: "Zoom",
     };
   }
 
@@ -44,7 +43,7 @@ export function buildEventLocationPayload(data: EventFormData): EventLocationInp
       address,
       city,
       country,
-      ...(link ? { virtualLink: link, platform: "Zoom" } : {}),
+      ...(link ? { virtualLink: link } : {}),
     };
   }
 

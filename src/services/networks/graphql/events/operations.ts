@@ -141,7 +141,6 @@ export const CREATE_EVENT = gql`
       title
       description
       status
-      visibility
       locationType
       startAt
       endAt

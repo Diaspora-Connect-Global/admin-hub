@@ -112,8 +112,8 @@ export function CreateEditEventModal({
       virtualLink: event.locationDetails?.virtualLink || "",
       isPaid: event.isPaid,
       ticketPrice: event.tickets?.[0] ? event.tickets[0].priceInCents / 100 : 0,
-      hasParticipantLimit: event.availableSpots != null && event.availableSpots > 0,
-      maxParticipants: event.availableSpots ?? 100,
+      hasParticipantLimit: event.availableSpots != null,
+      maxParticipants: event.availableSpots != null ? event.availableSpots + event.registrationCount : 100,
     });
   }, [open, isCreatingNew, event?.id]);
 
@@ -187,7 +187,32 @@ export function CreateEditEventModal({
     updateField("bannerImage", null);
   };
 
+  const validateStep = (step: number): string | null => {
+    if (step === 1) {
+      if (!formData.title.trim()) return "Event title is required.";
+      if (!formData.description.trim()) return "Event description is required.";
+    }
+    if (step === 2) {
+      if (!formData.date) return "Event date is required.";
+      if (!formData.startTime) return "Start time is required.";
+      if (!formData.endTime) return "End time is required.";
+      if (formData.endTime <= formData.startTime) return "End time must be after start time.";
+      if (formData.eventType === "in-person" || formData.eventType === "hybrid") {
+        if (!formData.venue.trim()) return "Venue name is required.";
+        if (!formData.address.trim()) return "Street address is required.";
+        if (!formData.city.trim()) return "City is required.";
+        if (!formData.country.trim()) return "Country is required.";
+      }
+    }
+    return null;
+  };
+
   const handleNext = () => {
+    const error = validateStep(currentStep);
+    if (error) {
+      toast({ title: "Required fields missing", description: error, variant: "destructive" });
+      return;
+    }
     if (currentStep < steps.length) {
       setCurrentStep(currentStep + 1);
     }
@@ -242,7 +267,7 @@ export function CreateEditEventModal({
                     currentStep > step.id
                       ? "bg-primary text-primary-foreground"
                       : currentStep === step.id
-                      ? "bg-primary text-primary-foreground"
+                      ? "bg-primary text-primary-foreground ring-2 ring-primary ring-offset-2"
                       : "bg-muted text-muted-foreground"
                   )}
                 >
@@ -375,6 +400,7 @@ export function CreateEditEventModal({
                       onSelect={(date) => updateField("date", date)}
                       initialFocus
                       className="pointer-events-auto"
+                      fromDate={isCreatingNew ? new Date() : undefined}
                     />
                   </PopoverContent>
                 </Popover>
