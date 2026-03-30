@@ -51,7 +51,7 @@ export function EventAnalyticsWidget({ events, loading, error }: EventAnalyticsW
 
     const statusMap = new Map<string, number>();
     events.forEach((e) => {
-      const key = (e.status ?? "UNKNOWN").toUpperCase();
+      const key = (e.status ?? "unknown").toUpperCase();
       statusMap.set(key, (statusMap.get(key) ?? 0) + 1);
     });
     const statusSlices = Array.from(statusMap.entries()).map(([name, value], i) => ({

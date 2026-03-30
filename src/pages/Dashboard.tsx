@@ -486,36 +486,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Quick Links Footer */}
-        <div className="glass rounded-xl p-5">
-          <h3 className="font-semibold text-foreground mb-4">Quick Links</h3>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-            <Button variant="outline" className="h-auto py-3 flex-col gap-2" onClick={() => navigate("/users")}>
-              <Users className="h-5 w-5" />
-              <span className="text-xs">User Management</span>
-            </Button>
-            <Button variant="outline" className="h-auto py-3 flex-col gap-2" onClick={() => navigate("/communities")}>
-              <Layers className="h-5 w-5" />
-              <span className="text-xs">Communities</span>
-            </Button>
-            <Button variant="outline" className="h-auto py-3 flex-col gap-2" onClick={() => navigate("/vendors")}>
-              <ShoppingCart className="h-5 w-5" />
-              <span className="text-xs">Vendors</span>
-            </Button>
-            <Button variant="outline" className="h-auto py-3 flex-col gap-2" onClick={() => navigate("/escrow")}>
-              <Wallet className="h-5 w-5" />
-              <span className="text-xs">Escrow</span>
-            </Button>
-            <Button variant="outline" className="h-auto py-3 flex-col gap-2" onClick={() => navigate("/disputes")}>
-              <AlertTriangle className="h-5 w-5" />
-              <span className="text-xs">Disputes</span>
-            </Button>
-            <Button variant="outline" className="h-auto py-3 flex-col gap-2" onClick={() => navigate("/health")}>
-              <Activity className="h-5 w-5" />
-              <span className="text-xs">System Health</span>
-            </Button>
-          </div>
-        </div>
+
       </div>
     </AdminLayout>
   );

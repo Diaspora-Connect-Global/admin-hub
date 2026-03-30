@@ -35,7 +35,7 @@ export interface ListEventsInput {
   limit?: number;
   offset?: number;
   searchTerm?: string;
-  status?: "DRAFT" | "PUBLISHED" | "CANCELLED" | "COMPLETED";
+  status?: "draft" | "published" | "cancelled" | "completed";
 }
 
 export interface GetEventsByOwnerInput {

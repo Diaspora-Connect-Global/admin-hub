@@ -2,6 +2,7 @@ import { useState, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import { useGetUsers } from "@/hooks/user";
+import { useDiscoverAssociations, useListCommunities } from "@/hooks/admin";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -157,19 +158,34 @@ export default function UserManagement() {
   const [resetPasswordOpen, setResetPasswordOpen] = useState(false);
 
   // Filters
-  const [roleFilter, setRoleFilter] = useState("all");
+  const [communityFilter, setCommunityFilter] = useState("all");
+  const [associationFilter, setAssociationFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [trustScoreRange, setTrustScoreRange] = useState([0, 100]);
+
+  const { data: communitiesData, loading: communitiesLoading } = useListCommunities({
+    limit: 500,
+    offset: 0,
+  });
+
+  const { data: associationsData, loading: associationsLoading } = useDiscoverAssociations({
+    limit: 500,
+    offset: 0,
+  });
+
+  const communityOptions = communitiesData?.listCommunities?.communities ?? [];
+  const associationOptions = (
+    associationsData as { discoverAssociations?: { associations?: { id: string; name: string }[] } } | undefined
+  )?.discoverAssociations?.associations ?? [];
 
   const filteredUsers = users.filter((user) => {
     const matchesSearch = user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
       user.phone.includes(searchQuery) ||
       user.id.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesRole = roleFilter === "all" || user.role === roleFilter;
     const matchesStatus = statusFilter === "all" || user.status === statusFilter;
     const matchesTrustScore = user.trustScore >= trustScoreRange[0] && user.trustScore <= trustScoreRange[1];
-    return matchesSearch && matchesRole && matchesStatus && matchesTrustScore;
+    return matchesSearch && matchesStatus && matchesTrustScore;
   });
 
   const handleSelectAll = (checked: boolean) => {
@@ -212,48 +228,47 @@ export default function UserManagement() {
           </div>
         </div>
 
-        <div className="flex gap-6">
+        <div className="space-y-4">
           {/* Filters Panel */}
-          <div className="w-64 shrink-0 space-y-4">
-            <Card className="glass">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium">Filters</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label className="text-xs text-muted-foreground">Role</Label>
-                  <Select value={roleFilter} onValueChange={setRoleFilter}>
-                    <SelectTrigger><SelectValue placeholder="Select role" /></SelectTrigger>
-                    <SelectContent className="bg-popover border-border">
-                      <SelectItem value="all">All Roles</SelectItem>
-                      <SelectItem value="Individual">Individual</SelectItem>
-                      <SelectItem value="Association Admin">Association Admin</SelectItem>
-                      <SelectItem value="Community Admin">Community Admin</SelectItem>
-                      <SelectItem value="System Admin">System Admin</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
+          <Card className="glass">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium">Filters</CardTitle>
+            </CardHeader>
+            <CardContent className="overflow-x-auto">
+              <div className="flex min-w-[920px] items-end gap-4">
+                <div className="w-56 space-y-2">
                   <Label className="text-xs text-muted-foreground">Community</Label>
-                  <Select>
+                  <Select value={communityFilter} onValueChange={setCommunityFilter}>
                     <SelectTrigger><SelectValue placeholder="Select community..." /></SelectTrigger>
                     <SelectContent className="bg-popover border-border">
-                      <SelectItem value="com1">Ghana Belgium Community</SelectItem>
-                      <SelectItem value="com2">Nigeria France Community</SelectItem>
+                      <SelectItem value="all">All Communities</SelectItem>
+                      {communitiesLoading ? (
+                        <SelectItem value="communities-loading" disabled>Loading communities...</SelectItem>
+                      ) : (
+                        communityOptions.map((community) => (
+                          <SelectItem key={community.id} value={community.id}>{community.name}</SelectItem>
+                        ))
+                      )}
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-2">
+                <div className="w-56 space-y-2">
                   <Label className="text-xs text-muted-foreground">Association</Label>
-                  <Select>
+                  <Select value={associationFilter} onValueChange={setAssociationFilter}>
                     <SelectTrigger><SelectValue placeholder="Select association..." /></SelectTrigger>
                     <SelectContent className="bg-popover border-border">
-                      <SelectItem value="asc1">Ghana Nurses Association</SelectItem>
-                      <SelectItem value="asc2">Nigerian Engineers</SelectItem>
+                      <SelectItem value="all">All Associations</SelectItem>
+                      {associationsLoading ? (
+                        <SelectItem value="associations-loading" disabled>Loading associations...</SelectItem>
+                      ) : (
+                        associationOptions.map((association: { id: string; name: string }) => (
+                          <SelectItem key={association.id} value={association.id}>{association.name}</SelectItem>
+                        ))
+                      )}
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-2">
+                <div className="w-44 space-y-2">
                   <Label className="text-xs text-muted-foreground">Status</Label>
                   <Select value={statusFilter} onValueChange={setStatusFilter}>
                     <SelectTrigger><SelectValue placeholder="Select status" /></SelectTrigger>
@@ -265,21 +280,20 @@ export default function UserManagement() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-2">
+                <div className="w-64 space-y-2">
                   <Label className="text-xs text-muted-foreground">Trust Score: {trustScoreRange[0]} - {trustScoreRange[1]}</Label>
                   <Slider value={trustScoreRange} onValueChange={setTrustScoreRange} min={0} max={100} step={5} className="mt-2" />
                 </div>
-                <div className="flex gap-2 pt-2">
-                  <Button size="sm" className="flex-1">Apply</Button>
-                  <Button size="sm" variant="ghost" onClick={() => { setRoleFilter("all"); setStatusFilter("all"); setTrustScoreRange([0, 100]); }}>Clear</Button>
+                <div className="flex gap-2 pb-0.5">
+                  <Button size="sm">Apply</Button>
+                  <Button size="sm" variant="ghost" onClick={() => { setCommunityFilter("all"); setAssociationFilter("all"); setStatusFilter("all"); setTrustScoreRange([0, 100]); }}>Clear</Button>
                 </div>
-              </CardContent>
-            </Card>
-          </div>
+              </div>
+            </CardContent>
+          </Card>
 
           {/* Main Table */}
-          <div className="flex-1">
-            <Card className="glass">
+          <Card className="glass">
               <CardHeader className="pb-3">
                 <div className="flex items-center gap-4">
                   <div className="relative flex-1">
@@ -371,8 +385,7 @@ export default function UserManagement() {
                   </div>
                 </div>
               </CardContent>
-            </Card>
-          </div>
+          </Card>
         </div>
       </div>
 

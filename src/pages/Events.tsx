@@ -98,7 +98,9 @@ export default function Events() {
   useEffect(() => {
     setSearchInput((prev) => ({
       ...prev,
-      status: statusFilter === "ALL" ? undefined : (statusFilter as ListEventsInput["status"]),
+      status: statusFilter === "ALL"
+        ? undefined
+        : (statusFilter.toLowerCase() as ListEventsInput["status"]),
       searchTerm: searchQuery || undefined,
     }));
   }, [searchQuery, statusFilter]);
@@ -133,7 +135,7 @@ export default function Events() {
       }
     });
 
-  const upcomingCount = events.filter((e) => e.status === "PUBLISHED").length;
+  const upcomingCount = events.filter((e) => e.status?.toUpperCase() === "PUBLISHED").length;
   const totalRegistrations = events.reduce((sum, e) => sum + e.registrationCount, 0);
   const avgAttendance =
     events.length > 0 && events.some((e) => e.availableSpots != null && e.availableSpots > 0)
@@ -168,7 +170,7 @@ export default function Events() {
   const handleTogglePublish = async (event: Event) => {
     if (!ensureSystemAdmin("Publishing events")) return;
 
-    if (event.status === "PUBLISHED") {
+    if (event.status?.toUpperCase() === "PUBLISHED") {
       try {
         await unpublishEventAdmin({ variables: { id: event.id } });
         toast({ title: "Event Unpublished", description: "Event reverted to draft." });

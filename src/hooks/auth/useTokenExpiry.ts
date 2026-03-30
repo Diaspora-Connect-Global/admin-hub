@@ -21,21 +21,14 @@ const ACTIVITY_EVENTS = ["mousedown", "mousemove", "keydown", "scroll", "touchst
 
 function getTokenExpMs(token: string): number | null {
   try {
-    const payload = JSON.parse(atob(token.split(".")[1])) as { exp?: number };
+    const encoded = token.split(".")[1];
+    if (!encoded) return null;
+    const normalized = encoded.replace(/-/g, "+").replace(/_/g, "/");
+    const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, "=");
+    const payload = JSON.parse(atob(padded)) as { exp?: number };
     return typeof payload.exp === "number" ? payload.exp * 1000 : null;
   } catch {
     return null;
-  }
-}
-
-function maybeRefreshAccessTokenSoon(): void {
-  const token = getAccessToken();
-  if (!token) return;
-  const expMs = getTokenExpMs(token);
-  if (!expMs) return;
-  const msLeft = expMs - Date.now();
-  if (msLeft > 0 && msLeft <= PROACTIVE_REFRESH_BEFORE_EXP_MS) {
-    void exchangeRefreshTokenForSession();
   }
 }
 
@@ -45,6 +38,7 @@ export function useTokenExpiry() {
   const expiryTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const warningTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const warningToastShown = useRef(false);
+  const refreshInFlight = useRef(false);
 
   const clearTimers = useCallback(() => {
     if (expiryTimer.current) { clearTimeout(expiryTimer.current); expiryTimer.current = null; }
@@ -61,6 +55,39 @@ export function useTokenExpiry() {
       variant: "destructive",
     });
   }, [navigate, clearTimers]);
+
+  const logoutExpired = useCallback(() => {
+    clearTimers();
+    clearSession();
+    navigate("/login?expired=1", { replace: true });
+    toast({
+      title: "Session Expired",
+      description: "Your session expired and could not be refreshed. Please log in again.",
+      variant: "destructive",
+    });
+  }, [navigate, clearTimers]);
+
+  const maybeRefreshAccessTokenSoon = useCallback(async (): Promise<boolean> => {
+    if (refreshInFlight.current) return true;
+
+    const token = getAccessToken();
+    if (!token) return true;
+
+    const expMs = getTokenExpMs(token);
+    if (!expMs) return true;
+
+    const msLeft = expMs - Date.now();
+    const shouldRefresh = msLeft <= 0 || msLeft <= PROACTIVE_REFRESH_BEFORE_EXP_MS;
+    if (!shouldRefresh) return true;
+
+    refreshInFlight.current = true;
+    try {
+      const result = await exchangeRefreshTokenForSession();
+      return result.ok;
+    } finally {
+      refreshInFlight.current = false;
+    }
+  }, []);
 
   // Called on every user interaction — resets the countdown from scratch
   const resetInactivityTimer = useCallback(() => {
@@ -84,15 +111,23 @@ export function useTokenExpiry() {
     // Log out after full inactivity window
     expiryTimer.current = setTimeout(logout, INACTIVITY_TIMEOUT_MS);
 
-    maybeRefreshAccessTokenSoon();
-  }, [clearTimers, logout]);
+    void maybeRefreshAccessTokenSoon().then((ok) => {
+      if (!ok) logoutExpired();
+    });
+  }, [clearTimers, logout, maybeRefreshAccessTokenSoon, logoutExpired]);
 
   useEffect(() => {
     if (!sessionId) return;
-    const id = setInterval(maybeRefreshAccessTokenSoon, 60_000);
-    maybeRefreshAccessTokenSoon();
+    const id = setInterval(() => {
+      void maybeRefreshAccessTokenSoon().then((ok) => {
+        if (!ok) logoutExpired();
+      });
+    }, 60_000);
+    void maybeRefreshAccessTokenSoon().then((ok) => {
+      if (!ok) logoutExpired();
+    });
     return () => clearInterval(id);
-  }, [sessionId]);
+  }, [sessionId, maybeRefreshAccessTokenSoon, logoutExpired]);
 
   useEffect(() => {
     if (!getAccessToken()) return;

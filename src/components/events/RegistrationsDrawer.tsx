@@ -231,7 +231,9 @@ export function RegistrationsDrawer({
                       <TableCell>
                         <StatusBadge
                           variant={
-                            registration.status === "confirmed" ? "active" : registration.status === "pending" ? "warning" : "inactive"
+                            registration.status?.toLowerCase() === "confirmed" ? "active"
+                            : registration.status?.toLowerCase() === "pending" ? "warning"
+                            : "inactive"
                           }
                         >
                           {registration.status}

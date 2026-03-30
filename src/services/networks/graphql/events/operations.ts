@@ -440,16 +440,16 @@ export const UPDATE_EVENT_TICKET = gql`
 /** Admin — Event dashboard stats (counts by status). */
 export const EVENT_DASHBOARD_STATS = gql`
   query EventDashboardStats {
-    liveEventCount: listEvents(input: { status: "PUBLISHED", limit: 1 }) {
+    liveEventCount: listEvents(input: { status: "published", limit: 1 }) {
       total
     }
-    draftEventCount: listEvents(input: { status: "DRAFT", limit: 1 }) {
+    draftEventCount: listEvents(input: { status: "draft", limit: 1 }) {
       total
     }
-    cancelledEventCount: listEvents(input: { status: "CANCELLED", limit: 1 }) {
+    cancelledEventCount: listEvents(input: { status: "cancelled", limit: 1 }) {
       total
     }
-    completedEventCount: listEvents(input: { status: "COMPLETED", limit: 1 }) {
+    completedEventCount: listEvents(input: { status: "completed", limit: 1 }) {
       total
     }
   }
