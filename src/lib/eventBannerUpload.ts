@@ -31,7 +31,11 @@ export async function uploadEventBannerToStorage(
       "Could not get upload URL for the banner. Ensure getUploadUrl supports category \"event_cover\".",
     );
   }
-  const res = await fetch(uploadUrl, { method: "PUT", body: file });
+  const res = await fetch(uploadUrl, {
+    method: "PUT",
+    body: file,
+    headers: { "Content-Type": contentType },
+  });
   if (!res.ok) {
     throw new Error(`Banner upload failed (${res.status}).`);
   }

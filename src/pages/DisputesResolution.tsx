@@ -403,7 +403,7 @@ export default function DisputesResolution() {
               <TableRow>
                 <TableHead className="w-12">
                   <Checkbox
-                    checked={selectedDisputes.length === mockDisputes.length}
+                    checked={selectedDisputes.length === disputes.length}
                     onCheckedChange={handleSelectAll}
                   />
                 </TableHead>
@@ -419,7 +419,7 @@ export default function DisputesResolution() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {mockDisputes.map((dispute) => (
+              {disputes.map((dispute) => (
                 <TableRow key={dispute.id}>
                   <TableCell>
                     <Checkbox

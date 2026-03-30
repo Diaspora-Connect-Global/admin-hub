@@ -5,6 +5,19 @@ import { gql } from "@apollo/client";
  * Auth: Bearer JWT. Use with admin client.
  */
 
+/** Minimal profile fetch for name resolution (used in attendee lists etc.). */
+export const GET_USER_DISPLAY_NAME = gql`
+  query GetUserDisplayName($userId: String!) {
+    getProfile(userId: $userId) {
+      userId
+      firstName
+      middleName
+      lastName
+      email
+    }
+  }
+`;
+
 /** Get a single user profile by userId. */
 export const GET_PROFILE = gql`
   query GetProfile($userId: String!) {

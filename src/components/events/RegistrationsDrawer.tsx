@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useApolloClient } from "@apollo/client/react";
 import { format } from "date-fns";
 import { Event, EventRegistration } from "@/types/events";
-import { GET_PROFILE } from "@/services/networks/graphql/user";
+import { GET_USER_DISPLAY_NAME } from "@/services/networks/graphql/user";
 import {
   Sheet,
   SheetContent,
@@ -45,9 +45,11 @@ function displayNameFromProfile(p: {
   firstName?: string | null;
   middleName?: string | null;
   lastName?: string | null;
+  email?: string | null;
 } | null | undefined): string {
   if (!p) return "";
-  return [p.firstName, p.middleName, p.lastName].filter(Boolean).join(" ").trim();
+  const fullName = [p.firstName, p.middleName, p.lastName].filter(Boolean).join(" ").trim();
+  return fullName || p.email?.trim() || "";
 }
 
 interface RegistrationsDrawerProps {
@@ -99,13 +101,16 @@ export function RegistrationsDrawer({
         ids.map(async (userId) => {
           try {
             const { data: profileData } = await client.query({
-              query: GET_PROFILE,
+              query: GET_USER_DISPLAY_NAME,
               variables: { userId },
               fetchPolicy: "cache-first",
             });
             const name = displayNameFromProfile(profileData?.getProfile);
             next[userId] = name || userId;
-          } catch {
+          } catch (err) {
+            if (import.meta.env.DEV) {
+              console.warn("[RegistrationsDrawer] getProfile failed for userId:", userId, err);
+            }
             next[userId] = userId;
           }
         }),

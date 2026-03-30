@@ -30,10 +30,12 @@ import { DeleteEventModal } from "@/components/events/DeleteEventModal";
 import { EventAnalyticsWidget } from "@/components/events/EventAnalyticsWidget";
 import { toast } from "@/hooks/use-toast";
 import {
+  ListEventsInput,
   useSearchEvents,
   useGetEvent,
   useCreateEvent,
   useUpdateEvent,
+  useCreateEventTicket,
   useDeleteEventAdmin,
   usePublishEventAdmin,
   useUnpublishEventAdmin,
@@ -48,10 +50,10 @@ export default function Events() {
   const location = useLocation();
   const t = useT("events");
 
-  const [searchInput, setSearchInput] = useState<{ status?: string; ownerType?: string; isPaid?: boolean; page?: number; limit?: number }>({ limit: 20, page: 1 });
+  const [searchInput, setSearchInput] = useState<ListEventsInput>({ limit: 20 });
   const { data: searchData, loading: listLoading, error: listError, refetch: refetchList } = useSearchEvents(searchInput);
-  const events: Event[] = Array.isArray(searchData?.searchEvents?.items) ? searchData.searchEvents.items : [];
-  const totalEvents = searchData?.searchEvents?.total ?? 0;
+  const events: Event[] = Array.isArray(searchData?.listEvents?.events) ? searchData.listEvents.events : [];
+  const totalEvents = searchData?.listEvents?.total ?? 0;
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
   const [typeFilter, setTypeFilter] = useState<string>("all");
@@ -60,6 +62,7 @@ export default function Events() {
   // Modal states
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
+  const [editingEventCard, setEditingEventCard] = useState<Event | null>(null);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [detailsDrawerOpen, setDetailsDrawerOpen] = useState(false);
   const [registrationsDrawerOpen, setRegistrationsDrawerOpen] = useState(false);
@@ -71,6 +74,7 @@ export default function Events() {
 
   const [createEvent] = useCreateEvent();
   const [updateEvent] = useUpdateEvent();
+  const [createEventTicket] = useCreateEventTicket();
   const [fetchUploadUrl] = useGetUploadUrl();
   const [deleteEventAdmin] = useDeleteEventAdmin();
   const [publishEventAdmin] = usePublishEventAdmin();
@@ -94,10 +98,10 @@ export default function Events() {
   useEffect(() => {
     setSearchInput((prev) => ({
       ...prev,
-      status: statusFilter === "ALL" ? undefined : statusFilter,
-      isPaid: typeFilter === "all" ? undefined : (typeFilter === "paid" ? true : typeFilter === "free" ? false : undefined),
+      status: statusFilter === "ALL" ? undefined : (statusFilter as ListEventsInput["status"]),
+      searchTerm: searchQuery || undefined,
     }));
-  }, [searchQuery, statusFilter, typeFilter]);
+  }, [searchQuery, statusFilter]);
 
   useEffect(() => {
     if (location.state?.openCreate) {
@@ -151,6 +155,7 @@ export default function Events() {
   };
 
   const handleEdit = (event: Event) => {
+    setEditingEventCard(event);
     setEditingEventId(event.id);
     setCreateModalOpen(true);
   };
@@ -165,7 +170,7 @@ export default function Events() {
 
     if (event.status === "PUBLISHED") {
       try {
-        await unpublishEventAdmin({ variables: { eventId: event.id } });
+        await unpublishEventAdmin({ variables: { id: event.id } });
         toast({ title: "Event Unpublished", description: "Event reverted to draft." });
         refetch();
       } catch (e) {
@@ -174,7 +179,7 @@ export default function Events() {
       return;
     }
     try {
-      await publishEventAdmin({ variables: { eventId: event.id } });
+      await publishEventAdmin({ variables: { id: event.id } });
       toast({ title: "Event Published", description: "Your event is now live!" });
       refetch();
     } catch (e) {
@@ -192,7 +197,7 @@ export default function Events() {
     if (!ensureSystemAdmin("Deleting events")) return;
     if (!eventToDelete) return;
     try {
-      await deleteEventAdmin({ variables: { eventId: eventToDelete.id } });
+      await deleteEventAdmin({ variables: { id: eventToDelete.id } });
       toast({ title: "Event Deleted", description: "The event has been permanently deleted." });
       setDeleteModalOpen(false);
       setEventToDelete(null);
@@ -266,7 +271,6 @@ export default function Events() {
             endAt,
             tags: [],
             isPaid: data.isPaid,
-            ...(data.isPaid && data.ticketPrice > 0 ? { ticketPrice: Math.round(data.ticketPrice * 100) } : {}),
             ...(data.isPaid && data.currency ? { currency: data.currency } : {}),
             ...(capacityValue != null ? { capacity: capacityValue } : {}),
             ...(coverImageUrl != null ? { coverImageUrl } : {}),
@@ -298,7 +302,6 @@ export default function Events() {
             startAt,
             endAt,
             isPaid: data.isPaid,
-            ...(data.isPaid && data.ticketPrice > 0 ? { ticketPrice: Math.round(data.ticketPrice * 100) } : {}),
             ...(data.isPaid && data.currency ? { currency: data.currency } : {}),
             ...(capacityValue != null ? { capacity: capacityValue } : {}),
             visibility: DEFAULT_EVENT_VISIBILITY,
@@ -308,16 +311,6 @@ export default function Events() {
           },
         };
         logEventMutation("CreateEvent", createVariables);
-        logEventMutation("CreateEvent — derived fields", {
-          capacityValue,
-          timezone,
-          locationType,
-          ownerType,
-          ownerId,
-          isPaid: data.isPaid,
-          ticketPriceInCents: data.isPaid ? Math.round(data.ticketPrice * 100) : 0,
-          currency: data.currency,
-        });
 
         const createResult = await createEvent({
           variables: createVariables,
@@ -325,6 +318,22 @@ export default function Events() {
         throwIfGraphQLErrors(createResult, "CreateEvent");
 
         const createdId = createResult.data?.createEvent?.id as string | undefined;
+
+        // Create ticket separately for paid events (ticket price lives on EventTicketGQL, not CreateEventInput).
+        if (createdId && data.isPaid && data.ticketPrice > 0) {
+          const ticketVariables = {
+            eventId: createdId,
+            input: {
+              name: "General Admission",
+              ticketType: "paid",
+              priceInCents: Math.round(data.ticketPrice * 100),
+              currency: data.currency || "USD",
+            },
+          };
+          logEventMutation("CreateEventTicket", ticketVariables);
+          const ticketRes = await createEventTicket({ variables: ticketVariables });
+          throwIfGraphQLErrors(ticketRes, "CreateEventTicket");
+        }
 
         // capacity is not accepted on create — patch it separately via UpdateEventInput.
         if (createdId && capacityValue != null) {
@@ -339,7 +348,7 @@ export default function Events() {
         if (data.publishNow && createdId) {
           const publishVariables = { id: createdId };
           logEventMutation("PublishEvent", publishVariables);
-          const pubRes = await publishEvent({ variables: publishVariables });
+          const pubRes = await publishEventAdmin({ variables: publishVariables });
           throwIfGraphQLErrors(pubRes, "PublishEvent");
         }
 
@@ -496,9 +505,12 @@ export default function Events() {
         isCreatingNew={!editingEventId}
         onOpenChange={(open) => {
           setCreateModalOpen(open);
-          if (!open) setEditingEventId(null);
+          if (!open) {
+            setEditingEventId(null);
+            setEditingEventCard(null);
+          }
         }}
-        event={editingEvent}
+        event={editingEvent ?? editingEventCard}
         onSubmit={handleCreateSubmit}
       />
 

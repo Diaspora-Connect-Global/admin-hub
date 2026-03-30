@@ -6,10 +6,12 @@
 import { useQuery, useMutation, useLazyQuery } from "@apollo/client/react";
 import {
   LIST_EVENTS,
-  SEARCH_EVENTS,
   GET_EVENT,
+  GET_EVENTS_BY_OWNER,
   GET_EVENT_REGISTRATIONS,
   GET_EVENT_TICKETS,
+  GET_EVENT_ATTENDANCE,
+  GET_EVENT_STATS,
   GET_EVENT_REGISTRATIONS_ADMIN,
   CREATE_EVENT,
   UPDATE_EVENT,
@@ -21,8 +23,11 @@ import {
   UNPUBLISH_EVENT,
   UNPUBLISH_EVENT_ADMIN,
   CANCEL_EVENT,
+  COMPLETE_EVENT,
   MARK_REGISTRATION_CHECKED_IN,
   REMOVE_EVENT_REGISTRATION,
+  CREATE_EVENT_TICKET,
+  UPDATE_EVENT_TICKET,
   EVENT_DASHBOARD_STATS,
 } from "@/services/networks/graphql/events";
 
@@ -31,19 +36,14 @@ export interface ListEventsInput {
   offset?: number;
   searchTerm?: string;
   status?: "DRAFT" | "PUBLISHED" | "CANCELLED" | "COMPLETED";
-  communityId?: string;
-  ownerType?: string;
-  ownerId?: string;
 }
 
-export interface SearchEventsInput {
+export interface GetEventsByOwnerInput {
+  ownerId: string;
+  ownerType: "USER" | "COMMUNITY" | "ASSOCIATION";
   status?: string;
-  ownerType?: string;
-  ownerId?: string;
-  category?: string;
-  isPaid?: boolean;
-  page?: number;
   limit?: number;
+  offset?: number;
 }
 
 export function useListEvents(input?: ListEventsInput) {
@@ -53,9 +53,10 @@ export function useListEvents(input?: ListEventsInput) {
   });
 }
 
-export function useSearchEvents(input?: SearchEventsInput) {
-  return useQuery(SEARCH_EVENTS, {
-    variables: input ?? {},
+/** Alias for useListEvents — use in pages that need search/filter. */
+export function useSearchEvents(input?: ListEventsInput) {
+  return useQuery(LIST_EVENTS, {
+    variables: { input: input ?? {} },
     fetchPolicy: "network-only",
   });
 }
@@ -64,6 +65,14 @@ export function useGetEvent(id: string | null) {
   return useQuery(GET_EVENT, {
     variables: { id: id ?? "" },
     skip: !id,
+  });
+}
+
+export function useGetEventsByOwner(input: GetEventsByOwnerInput | null) {
+  return useQuery(GET_EVENTS_BY_OWNER, {
+    variables: input ?? { ownerId: "", ownerType: "USER" },
+    skip: !input?.ownerId,
+    fetchPolicy: "network-only",
   });
 }
 
@@ -81,10 +90,30 @@ export function useGetEventRegistrations(variables: GetEventRegistrationsVariabl
   });
 }
 
-export function useGetEventTickets(eventId: string | null) {
+export function useGetEventTickets(eventId: string | null, activeOnly?: boolean) {
   return useQuery(GET_EVENT_TICKETS, {
+    variables: { eventId: eventId ?? "", activeOnly },
+    skip: !eventId,
+  });
+}
+
+export function useGetEventAttendance(
+  eventId: string | null,
+  limit?: number,
+  offset?: number,
+) {
+  return useQuery(GET_EVENT_ATTENDANCE, {
+    variables: { eventId: eventId ?? "", limit, offset },
+    skip: !eventId,
+    fetchPolicy: "network-only",
+  });
+}
+
+export function useGetEventStats(eventId: string | null) {
+  return useQuery(GET_EVENT_STATS, {
     variables: { eventId: eventId ?? "" },
     skip: !eventId,
+    fetchPolicy: "network-only",
   });
 }
 
@@ -139,6 +168,10 @@ export function useCancelEvent() {
   return useMutation(CANCEL_EVENT);
 }
 
+export function useCompleteEvent() {
+  return useMutation(COMPLETE_EVENT);
+}
+
 export function useMarkRegistrationCheckedIn() {
   return useMutation(MARK_REGISTRATION_CHECKED_IN);
 }
@@ -147,7 +180,14 @@ export function useRemoveEventRegistration() {
   return useMutation(REMOVE_EVENT_REGISTRATION);
 }
 
+export function useCreateEventTicket() {
+  return useMutation(CREATE_EVENT_TICKET);
+}
+
+export function useUpdateEventTicket() {
+  return useMutation(UPDATE_EVENT_TICKET);
+}
+
 export function useEventDashboardStats() {
   return useQuery(EVENT_DASHBOARD_STATS, { fetchPolicy: "network-only" });
 }
-

@@ -116,7 +116,8 @@ export function CreateEditEventModal({
       hasParticipantLimit: event.capacity != null && event.capacity > 0,
       maxParticipants: event.capacity || 100,
     });
-  }, [open, isCreatingNew, event?.id]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, isCreatingNew, event?.id, event?.description]);
 
   const steps = [
     { id: 1, title: t.basicInformation },
