@@ -5,6 +5,9 @@
 
 export type EventStatus = "DRAFT" | "PUBLISHED" | "CANCELLED" | "COMPLETED";
 export type EventLocationType = "PHYSICAL" | "VIRTUAL" | "HYBRID";
+export type EventOwnerType = "USER" | "COMMUNITY" | "ASSOCIATION";
+export type EventVisibility = "PUBLIC" | "COMMUNITY" | "ASSOCIATION" | "INVITE_ONLY";
+export type EventCapacityType = "LIMITED" | "UNLIMITED";
 
 export interface EventLocation {
   type: EventLocationType;
@@ -26,25 +29,34 @@ export interface EventTicket {
 
 export interface Event {
   id: string;
+  ownerType: EventOwnerType;
+  ownerId: string;
   title: string;
   description: string;
   status: EventStatus;
   startAt: string;
   endAt: string;
   eventCategory: string;
+  visibility?: EventVisibility | null;
   locationType: EventLocationType;
   locationDetails?: EventLocation | null;
+  timezone?: string | null;
+  capacityType?: EventCapacityType | null;
+  capacity?: number | null;
   isPaid: boolean;
   currency?: string | null;
   registrationCount: number;
+  viewCount?: number | null;
+  saveCount?: number | null;
   availableSpots?: number | null;
-  capacity?: number | null;
   isRegistered?: boolean;
   canRegister?: boolean;
   tickets?: EventTicket[] | null;
   coverImageUrl?: string | null;
   tags?: string[] | null;
-  timezone?: string | null;
+  publishedAt?: string | null;
+  cancelledAt?: string | null;
+  recurringEventId?: string | null;
   createdAt?: string | null;
   updatedAt?: string | null;
 }

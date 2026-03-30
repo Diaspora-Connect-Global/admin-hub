@@ -30,13 +30,14 @@ import { DeleteEventModal } from "@/components/events/DeleteEventModal";
 import { EventAnalyticsWidget } from "@/components/events/EventAnalyticsWidget";
 import { toast } from "@/hooks/use-toast";
 import {
-  useListEvents,
+  useSearchEvents,
   useGetEvent,
   useCreateEvent,
   useUpdateEvent,
-  useDeleteEvent,
-  usePublishEvent,
-  useUnpublishEvent,
+  useDeleteEventAdmin,
+  usePublishEventAdmin,
+  useUnpublishEventAdmin,
+  useCancelEvent,
   useGetUploadUrl,
 } from "@/hooks/events";
 import { uploadEventBannerToStorage } from "@/lib/eventBannerUpload";
@@ -47,10 +48,10 @@ export default function Events() {
   const location = useLocation();
   const t = useT("events");
 
-  const [listInput, setListInput] = useState<{ limit?: number; offset?: number; searchTerm?: string; status?: "DRAFT" | "PUBLISHED" | "CANCELLED" | "COMPLETED" }>({ limit: 20, offset: 0 });
-  const { data: listData, loading: listLoading, error: listError, refetch: refetchList } = useListEvents(listInput);
-  const events: Event[] = Array.isArray(listData?.listEvents?.events) ? listData.listEvents.events : [];
-  const totalEvents = listData?.listEvents?.total ?? 0;
+  const [searchInput, setSearchInput] = useState<{ status?: string; ownerType?: string; isPaid?: boolean; page?: number; limit?: number }>({ limit: 20, page: 1 });
+  const { data: searchData, loading: listLoading, error: listError, refetch: refetchList } = useSearchEvents(searchInput);
+  const events: Event[] = Array.isArray(searchData?.searchEvents?.items) ? searchData.searchEvents.items : [];
+  const totalEvents = searchData?.searchEvents?.total ?? 0;
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
   const [typeFilter, setTypeFilter] = useState<string>("all");
@@ -71,9 +72,10 @@ export default function Events() {
   const [createEvent] = useCreateEvent();
   const [updateEvent] = useUpdateEvent();
   const [fetchUploadUrl] = useGetUploadUrl();
-  const [deleteEvent] = useDeleteEvent();
-  const [publishEvent] = usePublishEvent();
-  const [unpublishEvent] = useUnpublishEvent();
+  const [deleteEventAdmin] = useDeleteEventAdmin();
+  const [publishEventAdmin] = usePublishEventAdmin();
+  const [unpublishEventAdmin] = useUnpublishEventAdmin();
+  const [cancelEvent] = useCancelEvent();
 
   const adminProfile = useSessionStore((state) => state.adminProfile);
   const adminRoleName = adminProfile?.role?.name ?? "UNKNOWN_ROLE";
@@ -90,12 +92,12 @@ export default function Events() {
   };
 
   useEffect(() => {
-    setListInput((prev) => ({
+    setSearchInput((prev) => ({
       ...prev,
-      searchTerm: searchQuery.trim() || undefined,
-      status: statusFilter === "ALL" ? undefined : (statusFilter as "DRAFT" | "PUBLISHED" | "CANCELLED" | "COMPLETED"),
+      status: statusFilter === "ALL" ? undefined : statusFilter,
+      isPaid: typeFilter === "all" ? undefined : (typeFilter === "paid" ? true : typeFilter === "free" ? false : undefined),
     }));
-  }, [searchQuery, statusFilter]);
+  }, [searchQuery, statusFilter, typeFilter]);
 
   useEffect(() => {
     if (location.state?.openCreate) {
@@ -163,7 +165,7 @@ export default function Events() {
 
     if (event.status === "PUBLISHED") {
       try {
-        await unpublishEvent({ variables: { id: event.id } });
+        await unpublishEventAdmin({ variables: { eventId: event.id } });
         toast({ title: "Event Unpublished", description: "Event reverted to draft." });
         refetch();
       } catch (e) {
@@ -172,7 +174,7 @@ export default function Events() {
       return;
     }
     try {
-      await publishEvent({ variables: { id: event.id } });
+      await publishEventAdmin({ variables: { eventId: event.id } });
       toast({ title: "Event Published", description: "Your event is now live!" });
       refetch();
     } catch (e) {
@@ -190,7 +192,7 @@ export default function Events() {
     if (!ensureSystemAdmin("Deleting events")) return;
     if (!eventToDelete) return;
     try {
-      await deleteEvent({ variables: { id: eventToDelete.id } });
+      await deleteEventAdmin({ variables: { eventId: eventToDelete.id } });
       toast({ title: "Event Deleted", description: "The event has been permanently deleted." });
       setDeleteModalOpen(false);
       setEventToDelete(null);

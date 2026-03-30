@@ -7,71 +7,53 @@ import { gql } from "@apollo/client";
  */
 
 const EVENT_LIST_FIELDS = gql`
-  fragment EventListFields on EventGQL {
+  fragment EventListFields on Event {
     id
+    ownerType
+    ownerId
     title
+    visibility
     status
-    startAt
-    endAt
-    eventCategory
-    locationType
-    locationDetails {
-      type
-      venueName
-      city
-      country
-      virtualLink
-      platform
-    }
     isPaid
     currency
-    registrationCount
-    availableSpots
+    capacityType
     capacity
-    isRegistered
-    canRegister
+    registrationCount
+    startAt
+    createdAt
     coverImageUrl
-    tags
   }
 `;
 
 const EVENT_FULL_FIELDS = gql`
-  fragment EventFullFields on EventGQL {
+  fragment EventFullFields on Event {
     id
+    ownerType
+    ownerId
     title
     description
-    status
+    eventCategory
+    visibility
+    locationType
+    locationDetails
     startAt
     endAt
-    eventCategory
-    locationType
-    locationDetails {
-      type
-      venueName
-      address
-      city
-      country
-      virtualLink
-      platform
-    }
+    timezone
+    capacityType
+    capacity
+    status
     isPaid
     currency
-    registrationCount
-    availableSpots
-    capacity
-    isRegistered
-    canRegister
-    tickets {
-      id
-      name
-      priceInCents
-      availableQuantity
-    }
     coverImageUrl
     tags
-    timezone
+    registrationCount
+    viewCount
+    saveCount
+    publishedAt
+    cancelledAt
     createdAt
     updatedAt
+    recurringEventId
   }
 `;
 
@@ -91,20 +73,41 @@ const EVENT_REGISTRATION_FIELDS = gql`
   }
 `;
 
-/** List events with filters and pagination. */
-export const LIST_EVENTS = gql`
+/** Admin list events with filters — all statuses, all owners. */
+export const SEARCH_EVENTS = gql`
   ${EVENT_LIST_FIELDS}
-  query ListEvents($input: ListEventsInput) {
-    listEvents(input: $input) {
-      events {
+  query SearchEvents(
+    $status: String
+    $ownerType: String
+    $ownerId: String
+    $category: String
+    $isPaid: Boolean
+    $page: Int
+    $limit: Int
+  ) {
+    searchEvents(
+      status: $status
+      ownerType: $ownerType
+      ownerId: $ownerId
+      category: $category
+      isPaid: $isPaid
+      page: $page
+      limit: $limit
+    ) {
+      items {
         ...EventListFields
       }
       total
+      page
+      limit
     }
   }
 `;
 
-/** Get single event by ID. */
+/** Kept for backward compatibility, but prefer SEARCH_EVENTS for admin. */
+export const LIST_EVENTS = SEARCH_EVENTS;
+
+/** Get single event by ID (admin view — full detail). */
 export const GET_EVENT = gql`
   ${EVENT_FULL_FIELDS}
   query GetEvent($id: ID!) {
@@ -247,6 +250,108 @@ export const REMOVE_EVENT_REGISTRATION = gql`
     removeEventRegistration(registrationId: $registrationId) {
       success
       message
+    }
+  }
+`;
+
+/** Admin — Get event tickets (for paid events). */
+export const GET_EVENT_TICKETS = gql`
+  query GetEventTickets($eventId: String!) {
+    getEventTickets(eventId: $eventId) {
+      id
+      name
+      ticketType
+      price
+      currency
+      totalQuantity
+      soldCount
+      status
+    }
+  }
+`;
+
+/** Admin — Get event registrations with pagination. */
+export const GET_EVENT_REGISTRATIONS_ADMIN = gql`
+  query GetEventRegistrations(
+    $eventId: String!
+    $status: String
+    $page: Int
+    $limit: Int
+  ) {
+    getEventRegistrations(
+      eventId: $eventId
+      status: $status
+      page: $page
+      limit: $limit
+    ) {
+      items {
+        id
+        userId
+        status
+        checkedIn
+        checkedInAt
+        createdAt
+      }
+      total
+      page
+      limit
+    }
+  }
+`;
+
+/** Admin — Force cancel an event. */
+export const CANCEL_EVENT = gql`
+  mutation CancelEvent($eventId: String!, $reason: String!) {
+    cancelEvent(eventId: $eventId, reason: $reason) {
+      id
+      status
+      cancelledAt
+    }
+  }
+`;
+
+/** Admin — Force delete an event. */
+export const DELETE_EVENT_ADMIN = gql`
+  mutation DeleteEventAdmin($eventId: String!) {
+    deleteEvent(eventId: $eventId)
+  }
+`;
+
+/** Admin — Publish event on behalf of owner. */
+export const PUBLISH_EVENT_ADMIN = gql`
+  mutation PublishEventAdmin($eventId: String!) {
+    publishEvent(eventId: $eventId) {
+      id
+      status
+      publishedAt
+    }
+  }
+`;
+
+/** Admin — Unpublish event on behalf of owner. */
+export const UNPUBLISH_EVENT_ADMIN = gql`
+  mutation UnpublishEventAdmin($eventId: String!) {
+    unpublishEvent(eventId: $eventId) {
+      id
+      status
+    }
+  }
+`;
+
+/** Admin — Get event dashboard stats. */
+export const EVENT_DASHBOARD_STATS = gql`
+  query EventDashboardStats {
+    liveEventCount: searchEvents(status: "published", limit: 1) {
+      total
+    }
+    draftEventCount: searchEvents(status: "draft", limit: 1) {
+      total
+    }
+    cancelledEventCount: searchEvents(status: "cancelled", limit: 1) {
+      total
+    }
+    paidEventCount: searchEvents(isPaid: true, limit: 1) {
+      total
     }
   }
 `;
