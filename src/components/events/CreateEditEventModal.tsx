@@ -112,8 +112,9 @@ export function CreateEditEventModal({
       virtualLink: event.locationDetails?.virtualLink || "",
       isPaid: event.isPaid,
       ticketPrice: event.tickets?.[0] ? event.tickets[0].priceInCents / 100 : 0,
-      hasParticipantLimit: event.availableSpots != null,
-      maxParticipants: event.availableSpots != null ? event.availableSpots + event.registrationCount : 100,
+      currency: event.currency || "USD",
+      hasParticipantLimit: event.capacity != null && event.capacity > 0,
+      maxParticipants: event.capacity || 100,
     });
   }, [open, isCreatingNew, event?.id]);
 
@@ -526,8 +527,12 @@ export function CreateEditEventModal({
                       <SelectContent>
                         <SelectItem value="USD">USD ($)</SelectItem>
                         <SelectItem value="EUR">EUR (€)</SelectItem>
-                        <SelectItem value="GHS">GHS (₵)</SelectItem>
                         <SelectItem value="GBP">GBP (£)</SelectItem>
+                        <SelectItem value="GHS">GHS (₵)</SelectItem>
+                        <SelectItem value="NGN">NGN (₦)</SelectItem>
+                        <SelectItem value="KES">KES (KSh)</SelectItem>
+                        <SelectItem value="ZAR">ZAR (R)</SelectItem>
+                        <SelectItem value="CAD">CAD (C$)</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>

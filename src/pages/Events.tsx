@@ -263,6 +263,9 @@ export default function Events() {
             startAt,
             endAt,
             tags: [],
+            isPaid: data.isPaid,
+            ...(data.isPaid && data.ticketPrice > 0 ? { ticketPrice: Math.round(data.ticketPrice * 100) } : {}),
+            ...(data.isPaid && data.currency ? { currency: data.currency } : {}),
             ...(capacityValue != null ? { capacity: capacityValue } : {}),
             ...(coverImageUrl != null ? { coverImageUrl } : {}),
           },
@@ -293,6 +296,9 @@ export default function Events() {
             startAt,
             endAt,
             isPaid: data.isPaid,
+            ...(data.isPaid && data.ticketPrice > 0 ? { ticketPrice: Math.round(data.ticketPrice * 100) } : {}),
+            ...(data.isPaid && data.currency ? { currency: data.currency } : {}),
+            ...(capacityValue != null ? { capacity: capacityValue } : {}),
             visibility: DEFAULT_EVENT_VISIBILITY,
             timezone,
             tags: [],
@@ -306,6 +312,9 @@ export default function Events() {
           locationType,
           ownerType,
           ownerId,
+          isPaid: data.isPaid,
+          ticketPriceInCents: data.isPaid ? Math.round(data.ticketPrice * 100) : 0,
+          currency: data.currency,
         });
 
         const createResult = await createEvent({

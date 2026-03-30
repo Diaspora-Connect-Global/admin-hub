@@ -35,8 +35,10 @@ export interface Event {
   locationType: EventLocationType;
   locationDetails?: EventLocation | null;
   isPaid: boolean;
+  currency?: string | null;
   registrationCount: number;
   availableSpots?: number | null;
+  capacity?: number | null;
   isRegistered?: boolean;
   canRegister?: boolean;
   tickets?: EventTicket[] | null;

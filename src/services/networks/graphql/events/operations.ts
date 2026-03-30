@@ -24,8 +24,10 @@ const EVENT_LIST_FIELDS = gql`
       platform
     }
     isPaid
+    currency
     registrationCount
     availableSpots
+    capacity
     isRegistered
     canRegister
     coverImageUrl
@@ -53,8 +55,10 @@ const EVENT_FULL_FIELDS = gql`
       platform
     }
     isPaid
+    currency
     registrationCount
     availableSpots
+    capacity
     isRegistered
     canRegister
     tickets {
@@ -148,6 +152,14 @@ export const CREATE_EVENT = gql`
       coverImageUrl
       tags
       isPaid
+      currency
+      capacity
+      availableSpots
+      tickets {
+        id
+        name
+        priceInCents
+      }
     }
   }
 `;
@@ -164,6 +176,14 @@ export const UPDATE_EVENT = gql`
       coverImageUrl
       tags
       isPaid
+      currency
+      capacity
+      availableSpots
+      tickets {
+        id
+        name
+        priceInCents
+      }
     }
   }
 `;
