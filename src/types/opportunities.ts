@@ -115,6 +115,7 @@ export interface Opportunity {
   applicationMethod?: ApplicationMethod | null;  // ⚠️ Nullable from backend, defaults to IN_PLATFORM_FORM
   externalLink?: string | null;
   applicationEmail?: string | null;
+  formFields?: FormField[] | null;
   status: OpportunityStatus;
   priorityLevel: PriorityLevel;
   salaryMin?: number | null;
@@ -216,6 +217,7 @@ export interface CreateOpportunityInput {
   applicationMethod?: ApplicationMethod;  // Optional, defaults to IN_PLATFORM_FORM
   applicationEmail?: string;  // REQUIRED if applicationMethod is EMAIL_REQUEST
   externalLink?: string;      // REQUIRED if applicationMethod is EXTERNAL_LINK
+  formFields?: FormField[];   // Replaces all form fields; omit to use defaults
   responsibilities?: string;
   requirements?: string;
   workMode?: WorkMode;
@@ -250,6 +252,7 @@ export interface UpdateOpportunityInput {
   applicationMethod?: ApplicationMethod;
   applicationEmail?: string;  // Required when applicationMethod is EMAIL_REQUEST
   externalLink?: string;      // Required when applicationMethod is EXTERNAL_LINK
+  formFields?: FormField[];   // Replaces all form fields when provided
 }
 
 export interface ListOpportunitiesInput {
@@ -320,6 +323,6 @@ export interface Applicant extends Application {
 export interface FormField {
   key: string;
   label: string;
-  required?: boolean;
-  type?: string;
+  type: 'text' | 'email' | 'textarea' | 'file_upload';
+  required: boolean;
 }

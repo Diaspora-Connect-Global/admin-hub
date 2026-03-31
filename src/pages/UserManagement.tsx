@@ -312,13 +312,6 @@ export default function UserManagement() {
                         <TableHead>Name</TableHead>
                         <TableHead>Email</TableHead>
                         <TableHead>Phone</TableHead>
-                        <TableHead>Role</TableHead>
-                        <TableHead>Communities</TableHead>
-                        <TableHead>Associations</TableHead>
-                        <TableHead>Posts</TableHead>
-                        <TableHead>Reactions</TableHead>
-                        <TableHead>Groups</TableHead>
-                        <TableHead>Opportunities</TableHead>
                         <TableHead>Trust Score</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead>Created At</TableHead>
@@ -327,9 +320,9 @@ export default function UserManagement() {
                     </TableHeader>
                     <TableBody>
                       {loading ? (
-                        <TableRow><TableCell colSpan={15} className="text-center text-muted-foreground py-8">Loading users...</TableCell></TableRow>
+                        <TableRow><TableCell colSpan={9} className="text-center text-muted-foreground py-8">Loading users...</TableCell></TableRow>
                       ) : error ? (
-                        <TableRow><TableCell colSpan={15} className="text-center text-destructive py-8">Failed to load users.</TableCell></TableRow>
+                        <TableRow><TableCell colSpan={9} className="text-center text-destructive py-8">Failed to load users.</TableCell></TableRow>
                       ) : (
                       filteredUsers.map((user) => (
                         <TableRow key={user.id} className="border-border/50">
@@ -337,13 +330,6 @@ export default function UserManagement() {
                           <TableCell className="font-medium">{user.name}</TableCell>
                           <TableCell className="text-muted-foreground">{user.email}</TableCell>
                           <TableCell className="text-muted-foreground">{user.phone}</TableCell>
-                          <TableCell><Badge variant="secondary">{user.role}</Badge></TableCell>
-                          <TableCell>{user.communitiesCount}</TableCell>
-                          <TableCell>{user.associationsCount}</TableCell>
-                          <TableCell>{user.postsCount}</TableCell>
-                          <TableCell>{user.reactionsCount}</TableCell>
-                          <TableCell>{user.groupsCount}</TableCell>
-                          <TableCell>{user.opportunitiesApplied}</TableCell>
                           <TableCell>{getTrustScoreBadge(user.trustScore)}</TableCell>
                           <TableCell>{getStatusBadge(user.status)}</TableCell>
                           <TableCell className="text-muted-foreground">{user.createdAt}</TableCell>

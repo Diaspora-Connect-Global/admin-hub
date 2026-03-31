@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useLocation } from "react-router-dom";
-import { gql } from "@apollo/client";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import { useT } from "@/hooks/useT";
 import { useAdminAuth } from "@/hooks/auth/useAdminAuth";
@@ -29,15 +28,13 @@ import {
   Opportunity,
   Applicant,
   OpportunityType as OpportunityTypeEnum,
-  OpportunityCategory,
   Visibility,
   ApplicationMethod,
-  OwnerType,
   type CreateOpportunityInput,
+  type UpdateOpportunityInput,
   type Application,
   OpportunityStatus,
   type OpportunityStatusFilter,
-  PriorityLevel,
   ApplicationStatus,
 } from "@/types/opportunities";
 import type {
@@ -45,7 +42,6 @@ import type {
   GetApplicationsResponse,
 } from "@/hooks/opportunity";
 import { toast } from "@/hooks/use-toast";
-import { getUserId } from "@/stores/session";
 import {
   useListOpportunities,
   useGetApplications,
@@ -212,130 +208,25 @@ export default function Opportunities() {
     return false;
   };
 
-  function mapFormTypeToEnums(
-    typeStr: string
-  ): { type: OpportunityTypeEnum; category: OpportunityCategory } {
-    const t = (typeStr || "EMPLOYMENT").toUpperCase();
-    
-    switch (t) {
-      case "EMPLOYMENT":
-        return { type: OpportunityTypeEnum.EMPLOYMENT, category: OpportunityCategory.EMPLOYMENT_CAREER };
-      case "SCHOLARSHIP":
-        return { type: OpportunityTypeEnum.SCHOLARSHIP, category: OpportunityCategory.EDUCATION_TRAINING };
-      case "INVESTMENT":
-        return { type: OpportunityTypeEnum.INVESTMENT, category: OpportunityCategory.BUSINESS_INVESTMENT };
-      case "FELLOWSHIP":
-        return { type: OpportunityTypeEnum.FELLOWSHIP, category: OpportunityCategory.FELLOWSHIPS_LEADERSHIP };
-      case "INITIATIVE":
-        return { type: OpportunityTypeEnum.INITIATIVE, category: OpportunityCategory.GOVERNMENT_EMBASSY_INITIATIVES };
-      case "GRANT":
-        return { type: OpportunityTypeEnum.GRANT, category: OpportunityCategory.FUNDING_GRANTS };
-      case "PROGRAM":
-        return { type: OpportunityTypeEnum.PROGRAM, category: OpportunityCategory.EDUCATION_TRAINING };
-      case "VOLUNTEER":
-        return { type: OpportunityTypeEnum.VOLUNTEER, category: OpportunityCategory.VOLUNTEERING_SOCIAL_IMPACT };
-      case "CONTRACT":
-        return { type: OpportunityTypeEnum.CONTRACT, category: OpportunityCategory.EMPLOYMENT_CAREER };
-      default:
-        return { type: OpportunityTypeEnum.EMPLOYMENT, category: OpportunityCategory.EMPLOYMENT_CAREER };
-    }
-  }
-
-
   const handleSaveOpportunity = async (
-    data: Partial<Opportunity>,
-    action: "draft" | "publish" | "schedule"
+    data: CreateOpportunityInput | UpdateOpportunityInput,
+    action: "draft" | "publish"
   ) => {
     if (!ensureSystemAdmin(editOpportunity?.id ? "Updating opportunities" : "Creating opportunities")) {
       return;
     }
 
-    // Validate required fields
-    if (!data.title || !data.title.trim()) {
-      toast({
-        title: "Title Required",
-        description: "Please enter a title for the opportunity.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    const { type: typeEnum, category } = mapFormTypeToEnums(data.type as string);
-    // Support full visibility options per updated backend contract
-    const visibilityInput = String(data.visibility ?? Visibility.PUBLIC).toUpperCase();
-    const visibility =
-      visibilityInput === Visibility.COMMUNITY_ONLY || visibilityInput === "COMMUNITY"
-        ? Visibility.COMMUNITY_ONLY
-        : visibilityInput === Visibility.ASSOCIATION_ONLY || visibilityInput === "ASSOCIATION"
-          ? Visibility.ASSOCIATION_ONLY
-          : Visibility.PUBLIC;
-    const deadlineStr = data.deadline
-      ? (typeof data.deadline === "string" && data.deadline.includes(",")
-          ? new Date(data.deadline).toISOString()
-          : (data.deadline as string))
-      : undefined;
-    const applicationMethod = data.applicationMethod ?? ApplicationMethod.IN_PLATFORM_FORM;
-
-    if (applicationMethod === ApplicationMethod.EMAIL_REQUEST && !data.applicationEmail?.trim()) {
-      toast({
-        title: "Application Email Required",
-        description: "Please provide an email to receive applications.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (applicationMethod === ApplicationMethod.EXTERNAL_LINK && !data.externalLink?.trim()) {
-      toast({
-        title: "External Link Required",
-        description: "Please provide an external application link.",
-        variant: "destructive",
-      });
-      return;
-    }
-
     if (editOpportunity?.id) {
       try {
-        // Sparse update — only send fields with actual values (backend ignores empty strings).
-        // applicationMethod change auto-clears the stale email/link on the service side.
-        const updateInput: import("@/types/opportunities").UpdateOpportunityInput = {};
-        if (data.title)                       updateInput.title           = data.title.trim();
-        if (data.description)                 updateInput.description     = data.description;
-        if (data.responsibilities)            updateInput.responsibilities = data.responsibilities;
-        if (data.requirements)                updateInput.requirements    = data.requirements;
-        if (data.location)                    updateInput.location        = data.location;
-        if (deadlineStr)                      updateInput.deadline        = deadlineStr;
-        if (data.workMode)                    updateInput.workMode        = data.workMode as import("@/types/opportunities").WorkMode;
-        if (data.engagementType)             updateInput.engagementType  = data.engagementType as import("@/types/opportunities").EngagementType;
-        if (data.salaryMin  != null)          updateInput.salaryMin       = data.salaryMin  as number;
-        if (data.salaryMax  != null)          updateInput.salaryMax       = data.salaryMax  as number;
-        if (data.salaryCurrency)             updateInput.salaryCurrency  = data.salaryCurrency as string;
-        if (data.tags?.length)               updateInput.tags            = data.tags as string[];
-        if (data.skills?.length)             updateInput.skills          = data.skills as string[];
-        if (data.subCategory)               updateInput.subCategory     = data.subCategory as string;
-        // Application method (always include when present so stale values are cleared)
-        updateInput.applicationMethod = applicationMethod;
-        if (applicationMethod === ApplicationMethod.EMAIL_REQUEST) {
-          updateInput.applicationEmail = data.applicationEmail?.trim() || undefined;
-        }
-        if (applicationMethod === ApplicationMethod.EXTERNAL_LINK) {
-          updateInput.externalLink = data.externalLink?.trim() || undefined;
-        }
-
         await updateOpportunityMutation({
-          variables: { id: editOpportunity.id, input: updateInput },
+          variables: { id: editOpportunity.id, input: data as UpdateOpportunityInput },
         });
         if (action === "publish" && editOpportunity.status !== OpportunityStatus.PUBLISHED) {
           await publishOpportunityMutation({ variables: { id: editOpportunity.id } });
         }
         toast({
           title: "Opportunity updated",
-          description:
-            action === "publish"
-              ? "Opportunity updated and published."
-              : action === "schedule"
-                ? "Opportunity updated. Scheduled publishing is not yet supported by the API."
-                : "Your changes have been saved.",
+          description: action === "publish" ? "Opportunity updated and published." : "Your changes have been saved.",
         });
         setCreateModalOpen(false);
         setEditOpportunity(null);
@@ -346,52 +237,15 @@ export default function Opportunities() {
       return;
     }
 
-    const ownerId = getUserId();
-    if (!ownerId) {
-      toast({
-        title: "Session error",
-        description: "Your user id is not available. Please log out and log in again.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Backend contract: ownerType must be USER, ownerId must match logged-in user ID (ownership check enforced backend)
-    const input: CreateOpportunityInput = {
-      ownerType: OwnerType.USER,
-      ownerId,  // Must be authenticated user's ID per backend ownership validation
-      type: typeEnum,
-      category,
-      title: data.title!.trim(), // Title validated above, safe to use
-      description: data.description ?? "",
-      visibility,
-      applicationMethod,
-      applicationEmail:
-        applicationMethod === ApplicationMethod.EMAIL_REQUEST
-          ? data.applicationEmail?.trim() || undefined
-          : undefined,
-      externalLink:
-        applicationMethod === ApplicationMethod.EXTERNAL_LINK
-          ? data.externalLink?.trim() || undefined
-          : undefined,
-      location: data.location ?? undefined,
-      deadline: deadlineStr,
-    };
-
     try {
-      const result = await createOpportunityMutation({ variables: { input } });
+      const result = await createOpportunityMutation({ variables: { input: data as CreateOpportunityInput } });
       const createdId = (result.data as { createOpportunity?: { id?: string } } | undefined)?.createOpportunity?.id;
       if (action === "publish" && createdId) {
         await publishOpportunityMutation({ variables: { id: createdId } });
       }
       toast({
         title: "Opportunity created",
-        description:
-          action === "draft"
-            ? "Saved as draft."
-            : action === "schedule"
-              ? "Created as draft. Scheduled publishing is not yet supported by the API."
-              : "Opportunity is now live.",
+        description: action === "draft" ? "Saved as draft." : "Opportunity is now live.",
       });
       setCreateModalOpen(false);
       setEditOpportunity(null);
@@ -399,18 +253,17 @@ export default function Opportunities() {
     } catch (e) {
       const error = e as { graphQLErrors?: Array<{ message: string; extensions?: { code?: string } }> };
       const graphQLError = error.graphQLErrors?.[0];
-      
-      if (graphQLError?.extensions?.code === "FORBIDDEN" || graphQLError?.message?.toLowerCase().includes('forbidden')) {
-        toast({ 
-          title: "Permission Denied", 
-          description: "You need SYSTEM_ADMIN role to create opportunities. Please contact your administrator.", 
-          variant: "destructive" 
+      if (graphQLError?.extensions?.code === "FORBIDDEN" || graphQLError?.message?.toLowerCase().includes("forbidden")) {
+        toast({
+          title: "Permission Denied",
+          description: "You need SYSTEM_ADMIN role to create opportunities.",
+          variant: "destructive",
         });
       } else {
-        toast({ 
-          title: "Error", 
-          description: graphQLError?.message || (e as Error).message || "Failed to create opportunity", 
-          variant: "destructive" 
+        toast({
+          title: "Error",
+          description: graphQLError?.message || (e as Error).message || "Failed to create opportunity",
+          variant: "destructive",
         });
       }
     }

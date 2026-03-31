@@ -18,7 +18,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { MultiSelect } from "@/components/ui/multi-select";
 import { Search, Plus, MoreHorizontal, Eye, Edit, Link2, Pause, ChevronDown, Download, FileJson, Store, X, BarChart3, Trash2, Upload, Globe, Loader2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
-import { useCreateCommunity, useListCommunities } from "@/hooks/admin";
+import { useCreateCommunity, useDiscoverAssociations, useListCommunities } from "@/hooks/admin";
 import type { CreateCommunityInput, Community } from "@/services/networks/graphql/admin";
 
 /** Table row shape for the communities list (mapped from API Community). */
@@ -88,12 +88,6 @@ const mockAdmins = [
   { id: "USR-002", name: "Jane Smith", email: "jane@example.com" },
   { id: "USR-003", name: "Michael Brown", email: "michael@example.com" },
   { id: "USR-004", name: "Sarah Wilson", email: "sarah@example.com" },
-];
-
-const associationOptions = [
-  { id: "ASC-001", name: "Ghana Nurses Association" },
-  { id: "ASC-002", name: "Nigerian Engineers Association" },
-  { id: "ASC-003", name: "African Professionals Network" },
 ];
 
 /** API-aligned create community form (Community Service CreateCommunityInput). */
@@ -181,6 +175,14 @@ export default function Communities() {
   const apiCommunities = listData?.listCommunities?.communities ?? [];
   const totalCount = listData?.listCommunities?.total ?? 0;
   const rows = apiCommunities.map(mapCommunityToRow);
+
+  const { data: associationsData, loading: associationsLoading } = useDiscoverAssociations({
+    limit: 1000,
+    offset: 0,
+  });
+  const associationOptions = (
+    associationsData as { discoverAssociations?: { associations?: Array<{ id: string; name: string }> } } | undefined
+  )?.discoverAssociations?.associations ?? [];
 
   const filteredCommunities = rows
     .filter((community) => {
@@ -889,9 +891,15 @@ export default function Communities() {
               <Select>
                 <SelectTrigger><SelectValue placeholder={t('communities.searchAssociations')} /></SelectTrigger>
                 <SelectContent className="bg-popover border-border">
-                  {associationOptions.map((assoc) => (
-                    <SelectItem key={assoc.id} value={assoc.id}>{assoc.name}</SelectItem>
-                  ))}
+                  {associationsLoading ? (
+                    <SelectItem value="associations-loading" disabled>{t('common.loading')}</SelectItem>
+                  ) : associationOptions.length === 0 ? (
+                    <SelectItem value="associations-empty" disabled>{t('common.noData')}</SelectItem>
+                  ) : (
+                    associationOptions.map((assoc) => (
+                      <SelectItem key={assoc.id} value={assoc.id}>{assoc.name}</SelectItem>
+                    ))
+                  )}
                 </SelectContent>
               </Select>
             </div>

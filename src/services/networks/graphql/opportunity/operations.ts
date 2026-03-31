@@ -46,6 +46,8 @@ export const OPPORTUNITY_FIELDS = gql`
     deadline
     skills
     tags
+    applicationMethod
+    formFields { key label type required }
     applicationCount
     createdAt
     updatedAt
