@@ -27,6 +27,7 @@ import { CreateEditEventModal } from "@/components/events/CreateEditEventModal";
 import { EventDetailsModal } from "@/components/events/EventDetailsModal";
 import { RegistrationsDrawer } from "@/components/events/RegistrationsDrawer";
 import { DeleteEventModal } from "@/components/events/DeleteEventModal";
+import { CancelEventModal } from "@/components/events/CancelEventModal";
 import { EventAnalyticsWidget } from "@/components/events/EventAnalyticsWidget";
 import { toast } from "@/hooks/use-toast";
 import {
@@ -50,10 +51,13 @@ export default function Events() {
   const location = useLocation();
   const t = useT("events");
 
-  const [searchInput, setSearchInput] = useState<ListEventsInput>({ limit: 20 });
+  const pageLimit = 20;
+  const [searchInput, setSearchInput] = useState<ListEventsInput>({ limit: pageLimit, offset: 0 });
   const { data: searchData, loading: listLoading, error: listError, refetch: refetchList } = useSearchEvents(searchInput);
-  const events: Event[] = Array.isArray(searchData?.listEvents?.events) ? searchData.listEvents.events : [];
-  const totalEvents = searchData?.listEvents?.total ?? 0;
+  const events: Event[] = Array.isArray(searchData?.adminListEvents?.events) ? searchData.adminListEvents.events : [];
+  const totalEvents = searchData?.adminListEvents?.total ?? 0;
+  const hasMore = Boolean(searchData?.adminListEvents?.hasMore);
+  const currentPage = searchData?.adminListEvents?.page ?? Math.floor((searchInput.offset ?? 0) / pageLimit) + 1;
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
   const [typeFilter, setTypeFilter] = useState<string>("all");
@@ -68,9 +72,11 @@ export default function Events() {
   const [registrationsDrawerOpen, setRegistrationsDrawerOpen] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [eventToDelete, setEventToDelete] = useState<Event | null>(null);
+  const [cancelModalOpen, setCancelModalOpen] = useState(false);
+  const [eventToCancel, setEventToCancel] = useState<Event | null>(null);
 
   const { data: editingEventData } = useGetEvent(editingEventId);
-  const editingEvent = editingEventData?.getEvent ?? null;
+  const editingEvent = editingEventData?.adminGetEvent ?? null;
 
   const [createEvent] = useCreateEvent();
   const [updateEvent] = useUpdateEvent();
@@ -96,14 +102,27 @@ export default function Events() {
   };
 
   useEffect(() => {
+    const debounceId = window.setTimeout(() => {
+      setSearchInput((prev) => ({
+        ...prev,
+        offset: 0,
+        status:
+          statusFilter === "ALL"
+            ? ""
+            : (statusFilter.toLowerCase() as ListEventsInput["status"]),
+        searchTerm: searchQuery.trim(),
+      }));
+    }, 400);
+
+    return () => window.clearTimeout(debounceId);
+  }, [searchQuery, statusFilter]);
+
+  useEffect(() => {
     setSearchInput((prev) => ({
       ...prev,
-      status: statusFilter === "ALL"
-        ? undefined
-        : (statusFilter.toLowerCase() as ListEventsInput["status"]),
-      searchTerm: searchQuery || undefined,
+      limit: pageLimit,
     }));
-  }, [searchQuery, statusFilter]);
+  }, [pageLimit]);
 
   useEffect(() => {
     if (location.state?.openCreate) {
@@ -195,11 +214,31 @@ export default function Events() {
     setDeleteModalOpen(true);
   };
 
+  const handleCancel = (event: Event) => {
+    if (!ensureSystemAdmin("Cancelling events")) return;
+    setEventToCancel(event);
+    setCancelModalOpen(true);
+  };
+
+  const handleConfirmCancel = async (reason: string) => {
+    if (!ensureSystemAdmin("Cancelling events")) return;
+    if (!eventToCancel) return;
+    try {
+      await cancelEvent({ variables: { eventId: eventToCancel.id, reason } });
+      toast({ title: "Event Cancelled", description: "The event has been cancelled." });
+      setCancelModalOpen(false);
+      setEventToCancel(null);
+      refetch();
+    } catch (e) {
+      toast({ title: "Error", description: (e as Error).message, variant: "destructive" });
+    }
+  };
+
   const handleConfirmDelete = async () => {
     if (!ensureSystemAdmin("Deleting events")) return;
     if (!eventToDelete) return;
     try {
-      await deleteEventAdmin({ variables: { id: eventToDelete.id } });
+      await deleteEventAdmin({ variables: { eventId: eventToDelete.id } });
       toast({ title: "Event Deleted", description: "The event has been permanently deleted." });
       setDeleteModalOpen(false);
       setEventToDelete(null);
@@ -250,7 +289,7 @@ export default function Events() {
     const locationDetails = buildEventLocationPayload(data);
     const capacityValue = resolveEventCapacity(data);
     const timezone = resolveEventTimezone(data.eventType);
-    const ownerType = data.ownerType === "COMMUNITY" ? "COMMUNITY" : "USER";
+    const ownerType = "SYSTEM";
 
     logEventFormSnapshot(data);
 
@@ -267,12 +306,14 @@ export default function Events() {
           input: {
             title: data.title,
             description: data.description,
+            eventCategory: data.eventCategory,
             locationType,
             ...(locationDetails != null ? { locationDetails } : {}),
             startAt,
             endAt,
             tags: [],
             isPaid: data.isPaid,
+            visibility: data.visibility ?? DEFAULT_EVENT_VISIBILITY,
             ...(data.isPaid && data.currency ? { currency: data.currency } : {}),
             ...(capacityValue != null ? { capacity: capacityValue } : {}),
             ...(coverImageUrl != null ? { coverImageUrl } : {}),
@@ -306,7 +347,7 @@ export default function Events() {
             isPaid: data.isPaid,
             ...(data.isPaid && data.currency ? { currency: data.currency } : {}),
             ...(capacityValue != null ? { capacity: capacityValue } : {}),
-            visibility: DEFAULT_EVENT_VISIBILITY,
+            visibility: data.visibility ?? DEFAULT_EVENT_VISIBILITY,
             timezone,
             tags: [],
             ...(coverImageUrl != null ? { coverImageUrl } : {}),
@@ -459,23 +500,59 @@ export default function Events() {
           ) : listError ? (
             <div className="text-center py-16 text-destructive">Failed to load events. Try again.</div>
           ) : filteredEvents.length > 0 ? (
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {filteredEvents.map((event, index) => (
-                <div
-                  key={event.id}
-                  className="animate-slide-up"
-                  style={{ animationDelay: `${index * 50}ms` }}
-                >
-                  <EventCard
-                    event={event}
-                    onViewDetails={handleViewDetails}
-                    onEdit={handleEdit}
-                    onManageRegistrations={handleManageRegistrations}
-                    onTogglePublish={handleTogglePublish}
-                    onDelete={handleDelete}
-                  />
+            <div className="space-y-4">
+              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                {filteredEvents.map((event, index) => (
+                  <div
+                    key={event.id}
+                    className="animate-slide-up"
+                    style={{ animationDelay: `${index * 50}ms` }}
+                  >
+                    <EventCard
+                      event={event}
+                      onViewDetails={handleViewDetails}
+                      onEdit={handleEdit}
+                      onManageRegistrations={handleManageRegistrations}
+                      onTogglePublish={handleTogglePublish}
+                      onCancel={handleCancel}
+                      onDelete={handleDelete}
+                    />
+                  </div>
+                ))}
+              </div>
+              <div className="flex items-center justify-between text-sm text-muted-foreground">
+                <span>
+                  Showing {filteredEvents.length} of {totalEvents} events • Page {currentPage}
+                </span>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={(searchInput.offset ?? 0) <= 0}
+                    onClick={() =>
+                      setSearchInput((prev) => ({
+                        ...prev,
+                        offset: Math.max((prev.offset ?? 0) - pageLimit, 0),
+                      }))
+                    }
+                  >
+                    Previous
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={!hasMore}
+                    onClick={() =>
+                      setSearchInput((prev) => ({
+                        ...prev,
+                        offset: (prev.offset ?? 0) + pageLimit,
+                      }))
+                    }
+                  >
+                    Next
+                  </Button>
                 </div>
-              ))}
+              </div>
             </div>
           ) : (
             <div className="text-center py-16 border border-dashed border-border rounded-lg">
@@ -522,6 +599,7 @@ export default function Events() {
         event={selectedEvent}
         onEdit={handleEdit}
         onTogglePublish={handleTogglePublish}
+        onCancel={handleCancel}
         onManageRegistrations={handleManageRegistrations}
         onDelete={handleDelete}
       />
@@ -538,6 +616,13 @@ export default function Events() {
         onOpenChange={setDeleteModalOpen}
         event={eventToDelete}
         onConfirm={handleConfirmDelete}
+      />
+
+      <CancelEventModal
+        open={cancelModalOpen}
+        onOpenChange={setCancelModalOpen}
+        event={eventToCancel}
+        onConfirm={handleConfirmCancel}
       />
     </AdminLayout>
   );

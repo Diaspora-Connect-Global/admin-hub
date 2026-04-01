@@ -88,12 +88,15 @@ const EVENT_REGISTRATION_FIELDS = gql`
 /** Admin list/search events — paginated with optional filters. */
 export const LIST_EVENTS = gql`
   ${EVENT_LIST_FIELDS}
-  query ListEvents($input: ListEventsInput) {
-    listEvents(input: $input) {
+  query AdminListEvents($input: ListEventsInput) {
+    adminListEvents(input: $input) {
       events {
         ...EventListFields
       }
       total
+      page
+      limit
+      hasMore
     }
   }
 `;
@@ -101,9 +104,16 @@ export const LIST_EVENTS = gql`
 /** Get single event by ID (admin view — full detail). */
 export const GET_EVENT = gql`
   ${EVENT_FULL_FIELDS}
-  query GetEvent($id: ID!) {
-    getEvent(id: $id) {
+  query AdminGetEvent($eventId: ID!) {
+    adminGetEvent(eventId: $eventId) {
       ...EventFullFields
+      registrationFormFields {
+        id
+        label
+        type
+        required
+        options
+      }
     }
   }
 `;
@@ -136,22 +146,26 @@ export const GET_EVENTS_BY_OWNER = gql`
 /** Get registrations for an event. */
 export const GET_EVENT_REGISTRATIONS = gql`
   ${EVENT_REGISTRATION_FIELDS}
-  query GetEventRegistrations(
+  query AdminGetEventRegistrations(
     $eventId: ID!
+    $page: Int
     $limit: Int
-    $offset: Int
     $status: String
   ) {
-    getEventRegistrations(
+    adminGetEventRegistrations(
       eventId: $eventId
+      page: $page
       limit: $limit
-      offset: $offset
       status: $status
     ) {
       registrations {
         ...EventRegistrationFields
+        currency
       }
       total
+      page
+      limit
+      hasMore
     }
   }
 `;
@@ -199,8 +213,8 @@ export const GET_EVENT_ATTENDANCE = gql`
 
 /** Admin — Dashboard stats for a single event. */
 export const GET_EVENT_STATS = gql`
-  query GetEventStats($eventId: ID!) {
-    getEventStats(eventId: $eventId) {
+  query AdminGetEventStats($eventId: ID!) {
+    adminGetEventStats(eventId: $eventId) {
       eventId
       totalRegistrations
       confirmedRegistrations
@@ -220,16 +234,16 @@ export const GET_EVENT_STATS = gql`
 
 /** Admin — Get registrations with pagination (admin view). */
 export const GET_EVENT_REGISTRATIONS_ADMIN = gql`
-  query GetEventRegistrationsAdmin(
+  query AdminGetEventRegistrationsCompact(
     $eventId: ID!
+    $page: Int
     $limit: Int
-    $offset: Int
     $status: String
   ) {
-    getEventRegistrations(
+    adminGetEventRegistrations(
       eventId: $eventId
+      page: $page
       limit: $limit
-      offset: $offset
       status: $status
     ) {
       registrations {
@@ -238,11 +252,16 @@ export const GET_EVENT_REGISTRATIONS_ADMIN = gql`
         userId
         status
         quantity
+        totalAmount
+        currency
         registeredAt
         confirmedAt
         cancelledAt
       }
       total
+      page
+      limit
+      hasMore
     }
   }
 `;
@@ -323,8 +342,8 @@ export const DELETE_EVENT = gql`
 
 /** Admin — Force delete an event. */
 export const DELETE_EVENT_ADMIN = gql`
-  mutation DeleteEventAdmin($id: ID!) {
-    deleteEvent(id: $id) {
+  mutation AdminDeleteEvent($eventId: ID!) {
+    adminDeleteEvent(eventId: $eventId) {
       success
       message
     }
@@ -373,8 +392,8 @@ export const UNPUBLISH_EVENT_ADMIN = gql`
 
 /** Admin — Force cancel an event. */
 export const CANCEL_EVENT = gql`
-  mutation CancelEvent($id: ID!, $reason: String!) {
-    cancelEvent(id: $id, reason: $reason) {
+  mutation AdminCancelEvent($eventId: ID!, $reason: String!) {
+    adminCancelEvent(eventId: $eventId, reason: $reason) {
       id
       status
     }
@@ -440,16 +459,16 @@ export const UPDATE_EVENT_TICKET = gql`
 /** Admin — Event dashboard stats (counts by status). */
 export const EVENT_DASHBOARD_STATS = gql`
   query EventDashboardStats {
-    liveEventCount: listEvents(input: { status: "published", limit: 1 }) {
+    liveEventCount: adminListEvents(input: { status: "published", limit: 1, offset: 0 }) {
       total
     }
-    draftEventCount: listEvents(input: { status: "draft", limit: 1 }) {
+    draftEventCount: adminListEvents(input: { status: "draft", limit: 1, offset: 0 }) {
       total
     }
-    cancelledEventCount: listEvents(input: { status: "cancelled", limit: 1 }) {
+    cancelledEventCount: adminListEvents(input: { status: "cancelled", limit: 1, offset: 0 }) {
       total
     }
-    completedEventCount: listEvents(input: { status: "completed", limit: 1 }) {
+    completedEventCount: adminListEvents(input: { status: "completed", limit: 1, offset: 0 }) {
       total
     }
   }

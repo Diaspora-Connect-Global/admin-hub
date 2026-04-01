@@ -5,7 +5,7 @@
 
 export type EventStatus = "DRAFT" | "PUBLISHED" | "CANCELLED" | "COMPLETED";
 export type EventLocationType = "PHYSICAL" | "VIRTUAL" | "HYBRID";
-export type EventOwnerType = "USER" | "COMMUNITY" | "ASSOCIATION";
+export type EventOwnerType = "SYSTEM" | "USER" | "COMMUNITY" | "ASSOCIATION";
 export type EventVisibility = "PUBLIC" | "COMMUNITY" | "ASSOCIATION" | "INVITE_ONLY";
 export type EventCapacityType = "LIMITED" | "UNLIMITED";
 
@@ -69,6 +69,7 @@ export interface EventRegistration {
   quantity: number;
   status: string;
   totalAmount?: string | null;
+  currency?: string | null;
   registeredAt?: string | null;
   confirmedAt?: string | null;
   cancelledAt?: string | null;
@@ -99,8 +100,7 @@ export interface EventFormData {
   maxParticipants: number;
   publishNow: boolean;
   notifyMembers: boolean;
-  allowComments: boolean;
   eventCategory?: string;
-  ownerType?: string;
   ownerId?: string;
+  visibility?: string;
 }

@@ -31,6 +31,7 @@ interface EventDetailsModalProps {
   event: Event | null;
   onEdit: (event: Event) => void;
   onTogglePublish: (event: Event) => void;
+  onCancel: (event: Event) => void;
   onManageRegistrations: (event: Event) => void;
   onDelete: (event: Event) => void;
 }
@@ -48,6 +49,7 @@ export function EventDetailsModal({
   event,
   onEdit,
   onTogglePublish,
+  onCancel,
   onManageRegistrations,
   onDelete,
 }: EventDetailsModalProps) {
@@ -142,6 +144,12 @@ export function EventDetailsModal({
                 <ToggleLeft className="h-4 w-4 mr-1.5" />
                 {normalizedStatus === "PUBLISHED" ? "Unpublish" : "Publish"}
               </Button>
+              {normalizedStatus !== "CANCELLED" && (
+                <Button variant="outline" size="sm" onClick={() => onCancel(event)}>
+                  <ToggleLeft className="h-4 w-4 mr-1.5" />
+                  Cancel
+                </Button>
+              )}
               <Button variant="outline" size="sm" onClick={() => onManageRegistrations(event)}>
                 <Users className="h-4 w-4 mr-1.5" />
                 Registrations

@@ -30,6 +30,7 @@ interface EventCardProps {
   onEdit: (event: Event) => void;
   onManageRegistrations: (event: Event) => void;
   onTogglePublish: (event: Event) => void;
+  onCancel: (event: Event) => void;
   onDelete: (event: Event) => void;
 }
 
@@ -46,6 +47,7 @@ export function EventCard({
   onEdit,
   onManageRegistrations,
   onTogglePublish,
+  onCancel,
   onDelete,
 }: EventCardProps) {
   const t = useT("events");
@@ -176,6 +178,12 @@ export function EventCard({
                 <ToggleLeft className="mr-2 h-4 w-4" />
                 {normalizedStatus === "PUBLISHED" ? t.unpublish : t.publish}
               </DropdownMenuItem>
+              {normalizedStatus !== "CANCELLED" && (
+                <DropdownMenuItem onClick={() => onCancel(event)}>
+                  <ToggleLeft className="mr-2 h-4 w-4" />
+                  Cancel event
+                </DropdownMenuItem>
+              )}
               <DropdownMenuSeparator />
               <DropdownMenuItem 
                 onClick={() => onDelete(event)}

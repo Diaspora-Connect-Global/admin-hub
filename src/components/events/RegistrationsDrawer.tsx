@@ -73,13 +73,20 @@ export function RegistrationsDrawer({
   const t = useT("events");
 
   const { data, loading, refetch } = useGetEventRegistrations(
-    event?.id ? { eventId: event.id, limit: 100, offset: 0, status: statusFilter === "all" ? undefined : statusFilter } : null
+    event?.id
+      ? {
+          eventId: event.id,
+          limit: 100,
+          offset: 0,
+          status: statusFilter === "all" ? "" : statusFilter,
+        }
+      : null
   );
   const [markCheckedIn] = useMarkRegistrationCheckedIn();
   const [removeRegistration] = useRemoveEventRegistration();
 
-  const registrations: EventRegistration[] = data?.getEventRegistrations?.registrations ?? [];
-  const total = data?.getEventRegistrations?.total ?? 0;
+  const registrations: EventRegistration[] = data?.adminGetEventRegistrations?.registrations ?? [];
+  const total = data?.adminGetEventRegistrations?.total ?? 0;
 
   const uniqueUserIdsKey = useMemo(
     () => [...new Set(registrations.map((r) => r.userId))].sort().join(","),
@@ -183,9 +190,11 @@ export function RegistrationsDrawer({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">{t.allStatus}</SelectItem>
-                <SelectItem value="pending">{t.pending}</SelectItem>
-                <SelectItem value="confirmed">Confirmed</SelectItem>
-                <SelectItem value="cancelled">Cancelled</SelectItem>
+                <SelectItem value="PENDING">{t.pending}</SelectItem>
+                <SelectItem value="CONFIRMED">Confirmed</SelectItem>
+                <SelectItem value="WAITLISTED">Waitlisted</SelectItem>
+                <SelectItem value="CHECKED_IN">Checked In</SelectItem>
+                <SelectItem value="CANCELLED">Cancelled</SelectItem>
               </SelectContent>
             </Select>
             <Button variant="outline" size="icon">
@@ -226,7 +235,11 @@ export function RegistrationsDrawer({
                       </TableCell>
                       <TableCell>{registration.quantity}</TableCell>
                       {event.isPaid && (
-                        <TableCell>{registration.totalAmount ?? "—"}</TableCell>
+                        <TableCell>
+                          {registration.totalAmount
+                            ? `${(parseInt(registration.totalAmount, 10) / 100).toFixed(2)} ${registration.currency ?? event.currency ?? ""}`
+                            : "Free"}
+                        </TableCell>
                       )}
                       <TableCell>
                         <StatusBadge

@@ -31,6 +31,8 @@ import { toast } from "@/hooks/use-toast";
 const EMPTY_EVENT_FORM: EventFormData = {
   title: "",
   description: "",
+  eventCategory: "OTHER",
+  visibility: "public",
   bannerImage: null,
   date: undefined,
   startTime: "",
@@ -48,7 +50,6 @@ const EMPTY_EVENT_FORM: EventFormData = {
   maxParticipants: 100,
   publishNow: false,
   notifyMembers: true,
-  allowComments: true,
 };
 
 interface CreateEditEventModalProps {
@@ -101,6 +102,8 @@ export function CreateEditEventModal({
       ...EMPTY_EVENT_FORM,
       title: event.title,
       description: event.description,
+      eventCategory: event.eventCategory ?? "OTHER",
+      visibility: (event.visibility ?? "public").toLowerCase(),
       date: event.startAt ? new Date(event.startAt) : undefined,
       startTime: event.startAt ? format(new Date(event.startAt), "HH:mm") : "",
       endTime: event.endAt ? format(new Date(event.endAt), "HH:mm") : "",
@@ -313,6 +316,43 @@ export function CreateEditEventModal({
                   value={formData.description}
                   onChange={(e) => updateField("description", e.target.value)}
                 />
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label>Category</Label>
+                  <Select
+                    value={formData.eventCategory ?? "OTHER"}
+                    onValueChange={(value) => updateField("eventCategory", value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="OTHER">Other</SelectItem>
+                      <SelectItem value="BUSINESS">Business</SelectItem>
+                      <SelectItem value="EDUCATION">Education</SelectItem>
+                      <SelectItem value="COMMUNITY">Community</SelectItem>
+                      <SelectItem value="ENTERTAINMENT">Entertainment</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Visibility</Label>
+                  <Select
+                    value={formData.visibility ?? "public"}
+                    onValueChange={(value) => updateField("visibility", value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="public">Public</SelectItem>
+                      <SelectItem value="community">Community</SelectItem>
+                      <SelectItem value="association">Association</SelectItem>
+                      <SelectItem value="invite_only">Invite only</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
               <div className="space-y-2">
                 <Label htmlFor={bannerInputId}>{t.bannerImageLabel}</Label>
@@ -603,18 +643,6 @@ export function CreateEditEventModal({
                 <Switch
                   checked={formData.notifyMembers}
                   onCheckedChange={(checked) => updateField("notifyMembers", checked)}
-                />
-              </div>
-              <div className="flex items-center justify-between p-4 rounded-lg border border-border">
-                <div>
-                  <Label>{t.allowCommentsLabel}</Label>
-                  <p className="text-sm text-muted-foreground">
-                    {t.letMembersComment}
-                  </p>
-                </div>
-                <Switch
-                  checked={formData.allowComments}
-                  onCheckedChange={(checked) => updateField("allowComments", checked)}
                 />
               </div>
             </>

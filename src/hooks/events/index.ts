@@ -63,7 +63,7 @@ export function useSearchEvents(input?: ListEventsInput) {
 
 export function useGetEvent(id: string | null) {
   return useQuery(GET_EVENT, {
-    variables: { id: id ?? "" },
+    variables: { eventId: id ?? "" },
     skip: !id,
   });
 }
@@ -80,12 +80,23 @@ export interface GetEventRegistrationsVariables {
   eventId: string;
   limit?: number;
   offset?: number;
+  page?: number;
   status?: string;
 }
 
 export function useGetEventRegistrations(variables: GetEventRegistrationsVariables | null) {
+  const limit = variables?.limit ?? 50;
+  const page = variables?.page ?? Math.floor((variables?.offset ?? 0) / limit) + 1;
+  const status = variables?.status;
   return useQuery(GET_EVENT_REGISTRATIONS, {
-    variables: variables ?? { eventId: "" },
+    variables: variables?.eventId
+      ? {
+          eventId: variables.eventId,
+          page,
+          limit,
+          status,
+        }
+      : { eventId: "" },
     skip: !variables?.eventId,
   });
 }
@@ -118,8 +129,17 @@ export function useGetEventStats(eventId: string | null) {
 }
 
 export function useGetEventRegistrationsAdmin(variables: GetEventRegistrationsVariables | null) {
+  const limit = variables?.limit ?? 50;
+  const page = variables?.page ?? Math.floor((variables?.offset ?? 0) / limit) + 1;
   return useQuery(GET_EVENT_REGISTRATIONS_ADMIN, {
-    variables: variables ?? { eventId: "" },
+    variables: variables?.eventId
+      ? {
+          eventId: variables.eventId,
+          page,
+          limit,
+          status: variables.status,
+        }
+      : { eventId: "" },
     skip: !variables?.eventId,
   });
 }
