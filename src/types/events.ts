@@ -79,6 +79,16 @@ export interface EventRegistration {
 /** Form data for create/edit event modal (UI values). */
 export type EventType = "in-person" | "virtual" | "hybrid";
 
+export interface EventTicketFormData {
+  name: string;
+  ticketType: "paid" | "free";
+  price: number;
+  currency: string;
+  quantity: number;
+  maxPerOrder: number;
+  isActive: boolean;
+}
+
 export interface EventFormData {
   title: string;
   description: string;
@@ -94,7 +104,14 @@ export interface EventFormData {
   country: string;
   virtualLink: string;
   isPaid: boolean;
+  tickets: EventTicketFormData[];
+  ticketType: "paid" | "free";
+  ticketName: string;
+  ticketDescription: string;
   ticketPrice: number;
+  ticketQuantity: number;
+  ticketMaxPerOrder: number;
+  ticketIsActive: boolean;
   currency: string;
   hasParticipantLimit: boolean;
   maxParticipants: number;

@@ -33,6 +33,8 @@ import {
   CalendarIcon,
   Save,
   Send,
+  ChevronLeft,
+  ChevronRight,
   MapPin,
   Plus,
   GripVertical,
@@ -55,6 +57,8 @@ import {
 } from "@/types/opportunities";
 import { toast } from "@/hooks/use-toast";
 import { getUserId } from "@/stores/session";
+
+const NONE_SELECTED = "__NONE__";
 
 interface CreateEditOpportunityModalProps {
   open: boolean;
@@ -93,15 +97,12 @@ export function CreateEditOpportunityModal({
   onSave,
 }: CreateEditOpportunityModalProps) {
   const isEdit = !!opportunity;
-
-  // Ownership (create only)
-  const [ownerType, setOwnerType] = useState<OwnerType>(OwnerType.USER);
-  const [ownerId, setOwnerId] = useState("");
+  const tabOrder = ["details", "application", "additional"] as const;
+  const [activeTab, setActiveTab] = useState<(typeof tabOrder)[number]>("details");
 
   // Core Details
   const [title, setTitle] = useState("");
   const [type, setType] = useState<OpportunityType>(OpportunityType.EMPLOYMENT);
-  const [category, setCategory] = useState<OpportunityCategory>(OpportunityCategory.EMPLOYMENT_CAREER);
   const [subCategory, setSubCategory] = useState("");
   const [description, setDescription] = useState("");
   const [tags, setTags] = useState<string[]>([]);
@@ -133,19 +134,19 @@ export function CreateEditOpportunityModal({
   const [newFieldType, setNewFieldType] = useState<FormField["type"]>("text");
   const [newFieldRequired, setNewFieldRequired] = useState(false);
 
-  // Sync type → category default (only when user changes the type, not on initial load)
+  // Sync type (category is now derived from type)
   const handleTypeChange = (v: OpportunityType) => {
     setType(v);
-    setCategory(defaultCategoryForType[v]);
   };
 
   useEffect(() => {
     if (!open) return;
 
+    setActiveTab("details");
+
     if (opportunity) {
       setTitle(opportunity.title);
       setType(opportunity.type);
-      setCategory(opportunity.category);
       setSubCategory(opportunity.subCategory ?? "");
       setDescription(opportunity.description ?? "");
       setTags(opportunity.tags ?? []);
@@ -165,12 +166,8 @@ export function CreateEditOpportunityModal({
       setSalaryMax(opportunity.salaryMax != null ? String(opportunity.salaryMax) : "");
       setSalaryCurrency(opportunity.salaryCurrency ?? "");
     } else {
-      const userId = getUserId() ?? "";
-      setOwnerType(OwnerType.USER);
-      setOwnerId(userId);
       setTitle("");
       setType(OpportunityType.EMPLOYMENT);
-      setCategory(OpportunityCategory.EMPLOYMENT_CAREER);
       setSubCategory("");
       setDescription("");
       setTags([]);
@@ -193,6 +190,20 @@ export function CreateEditOpportunityModal({
       setSalaryCurrency("");
     }
   }, [open, opportunity]);
+
+  const activeTabIndex = tabOrder.indexOf(activeTab);
+  const isFirstTab = activeTabIndex === 0;
+  const isLastTab = activeTabIndex === tabOrder.length - 1;
+
+  const goToNextTab = () => {
+    if (isLastTab) return;
+    setActiveTab(tabOrder[activeTabIndex + 1]);
+  };
+
+  const goToPreviousTab = () => {
+    if (isFirstTab) return;
+    setActiveTab(tabOrder[activeTabIndex - 1]);
+  };
 
   const handleAddTag = () => {
     const t = tagInput.trim();
@@ -265,15 +276,16 @@ export function CreateEditOpportunityModal({
       };
       onSave(input, action);
     } else {
-      if (!ownerId.trim()) {
-        toast({ title: "Owner ID Required", description: "Please enter the owner ID.", variant: "destructive" });
+      const ownerId = getUserId()?.trim();
+      if (!ownerId) {
+        toast({ title: "Session Required", description: "Please log in again and retry.", variant: "destructive" });
         return;
       }
       const input: CreateOpportunityInput = {
-        ownerType,
-        ownerId: ownerId.trim(),
+        ownerType: OwnerType.USER,
+        ownerId,
         type,
-        category,
+        category: defaultCategoryForType[type],
         title: title.trim(),
         description,
         visibility,
@@ -346,7 +358,7 @@ export function CreateEditOpportunityModal({
         </DialogHeader>
 
         <ScrollArea className="max-h-[calc(90vh-180px)]">
-          <Tabs defaultValue="details" className="px-6">
+          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as (typeof tabOrder)[number])} className="px-6">
             <TabsList className="mb-4">
               <TabsTrigger value="details">Core Details</TabsTrigger>
               <TabsTrigger value="application">Application Settings</TabsTrigger>
@@ -355,34 +367,6 @@ export function CreateEditOpportunityModal({
 
             {/* ── Tab 1: Core Details ─────────────────────────────── */}
             <TabsContent value="details" className="space-y-4">
-
-              {/* Owner — create only */}
-              {!isEdit && (
-                <div className="grid grid-cols-2 gap-4 rounded-lg border border-border bg-muted/30 p-4">
-                  <div className="space-y-2">
-                    <Label>Owner Type</Label>
-                    <Select value={ownerType} onValueChange={(v) => setOwnerType(v as OwnerType)}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value={OwnerType.USER}>User</SelectItem>
-                        <SelectItem value={OwnerType.COMMUNITY}>Community</SelectItem>
-                        <SelectItem value={OwnerType.ASSOCIATION}>Association</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="ownerId">Owner ID *</Label>
-                    <Input
-                      id="ownerId"
-                      placeholder="UUID of the user / community / association"
-                      value={ownerId}
-                      onChange={(e) => setOwnerId(e.target.value)}
-                    />
-                  </div>
-                </div>
-              )}
 
               <div className="space-y-2">
                 <Label htmlFor="title">Title *</Label>
@@ -396,7 +380,7 @@ export function CreateEditOpportunityModal({
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Type *</Label>
+                  <Label>Type / Category *</Label>
                   <Select value={type} onValueChange={(v) => handleTypeChange(v as OpportunityType)}>
                     <SelectTrigger>
                       <SelectValue />
@@ -413,29 +397,9 @@ export function CreateEditOpportunityModal({
                       <SelectItem value={OpportunityType.INITIATIVE}>Initiative</SelectItem>
                     </SelectContent>
                   </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Category *</Label>
-                  <Select value={category} onValueChange={(v) => setCategory(v as OpportunityCategory)}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value={OpportunityCategory.EMPLOYMENT_CAREER}>Employment &amp; Career</SelectItem>
-                      <SelectItem value={OpportunityCategory.EDUCATION_TRAINING}>Education &amp; Training</SelectItem>
-                      <SelectItem value={OpportunityCategory.FUNDING_GRANTS}>Funding &amp; Grants</SelectItem>
-                      <SelectItem value={OpportunityCategory.FELLOWSHIPS_LEADERSHIP}>Fellowships &amp; Leadership</SelectItem>
-                      <SelectItem value={OpportunityCategory.BUSINESS_INVESTMENT}>Business &amp; Investment</SelectItem>
-                      <SelectItem value={OpportunityCategory.VOLUNTEERING_SOCIAL_IMPACT}>Volunteering &amp; Social Impact</SelectItem>
-                      <SelectItem value={OpportunityCategory.EVENT_CREATIVE_INDUSTRY}>Event &amp; Creative Industry</SelectItem>
-                      <SelectItem value={OpportunityCategory.AGRICULTURE_SUSTAINABILITY}>Agriculture &amp; Sustainability</SelectItem>
-                      <SelectItem value={OpportunityCategory.REAL_ESTATE_INFRASTRUCTURE}>Real Estate &amp; Infrastructure</SelectItem>
-                      <SelectItem value={OpportunityCategory.GOVERNMENT_EMBASSY_INITIATIVES}>Government &amp; Embassy Initiatives</SelectItem>
-                      <SelectItem value={OpportunityCategory.INNOVATION_RESEARCH}>Innovation &amp; Research</SelectItem>
-                      <SelectItem value={OpportunityCategory.FINANCE_ECONOMICS}>Finance &amp; Economics</SelectItem>
-                      <SelectItem value={OpportunityCategory.RETURN_REINTEGRATION}>Return &amp; Reintegration</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Category auto-set to {defaultCategoryForType[type].split("_").join(" ")}
+                  </p>
                 </div>
               </div>
 
@@ -691,12 +655,15 @@ export function CreateEditOpportunityModal({
                   {showWorkMode && (
                     <div className="space-y-2">
                       <Label>Work Mode</Label>
-                      <Select value={workMode} onValueChange={(v) => setWorkMode(v as WorkMode | "")}>
+                      <Select
+                        value={workMode || NONE_SELECTED}
+                        onValueChange={(v) => setWorkMode(v === NONE_SELECTED ? "" : (v as WorkMode))}
+                      >
                         <SelectTrigger>
                           <SelectValue placeholder="Not specified" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">Not specified</SelectItem>
+                          <SelectItem value={NONE_SELECTED}>Not specified</SelectItem>
                           <SelectItem value={WorkMode.REMOTE}>Remote</SelectItem>
                           <SelectItem value={WorkMode.HYBRID}>Hybrid</SelectItem>
                           <SelectItem value={WorkMode.ONSITE}>Onsite</SelectItem>
@@ -707,12 +674,15 @@ export function CreateEditOpportunityModal({
                   {showEngagementType && (
                     <div className="space-y-2">
                       <Label>Engagement Type</Label>
-                      <Select value={engagementType} onValueChange={(v) => setEngagementType(v as EngagementType | "")}>
+                      <Select
+                        value={engagementType || NONE_SELECTED}
+                        onValueChange={(v) => setEngagementType(v === NONE_SELECTED ? "" : (v as EngagementType))}
+                      >
                         <SelectTrigger>
                           <SelectValue placeholder="Not specified" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">Not specified</SelectItem>
+                          <SelectItem value={NONE_SELECTED}>Not specified</SelectItem>
                           <SelectItem value={EngagementType.FULL_TIME}>Full Time</SelectItem>
                           <SelectItem value={EngagementType.PART_TIME}>Part Time</SelectItem>
                           <SelectItem value={EngagementType.CONTRACT}>Contract</SelectItem>
@@ -749,12 +719,15 @@ export function CreateEditOpportunityModal({
                     </div>
                     <div className="space-y-1">
                       <p className="text-xs text-muted-foreground">Currency</p>
-                      <Select value={salaryCurrency} onValueChange={setSalaryCurrency}>
+                      <Select
+                        value={salaryCurrency || NONE_SELECTED}
+                        onValueChange={(v) => setSalaryCurrency(v === NONE_SELECTED ? "" : v)}
+                      >
                         <SelectTrigger>
                           <SelectValue placeholder="Select" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">Not specified</SelectItem>
+                          <SelectItem value={NONE_SELECTED}>Not specified</SelectItem>
                           <SelectItem value="USD">USD</SelectItem>
                           <SelectItem value="GHS">GHS</SelectItem>
                           <SelectItem value="EUR">EUR</SelectItem>
@@ -785,6 +758,14 @@ export function CreateEditOpportunityModal({
               Cancel
             </Button>
             <div className="flex gap-2">
+              <Button variant="outline" onClick={goToPreviousTab} disabled={isFirstTab}>
+                <ChevronLeft className="h-4 w-4" />
+                Back
+              </Button>
+              <Button variant="outline" onClick={goToNextTab} disabled={isLastTab}>
+                Next
+                <ChevronRight className="h-4 w-4" />
+              </Button>
               <Button variant="secondary" className="gap-2" onClick={() => handleSubmit("draft")}>
                 <Save className="h-4 w-4" />
                 Save Draft

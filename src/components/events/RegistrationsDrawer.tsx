@@ -52,6 +52,25 @@ function displayNameFromProfile(p: {
   return fullName || p.email?.trim() || "";
 }
 
+function formatRegistrationAmount(totalAmount: string, currency?: string | null): string {
+  const amount = Number(totalAmount);
+  if (!Number.isFinite(amount)) {
+    return `${totalAmount} ${currency ?? ""}`.trim();
+  }
+  if (!currency) {
+    return amount.toLocaleString();
+  }
+  try {
+    return new Intl.NumberFormat(undefined, {
+      style: "currency",
+      currency,
+      maximumFractionDigits: 2,
+    }).format(amount);
+  } catch {
+    return `${amount.toFixed(2)} ${currency}`;
+  }
+}
+
 interface RegistrationsDrawerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -237,7 +256,10 @@ export function RegistrationsDrawer({
                       {event.isPaid && (
                         <TableCell>
                           {registration.totalAmount
-                            ? `${(parseInt(registration.totalAmount, 10) / 100).toFixed(2)} ${registration.currency ?? event.currency ?? ""}`
+                            ? formatRegistrationAmount(
+                                registration.totalAmount,
+                                registration.currency ?? event.currency,
+                              )
                             : "Free"}
                         </TableCell>
                       )}

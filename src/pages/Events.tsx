@@ -89,13 +89,13 @@ export default function Events() {
 
   const adminProfile = useSessionStore((state) => state.adminProfile);
   const adminRoleName = adminProfile?.role?.name ?? "UNKNOWN_ROLE";
-  const isSystemAdmin = adminRoleName === "SYSTEM_ADMIN";
+  const isSystemAdmin = adminRoleName === "SYSTEM_ADMIN" || adminRoleName === "SUPER_ADMIN";
 
   const ensureSystemAdmin = (actionLabel: string) => {
     if (isSystemAdmin) return true;
     toast({
       title: "Permission denied",
-      description: `${actionLabel} requires SYSTEM_ADMIN. Current role: ${adminRoleName}.`,
+      description: `${actionLabel} requires SYSTEM_ADMIN or SUPER_ADMIN. Current role: ${adminRoleName}.`,
       variant: "destructive",
     });
     return false;
@@ -238,7 +238,14 @@ export default function Events() {
     if (!ensureSystemAdmin("Deleting events")) return;
     if (!eventToDelete) return;
     try {
-      await deleteEventAdmin({ variables: { eventId: eventToDelete.id } });
+      const deleteRes = await deleteEventAdmin({ variables: { eventId: eventToDelete.id } });
+      throwIfGraphQLErrors(deleteRes, "AdminDeleteEvent");
+      const deleteResult = deleteRes.data?.adminDeleteEvent as
+        | { success?: boolean; message?: string | null }
+        | undefined;
+      if (!deleteResult?.success) {
+        throw new Error(deleteResult?.message || "Delete failed.");
+      }
       toast({ title: "Event Deleted", description: "The event has been permanently deleted." });
       setDeleteModalOpen(false);
       setEventToDelete(null);
@@ -289,7 +296,39 @@ export default function Events() {
     const locationDetails = buildEventLocationPayload(data);
     const capacityValue = resolveEventCapacity(data);
     const timezone = resolveEventTimezone(data.eventType);
-    const ownerType = "SYSTEM";
+    const ownerType = "USER";
+    const normalizedTickets = Array.isArray(data.tickets) ? data.tickets : [];
+    const baseTickets =
+      normalizedTickets.length > 0
+        ? normalizedTickets
+        : [
+            {
+              name: data.ticketName || "General Admission",
+              ticketType: data.ticketType || (data.isPaid ? "paid" : "free"),
+              price: Number(data.ticketPrice) || 0,
+              currency: data.currency || "USD",
+              quantity: Number(data.ticketQuantity) || 120,
+              maxPerOrder: Number(data.ticketMaxPerOrder) || 4,
+              isActive: data.ticketIsActive,
+            },
+          ];
+
+    const ticketsToCreate = baseTickets.map((ticket) => {
+      if (data.isPaid) return ticket;
+      return {
+        ...ticket,
+        ticketType: "free" as const,
+        price: 0,
+      };
+    });
+    const hasPaidTickets = ticketsToCreate.some(
+      (ticket) => ticket.ticketType === "paid" && Number(ticket.price) > 0,
+    );
+    const isPaidEvent = Boolean(data.isPaid && hasPaidTickets);
+    const eventCurrency =
+      ticketsToCreate.find((ticket) => ticket.ticketType === "paid")?.currency ||
+      data.currency ||
+      "USD";
 
     logEventFormSnapshot(data);
 
@@ -312,9 +351,9 @@ export default function Events() {
             startAt,
             endAt,
             tags: [],
-            isPaid: data.isPaid,
+            isPaid: isPaidEvent,
             visibility: data.visibility ?? DEFAULT_EVENT_VISIBILITY,
-            ...(data.isPaid && data.currency ? { currency: data.currency } : {}),
+            ...(isPaidEvent && eventCurrency ? { currency: eventCurrency } : {}),
             ...(capacityValue != null ? { capacity: capacityValue } : {}),
             ...(coverImageUrl != null ? { coverImageUrl } : {}),
           },
@@ -344,13 +383,7 @@ export default function Events() {
             ...(locationDetails != null ? { locationDetails } : {}),
             startAt,
             endAt,
-            isPaid: data.isPaid,
-            ...(data.isPaid && data.currency ? { currency: data.currency } : {}),
-            ...(capacityValue != null ? { capacity: capacityValue } : {}),
-            visibility: data.visibility ?? DEFAULT_EVENT_VISIBILITY,
-            timezone,
-            tags: [],
-            ...(coverImageUrl != null ? { coverImageUrl } : {}),
+            isPaid: isPaidEvent,
           },
         };
         logEventMutation("CreateEvent", createVariables);
@@ -362,26 +395,38 @@ export default function Events() {
 
         const createdId = createResult.data?.createEvent?.id as string | undefined;
 
-        // Create ticket separately for paid events (ticket price lives on EventTicketGQL, not CreateEventInput).
-        if (createdId && data.isPaid && data.ticketPrice > 0) {
-          const ticketVariables = {
-            eventId: createdId,
-            input: {
-              name: "General Admission",
-              ticketType: "paid",
-              priceInCents: Math.round(data.ticketPrice * 100),
-              currency: data.currency || "USD",
-            },
-          };
-          logEventMutation("CreateEventTicket", ticketVariables);
-          const ticketRes = await createEventTicket({ variables: ticketVariables });
-          throwIfGraphQLErrors(ticketRes, "CreateEventTicket");
+        // Create tickets separately for paid events (ticket rows live on EventTicketGQL).
+        if (createdId && ticketsToCreate.length > 0) {
+          for (const [index, ticket] of ticketsToCreate.entries()) {
+            const ticketType = ticket.ticketType;
+            const ticketVariables = {
+              eventId: createdId,
+              input: {
+                name: ticket.name.trim() || `Ticket ${index + 1}`,
+                ticketType,
+                priceInCents: ticketType === "paid" ? Math.round(Number(ticket.price || 0) * 100) : 0,
+                currency: ticket.currency || eventCurrency,
+                quantity: Math.max(1, Math.floor(Number(ticket.quantity) || 1)),
+                maxPerOrder: Math.max(1, Math.floor(Number(ticket.maxPerOrder) || 1)),
+              },
+            };
+            logEventMutation(`CreateEventTicket #${index + 1}`, ticketVariables);
+            const ticketRes = await createEventTicket({ variables: ticketVariables });
+            throwIfGraphQLErrors(ticketRes, `CreateEventTicket #${index + 1}`);
+          }
         }
 
-        // capacity is not accepted on create — patch it separately via UpdateEventInput.
-        if (createdId && capacityValue != null) {
-          const patchVariables = { id: createdId, input: { capacity: capacityValue } };
-          logEventMutation("UpdateEvent (post-create capacity patch)", patchVariables);
+        // Patch optional fields via UpdateEventInput after create for backend compatibility.
+        const postCreatePatchInput = {
+          ...(capacityValue != null ? { capacity: capacityValue } : {}),
+          visibility: data.visibility ?? DEFAULT_EVENT_VISIBILITY,
+          timezone,
+          ...(coverImageUrl != null ? { coverImageUrl } : {}),
+        };
+
+        if (createdId && Object.keys(postCreatePatchInput).length > 0) {
+          const patchVariables = { id: createdId, input: postCreatePatchInput };
+          logEventMutation("UpdateEvent (post-create patch)", patchVariables);
           const patchRes = await updateEvent({
             variables: patchVariables,
           });

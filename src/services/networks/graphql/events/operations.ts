@@ -12,16 +12,38 @@ const EVENT_LIST_FIELDS = gql`
     ownerType
     ownerId
     title
+    description
     visibility
     status
+    eventCategory
+    locationType
+    locationDetails {
+      type
+      venueName
+      address
+      city
+      country
+      virtualLink
+      platform
+    }
+    startAt
+    endAt
     isPaid
     currency
     capacity
     availableSpots
     registrationCount
-    startAt
-    createdAt
     coverImageUrl
+    tags
+    createdAt
+    updatedAt
+    registrationFormFields {
+      id
+      label
+      type
+      required
+      options
+    }
   }
 `;
 
@@ -178,6 +200,7 @@ export const GET_EVENT_TICKETS = gql`
         id
         name
         priceInCents
+        description
         ticketType
         totalQuantity
         soldQuantity
@@ -199,6 +222,7 @@ export const GET_EVENT_ATTENDANCE = gql`
       total
       attendance {
         id
+        eventId
         userId
         registrationId
         checkInMethod
@@ -271,24 +295,7 @@ export const CREATE_EVENT = gql`
   mutation CreateEvent($input: CreateEventInput!) {
     createEvent(input: $input) {
       id
-      title
-      description
       status
-      locationType
-      startAt
-      endAt
-      timezone
-      coverImageUrl
-      tags
-      isPaid
-      currency
-      capacity
-      availableSpots
-      tickets {
-        id
-        name
-        priceInCents
-      }
     }
   }
 `;
@@ -395,7 +402,9 @@ export const CANCEL_EVENT = gql`
   mutation AdminCancelEvent($eventId: ID!, $reason: String!) {
     adminCancelEvent(eventId: $eventId, reason: $reason) {
       id
+      title
       status
+      updatedAt
     }
   }
 `;

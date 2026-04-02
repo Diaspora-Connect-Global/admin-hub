@@ -21,12 +21,22 @@ import {
 } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, ChevronLeft, ChevronRight, Upload, Check, X } from "lucide-react";
+import { CalendarIcon, ChevronLeft, ChevronRight, Upload, Check, X, Plus, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { EVENT_BANNER_MAX_BYTES } from "@/lib/eventBannerUpload";
 import { useT } from "@/hooks/useT";
 import { toast } from "@/hooks/use-toast";
+
+const createDefaultTicket = (currency = "USD") => ({
+  name: "General Admission",
+  ticketType: "paid" as const,
+  price: 0,
+  currency,
+  quantity: 120,
+  maxPerOrder: 4,
+  isActive: true,
+});
 
 const EMPTY_EVENT_FORM: EventFormData = {
   title: "",
@@ -44,7 +54,14 @@ const EMPTY_EVENT_FORM: EventFormData = {
   country: "",
   virtualLink: "",
   isPaid: false,
+  tickets: [createDefaultTicket("USD")],
+  ticketType: "free",
+  ticketName: "General Admission",
+  ticketDescription: "",
   ticketPrice: 0,
+  ticketQuantity: 120,
+  ticketMaxPerOrder: 4,
+  ticketIsActive: true,
   currency: "USD",
   hasParticipantLimit: false,
   maxParticipants: 100,
@@ -114,7 +131,25 @@ export function CreateEditEventModal({
       country: event.locationDetails?.country ?? "",
       virtualLink: event.locationDetails?.virtualLink || "",
       isPaid: event.isPaid,
+      tickets:
+        event.tickets && event.tickets.length > 0
+          ? event.tickets.map((ticket) => ({
+              name: ticket.name ?? "General Admission",
+              ticketType: ticket.priceInCents > 0 ? "paid" : "free",
+              price: ticket.priceInCents > 0 ? ticket.priceInCents / 100 : 0,
+              currency: event.currency || "USD",
+              quantity: ticket.availableQuantity ?? 120,
+              maxPerOrder: 4,
+              isActive: true,
+            }))
+          : [createDefaultTicket(event.currency || "USD")],
+      ticketType: event.isPaid ? "paid" : "free",
+      ticketName: event.tickets?.[0]?.name ?? "General Admission",
+      ticketDescription: event.tickets?.[0]?.description ?? "",
       ticketPrice: event.tickets?.[0] ? event.tickets[0].priceInCents / 100 : 0,
+      ticketQuantity: event.tickets?.[0]?.availableQuantity ?? 120,
+      ticketMaxPerOrder: 4,
+      ticketIsActive: true,
       currency: event.currency || "USD",
       hasParticipantLimit: event.capacity != null && event.capacity > 0,
       maxParticipants: event.capacity || 100,
@@ -131,6 +166,37 @@ export function CreateEditEventModal({
 
   const updateField = <K extends keyof EventFormData>(field: K, value: EventFormData[K]) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const updateTicket = <K extends keyof EventFormData["tickets"][number]>(
+    index: number,
+    field: K,
+    value: EventFormData["tickets"][number][K],
+  ) => {
+    setFormData((prev) => ({
+      ...prev,
+      tickets: prev.tickets.map((ticket, i) =>
+        i === index ? { ...ticket, [field]: value } : ticket,
+      ),
+    }));
+  };
+
+  const addTicket = () => {
+    setFormData((prev) => ({
+      ...prev,
+      tickets: [...prev.tickets, createDefaultTicket(prev.currency || "USD")],
+      isPaid: true,
+    }));
+  };
+
+  const removeTicket = (index: number) => {
+    setFormData((prev) => {
+      const nextTickets = prev.tickets.filter((_, i) => i !== index);
+      return {
+        ...prev,
+        tickets: nextTickets.length > 0 ? nextTickets : [createDefaultTicket(prev.currency || "USD")],
+      };
+    });
   };
 
   const bannerInputId = useId();
@@ -209,6 +275,33 @@ export function CreateEditEventModal({
         if (!formData.country.trim()) return "Country is required.";
       }
     }
+    if (step === 3 && formData.isPaid) {
+      if (!Array.isArray(formData.tickets) || formData.tickets.length === 0) {
+        return "Add at least one ticket for paid events.";
+      }
+      const hasPaidTicket = formData.tickets.some((ticket) => ticket.ticketType === "paid");
+      if (!hasPaidTicket) {
+        return "At least one ticket must be paid when event is marked paid.";
+      }
+      for (let i = 0; i < formData.tickets.length; i += 1) {
+        const ticket = formData.tickets[i];
+        if (!ticket.name.trim()) {
+          return `Ticket #${i + 1} name is required.`;
+        }
+        if (ticket.ticketType === "paid" && (!Number.isFinite(ticket.price) || ticket.price <= 0)) {
+          return `Ticket #${i + 1} price must be greater than 0.`;
+        }
+        if (!Number.isFinite(ticket.quantity) || ticket.quantity < 1) {
+          return `Ticket #${i + 1} quantity must be at least 1.`;
+        }
+        if (!Number.isFinite(ticket.maxPerOrder) || ticket.maxPerOrder < 1) {
+          return `Ticket #${i + 1} max per order must be at least 1.`;
+        }
+        if (ticket.maxPerOrder > ticket.quantity) {
+          return `Ticket #${i + 1} max per order cannot exceed quantity.`;
+        }
+      }
+    }
     return null;
   };
 
@@ -254,7 +347,7 @@ export function CreateEditEventModal({
         onOpenChange(nextOpen);
       }}
     >
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-6xl w-[96vw] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             {event ? t.editEventLabel : t.createEvent}
@@ -551,44 +644,140 @@ export function CreateEditEventModal({
                 </div>
                 <Switch
                   checked={formData.isPaid}
-                  onCheckedChange={(checked) => updateField("isPaid", checked)}
+                  onCheckedChange={(checked) => {
+                    updateField("isPaid", checked);
+                    updateField("ticketType", checked ? "paid" : "free");
+                  }}
                 />
               </div>
               {formData.isPaid && (
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>{t.currency}</Label>
-                    <Select
-                      value={formData.currency}
-                      onValueChange={(value) => updateField("currency", value)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="USD">USD ($)</SelectItem>
-                        <SelectItem value="EUR">EUR (€)</SelectItem>
-                        <SelectItem value="GBP">GBP (£)</SelectItem>
-                        <SelectItem value="GHS">GHS (₵)</SelectItem>
-                        <SelectItem value="NGN">NGN (₦)</SelectItem>
-                        <SelectItem value="KES">KES (KSh)</SelectItem>
-                        <SelectItem value="ZAR">ZAR (R)</SelectItem>
-                        <SelectItem value="CAD">CAD (C$)</SelectItem>
-                      </SelectContent>
-                    </Select>
+                <div className="rounded-lg border border-border p-4 space-y-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-medium">Ticket setup</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Add multiple ticket tiers (e.g. Early Bird, VIP, General Admission).
+                      </p>
+                    </div>
+                    <Button type="button" variant="outline" size="sm" onClick={addTicket}>
+                      <Plus className="h-4 w-4 mr-1" />
+                      Add ticket
+                    </Button>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="ticketPrice">{t.ticketPrice}</Label>
-                    <Input
-                      id="ticketPrice"
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      placeholder="0.00"
-                      value={formData.ticketPrice || ""}
-                      onChange={(e) => updateField("ticketPrice", parseFloat(e.target.value) || 0)}
-                    />
-                  </div>
+
+                  {formData.tickets.map((ticket, index) => (
+                    <div key={`ticket-${index}`} className="rounded-md border border-border p-3">
+                      <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+                        <div className="md:col-span-2 space-y-1">
+                          <Label htmlFor={`ticketName-${index}`}>Name</Label>
+                          <Input
+                            id={`ticketName-${index}`}
+                            placeholder="General Admission"
+                            value={ticket.name}
+                            onChange={(e) => updateTicket(index, "name", e.target.value)}
+                          />
+                        </div>
+                        <div className="md:col-span-1 space-y-1">
+                          <Label>Type</Label>
+                          <Select
+                            value={ticket.ticketType}
+                            onValueChange={(value: "paid" | "free") => {
+                              updateTicket(index, "ticketType", value);
+                              if (value === "free") {
+                                updateTicket(index, "price", 0);
+                              }
+                            }}
+                          >
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="paid">Paid</SelectItem>
+                              <SelectItem value="free">Free</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="md:col-span-1 space-y-1">
+                          <Label>{t.currency}</Label>
+                          <Select
+                            value={ticket.currency}
+                            onValueChange={(value) => updateTicket(index, "currency", value)}
+                          >
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="USD">USD</SelectItem>
+                              <SelectItem value="EUR">EUR</SelectItem>
+                              <SelectItem value="GBP">GBP</SelectItem>
+                              <SelectItem value="GHS">GHS</SelectItem>
+                              <SelectItem value="NGN">NGN</SelectItem>
+                              <SelectItem value="KES">KES</SelectItem>
+                              <SelectItem value="ZAR">ZAR</SelectItem>
+                              <SelectItem value="CAD">CAD</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="md:col-span-2 space-y-1">
+                          <Label>Price</Label>
+                          <Input
+                            id={`ticketPrice-${index}`}
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            placeholder="0"
+                            value={ticket.price || ""}
+                            disabled={ticket.ticketType !== "paid"}
+                            onChange={(e) => updateTicket(index, "price", parseFloat(e.target.value) || 0)}
+                          />
+                        </div>
+                        <div className="md:col-span-2 space-y-1">
+                          <Label>Qty</Label>
+                          <Input
+                            id={`ticketQuantity-${index}`}
+                            type="number"
+                            min="1"
+                            step="1"
+                            placeholder="120"
+                            value={ticket.quantity || ""}
+                            onChange={(e) => updateTicket(index, "quantity", parseInt(e.target.value, 10) || 0)}
+                          />
+                        </div>
+                        <div className="md:col-span-2 space-y-1">
+                          <Label>Max</Label>
+                          <Input
+                            id={`ticketMaxPerOrder-${index}`}
+                            type="number"
+                            min="1"
+                            step="1"
+                            placeholder="4"
+                            value={ticket.maxPerOrder || ""}
+                            onChange={(e) => updateTicket(index, "maxPerOrder", parseInt(e.target.value, 10) || 0)}
+                          />
+                        </div>
+                        <div className="md:col-span-2 flex items-center justify-between md:justify-end gap-3">
+                          <div className="flex items-center gap-2">
+                            <Label>Active</Label>
+                            <Switch
+                              checked={ticket.isActive}
+                              onCheckedChange={(checked) => updateTicket(index, "isActive", checked)}
+                            />
+                          </div>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => removeTicket(index)}
+                            disabled={formData.tickets.length === 1}
+                            aria-label={`Remove ticket ${index + 1}`}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+
                 </div>
               )}
               <div className="flex items-center justify-between p-4 rounded-lg border border-border">
