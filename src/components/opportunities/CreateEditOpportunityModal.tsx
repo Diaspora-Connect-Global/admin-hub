@@ -758,22 +758,30 @@ export function CreateEditOpportunityModal({
               Cancel
             </Button>
             <div className="flex gap-2">
-              <Button variant="outline" onClick={goToPreviousTab} disabled={isFirstTab}>
-                <ChevronLeft className="h-4 w-4" />
-                Back
-              </Button>
-              <Button variant="outline" onClick={goToNextTab} disabled={isLastTab}>
-                Next
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-              <Button variant="secondary" className="gap-2" onClick={() => handleSubmit("draft")}>
-                <Save className="h-4 w-4" />
-                Save Draft
-              </Button>
-              <Button className="gap-2" onClick={() => handleSubmit("publish")}>
-                <Send className="h-4 w-4" />
-                Publish
-              </Button>
+              {!isFirstTab && (
+                <Button variant="outline" onClick={goToPreviousTab}>
+                  <ChevronLeft className="h-4 w-4" />
+                  Back
+                </Button>
+              )}
+
+              {!isLastTab ? (
+                <Button onClick={goToNextTab}>
+                  Next
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              ) : (
+                <>
+                  <Button variant="secondary" className="gap-2" onClick={() => handleSubmit("draft")}>
+                    <Save className="h-4 w-4" />
+                    Save Draft
+                  </Button>
+                  <Button className="gap-2" onClick={() => handleSubmit("publish")}>
+                    <Send className="h-4 w-4" />
+                    Publish
+                  </Button>
+                </>
+              )}
             </div>
           </div>
         </DialogFooter>
