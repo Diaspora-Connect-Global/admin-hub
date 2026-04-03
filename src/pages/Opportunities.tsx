@@ -48,6 +48,7 @@ import {
   useCreateOpportunity,
   useUpdateOpportunity,
   usePublishOpportunity,
+  useDraftOpportunity,
   useCloseOpportunity,
   useDeleteOpportunity,
   useAcceptApplication,
@@ -186,6 +187,7 @@ export default function Opportunities() {
   const [createOpportunityMutation] = useCreateOpportunity();
   const [updateOpportunityMutation] = useUpdateOpportunity();
   const [publishOpportunityMutation] = usePublishOpportunity();
+  const [draftOpportunityMutation] = useDraftOpportunity();
   const [closeOpportunityMutation] = useCloseOpportunity();
   const [deleteOpportunityMutation] = useDeleteOpportunity();
   const [setPriorityMutation] = useSetOpportunityPriority();
@@ -193,16 +195,25 @@ export default function Opportunities() {
   const [acceptApplicationMutation] = useAcceptApplication();
   const [rejectApplicationMutation] = useRejectApplication();
 
-  const canUsePriorityActions = isSystemAdmin || window.location.hostname === "localhost";
+  const allowedOpportunityAdminRoles = new Set([
+    "SYSTEM_ADMIN",
+    "SUPER_ADMIN",
+    "COMMUNITY_ADMIN",
+    "ASSOCIATION_ADMIN",
+    "MODERATOR",
+  ]);
+  const currentRoleName = adminProfile?.role?.name?.toUpperCase() ?? "";
+  const isOpportunityAdmin = isSystemAdmin || allowedOpportunityAdminRoles.has(currentRoleName);
+  const canUsePriorityActions = isOpportunityAdmin || window.location.hostname === "localhost";
   const adminRoleName = adminProfile?.role?.name ?? "UNKNOWN_ROLE";
   const adminScopeType = adminProfile?.scopeType ?? "UNKNOWN_SCOPE";
 
-  const ensureSystemAdmin = (actionLabel: string) => {
-    if (isSystemAdmin) return true;
+  const ensureOpportunityAdmin = (actionLabel: string) => {
+    if (isOpportunityAdmin) return true;
 
     toast({
       title: "Permission denied",
-      description: `${actionLabel} requires SYSTEM_ADMIN. Current role: ${adminRoleName} (${adminScopeType}).`,
+      description: `${actionLabel} requires an admin role (SYSTEM_ADMIN, COMMUNITY_ADMIN, ASSOCIATION_ADMIN, MODERATOR). Current role: ${adminRoleName} (${adminScopeType}).`,
       variant: "destructive",
     });
     return false;
@@ -212,21 +223,27 @@ export default function Opportunities() {
     data: CreateOpportunityInput | UpdateOpportunityInput,
     action: "draft" | "publish"
   ) => {
-    if (!ensureSystemAdmin(editOpportunity?.id ? "Updating opportunities" : "Creating opportunities")) {
+    if (!ensureOpportunityAdmin(editOpportunity?.id ? "Updating opportunities" : "Creating opportunities")) {
       return;
     }
 
     if (editOpportunity?.id) {
       try {
+        if (editOpportunity.status !== OpportunityStatus.DRAFT) {
+          await draftOpportunityMutation({ variables: { id: editOpportunity.id } });
+        }
+
         await updateOpportunityMutation({
           variables: { id: editOpportunity.id, input: data as UpdateOpportunityInput },
         });
-        if (action === "publish" && editOpportunity.status !== OpportunityStatus.PUBLISHED) {
+
+        if (action === "publish") {
           await publishOpportunityMutation({ variables: { id: editOpportunity.id } });
         }
+
         toast({
           title: "Opportunity updated",
-          description: action === "publish" ? "Opportunity updated and published." : "Your changes have been saved.",
+          description: action === "publish" ? "Opportunity updated and published." : "Opportunity moved to draft and updated.",
         });
         setCreateModalOpen(false);
         setEditOpportunity(null);
@@ -239,7 +256,10 @@ export default function Opportunities() {
 
     try {
       const result = await createOpportunityMutation({ variables: { input: data as CreateOpportunityInput } });
-      const createdId = (result.data as { createOpportunity?: { id?: string } } | undefined)?.createOpportunity?.id;
+      const createdId = (result.data as { createOpportunity?: string } | undefined)?.createOpportunity;
+      if (!createdId) {
+        throw new Error("Create succeeded but no opportunity ID was returned.");
+      }
       if (action === "publish" && createdId) {
         await publishOpportunityMutation({ variables: { id: createdId } });
       }
@@ -271,7 +291,7 @@ export default function Opportunities() {
 
   // Admin Action Handlers
   const handlePublishOpportunity = async (opportunityId: string) => {
-    if (!ensureSystemAdmin("Publishing opportunities")) return;
+    if (!ensureOpportunityAdmin("Publishing opportunities")) return;
     try {
       await publishOpportunityMutation({ variables: { id: opportunityId } });
       toast({ title: "Success", description: "Opportunity published successfully." });
@@ -282,7 +302,7 @@ export default function Opportunities() {
   };
 
   const handleCloseOpportunity = async (opportunityId: string, reason?: string) => {
-    if (!ensureSystemAdmin("Closing opportunities")) return;
+    if (!ensureOpportunityAdmin("Closing opportunities")) return;
     try {
       await closeOpportunityMutation({ variables: { id: opportunityId, reason } });
       toast({ title: "Success", description: "Opportunity closed successfully." });
@@ -293,7 +313,7 @@ export default function Opportunities() {
   };
 
   const handleDeleteOpportunity = async (opportunityId: string) => {
-    if (!ensureSystemAdmin("Deleting opportunities")) return;
+    if (!ensureOpportunityAdmin("Deleting opportunities")) return;
     try {
       await deleteOpportunityMutation({ variables: { id: opportunityId } });
       toast({ title: "Success", description: "Opportunity deleted successfully." });
@@ -306,7 +326,7 @@ export default function Opportunities() {
   };
 
   const handleSetPriority = async (opportunityId: string, priority: "HIGH" | "NORMAL" | "LOW") => {
-    if (!ensureSystemAdmin("Setting opportunity priority")) return;
+    if (!ensureOpportunityAdmin("Setting opportunity priority")) return;
     try {
       await setPriorityMutation({ variables: { opportunityId, priority } });
       toast({ title: "Success", description: `Priority set to ${priority.toLowerCase()}.` });
@@ -317,7 +337,7 @@ export default function Opportunities() {
   };
 
   const handleReviewApplication = async (applicationId: string, notes?: string) => {
-    if (!ensureSystemAdmin("Reviewing applications")) return;
+    if (!ensureOpportunityAdmin("Reviewing applications")) return;
     try {
       await reviewApplicationMutation({ variables: { applicationId, notes } });
       toast({ title: "Success", description: "Application marked for review." });
@@ -328,7 +348,7 @@ export default function Opportunities() {
   };
 
   const handleAcceptApplication = async (applicationId: string, notes?: string) => {
-    if (!ensureSystemAdmin("Accepting applications")) return;
+    if (!ensureOpportunityAdmin("Accepting applications")) return;
     try {
       await acceptApplicationMutation({ variables: { id: applicationId, notes } });
       toast({ title: "Success", description: "Application accepted." });
@@ -341,7 +361,7 @@ export default function Opportunities() {
   };
 
   const handleRejectApplication = async (applicationId: string, reason?: string) => {
-    if (!ensureSystemAdmin("Rejecting applications")) return;
+    if (!ensureOpportunityAdmin("Rejecting applications")) return;
     try {
       await rejectApplicationMutation({ variables: { id: applicationId, reason } });
       toast({ title: "Success", description: "Application rejected." });
@@ -361,7 +381,7 @@ export default function Opportunities() {
   });
 
   const handleBulkPublish = async () => {
-    if (!ensureSystemAdmin("Bulk publishing opportunities")) return;
+    if (!ensureOpportunityAdmin("Bulk publishing opportunities")) return;
     try {
       await Promise.all(selectedOpportunities.map((id) => publishOpportunityMutation({ variables: { id } })));
       toast({ title: "Success", description: `${selectedOpportunities.length} opportunities published.` });
@@ -373,7 +393,7 @@ export default function Opportunities() {
   };
 
   const handleBulkClose = async () => {
-    if (!ensureSystemAdmin("Bulk closing opportunities")) return;
+    if (!ensureOpportunityAdmin("Bulk closing opportunities")) return;
     try {
       await Promise.all(
         selectedOpportunities.map((id) => closeOpportunityMutation({ variables: { id, reason: "Closed by system admin" } }))
@@ -415,7 +435,7 @@ export default function Opportunities() {
 
   const handleOpenDrawer = (opp: Opportunity) => { setDrawerOpportunity(opp); setDrawerOpen(true); };
   const handleViewApplicants = (opp: Opportunity) => {
-    if (!ensureSystemAdmin("Viewing applicants")) return;
+    if (!ensureOpportunityAdmin("Viewing applicants")) return;
     setApplicantsOpportunity(opp);
     setApplicantsDrawerOpen(true);
   };
@@ -425,9 +445,9 @@ export default function Opportunities() {
       <div className="mb-6">
         <h1 className="text-2xl font-semibold text-foreground">{t.opportunitiesTitle}</h1>
         <p className="text-sm text-muted-foreground mt-1">{t.opportunitiesSubtitle}</p>
-        {!isSystemAdmin && (
+        {!isOpportunityAdmin && (
           <p className="mt-2 text-sm text-amber-600">
-            Read-only access. Privileged opportunity actions require SYSTEM_ADMIN. Current role: {adminRoleName} ({adminScopeType}).
+            Read-only access. Privileged opportunity actions require an admin role. Current role: {adminRoleName} ({adminScopeType}).
           </p>
         )}
       </div>
@@ -492,9 +512,9 @@ export default function Opportunities() {
           </Button>
           <Button
             className="gap-2"
-            disabled={!isSystemAdmin}
+            disabled={!isOpportunityAdmin}
             onClick={() => {
-              if (!ensureSystemAdmin("Creating opportunities")) return;
+              if (!ensureOpportunityAdmin("Creating opportunities")) return;
               setCreateModalOpen(true);
             }}
           >
@@ -540,7 +560,7 @@ export default function Opportunities() {
         )}
         {!listLoading && listTotal === 0 && (
           <p className="text-sm text-amber-600 mt-2">
-            ℹ️ No opportunities found. {!isSystemAdmin ? "Log in as SYSTEM_ADMIN to create and manage opportunities." : "Create your first opportunity!"}
+            ℹ️ No opportunities found. {!isOpportunityAdmin ? "Log in with an admin role to create and manage opportunities." : "Create your first opportunity!"}
           </p>
         )}
       </div>

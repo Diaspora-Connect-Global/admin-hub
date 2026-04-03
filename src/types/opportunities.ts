@@ -91,7 +91,7 @@ export enum ApplicationStatus {
 
 export interface OpportunityOwner {
   id: string;
-  name: string;     // ⚠️ Currently returns raw ownerId — not a display name
+  name: string;
   avatarUrl?: string | null;
   type: string;     // 'USER' | 'COMMUNITY' | 'ASSOCIATION'
 }
@@ -100,7 +100,7 @@ export interface Opportunity {
   id: string;
   ownerType: OwnerType;
   ownerId: string;
-  owner?: OpportunityOwner | null;        // ⚠️ name = ownerId until lookup is implemented
+  owner?: OpportunityOwner | null;        // Resolved dynamically; falls back to { id, name: ownerId, type }
   type: OpportunityType;
   category: OpportunityCategory;
   subCategory?: string | null;
@@ -112,7 +112,7 @@ export interface Opportunity {
   engagementType?: EngagementType | null;
   location?: string | null;
   visibility: Visibility;
-  applicationMethod?: ApplicationMethod | null;  // ⚠️ Nullable from backend, defaults to IN_PLATFORM_FORM
+  applicationMethod?: ApplicationMethod | null;  // Nullable from backend, defaults to IN_PLATFORM_FORM
   externalLink?: string | null;
   applicationEmail?: string | null;
   formFields?: FormField[] | null;
@@ -125,9 +125,9 @@ export interface Opportunity {
   skills?: string[] | null;
   tags?: string[] | null;
   applicationCount?: number | null;
-  isSavedByCurrentUser?: boolean | null;        // ⚠️ Always null — not yet implemented
-  hasCurrentUserApplied?: boolean | null;        // ⚠️ Always null — not yet implemented
-  currentUserApplicationId?: string | null;      // ⚠️ Always null — not yet implemented
+  isSavedByCurrentUser?: boolean | null;
+  hasCurrentUserApplied?: boolean | null;
+  currentUserApplicationId?: string | null;
   // UI-derived optional fields
   applicantsCount?: number;
   shortlistCount?: number;

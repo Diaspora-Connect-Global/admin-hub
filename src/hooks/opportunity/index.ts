@@ -12,6 +12,7 @@ import {
   CREATE_OPPORTUNITY,
   UPDATE_OPPORTUNITY,
   PUBLISH_OPPORTUNITY,
+  DRAFT_OPPORTUNITY,
   CLOSE_OPPORTUNITY,
   DELETE_OPPORTUNITY,
   ACCEPT_APPLICATION,
@@ -66,19 +67,23 @@ export interface GetApplicationResponse {
 }
 
 export interface CreateOpportunityResponse {
-  createOpportunity: Opportunity;
+  createOpportunity: string;
 }
 
 export interface UpdateOpportunityResponse {
-  updateOpportunity: Opportunity;
+  updateOpportunity: boolean;
 }
 
 export interface PublishOpportunityResponse {
-  publishOpportunity: Opportunity;
+  publishOpportunity: boolean;
+}
+
+export interface DraftOpportunityResponse {
+  draftOpportunity: boolean;
 }
 
 export interface CloseOpportunityResponse {
-  closeOpportunity: Opportunity;
+  closeOpportunity: boolean;
 }
 
 export interface DeleteOpportunityResponse {
@@ -127,6 +132,10 @@ export function useUpdateOpportunity() {
 
 export function usePublishOpportunity() {
   return useMutation(PUBLISH_OPPORTUNITY);
+}
+
+export function useDraftOpportunity() {
+  return useMutation(DRAFT_OPPORTUNITY);
 }
 
 export function useCloseOpportunity() {

@@ -1,8 +1,8 @@
 import { gql } from "@apollo/client";
 
 /**
- * Opportunity Service — operations that are SUPER ADMIN ONLY (⚡).
- * Only users with SYSTEM_ADMIN role can call these.
+ * Opportunity Service — elevated admin operations (⚡).
+ * Gateway currently allows admin roles for setOpportunityPriority.
  * Use for: featuring/pinning opportunities (set priority).
  */
 
@@ -10,15 +10,14 @@ import { gql } from "@apollo/client";
 export const PRIORITY_LEVELS = ["HIGH", "NORMAL", "LOW"] as const;
 export type PriorityLevel = (typeof PRIORITY_LEVELS)[number];
 
-/** Input for setOpportunityPriority. Super admin only. */
+/** Input for setOpportunityPriority. */
 export interface SetOpportunityPriorityInput {
   opportunityId: string;
   priority: PriorityLevel;
 }
 
 /**
- * Set opportunity priority (pin/boost). System admin only.
- * Backend returns 403 "Only system admins can set opportunity priority" if not super admin.
+ * Set opportunity priority (pin/boost).
  */
 export const SET_OPPORTUNITY_PRIORITY = gql`
   mutation SetOpportunityPriority($opportunityId: String!, $priority: String!) {

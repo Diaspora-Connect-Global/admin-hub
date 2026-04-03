@@ -1,6 +1,6 @@
 /**
- * Hooks for operations that are SUPER ADMIN ONLY (⚡).
- * Guard UI with admin role (e.g. role.name === "SUPER_ADMIN" or permissions include "*") before showing.
+ * Hooks for elevated opportunity admin operations (⚡).
+ * Guard UI with resolver-allowed admin roles before showing privileged actions.
  */
 
 import { useMutation } from "@apollo/client/react";
@@ -10,8 +10,7 @@ import { PriorityLevel } from "@/types/opportunities";
 export { PriorityLevel };
 
 /**
- * Set opportunity priority (pin/boost). System admin only.
- * Backend returns 403 if caller is not super admin.
+ * Set opportunity priority (pin/boost).
  * Pass variables: { opportunityId: string, priority: "HIGH" | "NORMAL" | "LOW" }.
  * ⚠️ Uses flat arguments - no input wrapper object.
  */

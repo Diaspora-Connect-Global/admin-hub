@@ -110,7 +110,7 @@ export const APPLICATION_FIELDS = gql`
 /** Get a single opportunity. */
 export const GET_OPPORTUNITY = gql`
   ${OPPORTUNITY_FULL_FIELDS}
-  query GetOpportunity($id: String!) {
+  query GetOpportunity($id: ID!) {
     getOpportunity(id: $id) {
       ...OpportunityFullFields
     }
@@ -146,7 +146,7 @@ export const GET_APPLICATIONS = gql`
 /** Get a single application. */
 export const GET_APPLICATION = gql`
   ${APPLICATION_FIELDS}
-  query GetApplication($id: String!) {
+  query GetApplication($id: ID!) {
     getApplication(id: $id) {
       ...ApplicationFields
       opportunity {
@@ -162,86 +162,86 @@ export const GET_APPLICATION = gql`
 
 // --- Mutations (system admin) ---
 
-/** Create opportunity (system admin can create for anyone). Returns OpportunityType. */
+/** Create opportunity (system admin can create for anyone). Returns new opportunity ID. */
 export const CREATE_OPPORTUNITY = gql`
   mutation CreateOpportunity($input: CreateOpportunityInput!) {
-    createOpportunity(input: $input) {
-      id
-      title
-      status
-      type
-      category
-      createdAt
-    }
+    createOpportunity(input: $input)
   }
 `;
 
 /** Update opportunity. */
 export const UPDATE_OPPORTUNITY = gql`
-  mutation UpdateOpportunity($id: String!, $input: UpdateOpportunityInput!) {
+  mutation UpdateOpportunity($id: ID!, $input: UpdateOpportunityInput!) {
     updateOpportunity(id: $id, input: $input)
   }
 `;
 
 /** Publish opportunity (DRAFT → PUBLISHED). */
 export const PUBLISH_OPPORTUNITY = gql`
-  mutation PublishOpportunity($id: String!) {
+  mutation PublishOpportunity($id: ID!) {
     publishOpportunity(id: $id)
+  }
+`;
+
+/** Move opportunity back to draft. */
+export const DRAFT_OPPORTUNITY = gql`
+  mutation DraftOpportunity($id: ID!) {
+    draftOpportunity(id: $id)
   }
 `;
 
 /** Close opportunity. */
 export const CLOSE_OPPORTUNITY = gql`
-  mutation CloseOpportunity($id: String!, $reason: String) {
+  mutation CloseOpportunity($id: ID!, $reason: String) {
     closeOpportunity(id: $id, reason: $reason)
   }
 `;
 
 /** Permanently delete opportunity. */
 export const DELETE_OPPORTUNITY = gql`
-  mutation DeleteOpportunity($id: String!) {
+  mutation DeleteOpportunity($id: ID!) {
     deleteOpportunity(id: $id)
   }
 `;
 
 /** Accept an application. */
 export const ACCEPT_APPLICATION = gql`
-  mutation AcceptApplication($id: String!, $notes: String) {
+  mutation AcceptApplication($id: ID!, $notes: String) {
     acceptApplication(id: $id, notes: $notes)
   }
 `;
 
 /** Reject an application. */
 export const REJECT_APPLICATION = gql`
-  mutation RejectApplication($id: String!, $reason: String) {
+  mutation RejectApplication($id: ID!, $reason: String) {
     rejectApplication(id: $id, reason: $reason)
   }
 `;
 
 /** Mark application as under review (optional notes). */
 export const REVIEW_APPLICATION = gql`
-  mutation ReviewApplication($applicationId: String!, $notes: String) {
+  mutation ReviewApplication($applicationId: ID!, $notes: String) {
     reviewApplication(applicationId: $applicationId, notes: $notes)
   }
 `;
 
 /** Set opportunity priority - flat args, no input wrapper. Priority: HIGH | NORMAL | LOW */
 export const SET_OPPORTUNITY_PRIORITY = gql`
-  mutation SetOpportunityPriority($opportunityId: String!, $priority: String!) {
+  mutation SetOpportunityPriority($opportunityId: ID!, $priority: String!) {
     setOpportunityPriority(opportunityId: $opportunityId, priority: $priority)
   }
 `;
 
 /** Save opportunity for current user. */
 export const SAVE_OPPORTUNITY = gql`
-  mutation SaveOpportunity($id: String!) {
+  mutation SaveOpportunity($id: ID!) {
     saveOpportunity(id: $id)
   }
 `;
 
 /** Unsave opportunity for current user. */
 export const UNSAVE_OPPORTUNITY = gql`
-  mutation UnsaveOpportunity($id: String!) {
+  mutation UnsaveOpportunity($id: ID!) {
     unsaveOpportunity(id: $id)
   }
 `;
@@ -255,7 +255,7 @@ export const SUBMIT_APPLICATION = gql`
 
 /** Withdraw application (stub - always returns true, gRPC not wired yet). */
 export const WITHDRAW_APPLICATION = gql`
-  mutation WithdrawApplication($id: String!) {
+  mutation WithdrawApplication($id: ID!) {
     withdrawApplication(id: $id)
   }
 `;
