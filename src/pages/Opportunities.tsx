@@ -134,42 +134,113 @@ export default function Opportunities() {
     ? applicationsDataTyped.getApplications.applications
     : [];
 
-  const applicants: Applicant[] = rawApplications.map((a) => ({
-    id: a.id,
-    createdAt: a.createdAt,
-    opportunityId: a.opportunityId,
-    applicantId: a.applicantId,
-    status: ((a.status as string | undefined) ?? ApplicationStatus.PENDING).toUpperCase() as ApplicationStatus,
-    appliedAt: a.createdAt,
-    name: (a as Application & { fullName?: string }).fullName ?? a.applicantId ?? "Unknown applicant",
-    email: (a as Application & { email?: string }).email ?? "",
-    phone: (a as Application & { phoneNumber?: string }).phoneNumber,
-    location: (a as Application & { location?: string }).location,
-    cvUrl: a.resumeFileRef?.path,
-    responses: (() => {
-      const answers = (a as { customAnswers?: string | Record<string, string> | null }).customAnswers;
-      if (!answers) return undefined;
-      if (typeof answers === "string") {
-        try {
-          return JSON.parse(answers) as Record<string, string>;
-        } catch {
-          return { Answers: answers };
-        }
+  const toRecord = (value: unknown): Record<string, unknown> | undefined => {
+    if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
+    return value as Record<string, unknown>;
+  };
+
+  const parseJsonSafely = (value: unknown): unknown => {
+    if (typeof value !== "string") return value;
+    try {
+      return JSON.parse(value);
+    } catch {
+      return value;
+    }
+  };
+
+  const isLikelyIdentifier = (value: string): boolean => {
+    const v = value.trim();
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const hexLikeRegex = /^[0-9a-f]{24,}$/i;
+    return uuidRegex.test(v) || hexLikeRegex.test(v);
+  };
+
+  const pickString = (...values: unknown[]): string | undefined => {
+    for (const value of values) {
+      if (typeof value === "string" && value.trim()) {
+        const trimmed = value.trim();
+        if (!isLikelyIdentifier(trimmed)) return trimmed;
       }
-      return answers;
-    })(),
-    notes: a.reviewNotes
-      ? [
-          {
-            id: `review-${a.id}`,
-            authorName: "Admin",
-            createdAt: a.createdAt ?? "",
-            content: a.reviewNotes ?? "",
-            isPrivate: false,
-          },
-        ]
-      : [],
-  }));
+    }
+    return undefined;
+  };
+
+  const applicants: Applicant[] = rawApplications.map((a) => {
+    const answersRaw = (a as { customAnswers?: string | Record<string, unknown> | null }).customAnswers;
+    const parsedOnce = parseJsonSafely(answersRaw);
+    const parsedTwice = parseJsonSafely(parsedOnce);
+    let parsedAnswers = toRecord(parsedTwice);
+    if (!parsedAnswers && typeof answersRaw === "string") {
+      parsedAnswers = { Answers: answersRaw };
+    }
+
+    const applicationDataRaw = parseJsonSafely(parsedAnswers?.applicationData);
+    const applicationData = toRecord(applicationDataRaw);
+    const firstName = pickString(
+      parsedAnswers?.firstName,
+      parsedAnswers?.first_name,
+      applicationData?.firstName,
+      applicationData?.first_name
+    );
+    const lastName = pickString(
+      parsedAnswers?.lastName,
+      parsedAnswers?.last_name,
+      applicationData?.lastName,
+      applicationData?.last_name
+    );
+    const combinedName = firstName && lastName ? `${firstName} ${lastName}` : undefined;
+
+    const name = pickString(
+      (a as Application & { fullName?: string }).fullName,
+      parsedAnswers?.fullName,
+      parsedAnswers?.full_name,
+      parsedAnswers?.name,
+      applicationData?.fullName,
+      applicationData?.full_name,
+      applicationData?.name,
+      combinedName
+    ) ?? "Unknown applicant";
+
+    const email = pickString(
+      (a as Application & { email?: string }).email,
+      parsedAnswers?.email,
+      applicationData?.email
+    ) ?? "";
+
+    const phone = pickString(
+      (a as Application & { phoneNumber?: string }).phoneNumber,
+      parsedAnswers?.phoneNumber,
+      parsedAnswers?.phone,
+      applicationData?.phoneNumber,
+      applicationData?.phone
+    );
+
+    return {
+      id: a.id,
+      createdAt: a.createdAt,
+      opportunityId: a.opportunityId,
+      applicantId: a.applicantId,
+      status: ((a.status as string | undefined) ?? ApplicationStatus.PENDING).toUpperCase() as ApplicationStatus,
+      appliedAt: a.createdAt,
+      name,
+      email,
+      phone,
+      location: (a as Application & { location?: string }).location,
+      cvUrl: a.resumeFileRef?.path,
+      responses: parsedAnswers as Record<string, string> | undefined,
+      notes: a.reviewNotes
+        ? [
+            {
+              id: `review-${a.id}`,
+              authorName: "Admin",
+              createdAt: a.createdAt ?? "",
+              content: a.reviewNotes ?? "",
+              isPrivate: false,
+            },
+          ]
+        : [],
+    };
+  });
   const [applicationModalOpen, setApplicationModalOpen] = useState(false);
   const [selectedApplicant, setSelectedApplicant] = useState<Applicant | null>(null);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);

@@ -258,6 +258,8 @@ export interface CreateOpportunityInput {
 }
 
 export interface UpdateOpportunityInput {
+  type?: OpportunityType;
+  category?: OpportunityCategory;
   title?: string;
   description?: string;
   scope?: string;

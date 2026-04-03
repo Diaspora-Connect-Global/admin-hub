@@ -272,6 +272,8 @@ export function CreateEditOpportunityModal({
 
     if (isEdit) {
       const input: UpdateOpportunityInput = {
+        type,
+        category: defaultCategoryForType[type],
         title: title.trim(),
         description: description || undefined,
         subCategory: subCategory || undefined,

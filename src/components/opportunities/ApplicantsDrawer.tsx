@@ -160,7 +160,7 @@ export function ApplicantsDrawer({
                   <TableRow key={applicant.id}>
                     <TableCell>
                       <div>
-                        <p className="font-medium">{applicant.name || applicant.applicantId}</p>
+                        <p className="font-medium">{applicant.name || "Unknown applicant"}</p>
                         <p className="text-xs text-muted-foreground">{applicant.email}</p>
                       </div>
                     </TableCell>
