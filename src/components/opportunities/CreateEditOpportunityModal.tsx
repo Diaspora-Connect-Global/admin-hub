@@ -368,7 +368,7 @@ export function CreateEditOpportunityModal({
     isFellowship            ? "Stipend"
     : isGrant || isScholarship ? "Funding Amount"
     : isInvestment          ? "Investment Range"
-    : "Salary";
+    : "Compensation";
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -780,7 +780,7 @@ export function CreateEditOpportunityModal({
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value={NONE_SELECTED}>Not specified</SelectItem>
-                          <SelectItem value={CompensationType.SALARY}>Salary</SelectItem>
+                          <SelectItem value={CompensationType.SALARY}>Compensation</SelectItem>
                           <SelectItem value={CompensationType.GRANT}>Grant</SelectItem>
                           <SelectItem value={CompensationType.STIPEND}>Stipend</SelectItem>
                           <SelectItem value={CompensationType.INVESTMENT}>Investment</SelectItem>
