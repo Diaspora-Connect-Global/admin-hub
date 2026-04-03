@@ -34,16 +34,32 @@ export enum OpportunityCategory {
   RETURN_REINTEGRATION           = 'RETURN_REINTEGRATION',
 }
 
-export enum WorkMode {
+export enum DeliveryMode {
   REMOTE = 'REMOTE',
+  IN_PERSON = 'IN_PERSON',
   HYBRID = 'HYBRID',
-  ONSITE = 'ONSITE',
+  ONLINE = 'ONLINE',
 }
 
-export enum EngagementType {
+export enum CommitmentType {
   FULL_TIME = 'FULL_TIME',
   PART_TIME = 'PART_TIME',
-  CONTRACT  = 'CONTRACT',
+  CONTRACT = 'CONTRACT',
+  ONE_TIME = 'ONE_TIME',
+  FLEXIBLE = 'FLEXIBLE',
+  PROJECT_BASED = 'PROJECT_BASED',
+  ONGOING = 'ONGOING',
+}
+
+export enum CompensationType {
+  SALARY = 'SALARY',
+  GRANT = 'GRANT',
+  STIPEND = 'STIPEND',
+  INVESTMENT = 'INVESTMENT',
+  PRIZE = 'PRIZE',
+  EQUITY = 'EQUITY',
+  HONORARIUM = 'HONORARIUM',
+  NONE = 'NONE',
 }
 
 export enum Visibility {
@@ -106,10 +122,10 @@ export interface Opportunity {
   subCategory?: string | null;
   title: string;
   description: string;
-  responsibilities?: string | null;
-  requirements?: string | null;
-  workMode?: WorkMode | null;
-  engagementType?: EngagementType | null;
+  scope?: string | null;
+  eligibilityCriteria?: string | null;
+  deliveryMode?: DeliveryMode | null;
+  commitmentType?: CommitmentType | null;
   location?: string | null;
   visibility: Visibility;
   applicationMethod?: ApplicationMethod | null;  // Nullable from backend, defaults to IN_PLATFORM_FORM
@@ -118,9 +134,13 @@ export interface Opportunity {
   formFields?: FormField[] | null;
   status: OpportunityStatus;
   priorityLevel: PriorityLevel;
-  salaryMin?: number | null;
-  salaryMax?: number | null;
-  salaryCurrency?: string | null;
+  compensationMin?: number | null;
+  compensationMax?: number | null;
+  compensationCurrency?: string | null;
+  compensationType?: CompensationType | null;
+  duration?: string | null;
+  eligibilityRegions?: string[] | null;
+  benefitsSummary?: string | null;
   deadline?: string | null;
   skills?: string[] | null;
   tags?: string[] | null;
@@ -204,8 +224,9 @@ export interface SavedOpportunityListResponse {
 // - applicationEmail is REQUIRED when applicationMethod is EMAIL_REQUEST
 // - externalLink is REQUIRED when applicationMethod is EXTERNAL_LINK
 // 
-// Optional fields: subCategory, skills, tags, responsibilities, requirements, workMode,
-// engagementType, location, salaryMin, salaryMax, salaryCurrency, deadline
+// Optional fields: subCategory, skills, tags, scope, eligibilityCriteria, deliveryMode,
+// commitmentType, location, compensationMin, compensationMax, compensationCurrency,
+// compensationType, duration, eligibilityRegions, benefitsSummary, deadline
 export interface CreateOpportunityInput {
   ownerType: OwnerType;  // USER | COMMUNITY | ASSOCIATION
   ownerId: string;       // Must match user's ID or owned entity (community/association)
@@ -213,36 +234,44 @@ export interface CreateOpportunityInput {
   category: OpportunityCategory;
   title: string;
   description: string;
+  scope?: string;
+  eligibilityCriteria?: string;
+  deliveryMode?: DeliveryMode;
+  commitmentType?: CommitmentType;
+  compensationMin?: number;
+  compensationMax?: number;
+  compensationCurrency?: string;    // ISO currency code e.g. "GHS"
+  compensationType?: CompensationType;
+  duration?: string;
+  eligibilityRegions?: string[];
+  benefitsSummary?: string;
+  deadline?: string;          // ISO 8601 date string
+  subCategory?: string;
+  skills?: string[];
+  tags?: string[];
   visibility: Visibility;
   applicationMethod?: ApplicationMethod;  // Optional, defaults to IN_PLATFORM_FORM
   applicationEmail?: string;  // REQUIRED if applicationMethod is EMAIL_REQUEST
   externalLink?: string;      // REQUIRED if applicationMethod is EXTERNAL_LINK
   formFields?: FormField[];   // Replaces all form fields; omit to use defaults
-  responsibilities?: string;
-  requirements?: string;
-  workMode?: WorkMode;
-  engagementType?: EngagementType;
   location?: string;
-  subCategory?: string;
-  salaryMin?: number;
-  salaryMax?: number;
-  salaryCurrency?: string;    // ISO currency code e.g. "GHS"
-  deadline?: string;          // ISO 8601 date string
-  skills?: string[];
-  tags?: string[];
 }
 
 export interface UpdateOpportunityInput {
   title?: string;
   description?: string;
-  responsibilities?: string;
-  requirements?: string;
-  workMode?: WorkMode;
-  engagementType?: EngagementType;
+  scope?: string;
+  eligibilityCriteria?: string;
+  deliveryMode?: DeliveryMode;
+  commitmentType?: CommitmentType;
   location?: string;
-  salaryMin?: number;
-  salaryMax?: number;
-  salaryCurrency?: string;
+  compensationMin?: number;
+  compensationMax?: number;
+  compensationCurrency?: string;
+  compensationType?: CompensationType;
+  duration?: string;
+  eligibilityRegions?: string[];
+  benefitsSummary?: string;
   deadline?: string;
   subCategory?: string;
   skills?: string[];
@@ -265,8 +294,8 @@ export interface ListOpportunitiesInput {
   ownerType?: OwnerType;
   ownerId?: string;
   status?: OpportunityStatusFilter;
-  workMode?: WorkMode;
-  engagementType?: EngagementType;
+  deliveryMode?: DeliveryMode;
+  commitmentType?: CommitmentType;
   location?: string;
   sortBy?: string;       // 'CREATED_AT' | 'DEADLINE' | 'SALARY' | 'RELEVANCE'
   sortOrder?: string;    // 'ASC' | 'DESC'

@@ -5,14 +5,13 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { X, ToggleRight, XCircle, Archive, Download, ChevronDown } from "lucide-react";
+import { X, ToggleRight, XCircle, Download, ChevronDown } from "lucide-react";
 
 interface OpportunityBulkActionsBarProps {
   selectedCount: number;
   onClearSelection: () => void;
   onBulkPublish: () => void;
   onBulkClose: () => void;
-  onBulkArchive: () => void;
   onBulkExport: () => void;
 }
 
@@ -21,7 +20,6 @@ export function OpportunityBulkActionsBar({
   onClearSelection,
   onBulkPublish,
   onBulkClose,
-  onBulkArchive,
   onBulkExport,
 }: OpportunityBulkActionsBarProps) {
   if (selectedCount === 0) return null;
@@ -50,10 +48,6 @@ export function OpportunityBulkActionsBar({
             <DropdownMenuItem onClick={onBulkClose}>
               <XCircle className="mr-2 h-4 w-4" />
               Close Selected
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={onBulkArchive}>
-              <Archive className="mr-2 h-4 w-4" />
-              Archive Selected
             </DropdownMenuItem>
             <DropdownMenuItem onClick={onBulkExport}>
               <Download className="mr-2 h-4 w-4" />

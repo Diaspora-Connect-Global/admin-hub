@@ -122,14 +122,7 @@ export default function Opportunities() {
     applicationMethod: (o.applicationMethod ?? ApplicationMethod.IN_PLATFORM_FORM) as ApplicationMethod,
     // UI-derived fields
     applicantsCount: o.applicationCount ?? 0,
-    shortlistCount: o.shortlistCount ?? 0,
-    hireCount: o.hireCount ?? 0,
     shortDescription: typeof o.description === "string" ? o.description.slice(0, 120) : "",
-    formType: "structured",
-    requireCv: true,
-    reviewWorkflow: "manual",
-    reviewers: [],
-    maxApplicants: null,
   }));
 
   const { data: applicationsData, refetch: refetchApplications } = useGetApplications(
@@ -195,25 +188,57 @@ export default function Opportunities() {
   const [acceptApplicationMutation] = useAcceptApplication();
   const [rejectApplicationMutation] = useRejectApplication();
 
-  const allowedOpportunityAdminRoles = new Set([
+  const allowedLifecycleRoles = new Set([
+    "SYSTEM_ADMIN",
+    "SUPER_ADMIN",
+    "COMMUNITY_ADMIN",
+    "ASSOCIATION_ADMIN",
+  ]);
+  const allowedReviewRoles = new Set([
     "SYSTEM_ADMIN",
     "SUPER_ADMIN",
     "COMMUNITY_ADMIN",
     "ASSOCIATION_ADMIN",
     "MODERATOR",
   ]);
+  const allowedPriorityRoles = allowedReviewRoles;
   const currentRoleName = adminProfile?.role?.name?.toUpperCase() ?? "";
-  const isOpportunityAdmin = isSystemAdmin || allowedOpportunityAdminRoles.has(currentRoleName);
-  const canUsePriorityActions = isOpportunityAdmin || window.location.hostname === "localhost";
+  const canManageOpportunityLifecycle = isSystemAdmin || allowedLifecycleRoles.has(currentRoleName);
+  const canReviewApplications = isSystemAdmin || allowedReviewRoles.has(currentRoleName);
+  const canSetPriority = isSystemAdmin || allowedPriorityRoles.has(currentRoleName);
+  const isOpportunityReadAdmin = canManageOpportunityLifecycle || canReviewApplications;
+  const canUsePriorityActions = canSetPriority || window.location.hostname === "localhost";
   const adminRoleName = adminProfile?.role?.name ?? "UNKNOWN_ROLE";
   const adminScopeType = adminProfile?.scopeType ?? "UNKNOWN_SCOPE";
 
-  const ensureOpportunityAdmin = (actionLabel: string) => {
-    if (isOpportunityAdmin) return true;
+  const ensureLifecycleAdmin = (actionLabel: string) => {
+    if (canManageOpportunityLifecycle) return true;
 
     toast({
       title: "Permission denied",
-      description: `${actionLabel} requires an admin role (SYSTEM_ADMIN, COMMUNITY_ADMIN, ASSOCIATION_ADMIN, MODERATOR). Current role: ${adminRoleName} (${adminScopeType}).`,
+      description: `${actionLabel} requires SYSTEM_ADMIN, COMMUNITY_ADMIN, or ASSOCIATION_ADMIN. Current role: ${adminRoleName} (${adminScopeType}).`,
+      variant: "destructive",
+    });
+    return false;
+  };
+
+  const ensureReviewAdmin = (actionLabel: string) => {
+    if (canReviewApplications) return true;
+
+    toast({
+      title: "Permission denied",
+      description: `${actionLabel} requires an admin review role. Current role: ${adminRoleName} (${adminScopeType}).`,
+      variant: "destructive",
+    });
+    return false;
+  };
+
+  const ensurePriorityAdmin = (actionLabel: string) => {
+    if (canSetPriority) return true;
+
+    toast({
+      title: "Permission denied",
+      description: `${actionLabel} requires an admin role with priority access. Current role: ${adminRoleName} (${adminScopeType}).`,
       variant: "destructive",
     });
     return false;
@@ -223,7 +248,7 @@ export default function Opportunities() {
     data: CreateOpportunityInput | UpdateOpportunityInput,
     action: "draft" | "publish"
   ) => {
-    if (!ensureOpportunityAdmin(editOpportunity?.id ? "Updating opportunities" : "Creating opportunities")) {
+    if (!ensureLifecycleAdmin(editOpportunity?.id ? "Updating opportunities" : "Creating opportunities")) {
       return;
     }
 
@@ -291,7 +316,7 @@ export default function Opportunities() {
 
   // Admin Action Handlers
   const handlePublishOpportunity = async (opportunityId: string) => {
-    if (!ensureOpportunityAdmin("Publishing opportunities")) return;
+    if (!ensureLifecycleAdmin("Publishing opportunities")) return;
     try {
       await publishOpportunityMutation({ variables: { id: opportunityId } });
       toast({ title: "Success", description: "Opportunity published successfully." });
@@ -302,7 +327,7 @@ export default function Opportunities() {
   };
 
   const handleCloseOpportunity = async (opportunityId: string, reason?: string) => {
-    if (!ensureOpportunityAdmin("Closing opportunities")) return;
+    if (!ensureLifecycleAdmin("Closing opportunities")) return;
     try {
       await closeOpportunityMutation({ variables: { id: opportunityId, reason } });
       toast({ title: "Success", description: "Opportunity closed successfully." });
@@ -313,7 +338,7 @@ export default function Opportunities() {
   };
 
   const handleDeleteOpportunity = async (opportunityId: string) => {
-    if (!ensureOpportunityAdmin("Deleting opportunities")) return;
+    if (!ensureLifecycleAdmin("Deleting opportunities")) return;
     try {
       await deleteOpportunityMutation({ variables: { id: opportunityId } });
       toast({ title: "Success", description: "Opportunity deleted successfully." });
@@ -326,7 +351,7 @@ export default function Opportunities() {
   };
 
   const handleSetPriority = async (opportunityId: string, priority: "HIGH" | "NORMAL" | "LOW") => {
-    if (!ensureOpportunityAdmin("Setting opportunity priority")) return;
+    if (!ensurePriorityAdmin("Setting opportunity priority")) return;
     try {
       await setPriorityMutation({ variables: { opportunityId, priority } });
       toast({ title: "Success", description: `Priority set to ${priority.toLowerCase()}.` });
@@ -337,7 +362,7 @@ export default function Opportunities() {
   };
 
   const handleReviewApplication = async (applicationId: string, notes?: string) => {
-    if (!ensureOpportunityAdmin("Reviewing applications")) return;
+    if (!ensureReviewAdmin("Reviewing applications")) return;
     try {
       await reviewApplicationMutation({ variables: { applicationId, notes } });
       toast({ title: "Success", description: "Application marked for review." });
@@ -348,7 +373,7 @@ export default function Opportunities() {
   };
 
   const handleAcceptApplication = async (applicationId: string, notes?: string) => {
-    if (!ensureOpportunityAdmin("Accepting applications")) return;
+    if (!ensureReviewAdmin("Accepting applications")) return;
     try {
       await acceptApplicationMutation({ variables: { id: applicationId, notes } });
       toast({ title: "Success", description: "Application accepted." });
@@ -361,7 +386,7 @@ export default function Opportunities() {
   };
 
   const handleRejectApplication = async (applicationId: string, reason?: string) => {
-    if (!ensureOpportunityAdmin("Rejecting applications")) return;
+    if (!ensureReviewAdmin("Rejecting applications")) return;
     try {
       await rejectApplicationMutation({ variables: { id: applicationId, reason } });
       toast({ title: "Success", description: "Application rejected." });
@@ -381,7 +406,7 @@ export default function Opportunities() {
   });
 
   const handleBulkPublish = async () => {
-    if (!ensureOpportunityAdmin("Bulk publishing opportunities")) return;
+    if (!ensureLifecycleAdmin("Bulk publishing opportunities")) return;
     try {
       await Promise.all(selectedOpportunities.map((id) => publishOpportunityMutation({ variables: { id } })));
       toast({ title: "Success", description: `${selectedOpportunities.length} opportunities published.` });
@@ -393,7 +418,7 @@ export default function Opportunities() {
   };
 
   const handleBulkClose = async () => {
-    if (!ensureOpportunityAdmin("Bulk closing opportunities")) return;
+    if (!ensureLifecycleAdmin("Bulk closing opportunities")) return;
     try {
       await Promise.all(
         selectedOpportunities.map((id) => closeOpportunityMutation({ variables: { id, reason: "Closed by system admin" } }))
@@ -435,7 +460,7 @@ export default function Opportunities() {
 
   const handleOpenDrawer = (opp: Opportunity) => { setDrawerOpportunity(opp); setDrawerOpen(true); };
   const handleViewApplicants = (opp: Opportunity) => {
-    if (!ensureOpportunityAdmin("Viewing applicants")) return;
+    if (!ensureReviewAdmin("Viewing applicants")) return;
     setApplicantsOpportunity(opp);
     setApplicantsDrawerOpen(true);
   };
@@ -445,7 +470,7 @@ export default function Opportunities() {
       <div className="mb-6">
         <h1 className="text-2xl font-semibold text-foreground">{t.opportunitiesTitle}</h1>
         <p className="text-sm text-muted-foreground mt-1">{t.opportunitiesSubtitle}</p>
-        {!isOpportunityAdmin && (
+        {!isOpportunityReadAdmin && (
           <p className="mt-2 text-sm text-amber-600">
             Read-only access. Privileged opportunity actions require an admin role. Current role: {adminRoleName} ({adminScopeType}).
           </p>
@@ -512,9 +537,9 @@ export default function Opportunities() {
           </Button>
           <Button
             className="gap-2"
-            disabled={!isOpportunityAdmin}
+            disabled={!canManageOpportunityLifecycle}
             onClick={() => {
-              if (!ensureOpportunityAdmin("Creating opportunities")) return;
+              if (!ensureLifecycleAdmin("Creating opportunities")) return;
               setCreateModalOpen(true);
             }}
           >
@@ -560,7 +585,7 @@ export default function Opportunities() {
         )}
         {!listLoading && listTotal === 0 && (
           <p className="text-sm text-amber-600 mt-2">
-            ℹ️ No opportunities found. {!isOpportunityAdmin ? "Log in with an admin role to create and manage opportunities." : "Create your first opportunity!"}
+            ℹ️ No opportunities found. {!isOpportunityReadAdmin ? "Log in with an admin role to access opportunity moderation." : "Create your first opportunity!"}
           </p>
         )}
       </div>
@@ -610,7 +635,6 @@ export default function Opportunities() {
         onClose={() => drawerOpportunity && handleCloseOpportunity(drawerOpportunity.id, "Closed by admin")}
         onViewApplicants={() => { setApplicantsOpportunity(drawerOpportunity); setApplicantsDrawerOpen(true); }}
         onSetPriority={canUsePriorityActions ? (priority) => drawerOpportunity && handleSetPriority(drawerOpportunity.id, priority) : undefined}
-        onDuplicate={() => toast({ title: "Duplicate functionality not yet implemented" })}
       />
       <ApplicantsDrawer
         open={applicantsDrawerOpen}
@@ -618,20 +642,20 @@ export default function Opportunities() {
         opportunity={applicantsOpportunity}
         applicants={applicants}
         onViewApplication={(a) => { setSelectedApplicant(a); setApplicationModalOpen(true); }}
-        onShortlist={(a) => toast({ title: `${a.name} shortlisted` })}
+        onReview={(a) => a.id && handleReviewApplication(a.id, "Moved to reviewing")}
         onMessage={(a) => { setSelectedApplicant(a); setMessageModalOpen(true); }}
         onReject={(a) => { setSelectedApplicant(a); setRejectModalOpen(true); }}
-        onMarkHired={(a) => toast({ title: `${a.name} marked as hired` })}
+        onAccept={(a) => a.id && handleAcceptApplication(a.id, "Accepted")}
         onExport={() => toast({ title: "Exporting..." })}
       />
       <ApplicationModal
         open={applicationModalOpen}
         onOpenChange={setApplicationModalOpen}
         applicant={selectedApplicant}
-        onShortlist={() => selectedApplicant?.id && handleReviewApplication(selectedApplicant.id, "Shortlisted for review")}
+        onReview={() => selectedApplicant?.id && handleReviewApplication(selectedApplicant.id, "Moved to reviewing")}
         onMessage={() => { setMessageModalOpen(true); }}
         onReject={() => { setRejectModalOpen(true); }}
-        onMarkHired={() => selectedApplicant?.id && handleAcceptApplication(selectedApplicant.id, "Hired")}
+        onAccept={() => selectedApplicant?.id && handleAcceptApplication(selectedApplicant.id, "Accepted")}
       />
       <DeleteOpportunityModal
         open={deleteModalOpen}
@@ -656,7 +680,6 @@ export default function Opportunities() {
         onClearSelection={() => setSelectedOpportunities([])}
         onBulkPublish={handleBulkPublish}
         onBulkClose={handleBulkClose}
-        onBulkArchive={() => toast({ title: "Archive is not yet supported by the API" })}
         onBulkExport={handleBulkExport}
       />
     </AdminLayout>

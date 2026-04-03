@@ -9,9 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { Textarea } from "@/components/ui/textarea";
 import {
-  Star,
   MessageCircle,
   XCircle,
   CheckCircle,
@@ -22,19 +20,17 @@ import {
   MapPin,
   User,
   Clock,
-  Plus,
 } from "lucide-react";
 import { Applicant, ApplicantStatus } from "@/types/opportunities";
-import { useState } from "react";
 
 interface ApplicationModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   applicant: Applicant | null;
-  onShortlist: () => void;
+  onReview: () => void;
   onMessage: () => void;
   onReject: () => void;
-  onMarkHired: () => void;
+  onAccept: () => void;
 }
 
 const statusColors: Record<ApplicantStatus, string> = {
@@ -49,13 +45,11 @@ export function ApplicationModal({
   open,
   onOpenChange,
   applicant,
-  onShortlist,
+  onReview,
   onMessage,
   onReject,
-  onMarkHired,
+  onAccept,
 }: ApplicationModalProps) {
-  const [newNote, setNewNote] = useState("");
-
   if (!applicant) return null;
 
   return (
@@ -184,24 +178,6 @@ export function ApplicationModal({
               </div>
             )}
 
-            {/* Add Note */}
-            <div className="space-y-2">
-              <Textarea
-                placeholder="Add a note about this applicant..."
-                value={newNote}
-                onChange={(e) => setNewNote(e.target.value)}
-                rows={2}
-              />
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm" className="gap-1">
-                  <Plus className="h-4 w-4" />
-                  Add Note
-                </Button>
-                <Button variant="ghost" size="sm">
-                  Add Private Note
-                </Button>
-              </div>
-            </div>
           </div>
         </ScrollArea>
 
@@ -213,9 +189,9 @@ export function ApplicationModal({
               Close
             </Button>
             <div className="flex gap-2">
-              <Button variant="outline" className="gap-2" onClick={onShortlist}>
-                <Star className="h-4 w-4" />
-                Shortlist
+              <Button variant="outline" className="gap-2" onClick={onReview}>
+                <CheckCircle className="h-4 w-4" />
+                Mark Reviewing
               </Button>
               <Button variant="outline" className="gap-2" onClick={onMessage}>
                 <MessageCircle className="h-4 w-4" />
@@ -225,9 +201,9 @@ export function ApplicationModal({
                 <XCircle className="h-4 w-4" />
                 Reject
               </Button>
-              <Button className="gap-2" onClick={onMarkHired}>
+              <Button className="gap-2" onClick={onAccept}>
                 <CheckCircle className="h-4 w-4" />
-                Mark Hired
+                Accept
               </Button>
             </div>
           </div>

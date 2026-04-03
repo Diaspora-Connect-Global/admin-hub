@@ -4,9 +4,9 @@ import { gql } from "@apollo/client";
  * Opportunity Service — GraphQL operations for system admin.
  * Auth: Bearer JWT (same as admin client). Use with adminClient or Apollo hooks.
  *
- * Enums (reference): OpportunityTypeEnum, OpportunityCategoryEnum, WorkModeEnum,
- * EngagementTypeEnum, VisibilityEnum, ApplicationMethodEnum, OpportunityStatusEnum,
- * OwnerTypeEnum, PriorityLevelEnum, ApplicationStatusEnum.
+ * Enums (reference): OpportunityTypeEnum, OpportunityCategoryEnum, DeliveryModeEnum,
+ * CommitmentTypeEnum, CompensationTypeEnum, VisibilityEnum, ApplicationMethodEnum,
+ * OpportunityStatusEnum, OwnerTypeEnum, PriorityLevelEnum, ApplicationStatusEnum.
  */
 
 // --- Fragments ---
@@ -30,19 +30,23 @@ export const OPPORTUNITY_FIELDS = gql`
     subCategory
     title
     description
-    responsibilities
-    requirements
-    workMode
-    engagementType
+    scope
+    eligibilityCriteria
+    deliveryMode
+    commitmentType
     location
     visibility
     externalLink
     applicationEmail
     status
     priorityLevel
-    salaryMin
-    salaryMax
-    salaryCurrency
+    compensationMin
+    compensationMax
+    compensationCurrency
+    compensationType
+    duration
+    eligibilityRegions
+    benefitsSummary
     deadline
     skills
     tags

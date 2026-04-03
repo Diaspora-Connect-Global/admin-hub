@@ -49,8 +49,9 @@ import {
   FormField,
   Visibility,
   ApplicationMethod,
-  WorkMode,
-  EngagementType,
+  DeliveryMode,
+  CommitmentType,
+  CompensationType,
   OwnerType,
   type CreateOpportunityInput,
   type UpdateOpportunityInput,
@@ -120,13 +121,17 @@ export function CreateEditOpportunityModal({
   const [formFields, setFormFields] = useState<FormField[]>(defaultFormFields);
 
   // Additional Details
-  const [responsibilities, setResponsibilities] = useState("");
-  const [requirements, setRequirements] = useState("");
-  const [workMode, setWorkMode] = useState<WorkMode | "">("");
-  const [engagementType, setEngagementType] = useState<EngagementType | "">("");
-  const [salaryMin, setSalaryMin] = useState("");
-  const [salaryMax, setSalaryMax] = useState("");
-  const [salaryCurrency, setSalaryCurrency] = useState("");
+  const [scope, setScope] = useState("");
+  const [eligibilityCriteria, setEligibilityCriteria] = useState("");
+  const [deliveryMode, setDeliveryMode] = useState<DeliveryMode | "">("");
+  const [commitmentType, setCommitmentType] = useState<CommitmentType | "">("");
+  const [compensationMin, setCompensationMin] = useState("");
+  const [compensationMax, setCompensationMax] = useState("");
+  const [compensationCurrency, setCompensationCurrency] = useState("");
+  const [compensationType, setCompensationType] = useState<CompensationType | "">("");
+  const [duration, setDuration] = useState("");
+  const [benefitsSummary, setBenefitsSummary] = useState("");
+  const [eligibilityRegionsInput, setEligibilityRegionsInput] = useState("");
 
   // Add field dialog
   const [addFieldDialogOpen, setAddFieldDialogOpen] = useState(false);
@@ -158,13 +163,17 @@ export function CreateEditOpportunityModal({
       setApplicationEmail(opportunity.applicationEmail ?? "");
       setExternalLink(opportunity.externalLink ?? "");
       setFormFields(opportunity.formFields?.length ? opportunity.formFields : defaultFormFields);
-      setResponsibilities(opportunity.responsibilities ?? "");
-      setRequirements(opportunity.requirements ?? "");
-      setWorkMode((opportunity.workMode as WorkMode) ?? "");
-      setEngagementType((opportunity.engagementType as EngagementType) ?? "");
-      setSalaryMin(opportunity.salaryMin != null ? String(opportunity.salaryMin) : "");
-      setSalaryMax(opportunity.salaryMax != null ? String(opportunity.salaryMax) : "");
-      setSalaryCurrency(opportunity.salaryCurrency ?? "");
+      setScope(opportunity.scope ?? "");
+      setEligibilityCriteria(opportunity.eligibilityCriteria ?? "");
+      setDeliveryMode((opportunity.deliveryMode as DeliveryMode) ?? "");
+      setCommitmentType((opportunity.commitmentType as CommitmentType) ?? "");
+      setCompensationMin(opportunity.compensationMin != null ? String(opportunity.compensationMin) : "");
+      setCompensationMax(opportunity.compensationMax != null ? String(opportunity.compensationMax) : "");
+      setCompensationCurrency(opportunity.compensationCurrency ?? "");
+      setCompensationType((opportunity.compensationType as CompensationType) ?? "");
+      setDuration(opportunity.duration ?? "");
+      setBenefitsSummary(opportunity.benefitsSummary ?? "");
+      setEligibilityRegionsInput((opportunity.eligibilityRegions ?? []).join(", "));
     } else {
       setTitle("");
       setType(OpportunityType.EMPLOYMENT);
@@ -181,13 +190,17 @@ export function CreateEditOpportunityModal({
       setApplicationEmail("");
       setExternalLink("");
       setFormFields(defaultFormFields);
-      setResponsibilities("");
-      setRequirements("");
-      setWorkMode("");
-      setEngagementType("");
-      setSalaryMin("");
-      setSalaryMax("");
-      setSalaryCurrency("");
+      setScope("");
+      setEligibilityCriteria("");
+      setDeliveryMode("");
+      setCommitmentType("");
+      setCompensationMin("");
+      setCompensationMax("");
+      setCompensationCurrency("");
+      setCompensationType("");
+      setDuration("");
+      setBenefitsSummary("");
+      setEligibilityRegionsInput("");
     }
   }, [open, opportunity]);
 
@@ -252,20 +265,28 @@ export function CreateEditOpportunityModal({
     }
 
     const deadlineISO = deadline ? deadline.toISOString() : undefined;
+    const eligibilityRegions = eligibilityRegionsInput
+      .split(",")
+      .map((region) => region.trim())
+      .filter(Boolean);
 
     if (isEdit) {
       const input: UpdateOpportunityInput = {
         title: title.trim(),
         description: description || undefined,
         subCategory: subCategory || undefined,
-        responsibilities: responsibilities || undefined,
-        requirements: requirements || undefined,
-        workMode: workMode || undefined,
-        engagementType: engagementType || undefined,
+        scope: scope || undefined,
+        eligibilityCriteria: eligibilityCriteria || undefined,
+        deliveryMode: deliveryMode || undefined,
+        commitmentType: commitmentType || undefined,
         location: location || undefined,
-        salaryMin: salaryMin ? Number(salaryMin) : undefined,
-        salaryMax: salaryMax ? Number(salaryMax) : undefined,
-        salaryCurrency: salaryCurrency || undefined,
+        compensationMin: compensationMin ? Number(compensationMin) : undefined,
+        compensationMax: compensationMax ? Number(compensationMax) : undefined,
+        compensationCurrency: compensationCurrency || undefined,
+        compensationType: compensationType || undefined,
+        duration: duration || undefined,
+        benefitsSummary: benefitsSummary || undefined,
+        eligibilityRegions: eligibilityRegions.length ? eligibilityRegions : undefined,
         deadline: deadlineISO,
         skills: skills.length ? skills : undefined,
         tags: tags.length ? tags : undefined,
@@ -294,14 +315,18 @@ export function CreateEditOpportunityModal({
         externalLink: applicationMethod === ApplicationMethod.EXTERNAL_LINK ? externalLink.trim() : undefined,
         formFields: applicationMethod === ApplicationMethod.IN_PLATFORM_FORM ? formFields : undefined,
         subCategory: subCategory || undefined,
-        responsibilities: responsibilities || undefined,
-        requirements: requirements || undefined,
-        workMode: workMode || undefined,
-        engagementType: engagementType || undefined,
+        scope: scope || undefined,
+        eligibilityCriteria: eligibilityCriteria || undefined,
+        deliveryMode: deliveryMode || undefined,
+        commitmentType: commitmentType || undefined,
         location: location || undefined,
-        salaryMin: salaryMin ? Number(salaryMin) : undefined,
-        salaryMax: salaryMax ? Number(salaryMax) : undefined,
-        salaryCurrency: salaryCurrency || undefined,
+        compensationMin: compensationMin ? Number(compensationMin) : undefined,
+        compensationMax: compensationMax ? Number(compensationMax) : undefined,
+        compensationCurrency: compensationCurrency || undefined,
+        compensationType: compensationType || undefined,
+        duration: duration || undefined,
+        benefitsSummary: benefitsSummary || undefined,
+        eligibilityRegions: eligibilityRegions.length ? eligibilityRegions : undefined,
         deadline: deadlineISO,
         skills: skills.length ? skills : undefined,
         tags: tags.length ? tags : undefined,
@@ -321,22 +346,22 @@ export function CreateEditOpportunityModal({
   const isScholarship    = type === OpportunityType.SCHOLARSHIP;
   const isInvestment     = type === OpportunityType.INVESTMENT;
 
-  // workMode only makes sense when there's a physical/remote dimension
-  const showWorkMode = isEmploymentLike || isFellowship || isVolunteer || isProgram;
-  // engagementType (full-time / part-time / contract) is employment/fellowship-specific
-  const showEngagementType = isEmploymentLike || isFellowship;
-  // responsibilities section — label varies by type
-  const showResponsibilities = isEmploymentLike || isFellowship || isVolunteer || isProgram;
-  const responsibilitiesLabel =
+  // deliveryMode only makes sense when there's a physical/remote dimension
+  const showDeliveryMode = isEmploymentLike || isFellowship || isVolunteer || isProgram;
+  // commitmentType is most relevant for structured opportunities
+  const showCommitmentType = isEmploymentLike || isFellowship || isProgram || isVolunteer;
+  // scope section — label varies by type
+  const showScope = isEmploymentLike || isFellowship || isVolunteer || isProgram;
+  const scopeLabel =
     isFellowship ? "Fellowship Duties"
     : isVolunteer ? "Volunteer Duties"
     : isProgram   ? "Program Activities"
-    : "Responsibilities";
-  // requirements / eligibility — applies to all, label varies
-  const requirementsLabel =
+    : "Scope";
+  // eligibility criteria — applies to all, label varies
+  const eligibilityCriteriaLabel =
     isScholarship || isFellowship || isGrant ? "Eligibility Criteria"
     : isInvestment                            ? "Investment Criteria"
-    : "Requirements";
+    : "Eligibility Criteria";
   // Compensation — shown for most types but labelled differently
   const showCompensation = isEmploymentLike || isFellowship || isGrant || isScholarship || isInvestment;
   const compensationLabel =
@@ -624,14 +649,14 @@ export function CreateEditOpportunityModal({
             {/* ── Tab 3: Additional Details ────────────────────────── */}
             <TabsContent value="additional" className="space-y-4">
 
-              {showResponsibilities && (
+              {showScope && (
                 <div className="space-y-2">
-                  <Label htmlFor="responsibilities">{responsibilitiesLabel}</Label>
+                  <Label htmlFor="scope">{scopeLabel}</Label>
                   <Textarea
-                    id="responsibilities"
-                    placeholder={`Key ${responsibilitiesLabel.toLowerCase()}...`}
-                    value={responsibilities}
-                    onChange={(e) => setResponsibilities(e.target.value)}
+                    id="scope"
+                    placeholder={`Key ${scopeLabel.toLowerCase()}...`}
+                    value={scope}
+                    onChange={(e) => setScope(e.target.value)}
                     rows={4}
                     className="resize-none"
                   />
@@ -639,53 +664,58 @@ export function CreateEditOpportunityModal({
               )}
 
               <div className="space-y-2">
-                <Label htmlFor="requirements">{requirementsLabel}</Label>
+                <Label htmlFor="eligibilityCriteria">{eligibilityCriteriaLabel}</Label>
                 <Textarea
-                  id="requirements"
-                  placeholder={`${requirementsLabel} for applicants...`}
-                  value={requirements}
-                  onChange={(e) => setRequirements(e.target.value)}
+                  id="eligibilityCriteria"
+                  placeholder={`${eligibilityCriteriaLabel} for applicants...`}
+                  value={eligibilityCriteria}
+                  onChange={(e) => setEligibilityCriteria(e.target.value)}
                   rows={4}
                   className="resize-none"
                 />
               </div>
 
-              {(showWorkMode || showEngagementType) && (
+              {(showDeliveryMode || showCommitmentType) && (
                 <div className="grid grid-cols-2 gap-4">
-                  {showWorkMode && (
+                  {showDeliveryMode && (
                     <div className="space-y-2">
-                      <Label>Work Mode</Label>
+                      <Label>Delivery Mode</Label>
                       <Select
-                        value={workMode || NONE_SELECTED}
-                        onValueChange={(v) => setWorkMode(v === NONE_SELECTED ? "" : (v as WorkMode))}
+                        value={deliveryMode || NONE_SELECTED}
+                        onValueChange={(v) => setDeliveryMode(v === NONE_SELECTED ? "" : (v as DeliveryMode))}
                       >
                         <SelectTrigger>
                           <SelectValue placeholder="Not specified" />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value={NONE_SELECTED}>Not specified</SelectItem>
-                          <SelectItem value={WorkMode.REMOTE}>Remote</SelectItem>
-                          <SelectItem value={WorkMode.HYBRID}>Hybrid</SelectItem>
-                          <SelectItem value={WorkMode.ONSITE}>Onsite</SelectItem>
+                          <SelectItem value={DeliveryMode.REMOTE}>Remote</SelectItem>
+                          <SelectItem value={DeliveryMode.HYBRID}>Hybrid</SelectItem>
+                          <SelectItem value={DeliveryMode.IN_PERSON}>In person</SelectItem>
+                          <SelectItem value={DeliveryMode.ONLINE}>Online</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
                   )}
-                  {showEngagementType && (
+                  {showCommitmentType && (
                     <div className="space-y-2">
-                      <Label>Engagement Type</Label>
+                      <Label>Commitment Type</Label>
                       <Select
-                        value={engagementType || NONE_SELECTED}
-                        onValueChange={(v) => setEngagementType(v === NONE_SELECTED ? "" : (v as EngagementType))}
+                        value={commitmentType || NONE_SELECTED}
+                        onValueChange={(v) => setCommitmentType(v === NONE_SELECTED ? "" : (v as CommitmentType))}
                       >
                         <SelectTrigger>
                           <SelectValue placeholder="Not specified" />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value={NONE_SELECTED}>Not specified</SelectItem>
-                          <SelectItem value={EngagementType.FULL_TIME}>Full Time</SelectItem>
-                          <SelectItem value={EngagementType.PART_TIME}>Part Time</SelectItem>
-                          <SelectItem value={EngagementType.CONTRACT}>Contract</SelectItem>
+                          <SelectItem value={CommitmentType.FULL_TIME}>Full Time</SelectItem>
+                          <SelectItem value={CommitmentType.PART_TIME}>Part Time</SelectItem>
+                          <SelectItem value={CommitmentType.CONTRACT}>Contract</SelectItem>
+                          <SelectItem value={CommitmentType.ONE_TIME}>One Time</SelectItem>
+                          <SelectItem value={CommitmentType.FLEXIBLE}>Flexible</SelectItem>
+                          <SelectItem value={CommitmentType.PROJECT_BASED}>Project Based</SelectItem>
+                          <SelectItem value={CommitmentType.ONGOING}>Ongoing</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -696,15 +726,15 @@ export function CreateEditOpportunityModal({
               {showCompensation && (
                 <div className="space-y-2">
                   <Label>{compensationLabel}</Label>
-                  <div className="grid grid-cols-3 gap-4">
+                  <div className="grid grid-cols-4 gap-4">
                     <div className="space-y-1">
                       <p className="text-xs text-muted-foreground">Min</p>
                       <Input
                         type="number"
                         placeholder="0"
                         min={0}
-                        value={salaryMin}
-                        onChange={(e) => setSalaryMin(e.target.value)}
+                        value={compensationMin}
+                        onChange={(e) => setCompensationMin(e.target.value)}
                       />
                     </div>
                     <div className="space-y-1">
@@ -713,15 +743,15 @@ export function CreateEditOpportunityModal({
                         type="number"
                         placeholder="0"
                         min={0}
-                        value={salaryMax}
-                        onChange={(e) => setSalaryMax(e.target.value)}
+                        value={compensationMax}
+                        onChange={(e) => setCompensationMax(e.target.value)}
                       />
                     </div>
                     <div className="space-y-1">
                       <p className="text-xs text-muted-foreground">Currency</p>
                       <Select
-                        value={salaryCurrency || NONE_SELECTED}
-                        onValueChange={(v) => setSalaryCurrency(v === NONE_SELECTED ? "" : v)}
+                        value={compensationCurrency || NONE_SELECTED}
+                        onValueChange={(v) => setCompensationCurrency(v === NONE_SELECTED ? "" : v)}
                       >
                         <SelectTrigger>
                           <SelectValue placeholder="Select" />
@@ -739,15 +769,64 @@ export function CreateEditOpportunityModal({
                         </SelectContent>
                       </Select>
                     </div>
+                    <div className="space-y-1">
+                      <p className="text-xs text-muted-foreground">Type</p>
+                      <Select
+                        value={compensationType || NONE_SELECTED}
+                        onValueChange={(v) => setCompensationType(v === NONE_SELECTED ? "" : (v as CompensationType))}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value={NONE_SELECTED}>Not specified</SelectItem>
+                          <SelectItem value={CompensationType.SALARY}>Salary</SelectItem>
+                          <SelectItem value={CompensationType.GRANT}>Grant</SelectItem>
+                          <SelectItem value={CompensationType.STIPEND}>Stipend</SelectItem>
+                          <SelectItem value={CompensationType.INVESTMENT}>Investment</SelectItem>
+                          <SelectItem value={CompensationType.PRIZE}>Prize</SelectItem>
+                          <SelectItem value={CompensationType.EQUITY}>Equity</SelectItem>
+                          <SelectItem value={CompensationType.HONORARIUM}>Honorarium</SelectItem>
+                          <SelectItem value={CompensationType.NONE}>None</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
                 </div>
               )}
 
-              {!showResponsibilities && !showCompensation && !showWorkMode && !showEngagementType && (
-                <p className="text-sm text-muted-foreground py-4 text-center">
-                  No additional details required for this opportunity type.
-                </p>
-              )}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="duration">Duration</Label>
+                  <Input
+                    id="duration"
+                    placeholder="e.g. 6 months, 1 year"
+                    value={duration}
+                    onChange={(e) => setDuration(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="eligibilityRegions">Eligibility Regions</Label>
+                  <Input
+                    id="eligibilityRegions"
+                    placeholder="e.g. Ghana, Nigeria, UK"
+                    value={eligibilityRegionsInput}
+                    onChange={(e) => setEligibilityRegionsInput(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="benefitsSummary">Benefits Summary</Label>
+                <Textarea
+                  id="benefitsSummary"
+                  placeholder="Optional perks and benefits summary..."
+                  value={benefitsSummary}
+                  onChange={(e) => setBenefitsSummary(e.target.value)}
+                  rows={3}
+                  className="resize-none"
+                />
+              </div>
             </TabsContent>
           </Tabs>
         </ScrollArea>

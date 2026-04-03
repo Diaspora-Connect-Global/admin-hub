@@ -14,7 +14,6 @@ import {
   ToggleLeft,
   ToggleRight,
   XCircle,
-  Copy,
   Link2,
   Users,
   Globe,
@@ -38,7 +37,6 @@ interface OpportunityModalProps {
   onClose: () => void;
   onViewApplicants: () => void;
   onSetPriority?: (priority: PriorityLevel) => void;
-  onDuplicate: () => void;
 }
 
 const statusMap = {
@@ -69,7 +67,6 @@ export function OpportunityModal({
   onClose,
   onViewApplicants,
   onSetPriority,
-  onDuplicate,
 }: OpportunityModalProps) {
   if (!opportunity) return null;
 
@@ -199,58 +196,10 @@ export function OpportunityModal({
               </div>
             )}
 
-            {/* Application Form */}
-            <div>
-              <h4 className="font-medium mb-2">Application Form</h4>
-              <div className="rounded-lg border border-border p-4">
-                <div className="flex items-center justify-between mb-3">
-                  <span className="text-sm">Form Type</span>
-                  <Badge variant="outline" className="capitalize">{(opportunity as Opportunity & { formType?: string }).formType || "structured"}</Badge>
-                </div>
-                <div className="flex items-center justify-between mb-3">
-                  <span className="text-sm">CV Required</span>
-                  <span className="text-sm text-muted-foreground">
-                    {(opportunity as Opportunity & { requireCv?: boolean }).requireCv !== false ? "Yes" : "No"}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm">Max Applicants</span>
-                  <span className="text-sm text-muted-foreground">
-                    {(opportunity as Opportunity & { maxApplicants?: number | null }).maxApplicants || "No limit"}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Screening & Workflow */}
-            <div>
-              <h4 className="font-medium mb-2">Screening & Workflow</h4>
-              <div className="rounded-lg border border-border p-4">
-                <div className="flex items-center justify-between mb-3">
-                  <span className="text-sm">Review Workflow</span>
-                  <Badge variant="outline" className="capitalize">
-                    {((opportunity as Opportunity & { reviewWorkflow?: string }).reviewWorkflow || "manual").replace("_", " ")}
-                  </Badge>
-                </div>
-                {((opportunity as Opportunity & { reviewers?: unknown[] }).reviewers || []).length > 0 && (
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm">Assigned Reviewers</span>
-                    <span className="text-sm text-muted-foreground">
-                      {((opportunity as Opportunity & { reviewers?: unknown[] }).reviewers || []).length} assigned
-                    </span>
-                  </div>
-                )}
-              </div>
-            </div>
-
             {/* Quick Actions */}
             <div>
               <h4 className="font-medium mb-2">Quick Actions</h4>
               <div className="space-y-2">
-                <Button variant="outline" className="w-full justify-start gap-2" onClick={onDuplicate}>
-                  <Copy className="h-4 w-4" />
-                  Duplicate Opportunity
-                </Button>
                 <Button variant="outline" className="w-full justify-start gap-2" onClick={handleCopyLink}>
                   <Link2 className="h-4 w-4" />
                   Share Link
