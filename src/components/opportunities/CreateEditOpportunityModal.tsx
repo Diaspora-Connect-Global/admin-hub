@@ -91,6 +91,48 @@ const defaultCategoryForType: Record<OpportunityType, OpportunityCategory> = {
   [OpportunityType.VOLUNTEER]:   OpportunityCategory.VOLUNTEERING_SOCIAL_IMPACT,
 };
 
+const slugifyFieldKey = (value: string) =>
+  value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+
+const generateUniqueFieldKey = (label: string, existingFields: FormField[]) => {
+  const base = slugifyFieldKey(label) || "custom_field";
+  const used = new Set(existingFields.map((f) => (f.key || "").trim()).filter(Boolean));
+
+  if (!used.has(base)) return base;
+
+  let i = 2;
+  while (used.has(`${base}_${i}`)) i += 1;
+  return `${base}_${i}`;
+};
+
+const toValidFormFieldType = (value: unknown): FormField["type"] => {
+  if (value === "text" || value === "email" || value === "textarea" || value === "file_upload") {
+    return value;
+  }
+  return "text";
+};
+
+const normalizeFormFieldsForSave = (fields: FormField[]) => {
+  const normalized: FormField[] = [];
+  for (const field of fields) {
+    const label = field.label?.trim() || "Custom Field";
+    const preferredKey = slugifyFieldKey(field.key || "") || slugifyFieldKey(label);
+    const key = generateUniqueFieldKey(preferredKey || label, normalized);
+
+    normalized.push({
+      key,
+      label,
+      type: toValidFormFieldType((field as { type?: unknown }).type),
+      required: Boolean((field as { required?: unknown }).required),
+    });
+  }
+  return normalized;
+};
+
 export function CreateEditOpportunityModal({
   open,
   onOpenChange,
@@ -234,7 +276,7 @@ export function CreateEditOpportunityModal({
       return;
     }
     const newField: FormField = {
-      key: String(Date.now()),
+      key: generateUniqueFieldKey(newFieldLabel, formFields),
       label: newFieldLabel.trim(),
       type: newFieldType,
       required: newFieldRequired,
@@ -269,6 +311,7 @@ export function CreateEditOpportunityModal({
       .split(",")
       .map((region) => region.trim())
       .filter(Boolean);
+    const normalizedFormFields = normalizeFormFieldsForSave(formFields);
 
     if (isEdit) {
       const input: UpdateOpportunityInput = {
@@ -295,7 +338,7 @@ export function CreateEditOpportunityModal({
         applicationMethod,
         applicationEmail: applicationMethod === ApplicationMethod.EMAIL_REQUEST ? applicationEmail.trim() : undefined,
         externalLink: applicationMethod === ApplicationMethod.EXTERNAL_LINK ? externalLink.trim() : undefined,
-        formFields: applicationMethod === ApplicationMethod.IN_PLATFORM_FORM ? formFields : undefined,
+        formFields: applicationMethod === ApplicationMethod.IN_PLATFORM_FORM ? normalizedFormFields : undefined,
       };
       onSave(input, action);
     } else {
@@ -315,7 +358,7 @@ export function CreateEditOpportunityModal({
         applicationMethod,
         applicationEmail: applicationMethod === ApplicationMethod.EMAIL_REQUEST ? applicationEmail.trim() : undefined,
         externalLink: applicationMethod === ApplicationMethod.EXTERNAL_LINK ? externalLink.trim() : undefined,
-        formFields: applicationMethod === ApplicationMethod.IN_PLATFORM_FORM ? formFields : undefined,
+        formFields: applicationMethod === ApplicationMethod.IN_PLATFORM_FORM ? normalizedFormFields : undefined,
         subCategory: subCategory || undefined,
         scope: scope || undefined,
         eligibilityCriteria: eligibilityCriteria || undefined,
