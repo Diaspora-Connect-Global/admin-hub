@@ -1,6 +1,6 @@
 import type { EventFormData } from "@/types/events";
 
-/** Matches API: public | private | community_only | unlisted */
+/** Matches API: public | community | association | invite_only */
 export const DEFAULT_EVENT_VISIBILITY = "public";
 
 /**

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useApolloClient } from "@apollo/client/react";
 import { format } from "date-fns";
 import { Event, EventRegistration } from "@/types/events";
@@ -41,15 +41,31 @@ import {
   useRemoveEventRegistration,
 } from "@/hooks/events";
 
-function displayNameFromProfile(p: {
+function getAttendeeFullName(p: {
   firstName?: string | null;
-  middleName?: string | null;
   lastName?: string | null;
   email?: string | null;
 } | null | undefined): string {
   if (!p) return "";
-  const fullName = [p.firstName, p.middleName, p.lastName].filter(Boolean).join(" ").trim();
-  return fullName || p.email?.trim() || "";
+  const fullName = [p.firstName, p.lastName].filter(Boolean).join(" ").trim();
+  return fullName;
+}
+
+function displayNameFromProfile(p: {
+  firstName?: string | null;
+  lastName?: string | null;
+  email?: string | null;
+} | null | undefined): string {
+  if (!p) return "";
+  return getAttendeeFullName(p) || p.email?.trim() || "";
+}
+
+function resolveAttendeeName(
+  registration: EventRegistration,
+  fallbackNameByUserId?: Record<string, string>,
+): string {
+  const fullName = getAttendeeFullName(registration.user);
+  return fullName || registration.user?.email?.trim() || fallbackNameByUserId?.[registration.userId] || "Unknown attendee";
 }
 
 function formatRegistrationAmount(totalAmount: string, currency?: string | null): string {
@@ -87,8 +103,7 @@ export function RegistrationsDrawer({
   const client = useApolloClient();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [nameByUserId, setNameByUserId] = useState<Record<string, string>>({});
-  const [namesResolving, setNamesResolving] = useState(false);
+  const [fallbackNameByUserId, setFallbackNameByUserId] = useState<Record<string, string>>({});
   const t = useT("events");
 
   const { data, loading, refetch } = useGetEventRegistrations(
@@ -104,59 +119,69 @@ export function RegistrationsDrawer({
   const [markCheckedIn] = useMarkRegistrationCheckedIn();
   const [removeRegistration] = useRemoveEventRegistration();
 
-  const registrations: EventRegistration[] = data?.adminGetEventRegistrations?.registrations ?? [];
-  const total = data?.adminGetEventRegistrations?.total ?? 0;
+  const registrations: EventRegistration[] = data?.getEventRegistrations?.registrations ?? [];
+  const total = data?.getEventRegistrations?.total ?? 0;
 
-  const uniqueUserIdsKey = useMemo(
-    () => [...new Set(registrations.map((r) => r.userId))].sort().join(","),
+  const unresolvedUserIdsKey = useMemo(
+    () =>
+      [
+        ...new Set(
+          registrations
+            .filter((reg) => !displayNameFromProfile(reg.user))
+            .map((reg) => reg.userId)
+            .filter(Boolean),
+        ),
+      ]
+        .sort()
+        .join(","),
     [registrations],
   );
 
   useEffect(() => {
-    if (!open || !uniqueUserIdsKey) {
-      setNameByUserId({});
-      setNamesResolving(false);
+    if (!open || !unresolvedUserIdsKey) {
+      setFallbackNameByUserId({});
       return;
     }
-    const ids = uniqueUserIdsKey.split(",").filter(Boolean);
+
+    const unresolvedIds = unresolvedUserIdsKey.split(",").filter(Boolean);
     let cancelled = false;
-    setNamesResolving(true);
+
     (async () => {
       const next: Record<string, string> = {};
       await Promise.all(
-        ids.map(async (userId) => {
+        unresolvedIds.map(async (userId) => {
           try {
             const { data: profileData } = await client.query({
               query: GET_USER_DISPLAY_NAME,
               variables: { userId },
               fetchPolicy: "cache-first",
             });
-            const name = displayNameFromProfile(profileData?.getProfile);
-            next[userId] = name || userId;
-          } catch (err) {
-            if (import.meta.env.DEV) {
-              console.warn("[RegistrationsDrawer] getProfile failed for userId:", userId, err);
+            const name = displayNameFromProfile(profileData?.getProfile?.profile);
+            if (name) {
+              next[userId] = name;
             }
-            next[userId] = userId;
+          } catch {
+            // ignore fallback failures
           }
         }),
       );
       if (!cancelled) {
-        setNameByUserId(next);
-        setNamesResolving(false);
+        setFallbackNameByUserId(next);
       }
     })();
+
     return () => {
       cancelled = true;
     };
-  }, [open, client, uniqueUserIdsKey]);
+  }, [open, unresolvedUserIdsKey, client]);
 
   const filteredRegistrations = registrations.filter((reg) => {
     const q = searchQuery.toLowerCase();
-    const display = (nameByUserId[reg.userId] ?? reg.userId).toLowerCase();
+    const display = resolveAttendeeName(reg, fallbackNameByUserId).toLowerCase();
     const matchesSearch =
       display.includes(q) ||
       reg.userId.toLowerCase().includes(q) ||
+      (reg.user?.email ?? "").toLowerCase().includes(q) ||
       (reg.totalAmount ?? "").toLowerCase().includes(q);
     return matchesSearch;
   });
@@ -242,15 +267,9 @@ export function RegistrationsDrawer({
                     <TableRow key={registration.id}>
                       <TableCell
                         className="font-medium max-w-[220px] truncate"
-                        title={
-                          nameByUserId[registration.userId]
-                            ? `${nameByUserId[registration.userId]} (${registration.userId})`
-                            : registration.userId
-                        }
+                        title={resolveAttendeeName(registration, fallbackNameByUserId)}
                       >
-                        {namesResolving && !nameByUserId[registration.userId]
-                          ? "…"
-                          : nameByUserId[registration.userId] ?? registration.userId}
+                        {resolveAttendeeName(registration, fallbackNameByUserId)}
                       </TableCell>
                       <TableCell>{registration.quantity}</TableCell>
                       {event.isPaid && (

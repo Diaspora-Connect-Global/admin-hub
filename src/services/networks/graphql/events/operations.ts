@@ -35,6 +35,10 @@ const EVENT_LIST_FIELDS = gql`
     registrationCount
     coverImageUrl
     tags
+    tickets {
+      id
+      priceInCents
+    }
     createdAt
     updatedAt
     registrationFormFields {
@@ -96,10 +100,18 @@ const EVENT_REGISTRATION_FIELDS = gql`
     id
     eventId
     userId
+    user {
+      id
+      firstName
+      lastName
+      email
+      avatarUrl
+    }
     ticketId
     quantity
     status
     totalAmount
+    currency
     registeredAt
     confirmedAt
     cancelledAt
@@ -168,26 +180,22 @@ export const GET_EVENTS_BY_OWNER = gql`
 /** Get registrations for an event. */
 export const GET_EVENT_REGISTRATIONS = gql`
   ${EVENT_REGISTRATION_FIELDS}
-  query AdminGetEventRegistrations(
+  query GetEventRegistrations(
     $eventId: ID!
-    $page: Int
     $limit: Int
+    $offset: Int
     $status: String
   ) {
-    adminGetEventRegistrations(
+    getEventRegistrations(
       eventId: $eventId
-      page: $page
       limit: $limit
+      offset: $offset
       status: $status
     ) {
       registrations {
         ...EventRegistrationFields
-        currency
       }
       total
-      page
-      limit
-      hasMore
     }
   }
 `;
@@ -224,6 +232,13 @@ export const GET_EVENT_ATTENDANCE = gql`
         id
         eventId
         userId
+        user {
+          id
+          firstName
+          lastName
+          email
+          avatarUrl
+        }
         registrationId
         checkInMethod
         checkedInAt
@@ -274,6 +289,13 @@ export const GET_EVENT_REGISTRATIONS_ADMIN = gql`
         id
         eventId
         userId
+        user {
+          id
+          firstName
+          lastName
+          email
+          avatarUrl
+        }
         status
         quantity
         totalAmount
@@ -295,7 +317,52 @@ export const CREATE_EVENT = gql`
   mutation CreateEvent($input: CreateEventInput!) {
     createEvent(input: $input) {
       id
+      title
+      description
       status
+      startAt
+      endAt
+      eventCategory
+      locationType
+      locationDetails {
+        type
+        venueName
+        address
+        city
+        country
+        virtualLink
+        platform
+      }
+      isPaid
+      currency
+      capacity
+      availableSpots
+      registrationCount
+      isRegistered
+      canRegister
+      coverImageUrl
+      visibility
+      timezone
+      tags
+      ownerType
+      ownerId
+      tickets {
+        id
+        name
+        priceInCents
+        currency
+        description
+        availableQuantity
+      }
+      registrationFormFields {
+        id
+        label
+        type
+        required
+        options
+      }
+      createdAt
+      updatedAt
     }
   }
 `;
@@ -306,20 +373,51 @@ export const UPDATE_EVENT = gql`
     updateEvent(id: $id, input: $input) {
       id
       title
+      description
       status
       startAt
       endAt
-      coverImageUrl
-      tags
+      eventCategory
+      locationType
+      locationDetails {
+        type
+        venueName
+        address
+        city
+        country
+        virtualLink
+        platform
+      }
       isPaid
       currency
       capacity
       availableSpots
+      registrationCount
+      isRegistered
+      canRegister
+      coverImageUrl
+      visibility
+      timezone
+      tags
+      ownerType
+      ownerId
       tickets {
         id
         name
         priceInCents
+        currency
+        description
+        availableQuantity
       }
+      registrationFormFields {
+        id
+        label
+        type
+        required
+        options
+      }
+      createdAt
+      updatedAt
     }
   }
 `;

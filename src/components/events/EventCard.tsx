@@ -61,6 +61,7 @@ export function EventCard({
   const hasCapacity = event.availableSpots != null && event.availableSpots > 0;
   const capacityPercentage = hasCapacity ? (event.registrationCount / event.availableSpots) * 100 : 0;
   const firstTicketPrice = event.tickets?.[0]?.priceInCents;
+  const isPaidEvent = Boolean(event.isPaid);
 
   const statusLabels: Record<string, string> = {
     PUBLISHED: t.published,
@@ -147,10 +148,14 @@ export function EventCard({
         {/* Footer */}
         <div className="flex items-center justify-between">
           <div>
-            {event.isPaid && firstTicketPrice != null ? (
-              <span className="text-lg font-bold text-foreground">
-                ${(firstTicketPrice / 100).toFixed(0)}
-              </span>
+            {isPaidEvent ? (
+              firstTicketPrice != null ? (
+                <span className="text-lg font-bold text-foreground">
+                  ${(firstTicketPrice / 100).toFixed(0)}
+                </span>
+              ) : (
+                <span className="text-sm font-medium text-foreground">{t.paid}</span>
+              )
             ) : (
               <span className="text-sm font-medium text-primary">{t.free}</span>
             )}

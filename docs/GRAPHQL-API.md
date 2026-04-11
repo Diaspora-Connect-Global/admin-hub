@@ -78,8 +78,8 @@ This document lists all **queries** and **mutations** implemented in the admin h
 
 | Operation | Variables | Description |
 |-----------|-----------|-------------|
-| **CreateEvent** | `input: CreateEventInput!` | Create event. Returns full **Event** (not ID). Input: `ownerType!`, `ownerId!`, `title!`, `description!`, `eventCategory!`, `locationType!`, `locationDetails`, `startAt!`, `endAt!`, `isPaid`. |
-| **UpdateEvent** | `id: ID!`, `input: UpdateEventInput!` | Update event. Partial fields: title, description, eventCategory, locationType, locationDetails, startAt, endAt, timezone, coverImageUrl, tags, capacity, visibility. |
+| **CreateEvent** | `input: CreateEventInput!` | Create event. Returns Event details. Input: `ownerType!`, `ownerId!`, `title!`, `description!`, `eventCategory!`, `locationType!`, `locationDetails`, `startAt!`, `endAt!`, optional pricing: free events omit pricing, paid single-tier uses `ticketPrice` + `currency`, paid multi-tier uses `tickets[]` + `currency`. |
+| **UpdateEvent** | `id: ID!`, `input: UpdateEventInput!` | Update event. Partial fields: title, description, eventCategory, locationType, locationDetails, startAt, endAt, timezone, visibility, capacity, coverImageUrl, tags, isPaid, ticketPrice (cents), currency. |
 | **DeleteEvent** | `id: ID!` | Delete event. Returns `DeleteEventResult` (success, message). |
 | **PublishEvent** | `id: ID!` | Publish event. Returns Event (id, status, title). |
 | **MarkRegistrationCheckedIn** | `registrationId: ID!` | Mark one registration as checked in. Returns `{ id, status }`. |

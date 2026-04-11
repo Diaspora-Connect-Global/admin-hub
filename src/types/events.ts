@@ -3,10 +3,26 @@
  * @see docs/EVENTS-GRAPHQL-API.md
  */
 
-export type EventStatus = "DRAFT" | "PUBLISHED" | "CANCELLED" | "COMPLETED";
-export type EventLocationType = "PHYSICAL" | "VIRTUAL" | "HYBRID";
-export type EventOwnerType = "SYSTEM" | "USER" | "COMMUNITY" | "ASSOCIATION";
-export type EventVisibility = "PUBLIC" | "COMMUNITY" | "ASSOCIATION" | "INVITE_ONLY";
+export type EventStatus =
+  | "DRAFT"
+  | "PUBLISHED"
+  | "CANCELLED"
+  | "COMPLETED"
+  | "draft"
+  | "published"
+  | "cancelled"
+  | "completed";
+export type EventLocationType = "PHYSICAL" | "VIRTUAL" | "HYBRID" | "physical" | "virtual" | "hybrid";
+export type EventOwnerType = "SYSTEM" | "USER" | "COMMUNITY" | "ASSOCIATION" | "user" | "community" | "association";
+export type EventVisibility =
+  | "PUBLIC"
+  | "COMMUNITY"
+  | "ASSOCIATION"
+  | "INVITE_ONLY"
+  | "public"
+  | "community"
+  | "association"
+  | "invite_only";
 export type EventCapacityType = "LIMITED" | "UNLIMITED";
 
 export interface EventLocation {
@@ -23,8 +39,18 @@ export interface EventTicket {
   id: string;
   name: string;
   priceInCents: number;
+  currency?: string | null;
+  ticketType?: string | null;
   description?: string | null;
   availableQuantity?: number | null;
+}
+
+export interface EventRegistrationFormField {
+  id: string;
+  label: string;
+  type: string;
+  required: boolean;
+  options?: string[] | null;
 }
 
 export interface Event {
@@ -57,6 +83,7 @@ export interface Event {
   publishedAt?: string | null;
   cancelledAt?: string | null;
   recurringEventId?: string | null;
+  registrationFormFields?: EventRegistrationFormField[] | null;
   createdAt?: string | null;
   updatedAt?: string | null;
 }
@@ -65,6 +92,13 @@ export interface EventRegistration {
   id: string;
   eventId: string;
   userId: string;
+  user?: {
+    id: string;
+    firstName?: string | null;
+    lastName?: string | null;
+    email?: string | null;
+    avatarUrl?: string | null;
+  } | null;
   ticketId?: string | null;
   quantity: number;
   status: string;
@@ -81,7 +115,7 @@ export type EventType = "in-person" | "virtual" | "hybrid";
 
 export interface EventTicketFormData {
   name: string;
-  ticketType: "paid" | "free";
+  ticketType: "general" | "vip" | "early_bird" | "group" | "student" | "member" | "free";
   price: number;
   currency: string;
   quantity: number;
@@ -105,7 +139,7 @@ export interface EventFormData {
   virtualLink: string;
   isPaid: boolean;
   tickets: EventTicketFormData[];
-  ticketType: "paid" | "free";
+  ticketType: "general" | "free";
   ticketName: string;
   ticketDescription: string;
   ticketPrice: number;

@@ -154,8 +154,17 @@ input CreateEventInput {
   locationDetails: CreateEventLocationInput
   startAt: String!        # ISO 8601
   endAt: String!         # ISO 8601
-  isPaid: Boolean
+  isPaid: Boolean         # omit for free events
+  ticketPrice: Int        # paid, single-tier only; cents
+  currency: String        # paid events
+  tickets: [CreateTicketInput] # paid, multi-tier only
 }
+
+Paid event pricing rules:
+
+- Free event: omit isPaid, ticketPrice, currency, and tickets.
+- Paid event, single tier: send isPaid, ticketPrice (cents), and currency.
+- Paid event, multiple tiers: send isPaid, currency, and tickets[]; omit ticketPrice.
 ```
 
 ### CreateEventLocationInput
@@ -188,12 +197,21 @@ input UpdateEventInput {
   startAt: String
   endAt: String
   timezone: String
+  isPaid: Boolean
+  ticketPrice: Int      # cents; updates auto-created General Admission ticket price
+  currency: String      # ISO code (e.g. USD)
   coverImageUrl: String
   tags: [String]
   capacity: Int
   visibility: String
 }
 ```
+
+Update semantics:
+
+- All fields are optional; send only the fields you want to change.
+- Omitted fields are preserved by the resolver.
+- `locationDetails` should be sent as a full object when changing location details.
 
 ---
 

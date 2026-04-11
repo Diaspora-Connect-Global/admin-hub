@@ -9,11 +9,14 @@ import { gql } from "@apollo/client";
 export const GET_USER_DISPLAY_NAME = gql`
   query GetUserDisplayName($userId: String!) {
     getProfile(userId: $userId) {
-      userId
-      firstName
-      middleName
-      lastName
-      email
+      success
+      profile {
+        userId
+        firstName
+        middleName
+        lastName
+        email
+      }
     }
   }
 `;
@@ -22,26 +25,29 @@ export const GET_USER_DISPLAY_NAME = gql`
 export const GET_PROFILE = gql`
   query GetProfile($userId: String!) {
     getProfile(userId: $userId) {
-      id
-      userId
-      email
-      firstName
-      lastName
-      middleName
-      phone
-      bio
-      avatarUrl
-      sector
-      occupation
-      city
-      country
-      location
-      dateOfBirth
-      countryOfOrigin
-      residenceSinceMonth
-      residenceSinceYear
-      createdAt
-      updatedAt
+      success
+      profile {
+        id
+        userId
+        firstName
+        middleName
+        lastName
+        email
+        phone
+        profilePicture
+        coverPhoto
+        headline
+        bio
+        location
+        city
+        residenceCountry
+        countryOfOrigin
+        gender
+        dateOfBirth
+        isVerified
+      }
+      connectionStatus
+      connectionId
     }
   }
 `;

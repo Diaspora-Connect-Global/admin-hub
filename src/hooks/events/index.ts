@@ -4,6 +4,7 @@
  */
 
 import { useQuery, useMutation, useLazyQuery } from "@apollo/client/react";
+import { Event } from "@/types/events";
 import {
   LIST_EVENTS,
   GET_EVENT,
@@ -31,6 +32,49 @@ import {
   EVENT_DASHBOARD_STATS,
 } from "@/services/networks/graphql/events";
 
+interface AdminListEventsResponse {
+  adminListEvents?: {
+    events?: Event[];
+    total?: number;
+    page?: number;
+    limit?: number;
+    hasMore?: boolean;
+  };
+}
+
+interface AdminListEventsVariables {
+  input?: ListEventsInput;
+}
+
+interface AdminGetEventResponse {
+  adminGetEvent?: Event | null;
+}
+
+interface AdminGetEventVariables {
+  eventId: string;
+}
+
+interface CreateEventResponse {
+  createEvent?: {
+    id: string;
+  };
+}
+
+interface CreateEventVariables {
+  input: Record<string, unknown>;
+}
+
+interface DeleteEventAdminResponse {
+  adminDeleteEvent?: {
+    success?: boolean;
+    message?: string | null;
+  };
+}
+
+interface DeleteEventAdminVariables {
+  eventId: string;
+}
+
 export interface ListEventsInput {
   limit?: number;
   offset?: number;
@@ -40,14 +84,14 @@ export interface ListEventsInput {
 
 export interface GetEventsByOwnerInput {
   ownerId: string;
-  ownerType: "USER" | "COMMUNITY" | "ASSOCIATION";
+  ownerType: "USER" | "COMMUNITY" | "ASSOCIATION" | "user" | "community" | "association";
   status?: string;
   limit?: number;
   offset?: number;
 }
 
 export function useListEvents(input?: ListEventsInput) {
-  return useQuery(LIST_EVENTS, {
+  return useQuery<AdminListEventsResponse, AdminListEventsVariables>(LIST_EVENTS, {
     variables: { input: input ?? {} },
     fetchPolicy: "network-only",
   });
@@ -55,14 +99,14 @@ export function useListEvents(input?: ListEventsInput) {
 
 /** Alias for useListEvents — use in pages that need search/filter. */
 export function useSearchEvents(input?: ListEventsInput) {
-  return useQuery(LIST_EVENTS, {
+  return useQuery<AdminListEventsResponse, AdminListEventsVariables>(LIST_EVENTS, {
     variables: { input: input ?? {} },
     fetchPolicy: "network-only",
   });
 }
 
 export function useGetEvent(id: string | null) {
-  return useQuery(GET_EVENT, {
+  return useQuery<AdminGetEventResponse, AdminGetEventVariables>(GET_EVENT, {
     variables: { eventId: id ?? "" },
     skip: !id,
   });
@@ -86,14 +130,14 @@ export interface GetEventRegistrationsVariables {
 
 export function useGetEventRegistrations(variables: GetEventRegistrationsVariables | null) {
   const limit = variables?.limit ?? 50;
-  const page = variables?.page ?? Math.floor((variables?.offset ?? 0) / limit) + 1;
+  const offset = variables?.offset ?? 0;
   const status = variables?.status;
   return useQuery(GET_EVENT_REGISTRATIONS, {
     variables: variables?.eventId
       ? {
           eventId: variables.eventId,
-          page,
           limit,
+          offset,
           status,
         }
       : { eventId: "" },
@@ -145,7 +189,7 @@ export function useGetEventRegistrationsAdmin(variables: GetEventRegistrationsVa
 }
 
 export function useCreateEvent() {
-  return useMutation(CREATE_EVENT);
+  return useMutation<CreateEventResponse, CreateEventVariables>(CREATE_EVENT);
 }
 
 export function useUpdateEvent() {
@@ -165,7 +209,7 @@ export function useDeleteEvent() {
 }
 
 export function useDeleteEventAdmin() {
-  return useMutation(DELETE_EVENT_ADMIN);
+  return useMutation<DeleteEventAdminResponse, DeleteEventAdminVariables>(DELETE_EVENT_ADMIN);
 }
 
 export function usePublishEvent() {

@@ -90,7 +90,7 @@ See each section’s **“What’s left to do”** subsection for details.
 | **Status** | **Provided** |
 | **Priority** | Required |
 | **Used in** | Create event modal. |
-| **Variables** | `input: CreateEventInput!` — ownerType!, ownerId!, title!, description!, eventCategory!, locationType!, locationDetails, startAt!, endAt!, isPaid. |
+| **Variables** | `input: CreateEventInput!` — ownerType!, ownerId!, title!, description!, eventCategory!, locationType!, locationDetails, startAt!, endAt!; pricing optional: free omits pricing, paid single-tier uses `ticketPrice` + `currency`, paid multi-tier uses `tickets[]` + `currency`. |
 | **Returns** | Full `Event` (id, title, status, startAt, endAt). |
 | **Notes** | Now returns Event instead of ID. **Wired:** `useCreateEvent()` in CreateEditEventModal submit. |
 
@@ -103,7 +103,7 @@ See each section’s **“What’s left to do”** subsection for details.
 | **Status** | **Provided** |
 | **Priority** | Required |
 | **Used in** | Edit event modal. |
-| **Variables** | `id: ID!`, `input: UpdateEventInput!` (title, description, eventCategory, locationType, locationDetails, startAt, endAt, timezone, coverImageUrl, tags, capacity, visibility). |
+| **Variables** | `id: ID!`, `input: UpdateEventInput!` (title, description, eventCategory, locationType, locationDetails, startAt, endAt, timezone, visibility, capacity, coverImageUrl, tags, isPaid, ticketPrice, currency). |
 | **Returns** | Updated Event (id, title, status, startAt, endAt, coverImageUrl, tags). |
 | **Notes** | **Wired:** `useUpdateEvent()` in CreateEditEventModal submit. |
 

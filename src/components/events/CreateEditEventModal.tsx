@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, ChevronLeft, ChevronRight, Upload, Check, X, Plus, Trash2 } from "lucide-react";
+import { CalendarIcon, ChevronLeft, ChevronRight, Upload, Check, X, Plus, Trash2, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { EVENT_BANNER_MAX_BYTES } from "@/lib/eventBannerUpload";
@@ -30,7 +30,7 @@ import { toast } from "@/hooks/use-toast";
 
 const createDefaultTicket = (currency = "USD") => ({
   name: "General Admission",
-  ticketType: "paid" as const,
+  ticketType: "general" as const,
   price: 0,
   currency,
   quantity: 120,
@@ -88,6 +88,7 @@ export function CreateEditEventModal({
   const t = useT("events");
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState<EventFormData>(EMPTY_EVENT_FORM);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const prevOpenRef = useRef(false);
 
   useEffect(() => {
@@ -135,7 +136,18 @@ export function CreateEditEventModal({
         event.tickets && event.tickets.length > 0
           ? event.tickets.map((ticket) => ({
               name: ticket.name ?? "General Admission",
-              ticketType: ticket.priceInCents > 0 ? "paid" : "free",
+              ticketType:
+                ticket.ticketType === "vip" ||
+                ticket.ticketType === "early_bird" ||
+                ticket.ticketType === "group" ||
+                ticket.ticketType === "student" ||
+                ticket.ticketType === "member" ||
+                ticket.ticketType === "general" ||
+                ticket.ticketType === "free"
+                  ? ticket.ticketType
+                  : ticket.priceInCents > 0
+                    ? "general"
+                    : "free",
               price: ticket.priceInCents > 0 ? ticket.priceInCents / 100 : 0,
               currency: event.currency || "USD",
               quantity: ticket.availableQuantity ?? 120,
@@ -143,7 +155,7 @@ export function CreateEditEventModal({
               isActive: true,
             }))
           : [createDefaultTicket(event.currency || "USD")],
-      ticketType: event.isPaid ? "paid" : "free",
+      ticketType: event.isPaid ? "general" : "free",
       ticketName: event.tickets?.[0]?.name ?? "General Admission",
       ticketDescription: event.tickets?.[0]?.description ?? "",
       ticketPrice: event.tickets?.[0] ? event.tickets[0].priceInCents / 100 : 0,
@@ -279,16 +291,18 @@ export function CreateEditEventModal({
       if (!Array.isArray(formData.tickets) || formData.tickets.length === 0) {
         return "Add at least one ticket for paid events.";
       }
-      const hasPaidTicket = formData.tickets.some((ticket) => ticket.ticketType === "paid");
-      if (!hasPaidTicket) {
-        return "At least one ticket must be paid when event is marked paid.";
+      const hasBillableTicket = formData.tickets.some(
+        (ticket) => ticket.ticketType !== "free" && Number(ticket.price) > 0,
+      );
+      if (!hasBillableTicket) {
+        return "At least one non-free ticket must have a price greater than 0.";
       }
       for (let i = 0; i < formData.tickets.length; i += 1) {
         const ticket = formData.tickets[i];
         if (!ticket.name.trim()) {
           return `Ticket #${i + 1} name is required.`;
         }
-        if (ticket.ticketType === "paid" && (!Number.isFinite(ticket.price) || ticket.price <= 0)) {
+        if (ticket.ticketType !== "free" && (!Number.isFinite(ticket.price) || ticket.price <= 0)) {
           return `Ticket #${i + 1} price must be greater than 0.`;
         }
         if (!Number.isFinite(ticket.quantity) || ticket.quantity < 1) {
@@ -323,16 +337,21 @@ export function CreateEditEventModal({
   };
 
   const handleSubmit = async () => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
     try {
       await onSubmit(formData);
       onOpenChange(false);
       setCurrentStep(1);
     } catch {
       /* Parent shows toast; keep modal open */
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   const handleClose = () => {
+    if (isSubmitting) return;
     onOpenChange(false);
     setCurrentStep(1);
   };
@@ -341,6 +360,9 @@ export function CreateEditEventModal({
     <Dialog
       open={open}
       onOpenChange={(nextOpen) => {
+        if (isSubmitting && !nextOpen) {
+          return;
+        }
         if (!nextOpen) {
           setCurrentStep(1);
         }
@@ -645,8 +667,22 @@ export function CreateEditEventModal({
                 <Switch
                   checked={formData.isPaid}
                   onCheckedChange={(checked) => {
-                    updateField("isPaid", checked);
-                    updateField("ticketType", checked ? "paid" : "free");
+                    if (!checked) {
+                      setFormData((prev) => ({
+                        ...prev,
+                        isPaid: false,
+                        ticketType: "free",
+                        ticketPrice: 0,
+                        tickets: prev.tickets.map((ticket) => ({
+                          ...ticket,
+                          ticketType: "free",
+                          price: 0,
+                        })),
+                      }));
+                      return;
+                    }
+                    updateField("isPaid", true);
+                    updateField("ticketType", "general");
                   }}
                 />
               </div>
@@ -681,7 +717,7 @@ export function CreateEditEventModal({
                           <Label>Type</Label>
                           <Select
                             value={ticket.ticketType}
-                            onValueChange={(value: "paid" | "free") => {
+                            onValueChange={(value: "general" | "vip" | "early_bird" | "group" | "student" | "member" | "free") => {
                               updateTicket(index, "ticketType", value);
                               if (value === "free") {
                                 updateTicket(index, "price", 0);
@@ -692,7 +728,12 @@ export function CreateEditEventModal({
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="paid">Paid</SelectItem>
+                              <SelectItem value="general">General</SelectItem>
+                              <SelectItem value="vip">VIP</SelectItem>
+                              <SelectItem value="early_bird">Early Bird</SelectItem>
+                              <SelectItem value="group">Group</SelectItem>
+                              <SelectItem value="student">Student</SelectItem>
+                              <SelectItem value="member">Member</SelectItem>
                               <SelectItem value="free">Free</SelectItem>
                             </SelectContent>
                           </Select>
@@ -727,7 +768,7 @@ export function CreateEditEventModal({
                             step="0.01"
                             placeholder="0"
                             value={ticket.price || ""}
-                            disabled={ticket.ticketType !== "paid"}
+                            disabled={ticket.ticketType === "free"}
                             onChange={(e) => updateTicket(index, "price", parseFloat(e.target.value) || 0)}
                           />
                         </div>
@@ -843,23 +884,32 @@ export function CreateEditEventModal({
           <Button
             variant="outline"
             onClick={handleBack}
-            disabled={currentStep === 1}
+            disabled={currentStep === 1 || isSubmitting}
           >
             <ChevronLeft className="h-4 w-4 mr-1" />
             {t.back}
           </Button>
           <div className="flex gap-2">
-            <Button variant="outline" onClick={handleClose}>
+            <Button variant="outline" onClick={handleClose} disabled={isSubmitting}>
               {t.cancel}
             </Button>
             {currentStep < steps.length ? (
-              <Button onClick={handleNext}>
+              <Button onClick={handleNext} disabled={isSubmitting}>
                 {t.next}
                 <ChevronRight className="h-4 w-4 ml-1" />
               </Button>
             ) : (
-              <Button onClick={handleSubmit}>
-                {event ? t.saveChanges : t.createEvent}
+              <Button onClick={handleSubmit} disabled={isSubmitting}>
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    {event ? "Saving changes..." : "Creating event..."}
+                  </>
+                ) : event ? (
+                  t.saveChanges
+                ) : (
+                  t.createEvent
+                )}
               </Button>
             )}
           </div>

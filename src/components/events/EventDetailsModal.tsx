@@ -119,10 +119,14 @@ export function EventDetailsModal({
               </div>
 
               <div className="flex items-center gap-2">
-                {event.isPaid && event.tickets?.[0]?.priceInCents != null ? (
-                  <span className="text-lg font-bold text-foreground">
-                    ${(event.tickets[0].priceInCents / 100).toFixed(0)}
-                  </span>
+                {event.isPaid ? (
+                  event.tickets?.[0]?.priceInCents != null ? (
+                    <span className="text-lg font-bold text-foreground">
+                      ${(event.tickets[0].priceInCents / 100).toFixed(0)}
+                    </span>
+                  ) : (
+                    <span className="text-sm font-medium text-foreground">Paid Event</span>
+                  )
                 ) : (
                   <span className="text-sm font-medium text-primary">Free Event</span>
                 )}
