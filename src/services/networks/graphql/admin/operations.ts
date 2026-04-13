@@ -202,12 +202,12 @@ export const GET_ASSOCIATION_STATS = gql`
 
 export const GET_AUDIT_LOGS = gql`
   query GetAuditLogs(
-    $actorId: ID
+    $actorId: String
     $action: String
     $resourceType: String
-    $resourceId: ID
-    $fromDate: DateTime
-    $toDate: DateTime
+    $resourceId: String
+    $fromDate: String
+    $toDate: String
     $limit: Int
     $offset: Int
   ) {
@@ -224,11 +224,9 @@ export const GET_AUDIT_LOGS = gql`
       items {
         id
         actorId
-        actorRole
         action
         resourceType
         resourceId
-        metadata
         createdAt
         ipAddress
       }
@@ -1262,6 +1260,7 @@ export interface UpdateCommunityInput {
   address?: string;
   embassyCountry?: string;
   locationCountry?: string;
+  communityTypeId?: string;
 }
 
 

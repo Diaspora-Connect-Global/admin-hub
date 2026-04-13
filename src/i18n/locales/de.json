@@ -144,6 +144,15 @@
     "exportData": "Daten exportieren",
     "allCountries": "Alle Länder",
     "allStatus": "Alle Status",
+    "yourMembership": "Ihre Mitgliedschaft",
+    "allMemberships": "Alle Mitgliedschaften",
+    "membershipStatus": {
+      "NOT_MEMBER": "Kein Mitglied",
+      "PENDING": "Ausstehend",
+      "MEMBER": "Mitglied",
+      "BANNED": "Gesperrt",
+      "SUSPENDED": "Suspendiert"
+    },
     "allTypes": "Alle Typen",
     "sortBy": "Sortieren nach",
     "nameAZ": "Name A-Z",
@@ -153,6 +162,7 @@
     "showing": "Zeige",
     "of": "von",
     "createCommunityDesc": "Neue Gemeinschaft für die Plattform erstellen.",
+    "editCommunityFormDesc": "Einstellungen für {{name}} aktualisieren. Admins werden auf der Gemeinschaftsseite zugewiesen, nicht hier.",
     "selectCountry": "Land auswählen",
     "enableVendorMode": "Verkäufermodus aktivieren",
     "vendorModeDesc": "Der Gemeinschaft erlauben, Produkte/Dienste zu verkaufen",

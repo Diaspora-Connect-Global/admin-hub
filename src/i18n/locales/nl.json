@@ -144,6 +144,15 @@
     "exportData": "Gegevens exporteren",
     "allCountries": "Alle landen",
     "allStatus": "Alle statussen",
+    "yourMembership": "Jouw lidmaatschap",
+    "allMemberships": "Alle lidmaatschappen",
+    "membershipStatus": {
+      "NOT_MEMBER": "Geen lid",
+      "PENDING": "In afwachting",
+      "MEMBER": "Lid",
+      "BANNED": "Verbannen",
+      "SUSPENDED": "Geschorst"
+    },
     "allTypes": "Alle typen",
     "sortBy": "Sorteren op",
     "nameAZ": "Naam A-Z",
@@ -153,6 +162,7 @@
     "showing": "Weergave",
     "of": "van",
     "createCommunityDesc": "Maak een nieuwe gemeenschap aan voor het platform.",
+    "editCommunityFormDesc": "Instellingen bijwerken voor {{name}}. Beheerders worden toegewezen via de gemeenschapspagina, niet hier.",
     "selectCountry": "Selecteer land",
     "enableVendorMode": "Verkopermodus inschakelen",
     "vendorModeDesc": "De gemeenschap toestaan producten/diensten te verkopen",

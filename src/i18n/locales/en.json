@@ -144,6 +144,15 @@
     "exportData": "Export Data",
     "allCountries": "All Countries",
     "allStatus": "All Status",
+    "yourMembership": "Your membership",
+    "allMemberships": "All memberships",
+    "membershipStatus": {
+      "NOT_MEMBER": "Not a member",
+      "PENDING": "Pending",
+      "MEMBER": "Member",
+      "BANNED": "Banned",
+      "SUSPENDED": "Suspended"
+    },
     "allTypes": "All Types",
     "sortBy": "Sort By",
     "nameAZ": "Name A-Z",
@@ -153,6 +162,7 @@
     "showing": "Showing",
     "of": "of",
     "createCommunityDesc": "Create a new community for the platform.",
+    "editCommunityFormDesc": "Update settings for {{name}}. Admins are assigned from the community page, not here.",
     "selectCountry": "Select country",
     "enableVendorMode": "Enable Vendor Mode",
     "vendorModeDesc": "Allow the community to sell products/services",

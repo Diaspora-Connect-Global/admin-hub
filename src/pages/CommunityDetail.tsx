@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useLocation, useParams, useNavigate } from "react-router-dom";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import { Button } from "@/components/ui/button";
@@ -13,16 +14,27 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { MultiSelect } from "@/components/ui/multi-select";
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
 import { toast } from "@/hooks/use-toast";
-import { useGetAuditLogs, useGetCommunity, useGetUsers, useListCommunityMembers, useUpdateCommunity } from "@/hooks/admin";
+import {
+  useDiscoverAssociations,
+  useGetAuditLogs,
+  useGetCommunity,
+  useGetUsers,
+  useListCommunityMembers,
+  useUpdateCommunity,
+  useUpdateCommunityJoinPolicy,
+  useUpdateCommunityVisibility,
+} from "@/hooks/admin";
+import { useLinkAssociation } from "@/hooks/admin/useAssociation";
 import { useGetEventsByOwner } from "@/hooks/events";
 import { useListOpportunities } from "@/hooks/opportunity";
 import { OwnerType } from "@/types/opportunities";
 import {
   ArrowLeft, Edit, Link2, UserPlus, Pause, Eye, Check, X, Trash2,
   MoreHorizontal, Download, Store, Unlink, Globe, Calendar, Users,
-  FileText, Briefcase, History, Shield, Building2, Loader2
+  FileText, Briefcase, History, Shield, Building2, Loader2, Upload,
 } from "lucide-react";
 
 const postsData = [
@@ -34,6 +46,41 @@ const vendorItems = [
   { id: "ITM-001", title: "African Art Print", category: "Art", price: "$45", stock: 25, status: "Approved" },
   { id: "ITM-002", title: "Kente Cloth", category: "Fashion", price: "$120", stock: 10, status: "Pending" },
 ];
+
+const typeOptions = ["Embassy", "NGO", "Church", "Association", "Club", "Other"];
+
+const allCountries = [
+  "Afghanistan", "Albania", "Algeria", "Andorra", "Angola", "Antigua and Barbuda", "Argentina", "Armenia", "Australia", "Austria",
+  "Azerbaijan", "Bahamas", "Bahrain", "Bangladesh", "Barbados", "Belarus", "Belgium", "Belize", "Benin", "Bhutan",
+  "Bolivia", "Bosnia and Herzegovina", "Botswana", "Brazil", "Brunei", "Bulgaria", "Burkina Faso", "Burundi", "Cabo Verde", "Cambodia",
+  "Cameroon", "Canada", "Central African Republic", "Chad", "Chile", "China", "Colombia", "Comoros", "Congo (Brazzaville)", "Congo (Kinshasa)",
+  "Costa Rica", "Croatia", "Cuba", "Cyprus", "Czech Republic", "Denmark", "Djibouti", "Dominica", "Dominican Republic", "Ecuador",
+  "Egypt", "El Salvador", "Equatorial Guinea", "Eritrea", "Estonia", "Eswatini", "Ethiopia", "Fiji", "Finland", "France",
+  "Gabon", "Gambia", "Georgia", "Germany", "Ghana", "Greece", "Grenada", "Guatemala", "Guinea", "Guinea-Bissau",
+  "Guyana", "Haiti", "Honduras", "Hungary", "Iceland", "India", "Indonesia", "Iran", "Iraq", "Ireland",
+  "Israel", "Italy", "Ivory Coast", "Jamaica", "Japan", "Jordan", "Kazakhstan", "Kenya", "Kiribati", "Kosovo",
+  "Kuwait", "Kyrgyzstan", "Laos", "Latvia", "Lebanon", "Lesotho", "Liberia", "Libya", "Liechtenstein", "Lithuania",
+  "Luxembourg", "Madagascar", "Malawi", "Malaysia", "Maldives", "Mali", "Malta", "Marshall Islands", "Mauritania", "Mauritius",
+  "Mexico", "Micronesia", "Moldova", "Monaco", "Mongolia", "Montenegro", "Morocco", "Mozambique", "Myanmar", "Namibia",
+  "Nauru", "Nepal", "Netherlands", "New Zealand", "Nicaragua", "Niger", "Nigeria", "North Korea", "North Macedonia", "Norway",
+  "Oman", "Pakistan", "Palau", "Palestine", "Panama", "Papua New Guinea", "Paraguay", "Peru", "Philippines", "Poland",
+  "Portugal", "Qatar", "Romania", "Russia", "Rwanda", "Saint Kitts and Nevis", "Saint Lucia", "Saint Vincent and the Grenadines", "Samoa", "San Marino",
+  "Sao Tome and Principe", "Saudi Arabia", "Senegal", "Serbia", "Seychelles", "Sierra Leone", "Singapore", "Slovakia", "Slovenia", "Solomon Islands",
+  "Somalia", "South Africa", "South Korea", "South Sudan", "Spain", "Sri Lanka", "Sudan", "Suriname", "Sweden", "Switzerland",
+  "Syria", "Taiwan", "Tajikistan", "Tanzania", "Thailand", "Timor-Leste", "Togo", "Tonga", "Trinidad and Tobago", "Tunisia",
+  "Turkey", "Turkmenistan", "Tuvalu", "Uganda", "Ukraine", "United Arab Emirates", "United Kingdom", "United States", "Uruguay", "Uzbekistan",
+  "Vanuatu", "Vatican City", "Venezuela", "Vietnam", "Yemen", "Zambia", "Zimbabwe",
+];
+
+const countryOptions = allCountries.map((country) => ({ label: country, value: country }));
+
+function joinPolicyToApi(joinUi: "FREE" | "PAID"): string {
+  return joinUi === "FREE" ? "OPEN" : "PAID";
+}
+
+function joinPolicyFromCommunity(joinPolicy: string | undefined): "FREE" | "PAID" {
+  return joinPolicy === "PAID" ? "PAID" : "FREE";
+}
 
 const getStatusBadge = (status: string) => {
   const styles: Record<string, string> = {
@@ -50,11 +97,14 @@ const getStatusBadge = (status: string) => {
 };
 
 export default function CommunityDetail() {
+  const { t } = useTranslation();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const location = useLocation();
   const { data, loading, error, refetch } = useGetCommunity(id ?? null);
   const [updateCommunityMutation, { loading: savingEdit }] = useUpdateCommunity();
+  const [updateVisibilityMutation] = useUpdateCommunityVisibility();
+  const [updateJoinPolicyMutation] = useUpdateCommunityJoinPolicy();
   const community = data?.getCommunity;
   const { data: membersData } = useListCommunityMembers(id ?? null, 50, 0);
   const { data: usersData } = useGetUsers({ limit: 500, offset: 0, skip: false });
@@ -105,16 +155,38 @@ export default function CommunityDetail() {
   const communityOpportunities =
     (opportunitiesData as { listOpportunities?: { opportunities?: Array<{ id: string; title?: string; type?: string; applicationCount?: number; status?: string; createdAt?: string }> } } | undefined)
       ?.listOpportunities?.opportunities ?? [];
-  const auditLogs = ((auditData as any)?.getAuditLogs?.items ?? []).map((log: any) => ({
-    timestamp: log.createdAt,
-    action: log.action,
-    performedBy: log.actorId || "System",
-    notes: typeof log.metadata === "string" ? log.metadata : JSON.stringify(log.metadata ?? {}),
-  }));
+  const auditLogs = ((auditData as any)?.getAuditLogs?.items ?? []).map((log: any) => {
+    const resource =
+      log.resourceType && log.resourceId
+        ? `${log.resourceType}: ${log.resourceId}`
+        : log.resourceType || log.resourceId || "";
+    const ip = log.ipAddress ? `IP ${log.ipAddress}` : "";
+    const notes = [resource, ip].filter(Boolean).join(" · ") || "—";
+    return {
+      timestamp: log.createdAt,
+      action: log.action,
+      performedBy: log.actorId || "System",
+      notes,
+    };
+  });
 
   const [vendorEnabled, setVendorEnabled] = useState(false);
   const [postingEnabled, setPostingEnabled] = useState(true);
   const [linkAssociationOpen, setLinkAssociationOpen] = useState(false);
+  const [selectedAssociationId, setSelectedAssociationId] = useState<string>("");
+
+  const { data: associationsData, loading: associationsLoading } = useDiscoverAssociations({
+    limit: 1000,
+    offset: 0,
+  });
+  const associationOptions =
+    (
+      associationsData as
+        | { discoverAssociations?: { associations?: Array<{ id: string; name: string }> } }
+        | undefined
+    )?.discoverAssociations?.associations ?? [];
+
+  const [linkAssociationMutation, { loading: linkingAssociation }] = useLinkAssociation();
   const [assignAdminOpen, setAssignAdminOpen] = useState(false);
   const [suspendOpen, setSuspendOpen] = useState(false);
   const [inviteMemberOpen, setInviteMemberOpen] = useState(false);
@@ -122,14 +194,22 @@ export default function CommunityDetail() {
   const [editForm, setEditForm] = useState({
     name: "",
     description: "",
-    countriesServed: "",
+    communityType: "",
+    visibility: "PUBLIC" as "PUBLIC" | "PRIVATE",
+    joinPolicy: "FREE" as "FREE" | "PAID",
+    paymentType: "NONE" as "NONE" | "ONE_TIME" | "SUBSCRIPTION",
+    priceAmount: "",
+    priceCurrency: "EUR",
+    countriesServed: [] as string[],
+    logoBanner: null as File | null,
+    rules: "",
+    whoCanPost: "ADMIN_ONLY" as "ADMIN_ONLY" | "ALL_MEMBERS",
+    groupCreationPermission: "Admins Only",
+    postModeration: true,
     address: "",
     contactEmail: "",
     contactPhone: "",
     website: "",
-    whoCanPost: "ADMIN_ONLY",
-    groupCreationPermission: "",
-    communityRules: "",
     embassyCountry: "",
     locationCountry: "",
   });
@@ -139,14 +219,22 @@ export default function CommunityDetail() {
     setEditForm({
       name: community.name ?? "",
       description: community.description ?? "",
-      countriesServed: community.countriesServed?.join(", ") ?? "",
+      communityType: community.communityTypeId ?? community.communityType?.name ?? "",
+      visibility: community.visibility === "PRIVATE" ? "PRIVATE" : "PUBLIC",
+      joinPolicy: joinPolicyFromCommunity(community.joinPolicy),
+      paymentType: "NONE",
+      priceAmount: community.priceAmount != null ? String(community.priceAmount) : "",
+      priceCurrency: community.priceCurrency ?? "EUR",
+      countriesServed: [...(community.countriesServed ?? [])],
+      logoBanner: null,
+      rules: community.communityRules ?? "",
+      whoCanPost: community.whoCanPost === "ALL_MEMBERS" ? "ALL_MEMBERS" : "ADMIN_ONLY",
+      groupCreationPermission: community.groupCreationPermission ?? "Admins Only",
+      postModeration: true,
       address: community.address ?? "",
       contactEmail: community.contactEmail ?? "",
       contactPhone: community.contactPhone ?? "",
       website: community.website ?? "",
-      whoCanPost: community.whoCanPost ?? "ADMIN_ONLY",
-      groupCreationPermission: community.groupCreationPermission ?? "",
-      communityRules: community.communityRules ?? "",
       embassyCountry: community.embassyCountry ?? "",
       locationCountry: community.locationCountry ?? "",
     });
@@ -170,17 +258,109 @@ export default function CommunityDetail() {
     toast({ title: checked ? "Vendor mode enabled" : "Vendor mode disabled" });
   };
 
+  const handleEditLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) setEditForm((prev) => ({ ...prev, logoBanner: file }));
+  };
+
+  const handleLinkAssociationSubmit = async () => {
+    if (!community?.id || !selectedAssociationId) {
+      toast({
+        title: t("communities.validationError"),
+        description: t("communities.selectAssociations"),
+        variant: "destructive",
+      });
+      return;
+    }
+    try {
+      const result = await linkAssociationMutation({
+        variables: {
+          input: {
+            associationId: selectedAssociationId,
+            communityId: community.id,
+          },
+        },
+      });
+      const payload = result.data?.linkAssociation;
+      if (payload?.success) {
+        toast({
+          title: t("communities.associationLinked"),
+          description: t("communities.associationLinkedDesc"),
+        });
+        setLinkAssociationOpen(false);
+        setSelectedAssociationId("");
+        await refetch();
+      } else {
+        toast({
+          title: t("communities.validationError"),
+          description: payload?.message ?? "Link failed.",
+          variant: "destructive",
+        });
+      }
+    } catch (e) {
+      const message = e instanceof Error ? e.message : "Link failed.";
+      toast({
+        title: t("communities.validationError"),
+        description: message,
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleSaveEdit = async () => {
     if (!community) return;
     if (!editForm.name.trim()) {
-      toast({ title: "Validation error", description: "Community name is required.", variant: "destructive" });
+      toast({
+        title: t("communities.validationError"),
+        description: t("communities.fillRequired"),
+        variant: "destructive",
+      });
       return;
     }
+    if (!editForm.communityType.trim()) {
+      toast({
+        title: t("communities.validationError"),
+        description: t("communities.form.selectType"),
+        variant: "destructive",
+      });
+      return;
+    }
+    const needsPrice = editForm.joinPolicy === "PAID" || editForm.paymentType !== "NONE";
+    if (needsPrice && (!editForm.priceAmount.trim() || !editForm.priceCurrency.trim())) {
+      toast({
+        title: t("communities.validationError"),
+        description: "Price amount and currency required when join is paid or payment type is set.",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (editForm.communityType === "Embassy") {
+      if (!editForm.embassyCountry.trim() || !editForm.locationCountry.trim()) {
+        toast({
+          title: t("communities.validationError"),
+          description: t("communities.embassyFieldsRequired"),
+          variant: "destructive",
+        });
+        return;
+      }
+    }
 
-    const countriesServed = editForm.countriesServed
-      .split(",")
-      .map((c) => c.trim())
-      .filter(Boolean);
+    let priceAmountNum: number | undefined;
+    if (needsPrice && editForm.priceAmount.trim()) {
+      const amount = Number(editForm.priceAmount);
+      if (!Number.isFinite(amount) || amount < 0) {
+        toast({
+          title: t("communities.validationError"),
+          description: "Invalid price amount.",
+          variant: "destructive",
+        });
+        return;
+      }
+      priceAmountNum = amount;
+    }
+
+    const countriesServed = [...editForm.countriesServed].map((c) => c.trim()).filter(Boolean);
+    const desiredJoinApi = joinPolicyToApi(editForm.joinPolicy);
 
     try {
       const result = await updateCommunityMutation({
@@ -196,9 +376,10 @@ export default function CommunityDetail() {
             website: editForm.website.trim(),
             whoCanPost: editForm.whoCanPost,
             groupCreationPermission: editForm.groupCreationPermission.trim(),
-            communityRules: editForm.communityRules.trim(),
+            communityRules: editForm.rules.trim(),
             embassyCountry: editForm.embassyCountry.trim(),
             locationCountry: editForm.locationCountry.trim(),
+            communityTypeId: editForm.communityType.trim(),
           },
         },
       });
@@ -213,6 +394,22 @@ export default function CommunityDetail() {
         });
         return;
       }
+
+      if (editForm.visibility !== community.visibility) {
+        await updateVisibilityMutation({
+          variables: { communityId: community.id, visibility: editForm.visibility },
+        });
+      }
+
+      await updateJoinPolicyMutation({
+        variables: {
+          communityId: community.id,
+          joinPolicy: desiredJoinApi,
+          ...(needsPrice && priceAmountNum != null
+            ? { priceAmount: priceAmountNum, priceCurrency: editForm.priceCurrency }
+            : {}),
+        },
+      });
 
       await refetch();
       setEditOpen(false);
@@ -266,7 +463,6 @@ export default function CommunityDetail() {
   const countryLabel = community.countriesServed?.length
     ? community.countriesServed.join(", ")
     : community.embassyCountry ?? community.locationCountry ?? "—";
-  const status = community.membershipStatus ?? "Active";
 
   return (
     <AdminLayout>
@@ -291,7 +487,6 @@ export default function CommunityDetail() {
             <div>
               <div className="flex items-center gap-3">
                 <h1 className="text-2xl font-semibold text-foreground">{community.name}</h1>
-                {getStatusBadge(status)}
                 {community.communityType && (
                   <Badge variant="outline" className={community.communityType.isEmbassy ? "border-blue-500 text-blue-500" : ""}>
                     {community.communityType.name}
@@ -364,10 +559,6 @@ export default function CommunityDetail() {
                     <div className="col-span-2">
                       <p className="text-muted-foreground text-xs">Description</p>
                       <p>{community.description ?? "—"}</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground text-xs">Status</p>
-                      {getStatusBadge(status)}
                     </div>
                     <div>
                       <p className="text-muted-foreground text-xs">Members</p>
@@ -556,13 +747,8 @@ export default function CommunityDetail() {
           <TabsContent value="events" className="space-y-4">
             <Card className="glass">
               <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="text-base">Events</CardTitle>
-                    <CardDescription>Community events and meetups.</CardDescription>
-                  </div>
-                  <Button size="sm">Create Event</Button>
-                </div>
+                <CardTitle className="text-base">Events</CardTitle>
+                <CardDescription>Community events and meetups.</CardDescription>
               </CardHeader>
               <CardContent className="p-0">
                 <Table>
@@ -604,13 +790,8 @@ export default function CommunityDetail() {
           <TabsContent value="opportunities" className="space-y-4">
             <Card className="glass">
               <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="text-base">Opportunities</CardTitle>
-                    <CardDescription>Opportunities posted in this community.</CardDescription>
-                  </div>
-                  <Button size="sm">Create Opportunity</Button>
-                </div>
+                <CardTitle className="text-base">Opportunities</CardTitle>
+                <CardDescription>Opportunities posted in this community.</CardDescription>
               </CardHeader>
               <CardContent className="p-0">
                 <Table>
@@ -653,13 +834,8 @@ export default function CommunityDetail() {
           <TabsContent value="vendor" className="space-y-4">
             <Card className="glass">
               <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="text-base">Vendor Products & Services</CardTitle>
-                    <CardDescription>Manage community's vendor listings.</CardDescription>
-                  </div>
-                  <Button size="sm" disabled={!vendorEnabled}>Add Product/Service</Button>
-                </div>
+                <CardTitle className="text-base">Vendor Products & Services</CardTitle>
+                <CardDescription>Manage community's vendor listings.</CardDescription>
               </CardHeader>
               <CardContent className="p-0">
                 {vendorEnabled ? (
@@ -743,117 +919,396 @@ export default function CommunityDetail() {
         </Tabs>
       </div>
 
-      {/* Link Association Modal */}
+      {/* Edit Community (same fields as create, without admin assignment) */}
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
         <DialogContent className="sm:max-w-2xl max-h-[90vh]">
           <DialogHeader>
-            <DialogTitle>Edit Community</DialogTitle>
-            <DialogDescription>Update basic details for {community.name}.</DialogDescription>
+            <DialogTitle>{t("communities.editCommunity")}</DialogTitle>
+            <DialogDescription>{t("communities.editCommunityFormDesc", { name: community.name })}</DialogDescription>
           </DialogHeader>
           <ScrollArea className="max-h-[65vh] pr-4">
-            <div className="space-y-4 py-2">
-              <div className="space-y-2">
-                <Label>Name <span className="text-destructive">*</span></Label>
-                <Input value={editForm.name} onChange={(e) => setEditForm((prev) => ({ ...prev, name: e.target.value }))} />
-              </div>
-              <div className="space-y-2">
-                <Label>Description</Label>
-                <Textarea value={editForm.description} onChange={(e) => setEditForm((prev) => ({ ...prev, description: e.target.value }))} rows={3} />
-              </div>
-              <div className="space-y-2">
-                <Label>Countries served (comma separated)</Label>
-                <Input
-                  placeholder="Belgium, Ghana"
-                  value={editForm.countriesServed}
-                  onChange={(e) => setEditForm((prev) => ({ ...prev, countriesServed: e.target.value }))}
-                />
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-6 py-4">
+              <div className="space-y-4">
+                <h3 className="text-sm font-semibold text-foreground border-b border-border pb-2">{t("communities.form.basicInfo")}</h3>
+
                 <div className="space-y-2">
-                  <Label>Embassy country</Label>
-                  <Input value={editForm.embassyCountry} onChange={(e) => setEditForm((prev) => ({ ...prev, embassyCountry: e.target.value }))} />
+                  <Label>{t("communities.communityName")} <span className="text-destructive">*</span></Label>
+                  <Input
+                    placeholder={t("communities.form.namePlaceholder")}
+                    value={editForm.name}
+                    onChange={(e) => setEditForm((prev) => ({ ...prev, name: e.target.value }))}
+                  />
                 </div>
+
                 <div className="space-y-2">
-                  <Label>Location country</Label>
-                  <Input value={editForm.locationCountry} onChange={(e) => setEditForm((prev) => ({ ...prev, locationCountry: e.target.value }))} />
+                  <Label>{t("common.description")}</Label>
+                  <Textarea
+                    placeholder={t("communities.form.descriptionPlaceholder")}
+                    value={editForm.description}
+                    onChange={(e) => setEditForm((prev) => ({ ...prev, description: e.target.value }))}
+                    rows={3}
+                  />
                 </div>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
                 <div className="space-y-2">
-                  <Label>Contact email</Label>
-                  <Input type="email" value={editForm.contactEmail} onChange={(e) => setEditForm((prev) => ({ ...prev, contactEmail: e.target.value }))} />
-                </div>
-                <div className="space-y-2">
-                  <Label>Contact phone</Label>
-                  <Input value={editForm.contactPhone} onChange={(e) => setEditForm((prev) => ({ ...prev, contactPhone: e.target.value }))} />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label>Website</Label>
-                <Input value={editForm.website} onChange={(e) => setEditForm((prev) => ({ ...prev, website: e.target.value }))} />
-              </div>
-              <div className="space-y-2">
-                <Label>Address</Label>
-                <Textarea value={editForm.address} onChange={(e) => setEditForm((prev) => ({ ...prev, address: e.target.value }))} rows={2} />
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Who can post</Label>
-                  <Select value={editForm.whoCanPost} onValueChange={(v) => setEditForm((prev) => ({ ...prev, whoCanPost: v }))}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
+                  <Label>{t("communities.communityType")} <span className="text-destructive">*</span></Label>
+                  <Select value={editForm.communityType} onValueChange={(value) => setEditForm((prev) => ({ ...prev, communityType: value }))}>
+                    <SelectTrigger>
+                      <SelectValue placeholder={t("communities.form.selectType")} />
+                    </SelectTrigger>
                     <SelectContent className="bg-popover border-border">
-                      <SelectItem value="ADMIN_ONLY">Admin only</SelectItem>
+                      {typeOptions.map((type) => (
+                        <SelectItem key={type} value={type}>
+                          {type}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Visibility <span className="text-destructive">*</span></Label>
+                    <Select
+                      value={editForm.visibility}
+                      onValueChange={(v: "PUBLIC" | "PRIVATE") => setEditForm((prev) => ({ ...prev, visibility: v }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-popover border-border">
+                        <SelectItem value="PUBLIC">Public</SelectItem>
+                        <SelectItem value="PRIVATE">Private</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Join policy <span className="text-destructive">*</span></Label>
+                    <Select
+                      value={editForm.joinPolicy}
+                      onValueChange={(v: "FREE" | "PAID") => setEditForm((prev) => ({ ...prev, joinPolicy: v }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-popover border-border">
+                        <SelectItem value="FREE">Free</SelectItem>
+                        <SelectItem value="PAID">Paid</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Payment type <span className="text-destructive">*</span></Label>
+                  <Select
+                    value={editForm.paymentType}
+                    onValueChange={(v: "NONE" | "ONE_TIME" | "SUBSCRIPTION") =>
+                      setEditForm((prev) => ({ ...prev, paymentType: v }))
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-popover border-border">
+                      <SelectItem value="NONE">None</SelectItem>
+                      <SelectItem value="ONE_TIME">One-time</SelectItem>
+                      <SelectItem value="SUBSCRIPTION">Subscription</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {(editForm.joinPolicy === "PAID" || editForm.paymentType !== "NONE") && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Price amount</Label>
+                      <Input
+                        type="number"
+                        min={0}
+                        step="any"
+                        placeholder="0.00"
+                        value={editForm.priceAmount}
+                        onChange={(e) => setEditForm((prev) => ({ ...prev, priceAmount: e.target.value }))}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Currency</Label>
+                      <Select value={editForm.priceCurrency} onValueChange={(v) => setEditForm((prev) => ({ ...prev, priceCurrency: v }))}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="bg-popover border-border">
+                          <SelectItem value="EUR">EUR</SelectItem>
+                          <SelectItem value="USD">USD</SelectItem>
+                          <SelectItem value="GBP">GBP</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                )}
+
+                <div className="space-y-2">
+                  <Label>{t("communities.countriesServed")}</Label>
+                  <MultiSelect
+                    options={countryOptions}
+                    selected={editForm.countriesServed}
+                    onChange={(selected) => setEditForm((prev) => ({ ...prev, countriesServed: selected }))}
+                    placeholder={t("communities.form.selectCountries")}
+                    searchPlaceholder={t("common.search")}
+                    maxDisplay={3}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>{t("communities.form.logoBanner")}</Label>
+                  <div className="border-2 border-dashed border-border rounded-md p-4 text-center hover:border-primary/50 transition-colors">
+                    <input type="file" accept=".jpg,.jpeg,.png" onChange={handleEditLogoUpload} className="hidden" id="edit-logo-upload" />
+                    <label htmlFor="edit-logo-upload" className="cursor-pointer flex flex-col items-center gap-2">
+                      <Upload className="h-8 w-8 text-muted-foreground" />
+                      <span className="text-sm text-muted-foreground">{t("communities.form.uploadImage")}</span>
+                      <span className="text-xs text-muted-foreground">{t("communities.form.acceptedFormats")}</span>
+                    </label>
+                    {editForm.logoBanner && (
+                      <div className="mt-2 flex items-center justify-center gap-2">
+                        <Badge variant="secondary">{editForm.logoBanner.name}</Badge>
+                        <X
+                          className="h-4 w-4 cursor-pointer text-muted-foreground hover:text-destructive"
+                          onClick={() => setEditForm((prev) => ({ ...prev, logoBanner: null }))}
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>{t("communities.form.rulesGuidelines")}</Label>
+                  <Textarea
+                    placeholder={t("communities.form.rulesPlaceholder")}
+                    value={editForm.rules}
+                    onChange={(e) => setEditForm((prev) => ({ ...prev, rules: e.target.value }))}
+                    rows={4}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>{t("communities.form.whoCanPost")}</Label>
+                  <Select
+                    value={editForm.whoCanPost}
+                    onValueChange={(value: "ADMIN_ONLY" | "ALL_MEMBERS") =>
+                      setEditForm((prev) => ({ ...prev, whoCanPost: value }))
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-popover border-border">
+                      <SelectItem value="ADMIN_ONLY">{t("communities.form.adminsOnly")}</SelectItem>
                       <SelectItem value="ALL_MEMBERS">All members</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-2">
-                  <Label>Group creation permission</Label>
-                  <Input
-                    placeholder="Admins Only"
-                    value={editForm.groupCreationPermission}
-                    onChange={(e) => setEditForm((prev) => ({ ...prev, groupCreationPermission: e.target.value }))}
-                  />
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>{t("communities.form.groupCreation")} <span className="text-destructive">*</span></Label>
+                    <Select
+                      value={editForm.groupCreationPermission}
+                      onValueChange={(value) => setEditForm((prev) => ({ ...prev, groupCreationPermission: value }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-popover border-border">
+                        <SelectItem value="Admins Only">{t("communities.form.adminsOnly")}</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="flex items-center justify-between p-3 border border-border rounded-md">
+                    <div>
+                      <Label>{t("communities.form.postModeration")}</Label>
+                      <p className="text-xs text-muted-foreground">{t("communities.form.postModerationDesc")}</p>
+                    </div>
+                    <Switch
+                      checked={editForm.postModeration}
+                      onCheckedChange={(checked) => setEditForm((prev) => ({ ...prev, postModeration: checked }))}
+                    />
+                  </div>
                 </div>
               </div>
-              <div className="space-y-2">
-                <Label>Community rules</Label>
-                <Textarea value={editForm.communityRules} onChange={(e) => setEditForm((prev) => ({ ...prev, communityRules: e.target.value }))} rows={4} />
-              </div>
+
+              {editForm.communityType && (
+                <div className="space-y-4">
+                  <h3 className="text-sm font-semibold text-foreground border-b border-border pb-2">{t("communities.form.contactInfo")}</h3>
+
+                  <div className="space-y-2">
+                    <Label>{t("communities.form.address")}</Label>
+                    <Input
+                      placeholder={t("communities.form.addressPlaceholder")}
+                      value={editForm.address}
+                      onChange={(e) => setEditForm((prev) => ({ ...prev, address: e.target.value }))}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>{t("communities.form.contactEmail")}</Label>
+                      <Input
+                        type="email"
+                        placeholder={t("communities.form.contactEmailPlaceholder")}
+                        value={editForm.contactEmail}
+                        onChange={(e) => setEditForm((prev) => ({ ...prev, contactEmail: e.target.value }))}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>{t("communities.form.contactPhone")}</Label>
+                      <Input
+                        placeholder={t("communities.form.contactPhonePlaceholder")}
+                        value={editForm.contactPhone}
+                        onChange={(e) => setEditForm((prev) => ({ ...prev, contactPhone: e.target.value }))}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>{t("communities.form.website")}</Label>
+                    <Input
+                      placeholder={t("communities.form.websitePlaceholder")}
+                      value={editForm.website}
+                      onChange={(e) => setEditForm((prev) => ({ ...prev, website: e.target.value }))}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {editForm.communityType === "Embassy" && (
+                <div className="space-y-4">
+                  <h3 className="text-sm font-semibold text-foreground border-b border-border pb-2 flex items-center gap-2">
+                    <Globe className="h-4 w-4 text-blue-500" />
+                    {t("communities.form.embassyInfo")}
+                  </h3>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>{t("communities.form.embassyCountry")} <span className="text-destructive">*</span></Label>
+                      <Select
+                        value={editForm.embassyCountry}
+                        onValueChange={(value) => setEditForm((prev) => ({ ...prev, embassyCountry: value }))}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder={t("communities.form.embassyCountryPlaceholder")} />
+                        </SelectTrigger>
+                        <SelectContent className="bg-popover border-border max-h-64">
+                          {allCountries.map((country) => (
+                            <SelectItem key={country} value={country}>
+                              {country}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>{t("communities.form.locationCountry")} <span className="text-destructive">*</span></Label>
+                      <Select
+                        value={editForm.locationCountry}
+                        onValueChange={(value) => setEditForm((prev) => ({ ...prev, locationCountry: value }))}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder={t("communities.form.locationCountryPlaceholder")} />
+                        </SelectTrigger>
+                        <SelectContent className="bg-popover border-border max-h-64">
+                          {allCountries.map((country) => (
+                            <SelectItem key={`loc-${country}`} value={country}>
+                              {country}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </ScrollArea>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setEditOpen(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setEditOpen(false)} disabled={savingEdit}>
+              {t("common.cancel")}
+            </Button>
             <Button onClick={handleSaveEdit} disabled={savingEdit}>
-              {savingEdit && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Save changes
+              {savingEdit ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  {t("common.loading")}
+                </>
+              ) : (
+                t("common.save")
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* Link Association Modal */}
-      <Dialog open={linkAssociationOpen} onOpenChange={setLinkAssociationOpen}>
+      <Dialog
+        open={linkAssociationOpen}
+        onOpenChange={(open) => {
+          setLinkAssociationOpen(open);
+          if (!open) setSelectedAssociationId("");
+        }}
+      >
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Link Association to Community</DialogTitle>
-            <DialogDescription>Link one or more associations to {community.name}.</DialogDescription>
+            <DialogTitle>{t("communities.linkAssociationTo")}</DialogTitle>
+            <DialogDescription>{t("communities.linkAssociationDesc", { name: community.name })}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label>Select Associations</Label>
-              <Select>
-                <SelectTrigger><SelectValue placeholder="Search associations..." /></SelectTrigger>
-                <SelectContent className="bg-popover border-border">
-                  <SelectItem value="asc1">Ghana Nurses Association</SelectItem>
-                  <SelectItem value="asc2">Nigerian Engineers Association</SelectItem>
+              <Label>
+                {t("communities.selectAssociations")} <span className="text-destructive">*</span>
+              </Label>
+              <Select value={selectedAssociationId} onValueChange={setSelectedAssociationId}>
+                <SelectTrigger>
+                  <SelectValue placeholder={t("communities.searchAssociations")} />
+                </SelectTrigger>
+                <SelectContent className="bg-popover border-border max-h-64">
+                  {associationsLoading ? (
+                    <SelectItem value="__loading" disabled>
+                      {t("common.loading")}
+                    </SelectItem>
+                  ) : associationOptions.length === 0 ? (
+                    <SelectItem value="__empty" disabled>
+                      {t("common.noData")}
+                    </SelectItem>
+                  ) : (
+                    associationOptions.map((assoc) => (
+                      <SelectItem key={assoc.id} value={assoc.id}>
+                        {assoc.name}
+                      </SelectItem>
+                    ))
+                  )}
                 </SelectContent>
               </Select>
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setLinkAssociationOpen(false)}>Cancel</Button>
-            <Button onClick={() => { toast({ title: "Association Linked" }); setLinkAssociationOpen(false); }}>Link</Button>
+            <Button
+              variant="outline"
+              onClick={() => setLinkAssociationOpen(false)}
+              disabled={linkingAssociation}
+            >
+              {t("common.cancel")}
+            </Button>
+            <Button onClick={handleLinkAssociationSubmit} disabled={linkingAssociation || !selectedAssociationId}>
+              {linkingAssociation ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  {t("common.loading")}
+                </>
+              ) : (
+                t("communities.linkAssociation")
+              )}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

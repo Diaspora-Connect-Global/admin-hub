@@ -1,4 +1,4 @@
-import { Search, UserPlus, ChevronDown, LogOut, User } from "lucide-react";
+import { Search, ChevronDown, LogOut, User } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -53,12 +53,6 @@ export function AdminHeader() {
               <DropdownMenuItem>Custom range</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-
-          {/* Quick Create Community */}
-          <Button size="sm" className="gap-2 bg-primary text-primary-foreground hover:bg-primary/90">
-            <UserPlus className="w-4 h-4" />
-            <span className="hidden sm:inline">{t('communities.createCommunity')}</span>
-          </Button>
 
           {/* Notifications */}
           <AdminNotificationBell />

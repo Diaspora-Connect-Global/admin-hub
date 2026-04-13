@@ -16,7 +16,7 @@ import { Switch } from "@/components/ui/switch";
 import { Card, CardContent } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { MultiSelect } from "@/components/ui/multi-select";
-import { Search, Plus, MoreHorizontal, Eye, Edit, Link2, Pause, ChevronDown, Download, FileJson, Store, X, BarChart3, Trash2, Upload, Globe, Loader2 } from "lucide-react";
+import { Search, Plus, MoreHorizontal, Eye, Edit, Link2, Pause, ChevronDown, Download, FileJson, BarChart3, Trash2, Upload, Globe, Loader2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { useCreateCommunity, useDiscoverAssociations, useGetUsers, useListCommunities } from "@/hooks/admin";
 import type { CreateCommunityInput, Community } from "@/services/networks/graphql/admin";
@@ -34,7 +34,6 @@ interface CommunityRow {
   postsCount: number;
   eventsCount: number;
   vendorEnabled: boolean;
-  status: string;
   createdAt: string;
 }
 
@@ -51,7 +50,6 @@ function mapCommunityToRow(c: Community): CommunityRow {
     postsCount: 0,
     eventsCount: 0,
     vendorEnabled: false,
-    status: c.membershipStatus ?? "Active",
     createdAt: c.createdAt ?? "",
   };
 }
@@ -149,7 +147,6 @@ export default function Communities() {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [countryFilter, setCountryFilter] = useState("all");
-  const [statusFilter, setStatusFilter] = useState("all");
   const [visibilityFilter, setVisibilityFilter] = useState("all");
   const [sortBy, setSortBy] = useState("name-az");
   const [page, setPage] = useState(0);
@@ -196,8 +193,7 @@ export default function Communities() {
   const filteredCommunities = rows
     .filter((community) => {
       const matchesCountry = countryFilter === "all" || community.countriesServed.includes(countryFilter);
-      const matchesStatus = statusFilter === "all" || community.status === statusFilter;
-      return matchesCountry && matchesStatus;
+      return matchesCountry;
     })
     .sort((a, b) => {
       switch (sortBy) {
@@ -367,20 +363,6 @@ export default function Communities() {
     }
   };
 
-  const getStatusBadge = (status: string) => {
-    const styles: Record<string, string> = {
-      "Active": "badge-status badge-success",
-      "Inactive": "badge-status badge-warning",
-      "Suspended": "badge-status badge-destructive",
-    };
-    const labels: Record<string, string> = {
-      "Active": t('common.active'),
-      "Inactive": t('common.inactive'),
-      "Suspended": t('communities.suspended'),
-    };
-    return <span className={styles[status] || "badge-status badge-muted"}>{labels[status] || status}</span>;
-  };
-
   return (
     <AdminLayout>
       <div className="space-y-6">
@@ -433,15 +415,6 @@ export default function Communities() {
                   ))}
                 </SelectContent>
               </Select>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-[150px]"><SelectValue placeholder={t('common.status')} /></SelectTrigger>
-                <SelectContent className="bg-popover border-border">
-                  <SelectItem value="all">{t('communities.allStatus')}</SelectItem>
-                  <SelectItem value="Active">{t('common.active')}</SelectItem>
-                  <SelectItem value="Inactive">{t('common.inactive')}</SelectItem>
-                  <SelectItem value="Suspended">{t('communities.suspended')}</SelectItem>
-                </SelectContent>
-              </Select>
               <Select value={visibilityFilter} onValueChange={setVisibilityFilter}>
                 <SelectTrigger className="w-[130px]"><SelectValue placeholder="Visibility" /></SelectTrigger>
                 <SelectContent className="bg-popover border-border">
@@ -484,7 +457,6 @@ export default function Communities() {
                     <TableHead>{t('communities.posts')}</TableHead>
                     <TableHead>{t('communities.events')}</TableHead>
                     <TableHead>{t('communities.vendorEnabled')}</TableHead>
-                    <TableHead>{t('common.status')}</TableHead>
                     <TableHead className="w-28">{t('common.actions')}</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -536,21 +508,16 @@ export default function Communities() {
                         )}
                       </TableCell>
                       <TableCell>
-                        <Badge variant="outline" className="cursor-pointer hover:bg-secondary">
-                          {community.associationsCount}
-                        </Badge>
+                        <span className="text-sm tabular-nums text-muted-foreground">{community.associationsCount}</span>
                       </TableCell>
                       <TableCell>{community.membersCount.toLocaleString()}</TableCell>
                       <TableCell>{community.postsCount}</TableCell>
                       <TableCell>{community.eventsCount}</TableCell>
                       <TableCell>
-                        {community.vendorEnabled ? (
-                          <Badge className="badge-status badge-success gap-1"><Store className="w-3 h-3" /> {t('communities.enabled')}</Badge>
-                        ) : (
-                          <Badge className="badge-status badge-muted gap-1"><X className="w-3 h-3" /> {t('communities.disabled')}</Badge>
-                        )}
+                        <span className={community.vendorEnabled ? "text-foreground" : "text-muted-foreground"}>
+                          {community.vendorEnabled ? t('communities.enabled') : t('communities.disabled')}
+                        </span>
                       </TableCell>
-                      <TableCell>{getStatusBadge(community.status)}</TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1">
                           <Button variant="ghost" size="icon" onClick={() => navigate(`/communities/${community.id}`)}>

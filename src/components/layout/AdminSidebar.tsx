@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { LayoutDashboard, Users, Wallet, AlertTriangle, CheckSquare, BarChart3, Settings, Bell, FileText, HeadphonesIcon, Shield, Store, Key, Activity, ChevronLeft, ChevronRight, LogOut, MessageSquare, Calendar, Briefcase } from "lucide-react";
+import { LayoutDashboard, Users, Wallet, AlertTriangle, CheckSquare, BarChart3, Settings, Bell, FileText, HeadphonesIcon, Shield, Store, Key, Activity, ChevronLeft, ChevronRight, LogOut, MessageSquare, Calendar, Briefcase, Landmark } from "lucide-react";
 import { cn } from "@/lib/utils";
 import logo from "@/assets/logo.svg";
 import { useAdminAuth } from "@/hooks/auth/useAdminAuth";
@@ -13,6 +13,7 @@ const navItems = [
   { id: "escrow_management", titleKey: "nav.escrow", icon: Wallet, path: "/escrow" },
   { id: "disputes", titleKey: "nav.disputes", icon: AlertTriangle, path: "/disputes" },
   { id: "communities", titleKey: "nav.communities", icon: Users, path: "/communities" },
+  { id: "associations", titleKey: "nav.associations", icon: Landmark, path: "/associations" },
   { id: "events", titleKey: "nav.events", icon: Calendar, path: "/events" },
   { id: "opportunities", titleKey: "nav.opportunities", icon: Briefcase, path: "/opportunities" },
   { id: "reports_analytics", titleKey: "nav.reports", icon: BarChart3, path: "/reports" },
