@@ -40,6 +40,7 @@ import {
   type AssociationMember,
   type MembershipActionInput,
   type UpdateCommunityInput,
+  type CommunityMutationPayload,
 } from "@/services/networks/graphql/admin/operations";
 
 // ─── Input / Result types ────────────────────────────────────────────────────
@@ -226,8 +227,8 @@ export function useAssociationStats(associationId: string | null) {
 
 export function useUpdateCommunity() {
   return useMutation<
-    { updateCommunity: { id: string; name: string; description?: string; updatedAt: string } },
-    { input: UpdateCommunityInput }
+    { updateCommunity: CommunityMutationPayload },
+    { id: string; input: UpdateCommunityInput }
   >(UPDATE_COMMUNITY);
 }
 

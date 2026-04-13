@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { useLocation, useParams, useNavigate } from "react-router-dom";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -15,55 +15,24 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
 import { toast } from "@/hooks/use-toast";
-import { useGetCommunity } from "@/hooks/admin";
+import { useGetAuditLogs, useGetCommunity, useGetUsers, useListCommunityMembers, useUpdateCommunity } from "@/hooks/admin";
+import { useGetEventsByOwner } from "@/hooks/events";
+import { useListOpportunities } from "@/hooks/opportunity";
+import { OwnerType } from "@/types/opportunities";
 import {
   ArrowLeft, Edit, Link2, UserPlus, Pause, Eye, Check, X, Trash2,
   MoreHorizontal, Download, Store, Unlink, Globe, Calendar, Users,
   FileText, Briefcase, History, Shield, Building2, Loader2
 } from "lucide-react";
 
-const linkedAssociations = [
-  { id: "ASC-001", name: "Accra Alumni Belgium", country: "Belgium" },
-  { id: "ASC-002", name: "Kumasi Cultural Group", country: "Belgium" },
-  { id: "ASC-003", name: "Ghana Traders Network", country: "Ghana" },
-];
-
-const communityAdmins = [
-  { id: "USR-001", name: "John Doe", email: "john@example.com", role: "Community Admin" },
-  { id: "USR-002", name: "Jane Smith", email: "jane@example.com", role: "Community Admin" },
-];
-
-const membersData = [
-  { id: "USR-003", name: "Kwame Asante", roles: ["Member"], associationsCount: 2, joinedAt: "2024-01-10", status: "Active" },
-  { id: "USR-004", name: "Ama Owusu", roles: ["Member", "Vendor"], associationsCount: 1, joinedAt: "2024-01-08", status: "Active" },
-  { id: "USR-005", name: "Kofi Mensah", roles: ["Member"], associationsCount: 3, joinedAt: "2024-01-05", status: "Active" },
-];
-
 const postsData = [
   { id: "PST-001", author: "John Doe", contentPreview: "Community Event Announcement...", media: "1 image", likes: 45, comments: 12, createdAt: "2024-01-20", status: "Pending" },
   { id: "PST-002", author: "Jane Smith", contentPreview: "New Member Introduction...", media: "-", likes: 32, comments: 8, createdAt: "2024-01-19", status: "Approved" },
 ];
 
-const opportunitiesData = [
-  { id: "OPP-001", title: "Business Partnership", type: "Business", applicationsCount: 15, status: "Open", postedAt: "2024-01-15" },
-  { id: "OPP-002", title: "Job Opening - Marketing", type: "Job", applicationsCount: 28, status: "Open", postedAt: "2024-01-14" },
-];
-
-const eventsData = [
-  { id: "EVT-001", title: "Annual Diaspora Meetup", location: "Brussels", date: "2024-03-15", attendees: 120, status: "Scheduled" },
-  { id: "EVT-002", title: "Cultural Night", location: "Antwerp", date: "2024-02-28", attendees: 85, status: "Scheduled" },
-  { id: "EVT-003", title: "Networking Breakfast", location: "Online", date: "2024-02-10", attendees: 45, status: "Completed" },
-];
-
 const vendorItems = [
   { id: "ITM-001", title: "African Art Print", category: "Art", price: "$45", stock: 25, status: "Approved" },
   { id: "ITM-002", title: "Kente Cloth", category: "Fashion", price: "$120", stock: 10, status: "Pending" },
-];
-
-const auditLogs = [
-  { timestamp: "2024-01-20 14:30:00", action: "Post Approved", performedBy: "John Doe", notes: "Approved community event post" },
-  { timestamp: "2024-01-18 10:15:00", action: "Association Linked", performedBy: "System Admin", notes: "Linked Ghana Traders Network" },
-  { timestamp: "2024-01-15 09:00:00", action: "Community Created", performedBy: "System", notes: "Initial creation" },
 ];
 
 const getStatusBadge = (status: string) => {
@@ -83,8 +52,65 @@ const getStatusBadge = (status: string) => {
 export default function CommunityDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { data, loading, error } = useGetCommunity(id ?? null);
+  const location = useLocation();
+  const { data, loading, error, refetch } = useGetCommunity(id ?? null);
+  const [updateCommunityMutation, { loading: savingEdit }] = useUpdateCommunity();
   const community = data?.getCommunity;
+  const { data: membersData } = useListCommunityMembers(id ?? null, 50, 0);
+  const { data: usersData } = useGetUsers({ limit: 500, offset: 0, skip: false });
+  const { data: communityEventsData } = useGetEventsByOwner(
+    id ? { ownerId: id, ownerType: "COMMUNITY", limit: 20, offset: 0 } : null,
+  );
+  const { data: opportunitiesData } = useListOpportunities(
+    id
+      ? { ownerType: OwnerType.COMMUNITY, ownerId: id, limit: 20, offset: 0 }
+      : { ownerType: OwnerType.COMMUNITY, ownerId: "__none__", limit: 1, offset: 0 },
+  );
+  const { data: auditData } = useGetAuditLogs({
+    resourceType: "COMMUNITY",
+    resourceId: id ?? undefined,
+    limit: 20,
+    offset: 0,
+  });
+
+  const users = (
+    usersData as { getUsers?: { items?: Array<{ id: string; email: string; displayName?: string | null }> } } | undefined
+  )?.getUsers?.items ?? [];
+  const userById = new Map(users.map((u) => [u.id, u]));
+  const communityMembers = membersData?.listCommunityMembers?.members ?? [];
+  const communityMemberRows = communityMembers.map((member) => {
+    const user = userById.get(member.userId);
+    return {
+      id: member.userId,
+      name: user?.displayName || user?.email || member.userId,
+      roles: [member.role],
+      associationsCount: 0,
+      joinedAt: member.joinedAt,
+      status: member.status,
+    };
+  });
+  const linkedAssociations: Array<{ id: string; name: string; country: string }> = [];
+  const communityAdmins = (community?.assignedAdminIds ?? []).map((adminId) => {
+    const user = userById.get(adminId);
+    return {
+      id: adminId,
+      name: user?.displayName || user?.email || adminId,
+      email: user?.email || "—",
+      role: "Community Admin",
+    };
+  });
+  const communityEvents =
+    (communityEventsData as { getEventsByOwner?: { events?: Array<{ id: string; title?: string; locationDetails?: { city?: string; venueName?: string; platform?: string } | null; startAt?: string; registrationCount?: number; status?: string }> } } | undefined)
+      ?.getEventsByOwner?.events ?? [];
+  const communityOpportunities =
+    (opportunitiesData as { listOpportunities?: { opportunities?: Array<{ id: string; title?: string; type?: string; applicationCount?: number; status?: string; createdAt?: string }> } } | undefined)
+      ?.listOpportunities?.opportunities ?? [];
+  const auditLogs = ((auditData as any)?.getAuditLogs?.items ?? []).map((log: any) => ({
+    timestamp: log.createdAt,
+    action: log.action,
+    performedBy: log.actorId || "System",
+    notes: typeof log.metadata === "string" ? log.metadata : JSON.stringify(log.metadata ?? {}),
+  }));
 
   const [vendorEnabled, setVendorEnabled] = useState(false);
   const [postingEnabled, setPostingEnabled] = useState(true);
@@ -92,6 +118,47 @@ export default function CommunityDetail() {
   const [assignAdminOpen, setAssignAdminOpen] = useState(false);
   const [suspendOpen, setSuspendOpen] = useState(false);
   const [inviteMemberOpen, setInviteMemberOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [editForm, setEditForm] = useState({
+    name: "",
+    description: "",
+    countriesServed: "",
+    address: "",
+    contactEmail: "",
+    contactPhone: "",
+    website: "",
+    whoCanPost: "ADMIN_ONLY",
+    groupCreationPermission: "",
+    communityRules: "",
+    embassyCountry: "",
+    locationCountry: "",
+  });
+
+  useEffect(() => {
+    if (!community) return;
+    setEditForm({
+      name: community.name ?? "",
+      description: community.description ?? "",
+      countriesServed: community.countriesServed?.join(", ") ?? "",
+      address: community.address ?? "",
+      contactEmail: community.contactEmail ?? "",
+      contactPhone: community.contactPhone ?? "",
+      website: community.website ?? "",
+      whoCanPost: community.whoCanPost ?? "ADMIN_ONLY",
+      groupCreationPermission: community.groupCreationPermission ?? "",
+      communityRules: community.communityRules ?? "",
+      embassyCountry: community.embassyCountry ?? "",
+      locationCountry: community.locationCountry ?? "",
+    });
+  }, [community]);
+
+  useEffect(() => {
+    if (!community) return;
+    const shouldOpenEdit = new URLSearchParams(location.search).get("edit") === "1";
+    if (shouldOpenEdit) {
+      setEditOpen(true);
+    }
+  }, [location.search, community]);
 
   const handleTogglePosting = (checked: boolean) => {
     setPostingEnabled(checked);
@@ -101,6 +168,59 @@ export default function CommunityDetail() {
   const handleToggleVendor = (checked: boolean) => {
     setVendorEnabled(checked);
     toast({ title: checked ? "Vendor mode enabled" : "Vendor mode disabled" });
+  };
+
+  const handleSaveEdit = async () => {
+    if (!community) return;
+    if (!editForm.name.trim()) {
+      toast({ title: "Validation error", description: "Community name is required.", variant: "destructive" });
+      return;
+    }
+
+    const countriesServed = editForm.countriesServed
+      .split(",")
+      .map((c) => c.trim())
+      .filter(Boolean);
+
+    try {
+      const result = await updateCommunityMutation({
+        variables: {
+          id: community.id,
+          input: {
+            name: editForm.name.trim(),
+            description: editForm.description.trim(),
+            countriesServed,
+            address: editForm.address.trim(),
+            contactEmail: editForm.contactEmail.trim(),
+            contactPhone: editForm.contactPhone.trim(),
+            website: editForm.website.trim(),
+            whoCanPost: editForm.whoCanPost,
+            groupCreationPermission: editForm.groupCreationPermission.trim(),
+            communityRules: editForm.communityRules.trim(),
+            embassyCountry: editForm.embassyCountry.trim(),
+            locationCountry: editForm.locationCountry.trim(),
+          },
+        },
+      });
+
+      const payload = result.data?.updateCommunity;
+      if (!payload?.success) {
+        const firstError = payload?.errors?.[0];
+        toast({
+          title: "Update failed",
+          description: firstError || "Failed to update community.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      await refetch();
+      setEditOpen(false);
+      toast({ title: "Community updated", description: "Changes were saved successfully." });
+    } catch (e) {
+      const message = e instanceof Error ? e.message : "Failed to update community.";
+      toast({ title: "Update failed", description: message, variant: "destructive" });
+    }
   };
 
   if (loading) {
@@ -184,7 +304,7 @@ export default function CommunityDetail() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="outline"><Edit className="mr-2 h-4 w-4" /> Edit</Button>
+            <Button variant="outline" onClick={() => setEditOpen(true)}><Edit className="mr-2 h-4 w-4" /> Edit</Button>
             <Button variant="outline" onClick={() => setLinkAssociationOpen(true)}><Link2 className="mr-2 h-4 w-4" /> Link Associations</Button>
             <Button variant="outline" onClick={() => setAssignAdminOpen(true)}><UserPlus className="mr-2 h-4 w-4" /> Assign Admins</Button>
             <Button variant="destructive" onClick={() => setSuspendOpen(true)}><Pause className="mr-2 h-4 w-4" /> Suspend</Button>
@@ -338,7 +458,7 @@ export default function CommunityDetail() {
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div>
-                    <CardTitle className="text-base">Members ({membersData.length})</CardTitle>
+                    <CardTitle className="text-base">Members ({communityMemberRows.length})</CardTitle>
                     <CardDescription>Community members and their roles.</CardDescription>
                   </div>
                   <div className="flex gap-2">
@@ -360,7 +480,7 @@ export default function CommunityDetail() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {membersData.map((member) => (
+                    {communityMemberRows.map((member) => (
                       <TableRow key={member.id} className="border-border/50">
                         <TableCell className="font-medium">{member.name}</TableCell>
                         <TableCell>
@@ -458,13 +578,13 @@ export default function CommunityDetail() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {eventsData.map((evt) => (
+                    {communityEvents.map((evt) => (
                       <TableRow key={evt.id} className="border-border/50">
                         <TableCell className="font-mono text-xs">{evt.id}</TableCell>
                         <TableCell className="font-medium">{evt.title}</TableCell>
-                        <TableCell>{evt.location}</TableCell>
-                        <TableCell className="text-muted-foreground">{evt.date}</TableCell>
-                        <TableCell>{evt.attendees}</TableCell>
+                        <TableCell>{evt.locationDetails?.city || evt.locationDetails?.venueName || evt.locationDetails?.platform || "—"}</TableCell>
+                        <TableCell className="text-muted-foreground">{evt.startAt || "—"}</TableCell>
+                        <TableCell>{evt.registrationCount ?? 0}</TableCell>
                         <TableCell>{getStatusBadge(evt.status)}</TableCell>
                         <TableCell>
                           <div className="flex gap-1">
@@ -506,14 +626,14 @@ export default function CommunityDetail() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {opportunitiesData.map((opp) => (
+                    {communityOpportunities.map((opp) => (
                       <TableRow key={opp.id} className="border-border/50">
                         <TableCell className="font-mono text-xs">{opp.id}</TableCell>
                         <TableCell className="font-medium">{opp.title}</TableCell>
                         <TableCell><Badge variant="outline">{opp.type}</Badge></TableCell>
-                        <TableCell>{opp.applicationsCount}</TableCell>
+                        <TableCell>{opp.applicationCount ?? 0}</TableCell>
                         <TableCell>{getStatusBadge(opp.status)}</TableCell>
-                        <TableCell className="text-muted-foreground">{opp.postedAt}</TableCell>
+                        <TableCell className="text-muted-foreground">{opp.createdAt}</TableCell>
                         <TableCell>
                           <div className="flex gap-1">
                             <Button variant="ghost" size="icon" className="text-success"><Check className="h-4 w-4" /></Button>
@@ -622,6 +742,95 @@ export default function CommunityDetail() {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Link Association Modal */}
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent className="sm:max-w-2xl max-h-[90vh]">
+          <DialogHeader>
+            <DialogTitle>Edit Community</DialogTitle>
+            <DialogDescription>Update basic details for {community.name}.</DialogDescription>
+          </DialogHeader>
+          <ScrollArea className="max-h-[65vh] pr-4">
+            <div className="space-y-4 py-2">
+              <div className="space-y-2">
+                <Label>Name <span className="text-destructive">*</span></Label>
+                <Input value={editForm.name} onChange={(e) => setEditForm((prev) => ({ ...prev, name: e.target.value }))} />
+              </div>
+              <div className="space-y-2">
+                <Label>Description</Label>
+                <Textarea value={editForm.description} onChange={(e) => setEditForm((prev) => ({ ...prev, description: e.target.value }))} rows={3} />
+              </div>
+              <div className="space-y-2">
+                <Label>Countries served (comma separated)</Label>
+                <Input
+                  placeholder="Belgium, Ghana"
+                  value={editForm.countriesServed}
+                  onChange={(e) => setEditForm((prev) => ({ ...prev, countriesServed: e.target.value }))}
+                />
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Embassy country</Label>
+                  <Input value={editForm.embassyCountry} onChange={(e) => setEditForm((prev) => ({ ...prev, embassyCountry: e.target.value }))} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Location country</Label>
+                  <Input value={editForm.locationCountry} onChange={(e) => setEditForm((prev) => ({ ...prev, locationCountry: e.target.value }))} />
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Contact email</Label>
+                  <Input type="email" value={editForm.contactEmail} onChange={(e) => setEditForm((prev) => ({ ...prev, contactEmail: e.target.value }))} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Contact phone</Label>
+                  <Input value={editForm.contactPhone} onChange={(e) => setEditForm((prev) => ({ ...prev, contactPhone: e.target.value }))} />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Website</Label>
+                <Input value={editForm.website} onChange={(e) => setEditForm((prev) => ({ ...prev, website: e.target.value }))} />
+              </div>
+              <div className="space-y-2">
+                <Label>Address</Label>
+                <Textarea value={editForm.address} onChange={(e) => setEditForm((prev) => ({ ...prev, address: e.target.value }))} rows={2} />
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Who can post</Label>
+                  <Select value={editForm.whoCanPost} onValueChange={(v) => setEditForm((prev) => ({ ...prev, whoCanPost: v }))}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent className="bg-popover border-border">
+                      <SelectItem value="ADMIN_ONLY">Admin only</SelectItem>
+                      <SelectItem value="ALL_MEMBERS">All members</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Group creation permission</Label>
+                  <Input
+                    placeholder="Admins Only"
+                    value={editForm.groupCreationPermission}
+                    onChange={(e) => setEditForm((prev) => ({ ...prev, groupCreationPermission: e.target.value }))}
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Community rules</Label>
+                <Textarea value={editForm.communityRules} onChange={(e) => setEditForm((prev) => ({ ...prev, communityRules: e.target.value }))} rows={4} />
+              </div>
+            </div>
+          </ScrollArea>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditOpen(false)}>Cancel</Button>
+            <Button onClick={handleSaveEdit} disabled={savingEdit}>
+              {savingEdit && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Save changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Link Association Modal */}
       <Dialog open={linkAssociationOpen} onOpenChange={setLinkAssociationOpen}>

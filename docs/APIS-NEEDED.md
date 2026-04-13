@@ -1,6 +1,8 @@
-# APIs needed in the app (not yet provided)
+# APIs needed in the app (System Admin)
 
-This document tracks **GraphQL (or REST) APIs that the admin hub UI is built to use but that are not yet implemented or exposed by the backend**. When an API is provided, update its status to **Provided** and add implementation details so the frontend can be wired to it.
+This document tracks **GraphQL APIs used by the Admin Hub (System Admin scope)** and whether they are currently available in the backend codebase.
+
+> Status in this file reflects **codebase availability** (resolver/schema present), not guaranteed live production deployment.
 
 ---
 
@@ -8,13 +10,9 @@ This document tracks **GraphQL (or REST) APIs that the admin hub UI is built to 
 
 | Status | Meaning |
 |--------|--------|
-| **Not provided** | Backend does not expose this operation yet. UI uses mock data or is stubbed. |
-| **Provided** | API is available. Add endpoint/schema reference and, when done, note when the admin hub was wired. |
-
-**Priority:**
-
-- **Required** — Needed for the feature to work end-to-end (list, create, get, update/delete).
-- **Optional** — Improves UX (e.g. publish/unpublish, registration actions) but the page can function with mocks or without it initially.
+| **Not provided** | Backend operation not found in API Gateway/Admin GraphQL contracts. |
+| **Provided** | Operation exists in backend contracts/resolvers and can be wired/used. |
+| **Partially provided** | Operation exists but contract/signature/filters do not fully match frontend expectation. |
 
 ---
 
@@ -22,11 +20,9 @@ This document tracks **GraphQL (or REST) APIs that the admin hub UI is built to 
 
 | Area | Provided | Wired in admin hub | What’s left |
 |------|----------|--------------------|-------------|
-| **Events** | All except `resendEventTicket` | Yes — list, get, create, update, delete, publish, unpublish, registrations, check-in, remove, cover via `getUploadUrl` | Backend: optional resend ticket. Hub: use real `ownerId` for create. |
-| **Opportunities** | All | Partially — list + applicants only | Hub: wire Create/Edit, Publish/Close/Delete, Accept/Reject, set priority. |
-| **Communities** | list, get, create | Yes — list, get, create | Backend: getCommunityStats, update, delete, suspend, link association, discoverAssociations. |
-
-See each section’s **“What’s left to do”** subsection for details.
+| **Events** | All listed + `unpublishEvent` | Mostly wired | Optional `resendEventTicket` only missing. |
+| **Opportunities** | All listed | Partially wired | UI wiring for Create/Edit/Publish/Close/Delete and application actions. |
+| **Communities** | Most core + moderation/member/media present | Partially wired | Finalize `updateCommunity` contract, add missing bulk/export/vendor/analytics/community-post moderation ops. |
 
 ---
 
@@ -139,12 +135,12 @@ See each section’s **“What’s left to do”** subsection for details.
 
 | Field | Detail |
 |-------|--------|
-| **Status** | **Not provided** |
+| **Status** | **Provided** |
 | **Priority** | Optional |
 | **Used in** | Event card dropdown Unpublish. |
 | **Variables** | `id: ID!`. |
 | **Returns** | Event with status. |
-| **Notes** | Not in provided schema; use updateEvent to set status if backend supports. |
+| **Notes** | Available in backend contracts. Wire UI action where needed. |
 
 ---
 
@@ -479,12 +475,12 @@ See each section’s **“What’s left to do”** subsection for details.
 
 | Field | Detail |
 |-------|--------|
-| **Status** | **Not provided** |
+| **Status** | **Provided** |
 | **Priority** | Optional |
 | **Used in** | Community detail “Link Associations” modal; Communities table row action. |
 | **Variables** | e.g. `communityId: ID!`, `associationId: ID!` or `associationIds: [ID!]!`. |
 | **Returns** | Success or updated community/associations. |
-| **Notes** | UI exists; no GraphQL operation or hook yet. `discoverAssociations` query exists for listing candidates. |
+| **Notes** | Backend contract exists (`linkAssociation`/`unlinkAssociation`). UI wiring still pending in some screens. |
 
 ---
 
@@ -492,100 +488,99 @@ See each section’s **“What’s left to do”** subsection for details.
 
 | Operation | Type | Status | Notes |
 |-----------|------|--------|--------|
-| `discoverAssociations` | Query | **Not provided** | List associations (e.g. for link-association picker). Hook: `useDiscoverAssociations()`. Mark Provided when backend supports it. |
+| `discoverAssociations` | Query | **Provided** | List associations (e.g. for link-association picker). Hook: `useDiscoverAssociations()`. |
 | `requestMembership` | Mutation | **Not provided** | Join community/association (member-facing). Hook: `useRequestMembership()`. |
 
 ---
 
-### Communities – summary table
+### Communities
+
+### Core + lifecycle + members + associations (current)
 
 | Operation | Type | Priority | Status |
 |-----------|------|----------|--------|
 | `listCommunities` | Query | Required | **Provided** |
 | `getCommunity` | Query | Required | **Provided** |
-| `getCommunityStats` | Query | Optional | **Not provided** |
 | `createCommunity` | Mutation | Required | **Provided** |
-| `updateCommunity` | Mutation | Optional | **Not provided** |
-| `deleteCommunity` | Mutation | Optional | **Not provided** |
-| Suspend / unsuspend community | Mutation | Optional | **Not provided** |
-| Link association to community | Mutation | Optional | **Not provided** |
-| `discoverAssociations` | Query | Optional | **Not provided** |
-| `requestMembership` | Mutation | Optional | **Not provided** |
+| `updateCommunity(input)` | Mutation | Required | **Partially provided** |
+| `softDeleteCommunity` | Mutation | Optional | **Provided** |
+| `restoreCommunity` | Mutation | Optional | **Provided** |
+| `listCommunityTypes` | Query | Required | **Provided** |
+| `createCommunityType` | Mutation | Optional | **Provided** |
+| `updateCommunityVisibility` | Mutation | Optional | **Provided** |
+| `updateCommunityJoinPolicy` | Mutation | Optional | **Provided** |
+| `discoverAssociations` | Query | Optional | **Provided** |
+| `linkAssociation` | Mutation | Optional | **Provided** |
+| `unlinkAssociation` | Mutation | Optional | **Provided** |
+| `getCommunityAssociations` | Query | Optional | **Provided** |
+| `listCommunityMembers` | Query | Required | **Provided** |
+| `inviteMember` | Mutation | Optional | **Provided** |
+| `removeMember` | Mutation | Optional | **Provided** |
+| `assignMemberRole` | Mutation | Optional | **Provided** |
+| `listPendingMemberships` | Query | Optional | **Provided** |
+| `approveMembership` | Mutation | Optional | **Provided** |
+| `rejectMembership` | Mutation | Optional | **Provided** |
+| `banUser` / `unbanUser` | Mutation | Optional | **Provided** |
+| `suspendMember` / `unsuspendMember` | Mutation | Optional | **Provided** |
+| `transferOwnership` | Mutation | Optional | **Provided** |
+| `getCommunityAvatarUploadUrl` | Mutation | Optional | **Provided** |
+| `getCommunityCoverUploadUrl` | Mutation | Optional | **Provided** |
+| `deleteEntityImage` | Mutation | Optional | **Provided** |
+| `getCommunityStats` | Query | Optional | **Provided** |
+
+### Missing or not aligned with frontend contract
+
+| Operation | Status | Notes |
+|---|---|---|
+| `updateCommunity(id, input)` | **Not finalized** | Current backend uses `updateCommunity(input)` with `input.communityId`. Finalize and freeze one signature. |
+| `deleteCommunity` (hard delete name) | **Not provided** | Closest available: `softDeleteCommunity`. |
+| `deleteCommunityType` | **Not provided** | Not found in gateway contract. |
+| `suspendCommunity` / `unsuspendCommunity` | **Not provided** | Only member-level suspend/unsuspend exists. |
+| `listCommunityAdmins(communityId)` | **Not provided** | Admin operations exist globally, not scoped list by community op name. |
+| `getPendingMembershipRequests` (exact op) | **Not provided** | Closest: `listPendingMemberships`. |
+| `listCommunityPosts` | **Not provided** | Community feed exists (`getCommunityFeed`), but not this exact moderation list contract. |
+| `approvePost` / `rejectPost` (community scoped) | **Not provided** | Global admin post actions exist, not these exact operations. |
+| `getCommunityVendorSettings` / `updateCommunityVendorSettings` | **Not provided** | Not found. |
+| `getCommunityAnalytics` | **Not provided** | Not found. |
+| `exportCommunityData` | **Not provided** | Not found. |
+| `bulkSuspendCommunities` | **Not provided** | Not found. |
+| `bulkLinkAssociations` | **Not provided** | Not found. |
+| `bulkExportCommunities` | **Not provided** | Not found. |
 
 ---
 
-### Communities – what’s left to do
+## Communities – backend execution checklist (System Admin)
 
-| Item | Status | Action |
-|------|--------|--------|
-| **Already wired** | | |
-| `listCommunities` | Provided + Wired | Communities page table. |
-| `getCommunity` | Provided + Wired | Community detail page. |
-| `createCommunity` | Provided + Wired | Create Community modal. |
-| **Backend not provided yet** | | |
-| `getCommunityStats` | Not provided | Optional. Hook exists; wire CommunityDetail stats when backend exposes it. |
-| `updateCommunity` | Not provided | Add operation + hook when backend provides; wire Edit community form. |
-| `deleteCommunity` | Not provided | Add operation + hook when backend provides; wire Delete action. |
-| Suspend / unsuspend | Not provided | Add operation + hook when backend provides; wire Suspend modal. |
-| Link association | Not provided | Add operation when backend provides; wire Link Associations modal. |
-| `discoverAssociations` | Not provided | For link-association picker. Hook exists. |
-| `requestMembership` | Not provided | Member-facing; lower priority for admin hub. |
+| Endpoint / Operation | Current status | Owner | ETA | Blocking UI |
+|---|---|---|---|---|
+| `updateCommunity(id, input)` final contract | Partially provided / not finalized | TBD | TBD | Edit community modal save |
+| `deleteCommunity(id)` alias/contract | Not provided | TBD | TBD | Row menu delete consistency |
+| `suspendCommunity` / `unsuspendCommunity` | Not provided | TBD | TBD | Community lifecycle controls |
+| `listCommunityAdmins(communityId)` | Not provided | TBD | TBD | Community admin panel |
+| `listCommunityPosts` + `approvePost`/`rejectPost` | Not provided | TBD | TBD | Posts tab moderation |
+| `getCommunityVendorSettings` / `updateCommunityVendorSettings` | Not provided | TBD | TBD | Vendor tab |
+| `getCommunityAnalytics` | Not provided | TBD | TBD | Analytics tab/cards |
+| `exportCommunityData` + bulk export | Not provided | TBD | TBD | Export actions |
+| `bulkSuspendCommunities` / `bulkLinkAssociations` | Not provided | TBD | TBD | Bulk action menu |
 
 ---
 
 ## How to update this file when an API is provided
 
-1. Find the operation in the section above (e.g. Events → `listEvents`).
-2. Change **Status** from **Not provided** to **Provided** in both the detailed block and the summary table.
-3. Under **Notes** (or in the table), add:
-   - Service or schema name (e.g. “Events service”),
-   - Link to schema/repo or internal doc if applicable,
-   - When the admin hub was wired (e.g. “Wired in admin-hub 2025-02-XX”).
+1. Change operation status to **Provided**.
+2. Add implementation reference (service, resolver, schema path).
+3. Add admin-hub wiring note and date.
 
-**Example** — after `listEvents` is provided and wired:
+Example:
 
-In the `listEvents` block, change:
-
-```markdown
-| **Status** | **Not provided** |
-...
-| **Notes** | UI filters by status... |
-```
-
-to:
-
-```markdown
-| **Status** | **Provided** |
-...
-| **Notes** | Events service. Wired in admin-hub 2025-02-XX. UI filters by status... |
-```
-
-And in the summary table:
-
-```markdown
-| `listEvents` | Query | Required | **Provided** |
-```
+- Status: **Not provided** → **Provided**
+- Notes: “Implemented in API Gateway + Community Service. Wired in admin-hub on YYYY-MM-DD.”
 
 ---
 
-## Backend checklists
+## System Admin policy reminders
 
-### Events
-
-When implementing the Events API, the admin hub expects:
-
-- **Auth:** All operations require the same admin Bearer token as the rest of the app.
-- **IDs:** Use `ID!` for `id`, `eventId`, `userId`, `registrationId`.
-- **Scoping:** If events belong to a community, support optional `communityId` in list/get/create/update so the UI can scope when opened from a community context.
-- **Enums:** The UI sends/receives strings for `status`, `eventType`, `paymentStatus`, `checkInStatus`; you can use GraphQL enums and map them in the client if needed.
-
-### Opportunities
-
-- **Auth:** Same admin Bearer token. `setOpportunityPriority` must be restricted to super-admins (return 403 for others).
-- **Input types:** Use the same shape as in `src/services/networks/graphql/opportunity/operations.ts` (ListOpportunitiesInput, CreateOpportunityInput, UpdateOpportunityInput, GetApplicationsInput, ReviewApplicationInput, SetOpportunityPriorityInput).
-- **Status flow:** DRAFT → PUBLISHED (publish), then close/delete. Applications: pending → shortlisted / rejected / accepted / hired, etc., per your schema.
-
-### Communities
-
-- **Auth:** Same admin Bearer token for list/get/create. Suspend/link-association may require community-admin or system-admin scope.
-- **Types:** Community, CreateCommunityInput, and list response should match `src/services/networks/graphql/admin/operations.ts` (Community, CommunityListResponse). getCommunity returns full Community; listCommunities returns communities + total.
+- All operations must enforce admin Bearer auth.
+- Community destructive/moderation operations should require `SYSTEM_ADMIN` or explicit scoped admin policy.
+- Keep operation names and payloads stable once frontend wiring starts.
+- Return deterministic errors (`code`, `message`, optional `field`, `details`).

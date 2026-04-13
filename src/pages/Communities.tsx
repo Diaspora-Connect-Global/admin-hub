@@ -18,7 +18,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { MultiSelect } from "@/components/ui/multi-select";
 import { Search, Plus, MoreHorizontal, Eye, Edit, Link2, Pause, ChevronDown, Download, FileJson, Store, X, BarChart3, Trash2, Upload, Globe, Loader2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
-import { useCreateCommunity, useDiscoverAssociations, useListCommunities } from "@/hooks/admin";
+import { useCreateCommunity, useDiscoverAssociations, useGetUsers, useListCommunities } from "@/hooks/admin";
 import type { CreateCommunityInput, Community } from "@/services/networks/graphql/admin";
 
 /** Table row shape for the communities list (mapped from API Community). */
@@ -83,12 +83,10 @@ const allCountries = [
 const countryOptions = allCountries.map(country => ({ label: country, value: country }));
 const typeOptions = ["Embassy", "NGO", "Church", "Association", "Club", "Other"];
 
-const mockAdmins = [
-  { id: "USR-001", name: "John Doe", email: "john@example.com" },
-  { id: "USR-002", name: "Jane Smith", email: "jane@example.com" },
-  { id: "USR-003", name: "Michael Brown", email: "michael@example.com" },
-  { id: "USR-004", name: "Sarah Wilson", email: "sarah@example.com" },
-];
+interface CommunityAdminDraft {
+  email: string;
+  password: string;
+}
 
 /** API-aligned create community form (Community Service CreateCommunityInput). */
 interface CreateFormData {
@@ -104,10 +102,11 @@ interface CreateFormData {
   countriesServed: string[];
   logoBanner: File | null;
   rules: string;
-  whoCanPost: string;
+  whoCanPost: "ADMIN_ONLY" | "ALL_MEMBERS";
   groupCreationPermission: string;
   postModeration: boolean;
-  communityAdmins: string[];
+  assignedAdminIds: string[];
+  communityAdmins: CommunityAdminDraft[];
   address: string;
   contactEmail: string;
   contactPhone: string;
@@ -128,9 +127,10 @@ const initialFormData: CreateFormData = {
   countriesServed: [],
   logoBanner: null,
   rules: "",
-  whoCanPost: "Admins Only",
+  whoCanPost: "ADMIN_ONLY",
   groupCreationPermission: "Admins Only",
   postModeration: true,
+  assignedAdminIds: [],
   communityAdmins: [],
   address: "",
   contactEmail: "",
@@ -183,6 +183,15 @@ export default function Communities() {
   const associationOptions = (
     associationsData as { discoverAssociations?: { associations?: Array<{ id: string; name: string }> } } | undefined
   )?.discoverAssociations?.associations ?? [];
+
+  const { data: usersData, loading: usersLoading } = useGetUsers({
+    limit: 200,
+    offset: 0,
+  });
+
+  const adminUserOptions = (
+    usersData as { getUsers?: { items?: Array<{ id: string; email: string; displayName?: string | null }> } } | undefined
+  )?.getUsers?.items ?? [];
 
   const filteredCommunities = rows
     .filter((community) => {
@@ -250,15 +259,30 @@ export default function Communities() {
       toast({ title: t('communities.validationError'), description: "Price amount and currency required when join is paid or payment type is set.", variant: "destructive" });
       return;
     }
+    for (const admin of formData.communityAdmins) {
+      if (!validateEmail(admin.email)) {
+        toast({ title: t('communities.validationError'), description: "Please enter a valid email for each new admin.", variant: "destructive" });
+        return;
+      }
+      if (!admin.password || admin.password.length < 8) {
+        toast({ title: t('communities.validationError'), description: "Each new admin password must be at least 8 characters.", variant: "destructive" });
+        return;
+      }
+    }
 
     const input: CreateCommunityInput = {
       name: formData.communityName.trim(),
       description: formData.description.trim() || "",
       visibility: formData.visibility,
-      joinPolicy: formData.joinPolicy,
+      joinPolicy: formData.joinPolicy === "FREE" ? "OPEN" : "PAID",
       paymentType: formData.paymentType,
       communityTypeId: formData.communityType,
+      assignedAdminIds: formData.assignedAdminIds,
+      whoCanPost: formData.whoCanPost,
     };
+    if (formData.communityAdmins.length > 0) {
+      input.communityAdmins = formData.communityAdmins;
+    }
     if (needsPrice && formData.priceAmount) {
       const amount = Number(formData.priceAmount);
       if (!Number.isFinite(amount) || amount < 0) {
@@ -297,12 +321,37 @@ export default function Communities() {
     setSelectedCommunity(null);
   };
 
-  const handleAdminToggle = (adminId: string) => {
+  const handleAssignedAdminToggle = (adminId: string) => {
     setFormData(prev => ({
       ...prev,
-      communityAdmins: prev.communityAdmins.includes(adminId)
-        ? prev.communityAdmins.filter(id => id !== adminId)
-        : [...prev.communityAdmins, adminId]
+      assignedAdminIds: prev.assignedAdminIds.includes(adminId)
+        ? prev.assignedAdminIds.filter(id => id !== adminId)
+        : [...prev.assignedAdminIds, adminId]
+    }));
+  };
+
+  const handleAddCommunityAdminDraft = () => {
+    setFormData(prev => ({
+      ...prev,
+      communityAdmins: [...prev.communityAdmins, { email: "", password: "" }],
+    }));
+  };
+
+  const handleCommunityAdminDraftChange = (
+    index: number,
+    field: "email" | "password",
+    value: string,
+  ) => {
+    setFormData(prev => ({
+      ...prev,
+      communityAdmins: prev.communityAdmins.map((admin, i) => i === index ? { ...admin, [field]: value } : admin),
+    }));
+  };
+
+  const handleRemoveCommunityAdminDraft = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      communityAdmins: prev.communityAdmins.filter((_, i) => i !== index),
     }));
   };
 
@@ -518,7 +567,9 @@ export default function Communities() {
                               <DropdownMenuItem onClick={() => navigate(`/communities/${community.id}`)}>
                                 <Eye className="mr-2 h-4 w-4" /> {t('communities.viewDetails')}
                               </DropdownMenuItem>
-                              <DropdownMenuItem><Edit className="mr-2 h-4 w-4" /> {t('communities.editCommunity')}</DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => navigate(`/communities/${community.id}?edit=1`)}>
+                                <Edit className="mr-2 h-4 w-4" /> {t('communities.editCommunity')}
+                              </DropdownMenuItem>
                               <DropdownMenuItem onClick={() => { setSelectedCommunity(community); setLinkAssociationOpen(true); }}>
                                 <Link2 className="mr-2 h-4 w-4" /> {t('communities.manageAssociations')}
                               </DropdownMenuItem>
@@ -717,10 +768,11 @@ export default function Communities() {
 
                 <div className="space-y-2">
                   <Label>{t('communities.form.whoCanPost')}</Label>
-                  <Select value={formData.whoCanPost} onValueChange={(value) => setFormData({ ...formData, whoCanPost: value })}>
+                  <Select value={formData.whoCanPost} onValueChange={(value: "ADMIN_ONLY" | "ALL_MEMBERS") => setFormData({ ...formData, whoCanPost: value })}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent className="bg-popover border-border">
-                      <SelectItem value="Admins Only">{t('communities.form.adminsOnly')}</SelectItem>
+                      <SelectItem value="ADMIN_ONLY">{t('communities.form.adminsOnly')}</SelectItem>
+                      <SelectItem value="ALL_MEMBERS">All members</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -749,32 +801,78 @@ export default function Communities() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label>{t('communities.form.communityAdmins')} <span className="text-destructive">*</span></Label>
+                  <Label>{t('communities.form.communityAdmins')} (existing users)</Label>
                   <div className="border border-border rounded-md p-3 max-h-32 overflow-y-auto bg-background">
-                    {mockAdmins.map((admin) => (
-                      <div key={admin.id} className="flex items-center space-x-2 py-1">
-                        <Checkbox 
-                          id={`admin-${admin.id}`}
-                          checked={formData.communityAdmins.includes(admin.id)}
-                          onCheckedChange={() => handleAdminToggle(admin.id)}
-                        />
-                        <label htmlFor={`admin-${admin.id}`} className="text-sm cursor-pointer flex-1">
-                          {admin.name} <span className="text-muted-foreground">({admin.email})</span>
-                        </label>
-                      </div>
-                    ))}
+                    {usersLoading ? (
+                      <p className="text-sm text-muted-foreground">Loading users...</p>
+                    ) : adminUserOptions.length === 0 ? (
+                      <p className="text-sm text-muted-foreground">No users found.</p>
+                    ) : (
+                      adminUserOptions.map((admin) => (
+                        <div key={admin.id} className="flex items-center space-x-2 py-1">
+                          <Checkbox
+                            id={`admin-${admin.id}`}
+                            checked={formData.assignedAdminIds.includes(admin.id)}
+                            onCheckedChange={() => handleAssignedAdminToggle(admin.id)}
+                          />
+                          <label htmlFor={`admin-${admin.id}`} className="text-sm cursor-pointer flex-1">
+                            {admin.displayName || admin.email} <span className="text-muted-foreground">({admin.email})</span>
+                          </label>
+                        </div>
+                      ))
+                    )}
                   </div>
-                  {formData.communityAdmins.length > 0 && (
+                  {formData.assignedAdminIds.length > 0 && (
                     <div className="flex flex-wrap gap-1 mt-2">
-                      {formData.communityAdmins.map((adminId) => {
-                        const admin = mockAdmins.find(a => a.id === adminId);
+                      {formData.assignedAdminIds.map((adminId) => {
+                        const admin = adminUserOptions.find(a => a.id === adminId);
                         return admin ? (
                           <Badge key={adminId} variant="secondary" className="gap-1">
-                            {admin.name}
-                            <X className="h-3 w-3 cursor-pointer" onClick={() => handleAdminToggle(adminId)} />
+                            {admin.displayName || admin.email}
+                            <X className="h-3 w-3 cursor-pointer" onClick={() => handleAssignedAdminToggle(adminId)} />
                           </Badge>
                         ) : null;
                       })}
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label>Create new community admins (optional)</Label>
+                    <Button type="button" variant="outline" size="sm" onClick={handleAddCommunityAdminDraft}>
+                      <Plus className="h-3.5 w-3.5 mr-1" /> Add admin
+                    </Button>
+                  </div>
+                  {formData.communityAdmins.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">No new admin accounts added.</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {formData.communityAdmins.map((admin, index) => (
+                        <div key={`community-admin-draft-${index}`} className="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto] gap-2 items-center">
+                          <Input
+                            type="email"
+                            placeholder="admin@example.com"
+                            value={admin.email}
+                            onChange={(e) => handleCommunityAdminDraftChange(index, "email", e.target.value)}
+                          />
+                          <Input
+                            type="password"
+                            placeholder="Password (min 8 chars)"
+                            value={admin.password}
+                            onChange={(e) => handleCommunityAdminDraftChange(index, "password", e.target.value)}
+                          />
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleRemoveCommunityAdminDraft(index)}
+                            aria-label="Remove admin"
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ))}
                     </div>
                   )}
                 </div>

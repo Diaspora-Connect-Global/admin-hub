@@ -479,7 +479,7 @@ export interface CommunityType {
   id: string;
   name: string;
   description?: string;
-  isEmbassy: boolean;
+  isEmbassy?: boolean;
 }
 
 /** Community (listCommunities / getCommunity(id) response). */
@@ -556,11 +556,17 @@ export interface CreateCommunityInput {
   name: string;
   description: string;
   visibility: "PUBLIC" | "PRIVATE";
-  joinPolicy: "FREE" | "PAID";
+  joinPolicy: "OPEN" | "FREE" | "PAID";
   paymentType: "NONE" | "ONE_TIME" | "SUBSCRIPTION";
   communityTypeId: string;
   priceAmount?: number;
   priceCurrency?: string;
+  assignedAdminIds?: string[];
+  whoCanPost?: "ADMIN_ONLY" | "ALL_MEMBERS";
+  communityAdmins?: Array<{
+    email: string;
+    password: string;
+  }>;
 }
 
 /** getCommunity(id: ID!): Community! */
@@ -608,7 +614,13 @@ export const GET_COMMUNITY = gql`
 
 /** createCommunity mutation result. */
 export interface CreateCommunityMutationResult {
-  createCommunity: { id: string; name: string; createdAt: string };
+  createCommunity: {
+    id: string;
+    name: string;
+    description?: string;
+    assignedAdminIds?: string[];
+    createdAt: string;
+  };
 }
 
 /** createCommunity(input: CreateCommunityInput!): Community! */
@@ -617,6 +629,8 @@ export const CREATE_COMMUNITY = gql`
     createCommunity(input: $input) {
       id
       name
+      description
+      assignedAdminIds
       createdAt
     }
   }
@@ -1236,7 +1250,6 @@ export const CREATE_ROLE_DEFINITION = gql`
 // ─── Extended Community Operations ───────────────────────────────────────────
 
 export interface UpdateCommunityInput {
-  communityId: string;
   name?: string;
   description?: string;
   whoCanPost?: string;
@@ -1251,13 +1264,30 @@ export interface UpdateCommunityInput {
   locationCountry?: string;
 }
 
+
+
+export interface CommunityMutationPayload {
+  success: boolean;
+  community?: {
+    id: string;
+    name: string;
+    description?: string;
+    updatedAt?: string;
+  } | null;
+  errors: string[];
+}
+
 export const UPDATE_COMMUNITY = gql`
-  mutation UpdateCommunity($input: UpdateCommunityInput!) {
-    updateCommunity(input: $input) {
-      id
-      name
-      description
-      updatedAt
+  mutation UpdateCommunity($id: ID!, $input: UpdateCommunityInput!) {
+    updateCommunity(id: $id, input: $input) {
+      success
+      community {
+        id
+        name
+        description
+        updatedAt
+      }
+      errors
     }
   }
 `;
