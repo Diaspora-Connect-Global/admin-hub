@@ -487,6 +487,7 @@ export interface Community {
   description?: string;
   visibility: string;
   joinPolicy: string;
+  paymentType?: string;
   address?: string;
   assignedAdminIds?: string[];
   avatarUrl?: string;
@@ -554,13 +555,22 @@ export interface CreateCommunityInput {
   name: string;
   description: string;
   visibility: "PUBLIC" | "PRIVATE";
-  joinPolicy: "OPEN" | "FREE" | "PAID";
+  joinPolicy: "OPEN" | "PAID";
   paymentType: "NONE" | "ONE_TIME" | "SUBSCRIPTION";
   communityTypeId: string;
   priceAmount?: number;
   priceCurrency?: string;
   assignedAdminIds?: string[];
   whoCanPost?: "ADMIN_ONLY" | "ALL_MEMBERS";
+  groupCreationPermission?: string;
+  countriesServed?: string[];
+  communityRules?: string;
+  contactEmail?: string;
+  contactPhone?: string;
+  website?: string;
+  address?: string;
+  embassyCountry?: string | null;
+  locationCountry?: string | null;
   communityAdmins?: Array<{
     email: string;
     password: string;
@@ -580,6 +590,7 @@ export const GET_COMMUNITY = gql`
       description
       visibility
       joinPolicy
+      paymentType
       communityTypeId
       communityType {
         id
@@ -616,7 +627,22 @@ export interface CreateCommunityMutationResult {
     id: string;
     name: string;
     description?: string;
-    assignedAdminIds?: string[];
+    visibility: string;
+    joinPolicy: string;
+    paymentType?: string;
+    priceAmount?: number | null;
+    priceCurrency?: string | null;
+    communityTypeId: string;
+    whoCanPost?: string;
+    groupCreationPermission?: string;
+    countriesServed?: string[];
+    communityRules?: string;
+    contactEmail?: string;
+    contactPhone?: string;
+    website?: string;
+    address?: string;
+    embassyCountry?: string | null;
+    locationCountry?: string | null;
     createdAt: string;
   };
 }
@@ -628,7 +654,22 @@ export const CREATE_COMMUNITY = gql`
       id
       name
       description
-      assignedAdminIds
+      visibility
+      joinPolicy
+      paymentType
+      priceAmount
+      priceCurrency
+      communityTypeId
+      whoCanPost
+      groupCreationPermission
+      countriesServed
+      communityRules
+      contactEmail
+      contactPhone
+      website
+      address
+      embassyCountry
+      locationCountry
       createdAt
     }
   }
@@ -1271,7 +1312,17 @@ export interface CommunityMutationPayload {
     id: string;
     name: string;
     description?: string;
-    updatedAt?: string;
+    communityTypeId?: string;
+    whoCanPost?: string;
+    groupCreationPermission?: string;
+    countriesServed?: string[];
+    communityRules?: string;
+    contactEmail?: string;
+    contactPhone?: string;
+    website?: string;
+    address?: string;
+    embassyCountry?: string | null;
+    locationCountry?: string | null;
   } | null;
   errors: string[];
 }
@@ -1284,29 +1335,51 @@ export const UPDATE_COMMUNITY = gql`
         id
         name
         description
-        updatedAt
+        communityTypeId
+        whoCanPost
+        groupCreationPermission
+        countriesServed
+        communityRules
+        contactEmail
+        contactPhone
+        website
+        address
+        embassyCountry
+        locationCountry
       }
       errors
     }
   }
 `;
 
+export interface UpdateCommunityVisibilityInput {
+  communityId: string;
+  visibility: string;
+}
+
+export interface UpdateCommunityJoinPolicyInput {
+  communityId: string;
+  joinPolicy: string;
+  priceAmount?: number | null;
+  priceCurrency?: string | null;
+}
+
 export const UPDATE_COMMUNITY_VISIBILITY = gql`
-  mutation UpdateCommunityVisibility($communityId: String!, $visibility: String!) {
-    updateCommunityVisibility(input: { communityId: $communityId, visibility: $visibility }) {
+  mutation UpdateCommunityVisibility($input: UpdateCommunityVisibilityInput!) {
+    updateCommunityVisibility(input: $input) {
       id
       visibility
-      updatedAt
     }
   }
 `;
 
 export const UPDATE_COMMUNITY_JOIN_POLICY = gql`
-  mutation UpdateCommunityJoinPolicy($communityId: String!, $joinPolicy: String!, $priceAmount: Float, $priceCurrency: String) {
-    updateCommunityJoinPolicy(input: { communityId: $communityId, joinPolicy: $joinPolicy, priceAmount: $priceAmount, priceCurrency: $priceCurrency }) {
+  mutation UpdateCommunityJoinPolicy($input: UpdateCommunityJoinPolicyInput!) {
+    updateCommunityJoinPolicy(input: $input) {
       id
       joinPolicy
-      updatedAt
+      priceAmount
+      priceCurrency
     }
   }
 `;

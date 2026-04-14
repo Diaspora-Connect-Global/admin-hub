@@ -27,7 +27,13 @@ import {
   useUpdateCommunityJoinPolicy,
   useUpdateCommunityVisibility,
 } from "@/hooks/admin";
+import { useCreateAdmin, useListAdmins, useAssignAdminRole } from "@/hooks/admin/useAdminAccounts";
 import { useLinkAssociation } from "@/hooks/admin/useAssociation";
+import {
+  countriesServedLabelsToIso2,
+  groupCreationUiToApi,
+  singleCountryLabelToIso2,
+} from "@/lib/countriesServedIso";
 import { useGetEventsByOwner } from "@/hooks/events";
 import { useListOpportunities } from "@/hooks/opportunity";
 import { OwnerType } from "@/types/opportunities";
@@ -188,6 +194,30 @@ export default function CommunityDetail() {
 
   const [linkAssociationMutation, { loading: linkingAssociation }] = useLinkAssociation();
   const [assignAdminOpen, setAssignAdminOpen] = useState(false);
+  const [assignAdminTab, setAssignAdminTab] = useState<"existing" | "create">("existing");
+  const [selectedExistingAdminId, setSelectedExistingAdminId] = useState("");
+  const [newAdminEmail, setNewAdminEmail] = useState("");
+  const [newAdminPassword, setNewAdminPassword] = useState("");
+  const [newAdminConfirmPassword, setNewAdminConfirmPassword] = useState("");
+  const [assignAdminSubmitting, setAssignAdminSubmitting] = useState(false);
+  const { data: listAdminsData, loading: listAdminsLoading } = useListAdmins(200, 0);
+  const [assignAdminRoleMutation] = useAssignAdminRole();
+  const [createAdminMutation] = useCreateAdmin();
+
+  const adminAccounts = listAdminsData?.listAdmins?.admins ?? [];
+  const eligibleExistingAdmins = id
+    ? adminAccounts.filter(
+        (a) =>
+          a.status === "ACTIVE" &&
+          !a.roles.some(
+            (r) =>
+              r.roleType === "COMMUNITY_ADMIN" &&
+              r.scopeType === "COMMUNITY" &&
+              r.scopeId === id,
+          ),
+      )
+    : [];
+
   const [suspendOpen, setSuspendOpen] = useState(false);
   const [inviteMemberOpen, setInviteMemberOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
@@ -222,7 +252,10 @@ export default function CommunityDetail() {
       communityType: community.communityTypeId ?? community.communityType?.name ?? "",
       visibility: community.visibility === "PRIVATE" ? "PRIVATE" : "PUBLIC",
       joinPolicy: joinPolicyFromCommunity(community.joinPolicy),
-      paymentType: "NONE",
+      paymentType:
+        community.paymentType === "ONE_TIME" || community.paymentType === "SUBSCRIPTION"
+          ? community.paymentType
+          : "NONE",
       priceAmount: community.priceAmount != null ? String(community.priceAmount) : "",
       priceCurrency: community.priceCurrency ?? "EUR",
       countriesServed: [...(community.countriesServed ?? [])],
@@ -307,6 +340,138 @@ export default function CommunityDetail() {
     }
   };
 
+  const resetAssignAdminForm = () => {
+    setAssignAdminTab("existing");
+    setSelectedExistingAdminId("");
+    setNewAdminEmail("");
+    setNewAdminPassword("");
+    setNewAdminConfirmPassword("");
+  };
+
+  const handleAssignAdminDialogChange = (open: boolean) => {
+    setAssignAdminOpen(open);
+    if (!open) resetAssignAdminForm();
+  };
+
+  const handleAssignExistingCommunityAdmin = async () => {
+    if (!id || !selectedExistingAdminId) {
+      toast({
+        title: t("communities.validationError"),
+        description: t("communities.assignAdmin.selectAdmin"),
+        variant: "destructive",
+      });
+      return;
+    }
+    setAssignAdminSubmitting(true);
+    try {
+      const result = await assignAdminRoleMutation({
+        variables: {
+          input: {
+            adminId: selectedExistingAdminId,
+            roleType: "COMMUNITY_ADMIN",
+            scopeType: "COMMUNITY",
+            scopeId: id,
+          },
+        },
+      });
+      if (result.data?.assignAdminRole?.success) {
+        toast({
+          title: t("communities.assignAdmin.successTitle"),
+          description: t("communities.assignAdmin.successExisting"),
+        });
+        handleAssignAdminDialogChange(false);
+        await refetch();
+      } else {
+        toast({
+          title: t("communities.validationError"),
+          description: result.data?.assignAdminRole?.message ?? t("communities.assignAdmin.requestFailed"),
+          variant: "destructive",
+        });
+      }
+    } catch (e) {
+      toast({
+        title: t("communities.validationError"),
+        description: e instanceof Error ? e.message : String(e),
+        variant: "destructive",
+      });
+    } finally {
+      setAssignAdminSubmitting(false);
+    }
+  };
+
+  const handleCreateCommunityAdmin = async () => {
+    if (!id) return;
+    const email = newAdminEmail.trim();
+    if (!email) {
+      toast({
+        title: t("communities.validationError"),
+        description: t("communities.invalidEmail"),
+        variant: "destructive",
+      });
+      return;
+    }
+    if (!newAdminPassword.trim()) {
+      toast({
+        title: t("communities.validationError"),
+        description: t("communities.assignAdmin.passwordRequired"),
+        variant: "destructive",
+      });
+      return;
+    }
+    if (newAdminPassword.length < 8) {
+      toast({
+        title: t("communities.validationError"),
+        description: t("communities.assignAdmin.passwordTooShort"),
+        variant: "destructive",
+      });
+      return;
+    }
+    if (newAdminPassword !== newAdminConfirmPassword) {
+      toast({
+        title: t("communities.validationError"),
+        description: t("communities.assignAdmin.passwordMismatch"),
+        variant: "destructive",
+      });
+      return;
+    }
+    setAssignAdminSubmitting(true);
+    try {
+      const result = await createAdminMutation({
+        variables: {
+          input: {
+            email,
+            password: newAdminPassword,
+            adminType: "COMMUNITY_ADMIN",
+            scopeType: "COMMUNITY",
+            scopeId: id,
+          },
+        },
+      });
+      if (result.data?.createAdmin?.success) {
+        toast({
+          title: t("communities.assignAdmin.successTitle"),
+          description: t("communities.assignAdmin.successCreate"),
+        });
+        handleAssignAdminDialogChange(false);
+        await refetch();
+      } else {
+        toast({
+          title: t("communities.validationError"),
+          description: result.data?.createAdmin?.message ?? t("communities.assignAdmin.requestFailed"),
+          variant: "destructive",
+        });
+      }
+    } catch (e) {
+      toast({
+        title: t("communities.validationError"),
+        description: e instanceof Error ? e.message : String(e),
+        variant: "destructive",
+      });
+    } finally {
+      setAssignAdminSubmitting(false);
+    }
+  };
+
   const handleSaveEdit = async () => {
     if (!community) return;
     if (!editForm.name.trim()) {
@@ -359,7 +524,7 @@ export default function CommunityDetail() {
       priceAmountNum = amount;
     }
 
-    const countriesServed = [...editForm.countriesServed].map((c) => c.trim()).filter(Boolean);
+    const countriesServed = countriesServedLabelsToIso2(editForm.countriesServed);
     const desiredJoinApi = joinPolicyToApi(editForm.joinPolicy);
 
     try {
@@ -375,10 +540,10 @@ export default function CommunityDetail() {
             contactPhone: editForm.contactPhone.trim(),
             website: editForm.website.trim(),
             whoCanPost: editForm.whoCanPost,
-            groupCreationPermission: editForm.groupCreationPermission.trim(),
+            groupCreationPermission: groupCreationUiToApi(editForm.groupCreationPermission),
             communityRules: editForm.rules.trim(),
-            embassyCountry: editForm.embassyCountry.trim(),
-            locationCountry: editForm.locationCountry.trim(),
+            embassyCountry: singleCountryLabelToIso2(editForm.embassyCountry),
+            locationCountry: singleCountryLabelToIso2(editForm.locationCountry),
             communityTypeId: editForm.communityType.trim(),
           },
         },
@@ -397,18 +562,27 @@ export default function CommunityDetail() {
 
       if (editForm.visibility !== community.visibility) {
         await updateVisibilityMutation({
-          variables: { communityId: community.id, visibility: editForm.visibility },
+          variables: {
+            input: { communityId: community.id, visibility: editForm.visibility },
+          },
         });
       }
 
+      const joinPolicyInput: {
+        communityId: string;
+        joinPolicy: string;
+        priceAmount?: number;
+        priceCurrency?: string;
+      } = {
+        communityId: community.id,
+        joinPolicy: desiredJoinApi,
+      };
+      if (desiredJoinApi === "PAID" && priceAmountNum != null) {
+        joinPolicyInput.priceAmount = priceAmountNum;
+        joinPolicyInput.priceCurrency = editForm.priceCurrency.trim() || "EUR";
+      }
       await updateJoinPolicyMutation({
-        variables: {
-          communityId: community.id,
-          joinPolicy: desiredJoinApi,
-          ...(needsPrice && priceAmountNum != null
-            ? { priceAmount: priceAmountNum, priceCurrency: editForm.priceCurrency }
-            : {}),
-        },
+        variables: { input: joinPolicyInput },
       });
 
       await refetch();
@@ -1314,27 +1488,119 @@ export default function CommunityDetail() {
       </Dialog>
 
       {/* Assign Admin Modal */}
-      <Dialog open={assignAdminOpen} onOpenChange={setAssignAdminOpen}>
-        <DialogContent className="sm:max-w-md">
+      <Dialog open={assignAdminOpen} onOpenChange={handleAssignAdminDialogChange}>
+        <DialogContent className="sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>Assign Community Admin</DialogTitle>
-            <DialogDescription>Assign admin privileges to a user.</DialogDescription>
+            <DialogTitle>{t("communities.assignAdmin.title")}</DialogTitle>
+            <DialogDescription>{t("communities.assignAdmin.description")}</DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>Select User</Label>
-              <Select>
-                <SelectTrigger><SelectValue placeholder="Search users..." /></SelectTrigger>
-                <SelectContent className="bg-popover border-border">
-                  <SelectItem value="usr1">Kwame Asante</SelectItem>
-                  <SelectItem value="usr2">Ama Owusu</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
+          <Tabs value={assignAdminTab} onValueChange={(v) => setAssignAdminTab(v as "existing" | "create")} className="py-2">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="existing">{t("communities.assignAdmin.tabExisting")}</TabsTrigger>
+              <TabsTrigger value="create">{t("communities.assignAdmin.tabCreate")}</TabsTrigger>
+            </TabsList>
+            <TabsContent value="existing" className="space-y-4 pt-4">
+              <div className="space-y-2">
+                <Label>{t("communities.assignAdmin.selectAdmin")}</Label>
+                <Select
+                  value={selectedExistingAdminId || "__none__"}
+                  onValueChange={(v) => setSelectedExistingAdminId(v === "__none__" ? "" : v)}
+                  disabled={listAdminsLoading || assignAdminSubmitting}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder={t("communities.assignAdmin.selectPlaceholder")} />
+                  </SelectTrigger>
+                  <SelectContent className="bg-popover border-border max-h-64">
+                    <SelectItem value="__none__">{t("communities.assignAdmin.selectPlaceholder")}</SelectItem>
+                    {listAdminsLoading ? (
+                      <SelectItem value="__loading" disabled>
+                        {t("communities.assignAdmin.loadingAdmins")}
+                      </SelectItem>
+                    ) : eligibleExistingAdmins.length === 0 ? (
+                      <SelectItem value="__empty" disabled>
+                        {t("communities.assignAdmin.noEligibleAdmins")}
+                      </SelectItem>
+                    ) : (
+                      eligibleExistingAdmins.map((admin) => (
+                        <SelectItem key={admin.id} value={admin.id}>
+                          {admin.email}
+                        </SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
+            </TabsContent>
+            <TabsContent value="create" className="space-y-4 pt-4">
+              <div className="space-y-2">
+                <Label htmlFor="assign-admin-email">{t("common.email")}</Label>
+                <Input
+                  id="assign-admin-email"
+                  type="email"
+                  autoComplete="off"
+                  placeholder={t("communities.assignAdmin.emailPlaceholder")}
+                  value={newAdminEmail}
+                  onChange={(e) => setNewAdminEmail(e.target.value)}
+                  disabled={assignAdminSubmitting}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="assign-admin-password">{t("communities.assignAdmin.initialPassword")}</Label>
+                <Input
+                  id="assign-admin-password"
+                  type="password"
+                  autoComplete="new-password"
+                  value={newAdminPassword}
+                  onChange={(e) => setNewAdminPassword(e.target.value)}
+                  disabled={assignAdminSubmitting}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="assign-admin-confirm">{t("communities.assignAdmin.confirmPassword")}</Label>
+                <Input
+                  id="assign-admin-confirm"
+                  type="password"
+                  autoComplete="new-password"
+                  value={newAdminConfirmPassword}
+                  onChange={(e) => setNewAdminConfirmPassword(e.target.value)}
+                  disabled={assignAdminSubmitting}
+                />
+              </div>
+            </TabsContent>
+          </Tabs>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setAssignAdminOpen(false)}>Cancel</Button>
-            <Button onClick={() => { toast({ title: "Admin Assigned" }); setAssignAdminOpen(false); }}>Assign</Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => handleAssignAdminDialogChange(false)}
+              disabled={assignAdminSubmitting}
+            >
+              {t("common.cancel")}
+            </Button>
+            <Button
+              type="button"
+              disabled={
+                assignAdminSubmitting ||
+                (assignAdminTab === "existing" &&
+                  (!selectedExistingAdminId || listAdminsLoading || eligibleExistingAdmins.length === 0))
+              }
+              onClick={
+                assignAdminTab === "existing"
+                  ? handleAssignExistingCommunityAdmin
+                  : handleCreateCommunityAdmin
+              }
+            >
+              {assignAdminSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  {t("common.loading")}
+                </>
+              ) : assignAdminTab === "existing" ? (
+                t("communities.assignAdmin.assignRole")
+              ) : (
+                t("communities.assignAdmin.createAdmin")
+              )}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

@@ -40,6 +40,8 @@ import {
   type AssociationMember,
   type MembershipActionInput,
   type UpdateCommunityInput,
+  type UpdateCommunityVisibilityInput,
+  type UpdateCommunityJoinPolicyInput,
   type CommunityMutationPayload,
 } from "@/services/networks/graphql/admin/operations";
 
@@ -234,15 +236,22 @@ export function useUpdateCommunity() {
 
 export function useUpdateCommunityVisibility() {
   return useMutation<
-    { updateCommunityVisibility: { id: string; visibility: string; updatedAt: string } },
-    { communityId: string; visibility: string }
+    { updateCommunityVisibility: { id: string; visibility: string } },
+    { input: UpdateCommunityVisibilityInput }
   >(UPDATE_COMMUNITY_VISIBILITY);
 }
 
 export function useUpdateCommunityJoinPolicy() {
   return useMutation<
-    { updateCommunityJoinPolicy: { id: string; joinPolicy: string; updatedAt: string } },
-    { communityId: string; joinPolicy: string; priceAmount?: number; priceCurrency?: string }
+    {
+      updateCommunityJoinPolicy: {
+        id: string;
+        joinPolicy: string;
+        priceAmount?: number | null;
+        priceCurrency?: string | null;
+      };
+    },
+    { input: UpdateCommunityJoinPolicyInput }
   >(UPDATE_COMMUNITY_JOIN_POLICY);
 }
 

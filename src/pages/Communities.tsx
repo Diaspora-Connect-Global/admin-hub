@@ -20,6 +20,11 @@ import { Search, Plus, MoreHorizontal, Eye, Edit, Link2, Pause, ChevronDown, Dow
 import { toast } from "@/hooks/use-toast";
 import { useCreateCommunity, useDiscoverAssociations, useGetUsers, useListCommunities } from "@/hooks/admin";
 import type { CreateCommunityInput, Community } from "@/services/networks/graphql/admin";
+import {
+  countriesServedLabelsToIso2,
+  groupCreationUiToApi,
+  singleCountryLabelToIso2,
+} from "@/lib/countriesServedIso";
 
 /** Table row shape for the communities list (mapped from API Community). */
 interface CommunityRow {
@@ -266,15 +271,30 @@ export default function Communities() {
       }
     }
 
+    const joinPolicyApi: CreateCommunityInput["joinPolicy"] =
+      formData.joinPolicy === "FREE" ? "OPEN" : "PAID";
+    const paymentTypeApi: CreateCommunityInput["paymentType"] =
+      formData.joinPolicy === "FREE" ? "NONE" : formData.paymentType;
+    const isEmbassy = formData.communityType === "Embassy";
+
     const input: CreateCommunityInput = {
       name: formData.communityName.trim(),
       description: formData.description.trim() || "",
       visibility: formData.visibility,
-      joinPolicy: formData.joinPolicy === "FREE" ? "OPEN" : "PAID",
-      paymentType: formData.paymentType,
+      joinPolicy: joinPolicyApi,
+      paymentType: paymentTypeApi,
       communityTypeId: formData.communityType,
       assignedAdminIds: formData.assignedAdminIds,
       whoCanPost: formData.whoCanPost,
+      groupCreationPermission: groupCreationUiToApi(formData.groupCreationPermission),
+      countriesServed: countriesServedLabelsToIso2(formData.countriesServed),
+      communityRules: formData.rules.trim() || "",
+      contactEmail: formData.contactEmail.trim() || "",
+      contactPhone: formData.contactPhone.trim() || "",
+      website: formData.website.trim() || "",
+      address: formData.address.trim() || "",
+      embassyCountry: isEmbassy ? singleCountryLabelToIso2(formData.embassyCountry) : null,
+      locationCountry: isEmbassy ? singleCountryLabelToIso2(formData.locationCountry) : null,
     };
     if (formData.communityAdmins.length > 0) {
       input.communityAdmins = formData.communityAdmins;
