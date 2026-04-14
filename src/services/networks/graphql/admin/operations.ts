@@ -1078,6 +1078,7 @@ export const GET_ASSOCIATION = gql`
       visibility
       joinPolicy
       avatarUrl
+      coverImageUrl
       createdAt
       updatedAt
       memberCount
@@ -1129,6 +1130,7 @@ export const SEARCH_ASSOCIATIONS = gql`
         countriesServed
         membershipStatus
         avatarUrl
+        coverImageUrl
         createdAt
       }
       total
@@ -1137,8 +1139,6 @@ export const SEARCH_ASSOCIATIONS = gql`
     }
   }
 `;
-
-/** When the backend adds `coverImageUrl` on `Association`, add it to `GET_ASSOCIATION` and `SEARCH_ASSOCIATIONS` above. */
 
 export const UPDATE_ASSOCIATION = gql`
   mutation UpdateAssociation($input: UpdateAssociationInput!) {
@@ -1742,7 +1742,7 @@ export interface AdminDispute {
   id: string;
   paymentIntentId?: string;
   escrowId?: string;
-  status: "OPEN" | "UNDER_REVIEW" | "RESOLVED" | "CLOSED";
+  status: "OPEN" | "UNDER_REVIEW" | "RESOLVED" | "CLOSED" | "ESCALATED";
   reason?: string;
   description?: string;
   resolution?: string;
@@ -1755,7 +1755,13 @@ export interface AdminDispute {
 export interface AdminEscrow {
   id: string;
   paymentIntentId?: string;
-  status: "HELD" | "RELEASED" | "FROZEN" | "REFUNDED";
+  status:
+    | "PENDING"
+    | "HELD"
+    | "RELEASED"
+    | "REFUNDED"
+    | "FROZEN"
+    | "DISPUTED";
   totalAmount: number;
   releasedAmount?: number;
   remainingAmount?: number;
@@ -1914,7 +1920,7 @@ export const GET_SYSTEM_HEALTH = gql`
 `;
 
 export const GET_PLATFORM_ANALYTICS = gql`
-  query GetPlatformAnalytics($period: String) {
+  query GetPlatformAnalytics($period: String!) {
     getPlatformAnalytics(period: $period) {
       period
       contentRemovedCount

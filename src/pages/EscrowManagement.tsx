@@ -81,10 +81,12 @@ const mockAttachments = [
 
 // Map API uppercase statuses to display labels
 const STATUS_DISPLAY: Record<AdminEscrow["status"], string> = {
+  PENDING: "Pending",
   HELD: "Held",
   RELEASED: "Released",
   FROZEN: "Frozen",
   REFUNDED: "Refunded",
+  DISPUTED: "Disputed",
 };
 
 export default function EscrowManagement() {
@@ -133,10 +135,12 @@ export default function EscrowManagement() {
 
   const getStatusBadge = (status: AdminEscrow["status"]) => {
     const variants: Record<AdminEscrow["status"], string> = {
+      PENDING: "bg-yellow-500/20 text-yellow-400 border-yellow-500/50",
       HELD: "bg-blue-500/20 text-blue-400 border-blue-500/50",
       RELEASED: "bg-emerald-500/20 text-emerald-400 border-emerald-500/50",
       FROZEN: "bg-cyan-500/20 text-cyan-400 border-cyan-500/50",
       REFUNDED: "bg-muted text-muted-foreground",
+      DISPUTED: "bg-red-500/20 text-red-400 border-red-500/50",
     };
     return (
       <Badge variant="outline" className={variants[status]}>
@@ -306,10 +310,12 @@ export default function EscrowManagement() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Statuses</SelectItem>
+                <SelectItem value="PENDING">Pending</SelectItem>
                 <SelectItem value="HELD">Held</SelectItem>
                 <SelectItem value="RELEASED">Released</SelectItem>
                 <SelectItem value="FROZEN">Frozen</SelectItem>
                 <SelectItem value="REFUNDED">Refunded</SelectItem>
+                <SelectItem value="DISPUTED">Disputed</SelectItem>
               </SelectContent>
             </Select>
           </div>

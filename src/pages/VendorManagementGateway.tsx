@@ -74,9 +74,10 @@ function parseJson(raw: string): JsonInput | null {
   }
 }
 
-function firstText(value: Record<string, unknown>, keys: string[]): string {
+function firstText(value: object, keys: string[]): string {
+  const record = value as Record<string, unknown>;
   for (const key of keys) {
-    const candidate = value[key];
+    const candidate = record[key];
     if (typeof candidate === "string" && candidate.trim()) return candidate;
   }
   return "-";
@@ -466,10 +467,10 @@ export default function VendorManagementGateway() {
                     <p className="text-sm text-destructive">{extractErrorMessage(vendorError)}</p>
                   ) : vendor ? (
                     <div className="space-y-1 text-sm">
-                      <p><span className="text-muted-foreground">ID:</span> {firstText(vendor as JsonInput, ["id"])}</p>
-                      <p><span className="text-muted-foreground">Type:</span> {firstText(vendor as JsonInput, ["vendorType"])}</p>
-                      <p><span className="text-muted-foreground">Name:</span> {firstText(vendor as JsonInput, ["displayName"])}</p>
-                      <p><span className="text-muted-foreground">Status:</span> {firstText(vendor as JsonInput, ["status"])}</p>
+                      <p><span className="text-muted-foreground">ID:</span> {firstText(vendor, ["id"])}</p>
+                      <p><span className="text-muted-foreground">Type:</span> {firstText(vendor, ["vendorType"])}</p>
+                      <p><span className="text-muted-foreground">Name:</span> {firstText(vendor, ["displayName"])}</p>
+                      <p><span className="text-muted-foreground">Status:</span> {firstText(vendor, ["status"])}</p>
                     </div>
                   ) : (
                     <p className="text-sm text-muted-foreground">No data</p>
@@ -621,9 +622,9 @@ export default function VendorManagementGateway() {
                       products.map((product) => (
                         <TableRow key={product.id}>
                           <TableCell>{product.id}</TableCell>
-                          <TableCell>{firstText(product as JsonInput, ["name", "title"])}</TableCell>
-                          <TableCell>{firstText(product as JsonInput, ["status"])}</TableCell>
-                          <TableCell>{firstText(product as JsonInput, ["createdAt", "updatedAt"])}</TableCell>
+                          <TableCell>{firstText(product, ["name", "title"])}</TableCell>
+                          <TableCell>{firstText(product, ["status"])}</TableCell>
+                          <TableCell>{firstText(product, ["createdAt", "updatedAt"])}</TableCell>
                           <TableCell className="text-right space-x-2">
                             <Button
                               size="sm"
@@ -709,9 +710,9 @@ export default function VendorManagementGateway() {
                       servicePackages.map((item) => (
                         <TableRow key={item.id}>
                           <TableCell>{item.id}</TableCell>
-                          <TableCell>{firstText(item as JsonInput, ["title", "name"])}</TableCell>
-                          <TableCell>{firstText(item as JsonInput, ["status"])}</TableCell>
-                          <TableCell>{firstText(item as JsonInput, ["createdAt", "updatedAt"])}</TableCell>
+                          <TableCell>{firstText(item, ["title", "name"])}</TableCell>
+                          <TableCell>{firstText(item, ["status"])}</TableCell>
+                          <TableCell>{firstText(item, ["createdAt", "updatedAt"])}</TableCell>
                           <TableCell className="text-right">
                             <Button
                               size="sm"
@@ -791,12 +792,12 @@ export default function VendorManagementGateway() {
                       orders.map((order) => (
                         <TableRow key={order.id}>
                           <TableCell>{order.id}</TableCell>
-                          <TableCell>{firstText(order as JsonInput, ["status"])}</TableCell>
+                          <TableCell>{firstText(order, ["status"])}</TableCell>
                           <TableCell>
-                            {String(order.amount ?? "-")}
+                            {String(order.amount ?? order.totalAmount ?? "-")}
                             {order.currency ? ` ${order.currency}` : ""}
                           </TableCell>
-                          <TableCell>{firstText(order as JsonInput, ["createdAt", "updatedAt"])}</TableCell>
+                          <TableCell>{firstText(order, ["createdAt", "updatedAt"])}</TableCell>
                         </TableRow>
                       ))
                     )}

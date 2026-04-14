@@ -11,7 +11,6 @@ import {
   RefreshCw,
   Search,
   Calendar,
-  Activity,
   Eye,
   TrendingUp,
   TrendingDown,
@@ -51,11 +50,14 @@ import {
 } from "recharts";
 import { useToast } from "@/hooks/use-toast";
 import {
+  dashboardDateRangeToAnalyticsPeriod,
   useGetDashboardStats,
   useGetSystemHealth,
   useGetPlatformAnalytics,
   useAdminListDisputes,
   useAdminListEscrows,
+  type AdminDispute,
+  type AdminEscrow,
 } from "@/hooks/admin";
 
 interface MetricCardProps {
@@ -103,9 +105,9 @@ export default function Dashboard() {
 
   const { data: statsData, refetch: refetchStats } = useGetDashboardStats();
   const { data: healthData, refetch: refetchHealth } = useGetSystemHealth();
-  const { data: analyticsData, refetch: refetchAnalytics } = useGetPlatformAnalytics(
-    dateRange === "7" ? "last_7_days" : dateRange === "90" ? "last_90_days" : "last_30_days"
-  );
+  const analyticsPeriod = dashboardDateRangeToAnalyticsPeriod(dateRange);
+  const { data: analyticsData, refetch: refetchAnalytics } =
+    useGetPlatformAnalytics(analyticsPeriod);
   const { data: escrowData } = useAdminListEscrows({ limit: 5 });
   const { data: disputesData } = useAdminListDisputes({ limit: 5 });
 
@@ -150,33 +152,54 @@ export default function Dashboard() {
     });
   };
 
-  const getStatusBadge = (status: string) => {
-    const colors: Record<string, string> = {
-      "Funded": "bg-blue-500/20 text-blue-400 border-blue-500/50",
-      "In Progress": "bg-cyan-500/20 text-cyan-400 border-cyan-500/50",
-      "Released": "bg-emerald-500/20 text-emerald-400 border-emerald-500/50",
-      "Disputed": "bg-red-500/20 text-red-400 border-red-500/50",
-      "Pending Funding": "bg-yellow-500/20 text-yellow-400 border-yellow-500/50",
-      "Open": "bg-blue-500/20 text-blue-400 border-blue-500/50",
-      "In Review": "bg-cyan-500/20 text-cyan-400 border-cyan-500/50",
-      "Resolved": "bg-emerald-500/20 text-emerald-400 border-emerald-500/50",
-      "Escalated": "bg-red-500/20 text-red-400 border-red-500/50",
+  const getEscrowStatusBadge = (status: AdminEscrow["status"]) => {
+    const labels: Record<AdminEscrow["status"], string> = {
+      PENDING: "Pending",
+      HELD: "Held",
+      RELEASED: "Released",
+      REFUNDED: "Refunded",
+      FROZEN: "Frozen",
+      DISPUTED: "Disputed",
     };
-    return <Badge variant="outline" className={colors[status] || ""}>{status}</Badge>;
+    const colors: Record<AdminEscrow["status"], string> = {
+      PENDING: "bg-yellow-500/20 text-yellow-400 border-yellow-500/50",
+      HELD: "bg-blue-500/20 text-blue-400 border-blue-500/50",
+      RELEASED: "bg-emerald-500/20 text-emerald-400 border-emerald-500/50",
+      REFUNDED: "bg-muted text-muted-foreground border-border",
+      FROZEN: "bg-cyan-500/20 text-cyan-400 border-cyan-500/50",
+      DISPUTED: "bg-red-500/20 text-red-400 border-red-500/50",
+    };
+    return (
+      <Badge variant="outline" className={colors[status] ?? ""}>
+        {labels[status] ?? status}
+      </Badge>
+    );
   };
 
-  const getPriorityBadge = (priority: string) => {
-    const colors: Record<string, string> = {
-      "Critical": "bg-red-500/20 text-red-400 border-red-500/50",
-      "High": "bg-orange-500/20 text-orange-400 border-orange-500/50",
-      "Medium": "bg-yellow-500/20 text-yellow-400 border-yellow-500/50",
-      "Low": "bg-muted text-muted-foreground",
+  const getDisputeStatusBadge = (status: AdminDispute["status"]) => {
+    const labels: Record<AdminDispute["status"], string> = {
+      OPEN: "Open",
+      UNDER_REVIEW: "In review",
+      RESOLVED: "Resolved",
+      CLOSED: "Closed",
+      ESCALATED: "Escalated",
     };
-    return <Badge variant="outline" className={colors[priority] || ""}>{priority}</Badge>;
+    const colors: Record<AdminDispute["status"], string> = {
+      OPEN: "bg-blue-500/20 text-blue-400 border-blue-500/50",
+      UNDER_REVIEW: "bg-cyan-500/20 text-cyan-400 border-cyan-500/50",
+      RESOLVED: "bg-emerald-500/20 text-emerald-400 border-emerald-500/50",
+      CLOSED: "bg-muted text-muted-foreground border-border",
+      ESCALATED: "bg-red-500/20 text-red-400 border-red-500/50",
+    };
+    return (
+      <Badge variant="outline" className={colors[status] ?? ""}>
+        {labels[status] ?? status}
+      </Badge>
+    );
   };
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(amount);
+  const formatCurrency = (amount: number, currency = "USD") => {
+    return new Intl.NumberFormat("en-US", { style: "currency", currency }).format(amount);
   };
 
   return (
@@ -423,9 +446,11 @@ export default function Dashboard() {
                   ) : recentEscrows.map((escrow) => (
                     <TableRow key={escrow.id} className="border-border">
                       <TableCell className="font-medium text-foreground font-mono text-xs">{escrow.id.slice(0, 12)}…</TableCell>
-                      <TableCell className="font-semibold text-foreground">{formatCurrency(escrow.totalAmount)}</TableCell>
+                      <TableCell className="font-semibold text-foreground">
+                        {formatCurrency(escrow.totalAmount, escrow.currency ?? "USD")}
+                      </TableCell>
                       <TableCell className="text-muted-foreground">{escrow.currency ?? "USD"}</TableCell>
-                      <TableCell>{getStatusBadge(escrow.status)}</TableCell>
+                      <TableCell>{getEscrowStatusBadge(escrow.status)}</TableCell>
                       <TableCell>
                         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => navigate("/escrow")}>
                           <Eye className="h-4 w-4" />
@@ -468,7 +493,7 @@ export default function Dashboard() {
                   ) : recentDisputes.map((dispute) => (
                     <TableRow key={dispute.id} className="border-border">
                       <TableCell className="font-medium text-foreground font-mono text-xs">{dispute.id.slice(0, 12)}…</TableCell>
-                      <TableCell>{getStatusBadge(dispute.status)}</TableCell>
+                      <TableCell>{getDisputeStatusBadge(dispute.status)}</TableCell>
                       <TableCell className="text-muted-foreground">{dispute.raisedBy ?? "—"}</TableCell>
                       <TableCell className="text-muted-foreground text-xs">
                         {new Date(dispute.createdAt).toLocaleDateString()}

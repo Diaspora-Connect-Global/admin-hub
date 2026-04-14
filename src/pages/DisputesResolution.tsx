@@ -169,6 +169,7 @@ export default function DisputesResolution() {
       UNDER_REVIEW: "In Review",
       RESOLVED: "Resolved",
       CLOSED: "Closed",
+      ESCALATED: "Escalated",
     };
     return map[status] ?? status;
   };

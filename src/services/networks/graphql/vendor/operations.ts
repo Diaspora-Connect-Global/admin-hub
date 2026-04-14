@@ -47,6 +47,12 @@ export interface VendorDashboardDTO {
   completedOrders?: number;
   status?: string | null;
   currency?: string;
+  /** Admin dashboard summary (see GetVendorDashboard) */
+  totalProducts?: number | null;
+  totalServicePackages?: number | null;
+  totalOrders?: number | null;
+  pendingOrders?: number | null;
+  totalRevenue?: number | null;
 }
 
 export interface VendorEligibilityDTO {
@@ -58,6 +64,13 @@ export interface VendorEligibilityDTO {
   payoutAccountCount?: number;
   verifiedPayoutAccounts?: number;
   activeSuspensionCount?: number;
+  /** Granular flags from getVendorEligibility */
+  canSellProducts?: boolean | null;
+  canSellServices?: boolean | null;
+  canRequestPayout?: boolean | null;
+  hasPayoutAccount?: boolean | null;
+  isKycVerified?: boolean | null;
+  reasons?: string[] | null;
 }
 
 export interface ProductDTO {
@@ -115,6 +128,8 @@ export interface VendorOrderDTO {
   vendorId?: string;
   buyerId?: string;
   status?: string | null;
+  /** Returned by listVendorOrders in gateway schema */
+  amount?: number | null;
   totalAmount?: number | null;
   currency?: string | null;
   createdAt?: string | null;

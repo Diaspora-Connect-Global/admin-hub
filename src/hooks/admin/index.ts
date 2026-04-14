@@ -293,6 +293,7 @@ export function useAdminClient() {
 }
 
 export {
+  dashboardDateRangeToAnalyticsPeriod,
   useGetDashboardStats,
   useGetSystemHealth,
   useGetPlatformAnalytics,
