@@ -554,8 +554,8 @@ export const LIST_COMMUNITIES = gql`
 export interface CreateCommunityInput {
   name: string;
   description: string;
-  visibility: "PUBLIC" | "PRIVATE";
-  joinPolicy: "OPEN" | "PAID";
+  visibility: "PUBLIC" | "PRIVATE" | "HIDDEN";
+  joinPolicy: "OPEN" | "APPROVAL" | "INVITE_ONLY" | "PAID";
   paymentType: "NONE" | "ONE_TIME" | "SUBSCRIPTION";
   communityTypeId: string;
   priceAmount?: number;
@@ -675,21 +675,52 @@ export const CREATE_COMMUNITY = gql`
   }
 `;
 
+/** Nested group on association detail query. */
+export interface AssociationDefaultGroup {
+  id: string;
+  name: string;
+  description?: string | null;
+  privacy?: string | null;
+  memberCount?: number | null;
+}
+
+/** Current user's membership on association (from getAssociation). */
+export interface AssociationMyMembership {
+  isMember?: boolean | null;
+  role?: string | null;
+  status?: string | null;
+  joinedAt?: string | null;
+}
+
 /** Association (Community Service). */
 export interface Association {
   id: string;
   name: string;
   description?: string;
   visibility: "PUBLIC" | "PRIVATE";
-  joinPolicy: "OPEN" | "REQUEST" | "INVITE_ONLY";
+  joinPolicy: "OPEN" | "REQUEST" | "APPROVAL" | "INVITE_ONLY" | "PAID";
+  paymentType?: "NONE" | "ONE_TIME" | "SUBSCRIPTION";
+  priceAmount?: number;
+  priceCurrency?: string;
+  whoCanPost?: string;
   associationTypeId?: string;
+  associationType?: {
+    id: string;
+    name: string;
+    description?: string | null;
+  } | null;
   defaultGroupId?: string;
+  defaultGroup?: AssociationDefaultGroup | null;
   memberCount?: number;
+  membershipStatus?: string;
+  myMembership?: AssociationMyMembership | null;
   avatarUrl?: string;
+  coverImageUrl?: string;
   contactEmail?: string;
   contactPhone?: string;
   website?: string;
   address?: string;
+  countriesServed?: string[];
   createdAt?: string;
   updatedAt?: string;
 }
@@ -729,19 +760,37 @@ export interface CreateAssociationInput {
   name: string;
   description?: string;
   associationTypeId: string;
-  joinPolicy: "OPEN" | "REQUEST" | "INVITE_ONLY";
+  joinPolicy: "OPEN" | "REQUEST" | "APPROVAL" | "INVITE_ONLY" | "PAID";
   visibility: "PUBLIC" | "PRIVATE";
+  paymentType?: "NONE" | "ONE_TIME" | "SUBSCRIPTION";
+  priceAmount?: number;
+  priceCurrency?: string;
+  whoCanPost?: string;
+  countriesServed?: string[];
+  contactEmail?: string;
+  contactPhone?: string;
+  website?: string;
+  address?: string;
   communityIds?: string[];
+  adminEmail?: string;
+  adminPassword?: string;
   associationAdmins?: { email: string; password: string }[];
 }
 
 export interface UpdateAssociationInput {
-  id: string;
+  id?: string;
+  associationId?: string;
   name?: string;
   description?: string;
-  joinPolicy?: "OPEN" | "REQUEST" | "INVITE_ONLY";
+  joinPolicy?: "OPEN" | "REQUEST" | "APPROVAL" | "INVITE_ONLY" | "PAID";
   visibility?: "PUBLIC" | "PRIVATE";
+  contactEmail?: string;
+  contactPhone?: string;
+  website?: string;
+  address?: string;
+  countriesServed?: string[];
   avatarKey?: string;
+  coverKey?: string;
 }
 
 export interface AssociationMember {
@@ -1026,13 +1075,39 @@ export const GET_ASSOCIATION = gql`
       id
       name
       description
-      joinPolicy
       visibility
-      defaultGroupId
-      memberCount
+      joinPolicy
       avatarUrl
+      coverImageUrl
       createdAt
       updatedAt
+      memberCount
+      associationTypeId
+      contactEmail
+      contactPhone
+      website
+      address
+      countriesServed
+      defaultGroupId
+      associationType {
+        id
+        name
+        description
+      }
+      myMembership {
+        isMember
+        role
+        status
+        joinedAt
+      }
+      membershipStatus
+      defaultGroup {
+        id
+        name
+        description
+        privacy
+        memberCount
+      }
     }
   }
 `;
@@ -1047,7 +1122,15 @@ export const SEARCH_ASSOCIATIONS = gql`
         memberCount
         joinPolicy
         visibility
+        associationTypeId
+        contactEmail
+        contactPhone
+        website
+        address
+        countriesServed
+        membershipStatus
         avatarUrl
+        coverImageUrl
         createdAt
       }
       total
@@ -1164,6 +1247,16 @@ export const GET_PENDING_MEMBERSHIP_REQUESTS = gql`
 export const GET_ASSOCIATION_AVATAR_UPLOAD_URL = gql`
   mutation GetAssociationAvatarUploadUrl($associationId: ID!) {
     getAssociationAvatarUploadUrl(associationId: $associationId) {
+      uploadUrl
+      fileKey
+    }
+  }
+`;
+
+/** Banner / cover image; mirrors avatar upload shape (`uploadUrl` + `fileKey`). */
+export const GET_ASSOCIATION_COVER_UPLOAD_URL = gql`
+  mutation GetAssociationCoverUploadUrl($associationId: ID!) {
+    getAssociationCoverUploadUrl(associationId: $associationId) {
       uploadUrl
       fileKey
     }

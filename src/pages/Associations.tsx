@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import { Input } from "@/components/ui/input";
@@ -18,18 +18,24 @@ import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MultiSelect } from "@/components/ui/multi-select";
 import { useToast } from "@/hooks/use-toast";
-import { 
+import {
   Search, Plus, Eye, MoreHorizontal, Edit, Trash2, Link2, Users, 
   Download, ChevronDown, Upload, Building2, Globe, Mail, Phone, LinkIcon,
-  Loader2
+  Loader2, X,
 } from "lucide-react";
 import {
   useSearchAssociations,
   useCreateAssociation,
+  useUpdateAssociation,
   useLinkAssociation,
   useAssignAssociationAdmin,
+  useSearchCommunitiesAdvanced,
+  useGetAssociationAvatarUploadUrl,
+  useGetAssociationCoverUploadUrl,
 } from "@/hooks/admin/useAssociation";
+import { uploadAssociationAvatar, uploadAssociationCover } from "@/lib/associationImageUpload";
 import { useListAssociationTypes } from "@/hooks/admin/useEntityTypes";
+import { useListAdmins } from "@/hooks/admin/useAdminAccounts";
 
 // Complete list of all countries
 const allCountries = [
@@ -56,148 +62,6 @@ const allCountries = [
 ];
 
 const countryOptions = allCountries.map(country => ({ label: country, value: country }));
-const typeOptions = ["NGO", "Club", "Church", "Community Organization", "Other"];
-
-const mockAdmins = [
-  { id: "USR-001", name: "John Doe", email: "john@example.com", role: "Association Admin" },
-  { id: "USR-002", name: "Jane Smith", email: "jane@example.com", role: "Moderator" },
-  { id: "USR-003", name: "Michael Brown", email: "michael@example.com", role: "Association Admin" },
-  { id: "USR-004", name: "Sarah Wilson", email: "sarah@example.com", role: "Editor" },
-];
-
-const mockCommunities = [
-  { id: "COM-001", name: "Ghana Belgium Community", type: "Association", countriesServed: ["Belgium", "Ghana"] },
-  { id: "COM-002", name: "Nigeria UK Diaspora", type: "NGO", countriesServed: ["United Kingdom", "Nigeria"] },
-  { id: "COM-003", name: "Kenya Germany Network", type: "Club", countriesServed: ["Germany", "Kenya"] },
-];
-
-const sampleAssociations = [
-  { 
-    id: "ASC-001", 
-    name: "Ghana Nurses Association - Belgium", 
-    type: "NGO",
-    description: "Professional association for Ghanaian nurses in Belgium.",
-    countriesServed: ["Belgium", "Ghana"], 
-    linkedCommunities: ["COM-001", "COM-002"],
-    membersCount: 150, 
-    postsCount: 45, 
-    opportunitiesCount: 12,
-    vendorProductsCount: 8,
-    isPaid: true,
-    paymentType: "Monthly",
-    paymentAmount: 25,
-    paymentCurrency: "EUR",
-    assignedAdmins: ["USR-001", "USR-002"],
-    joinPolicy: "Approval Required",
-    whoCanPost: "Admins Only",
-    logoUrl: null,
-    address: "123 Main St, Brussels",
-    contactEmail: "contact@ghananurses.be",
-    contactPhone: "+32 471 234 567",
-    website: "https://ghananurses.be",
-    createdAt: "2024-01-10" 
-  },
-  { 
-    id: "ASC-002", 
-    name: "Nigerian Engineers Association", 
-    type: "Club",
-    description: "Network for Nigerian engineering professionals in France.",
-    countriesServed: ["France", "Nigeria"], 
-    linkedCommunities: ["COM-002"],
-    membersCount: 85, 
-    postsCount: 23, 
-    opportunitiesCount: 5,
-    vendorProductsCount: 0,
-    isPaid: false,
-    paymentType: null,
-    paymentAmount: null,
-    paymentCurrency: null,
-    assignedAdmins: ["USR-003"],
-    joinPolicy: "Open",
-    whoCanPost: "All Members",
-    logoUrl: null,
-    address: "45 Rue de Paris, Paris",
-    contactEmail: "info@nigerianengineers.fr",
-    contactPhone: "+33 6 12 34 56 78",
-    website: "https://nigerianengineers.fr",
-    createdAt: "2024-01-12" 
-  },
-  { 
-    id: "ASC-003", 
-    name: "Cameroonian Teachers Union", 
-    type: "Community Organization",
-    description: "Supporting Cameroonian educators across Germany.",
-    countriesServed: ["Germany", "Cameroon"], 
-    linkedCommunities: ["COM-001", "COM-003"],
-    membersCount: 200, 
-    postsCount: 67, 
-    opportunitiesCount: 18,
-    vendorProductsCount: 15,
-    isPaid: true,
-    paymentType: "Yearly",
-    paymentAmount: 120,
-    paymentCurrency: "EUR",
-    assignedAdmins: ["USR-001", "USR-004"],
-    joinPolicy: "Approval Required",
-    whoCanPost: "Admins Only",
-    logoUrl: null,
-    address: "78 Hauptstraße, Berlin",
-    contactEmail: "contact@cameroonteachers.de",
-    contactPhone: "+49 170 1234567",
-    website: "https://cameroonteachers.de",
-    createdAt: "2024-01-08" 
-  },
-  { 
-    id: "ASC-004", 
-    name: "Senegalese Business Network", 
-    type: "Club",
-    description: "Connecting Senegalese entrepreneurs in Italy.",
-    countriesServed: ["Italy", "Senegal"], 
-    linkedCommunities: [],
-    membersCount: 45, 
-    postsCount: 12, 
-    opportunitiesCount: 3,
-    vendorProductsCount: 2,
-    isPaid: false,
-    paymentType: null,
-    paymentAmount: null,
-    paymentCurrency: null,
-    assignedAdmins: ["USR-002"],
-    joinPolicy: "Open",
-    whoCanPost: "All Members",
-    logoUrl: null,
-    address: "22 Via Roma, Milan",
-    contactEmail: "hello@senegalbusiness.it",
-    contactPhone: "+39 333 1234567",
-    website: null,
-    createdAt: "2024-01-14" 
-  },
-  { 
-    id: "ASC-005", 
-    name: "Ethiopian Cultural Society", 
-    type: "Church",
-    description: "Promoting Ethiopian culture and heritage in Netherlands.",
-    countriesServed: ["Netherlands", "Ethiopia"], 
-    linkedCommunities: ["COM-001"],
-    membersCount: 120, 
-    postsCount: 34, 
-    opportunitiesCount: 8,
-    vendorProductsCount: 5,
-    isPaid: true,
-    paymentType: "Monthly",
-    paymentAmount: 15,
-    paymentCurrency: "EUR",
-    assignedAdmins: ["USR-003", "USR-004"],
-    joinPolicy: "Approval Required",
-    whoCanPost: "Admins Only",
-    logoUrl: null,
-    address: "56 Amstelstraat, Amsterdam",
-    contactEmail: "info@ethiopiansociety.nl",
-    contactPhone: "+31 6 12345678",
-    website: "https://ethiopiansociety.nl",
-    createdAt: "2024-01-05" 
-  },
-];
 
 interface CreateFormData {
   name: string;
@@ -205,7 +69,8 @@ interface CreateFormData {
   associationTypeId: string;
   visibility: string;
   countriesServed: string[];
-  logoBanner: File | null;
+  logoFile: File | null;
+  bannerFile: File | null;
   joinPolicy: string;
   whoCanPost: string;
   isPaid: boolean;
@@ -220,13 +85,44 @@ interface CreateFormData {
   website: string;
 }
 
+interface AssociationRow {
+  id: string;
+  associationTypeId: string;
+  name: string;
+  type: string;
+  description: string;
+  countriesServed: string[];
+  linkedCommunities: string[];
+  membersCount: number;
+  postsCount: number;
+  opportunitiesCount: number;
+  vendorProductsCount: number;
+  isPaid: boolean;
+  paymentType: string | null;
+  paymentAmount: number | null;
+  paymentCurrency: string | null;
+  assignedAdmins: string[];
+  joinPolicy: string;
+  visibility: string;
+  whoCanPost: string;
+  logoUrl: string | null;
+  coverUrl: string | null;
+  address: string;
+  contactEmail: string;
+  contactPhone: string;
+  website: string;
+  createdAt: string;
+  membershipStatus?: string;
+}
+
 const initialFormData: CreateFormData = {
   name: "",
   description: "",
   associationTypeId: "",
   visibility: "PUBLIC",
   countriesServed: [],
-  logoBanner: null,
+  logoFile: null,
+  bannerFile: null,
   joinPolicy: "OPEN",
   whoCanPost: "Admins Only",
   isPaid: false,
@@ -243,9 +139,16 @@ const initialFormData: CreateFormData = {
 
 export default function Associations() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
   const { t } = useTranslation();
   
+  const mapUiPaymentTypeToApi = (value: string): "NONE" | "ONE_TIME" | "SUBSCRIPTION" => {
+    if (value === "One-time") return "ONE_TIME";
+    if (value === "Monthly" || value === "Yearly") return "SUBSCRIPTION";
+    return "NONE";
+  };
+
   // Filters
   const [searchQuery, setSearchQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
@@ -266,7 +169,9 @@ export default function Associations() {
   const [assocAdminPassword, setAssocAdminPassword] = useState("");
   const [assocAdminConfirmPassword, setAssocAdminConfirmPassword] = useState("");
   const [linkCommunitiesModalOpen, setLinkCommunitiesModalOpen] = useState(false);
-  const [selectedAssociation, setSelectedAssociation] = useState<typeof sampleAssociations[0] | null>(null);
+  const [selectedLinkCommunityIds, setSelectedLinkCommunityIds] = useState<string[]>([]);
+  const [selectedAssociation, setSelectedAssociation] = useState<AssociationRow | null>(null);
+  const [editingAssociationId, setEditingAssociationId] = useState<string | null>(null);
   
   // Form state
   const [formData, setFormData] = useState<CreateFormData>(initialFormData);
@@ -274,38 +179,55 @@ export default function Associations() {
   // Live API data
   const { data: searchData, loading: searchLoading } = useSearchAssociations({ limit: 50 });
   const [createAssociationMutation, { loading: createLoading }] = useCreateAssociation();
+  const [updateAssociationMutation, { loading: updateLoading }] = useUpdateAssociation();
+  const [getAvatarUploadUrl] = useGetAssociationAvatarUploadUrl();
+  const [getCoverUploadUrl] = useGetAssociationCoverUploadUrl();
   const [linkAssociationMutation] = useLinkAssociation();
   const [assignAssociationAdminMutation, { loading: assignAssocAdminLoading }] = useAssignAssociationAdmin();
   const { data: assocTypesData } = useListAssociationTypes();
+  const { data: communitiesData } = useSearchCommunitiesAdvanced({ limit: 200, offset: 0 });
+  const { data: adminsData } = useListAdmins(200, 0, "ACTIVE", "ASSOCIATION_ADMIN");
 
-  const apiAssociations = searchData?.searchAssociations.associations.map((a) => ({
+  const typeNameById = new Map((assocTypesData?.listAssociationTypes ?? []).map((x) => [x.id, x.name]));
+  const communityById = new Map(
+    (communitiesData?.searchCommunitiesAdvanced.communities ?? []).map((c) => [c.id, c])
+  );
+  const adminById = new Map((adminsData?.listAdmins.admins ?? []).map((a) => [a.id, a]));
+
+  const apiAssociations: AssociationRow[] = (searchData?.searchAssociations.associations ?? []).map((a) => ({
     id: a.id,
+    associationTypeId: a.associationTypeId ?? "",
     name: a.name,
-    type: a.joinPolicy ?? "OPEN",
+    type: (a.associationTypeId && typeNameById.get(a.associationTypeId)) || "Association",
     description: a.description ?? "",
-    countriesServed: [] as string[],
-    linkedCommunities: [] as string[],
+    countriesServed: a.countriesServed ?? [],
+    linkedCommunities: [],
     membersCount: a.memberCount ?? 0,
     postsCount: 0,
     opportunitiesCount: 0,
     vendorProductsCount: 0,
-    isPaid: false,
-    paymentType: null as string | null,
-    paymentAmount: null as number | null,
-    paymentCurrency: null as string | null,
-    assignedAdmins: [] as string[],
+    isPaid: a.joinPolicy === "PAID",
+    paymentType: a.paymentType ?? null,
+    paymentAmount: a.priceAmount ?? null,
+    paymentCurrency: a.priceCurrency ?? null,
+    assignedAdmins: [],
     joinPolicy: a.joinPolicy ?? "OPEN",
     visibility: a.visibility ?? "PUBLIC",
-    whoCanPost: "All Members",
+    whoCanPost: a.whoCanPost ?? "All Members",
     logoUrl: a.avatarUrl ?? null,
-    address: "",
-    contactEmail: "",
-    contactPhone: "",
-    website: "",
+    coverUrl: a.coverImageUrl ?? null,
+    address: a.address ?? "",
+    contactEmail: a.contactEmail ?? "",
+    contactPhone: a.contactPhone ?? "",
+    website: a.website ?? "",
     createdAt: a.createdAt ?? new Date().toISOString(),
-  })) ?? sampleAssociations;
+    membershipStatus: a.membershipStatus ?? undefined,
+  }));
 
-  const communityOptions = mockCommunities.map(c => ({ label: c.name, value: c.id }));
+  const communityOptions = (communitiesData?.searchCommunitiesAdvanced.communities ?? []).map((c) => ({
+    label: c.name,
+    value: c.id,
+  }));
 
   const filteredAssociations = apiAssociations
     .filter((assoc) => {
@@ -315,7 +237,7 @@ export default function Associations() {
         assoc.type.toLowerCase().includes(searchLower) ||
         assoc.countriesServed.some(c => c.toLowerCase().includes(searchLower)) ||
         assoc.linkedCommunities.some(cid => {
-          const community = mockCommunities.find(c => c.id === cid);
+          const community = communityById.get(cid);
           return community?.name.toLowerCase().includes(searchLower);
         });
       const matchesType = typeFilter === "all" || assoc.type === typeFilter;
@@ -458,29 +380,138 @@ export default function Associations() {
       toast({ title: t('associations.validationError'), description: t('associations.paymentAmountRequired'), variant: "destructive" });
       return;
     }
+    if (formData.adminEmail && !formData.adminPassword) {
+      toast({
+        title: t("associations.validationError"),
+        description: "Admin password is required when admin email is provided.",
+        variant: "destructive",
+      });
+      return;
+    }
+    const paidPolicy = formData.isPaid ? "PAID" : "OPEN";
+    const paymentType = formData.isPaid ? mapUiPaymentTypeToApi(formData.paymentType) : "NONE";
+    const paymentAmount = formData.isPaid ? Number(formData.paymentAmount) : undefined;
+    const paymentCurrency = formData.isPaid ? formData.paymentCurrency : undefined;
+    const whoCanPost = formData.whoCanPost === "Admins Only" ? "ADMIN_ONLY" : "ALL_MEMBERS";
+
     try {
-      await createAssociationMutation({
+      if (editingAssociationId) {
+        await updateAssociationMutation({
+          variables: {
+            input: {
+              id: editingAssociationId,
+              name: formData.name,
+              description: formData.description || undefined,
+              joinPolicy: paidPolicy,
+              visibility: formData.visibility as "PUBLIC" | "PRIVATE",
+              contactEmail: formData.contactEmail || undefined,
+              contactPhone: formData.contactPhone || undefined,
+              website: formData.website || undefined,
+              address: formData.address || undefined,
+              countriesServed: formData.countriesServed.length > 0 ? formData.countriesServed : undefined,
+            },
+          },
+        });
+        await persistAssociationImages(editingAssociationId);
+        toast({ title: t('associations.editAssociation'), description: "Association updated successfully." });
+        setCreateModalOpen(false);
+        setEditingAssociationId(null);
+        setSelectedAssociation(null);
+        setFormData(initialFormData);
+        return;
+      }
+      const createResult = await createAssociationMutation({
         variables: {
           input: {
             name: formData.name,
             description: formData.description || undefined,
             associationTypeId: formData.associationTypeId,
-            joinPolicy: formData.joinPolicy as "OPEN" | "REQUEST" | "INVITE_ONLY",
+            joinPolicy: paidPolicy,
             visibility: formData.visibility as "PUBLIC" | "PRIVATE",
-            associationAdmins: formData.adminEmail
-              ? [{ email: formData.adminEmail, password: formData.adminPassword }]
-              : undefined,
+            paymentType,
+            priceAmount: paymentAmount,
+            priceCurrency: paymentCurrency,
+            whoCanPost,
+            countriesServed: formData.countriesServed.length > 0 ? formData.countriesServed : undefined,
+            contactEmail: formData.contactEmail || undefined,
+            contactPhone: formData.contactPhone || undefined,
+            website: formData.website || undefined,
+            address: formData.address || undefined,
+            adminEmail: formData.adminEmail || undefined,
+            adminPassword: formData.adminPassword || undefined,
           },
         },
       });
+      const newId = createResult.data?.createAssociation?.id;
+      if (newId) {
+        await persistAssociationImages(newId);
+      }
       toast({ title: t('associations.createSuccess'), description: t('associations.createSuccessDesc') });
       setCreateModalOpen(false);
       setFormData(initialFormData);
     } catch (err) {
       const message = err instanceof Error ? err.message : "An error occurred";
-      toast({ title: "Error creating association", description: message, variant: "destructive" });
+      toast({
+        title: editingAssociationId ? "Error updating association" : "Error creating association",
+        description: message,
+        variant: "destructive",
+      });
     }
   };
+
+  const openCreateAssociationModal = () => {
+    setEditingAssociationId(null);
+    setSelectedAssociation(null);
+    setFormData(initialFormData);
+    setCreateModalOpen(true);
+  };
+
+  const openEditAssociationModal = (assoc: AssociationRow) => {
+    setEditingAssociationId(assoc.id);
+    setSelectedAssociation(assoc);
+    setFormData({
+      ...initialFormData,
+      name: assoc.name,
+      description: assoc.description,
+      associationTypeId: assoc.associationTypeId,
+      visibility: assoc.visibility || "PUBLIC",
+      countriesServed: [...assoc.countriesServed],
+      joinPolicy: ["OPEN", "REQUEST", "INVITE_ONLY"].includes(assoc.joinPolicy) ? assoc.joinPolicy : "OPEN",
+      whoCanPost: assoc.whoCanPost || "Admins Only",
+      isPaid: assoc.isPaid,
+      paymentType: assoc.paymentType ?? "Monthly",
+      paymentAmount: assoc.paymentAmount != null ? String(assoc.paymentAmount) : "",
+      paymentCurrency: assoc.paymentCurrency ?? "EUR",
+      address: assoc.address || "",
+      contactEmail: assoc.contactEmail || "",
+      contactPhone: assoc.contactPhone || "",
+      website: assoc.website || "",
+      adminEmail: "",
+      adminPassword: "",
+      logoFile: null,
+      bannerFile: null,
+    });
+    setCreateModalOpen(true);
+  };
+
+  useEffect(() => {
+    const state = location.state as { editAssociationId?: string } | null;
+    const editAssociationId = state?.editAssociationId;
+    if (!editAssociationId || searchLoading) return;
+
+    const target = apiAssociations.find((assoc) => assoc.id === editAssociationId);
+    if (target) {
+      openEditAssociationModal(target);
+    } else {
+      toast({
+        title: t("associations.validationError"),
+        description: "Association not found for editing.",
+        variant: "destructive",
+      });
+    }
+
+    navigate(location.pathname, { replace: true, state: null });
+  }, [location.state, location.pathname, searchLoading, apiAssociations, navigate, toast, t]);
 
   const handleDeleteAssociation = () => {
     toast({ title: t('associations.deleteSuccess'), description: t('associations.deleteSuccessDesc') });
@@ -489,11 +520,11 @@ export default function Associations() {
   };
 
   const getAdminNames = (adminIds: string[]) => {
-    return adminIds.map(id => mockAdmins.find(a => a.id === id)?.name || id).join(", ");
+    return adminIds.map(id => adminById.get(id)?.email || id).join(", ");
   };
 
   const getCommunityNames = (communityIds: string[]) => {
-    return communityIds.map(id => mockCommunities.find(c => c.id === id)?.name || id);
+    return communityIds.map(id => communityById.get(id)?.name || id);
   };
 
   return (
@@ -521,8 +552,8 @@ export default function Associations() {
             <Button variant="outline" onClick={() => toast({ title: "Export", description: "Exporting associations..." })}>
               <Download className="mr-2 h-4 w-4" /> {t('associations.exportAssociations')}
             </Button>
-            <Button onClick={() => setCreateModalOpen(true)} disabled={createLoading}>
-              {createLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
+            <Button onClick={openCreateAssociationModal} disabled={createLoading || updateLoading}>
+              {createLoading || updateLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
               {t('associations.createAssociation')}
             </Button>
           </div>
@@ -548,8 +579,8 @@ export default function Associations() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">{t('common.all')}</SelectItem>
-                    {typeOptions.map(type => (
-                      <SelectItem key={type} value={type}>{type}</SelectItem>
+                    {(assocTypesData?.listAssociationTypes ?? []).map((type) => (
+                      <SelectItem key={type.id} value={type.name}>{type.name}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -625,8 +656,25 @@ export default function Associations() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredAssociations.map((assoc) => (
-                    <TableRow key={assoc.id} className="border-border/50 cursor-pointer hover:bg-muted/50" onClick={() => { setSelectedAssociation(assoc); setDetailModalOpen(true); }}>
+                  {searchLoading ? (
+                    <TableRow>
+                      <TableCell colSpan={11} className="text-center py-8 text-muted-foreground">
+                        <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2" />
+                        {t("common.loading")}
+                      </TableCell>
+                    </TableRow>
+                  ) : filteredAssociations.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={11} className="text-center py-8 text-muted-foreground">
+                        {t("common.noData")}
+                      </TableCell>
+                    </TableRow>
+                  ) : filteredAssociations.map((assoc) => (
+                    <TableRow
+                      key={assoc.id}
+                      className="border-border/50 cursor-pointer hover:bg-muted/50"
+                      onClick={() => navigate(`/associations/${assoc.id}`)}
+                    >
                       <TableCell onClick={(e) => e.stopPropagation()}>
                         <Checkbox 
                           checked={selectedAssociations.includes(assoc.id)}
@@ -669,14 +717,16 @@ export default function Associations() {
                       </TableCell>
                       <TableCell>{assoc.membersCount}</TableCell>
                       <TableCell>
-                        <span className="text-sm text-muted-foreground">{getAdminNames(assoc.assignedAdmins).substring(0, 20)}...</span>
+                        <span className="text-sm text-muted-foreground">
+                          {assoc.assignedAdmins.length > 0 ? getAdminNames(assoc.assignedAdmins) : "-"}
+                        </span>
                       </TableCell>
                       <TableCell onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center gap-1">
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            onClick={() => { setSelectedAssociation(assoc); setDetailModalOpen(true); }}
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => navigate(`/associations/${assoc.id}`)}
                           >
                             <Eye className="h-4 w-4" />
                           </Button>
@@ -687,16 +737,22 @@ export default function Associations() {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => { setSelectedAssociation(assoc); setDetailModalOpen(true); }}>
+                              <DropdownMenuItem onClick={() => navigate(`/associations/${assoc.id}`)}>
                                 <Eye className="mr-2 h-4 w-4" /> {t('associations.viewDetails')}
                               </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => navigate(`/associations/${assoc.id}/edit`)}>
+                              <DropdownMenuItem onClick={() => openEditAssociationModal(assoc)}>
                                 <Edit className="mr-2 h-4 w-4" /> {t('common.edit')}
                               </DropdownMenuItem>
                               <DropdownMenuItem onClick={() => { setSelectedAssociation(assoc); setAssignAdminsModalOpen(true); }}>
                                 <Users className="mr-2 h-4 w-4" /> {t('associations.manageAdmins')}
                               </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => { setSelectedAssociation(assoc); setLinkCommunitiesModalOpen(true); }}>
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  setSelectedAssociation(assoc);
+                                  setSelectedLinkCommunityIds(assoc.linkedCommunities);
+                                  setLinkCommunitiesModalOpen(true);
+                                }}
+                              >
                                 <Link2 className="mr-2 h-4 w-4" /> {t('associations.linkUnlinkCommunities')}
                               </DropdownMenuItem>
                               <DropdownMenuSeparator />
@@ -714,7 +770,9 @@ export default function Associations() {
             </div>
             <div className="flex items-center justify-between border-t border-border/50 px-4 py-3">
               <p className="text-sm text-muted-foreground">
-                {t('associations.showing')} 1-{filteredAssociations.length} {t('associations.of')} {filteredAssociations.length}
+                {filteredAssociations.length > 0
+                  ? `${t("associations.showing")} 1-${filteredAssociations.length} ${t("associations.of")} ${filteredAssociations.length}`
+                  : `${t("associations.showing")} 0 ${t("associations.of")} 0`}
               </p>
               <div className="flex items-center gap-2">
                 <Select defaultValue="20">
@@ -740,8 +798,8 @@ export default function Associations() {
       <Dialog open={createModalOpen} onOpenChange={setCreateModalOpen}>
         <DialogContent className="sm:max-w-2xl max-h-[90vh]">
           <DialogHeader>
-            <DialogTitle>{t('associations.createAssociation')}</DialogTitle>
-            <DialogDescription>{t('associations.createDesc')}</DialogDescription>
+            <DialogTitle>{editingAssociationId ? t('associations.editAssociation') : t('associations.createAssociation')}</DialogTitle>
+            <DialogDescription>{editingAssociationId ? t('associations.associationDetails') : t('associations.createDesc')}</DialogDescription>
           </DialogHeader>
           <ScrollArea className="max-h-[60vh] pr-4">
             <div className="space-y-6 py-4">
@@ -789,12 +847,91 @@ export default function Associations() {
               </div>
 
               {/* Logo / Banner */}
-              <div className="space-y-2">
-                <Label>{t('associations.form.logoBanner')}</Label>
-                <div className="border-2 border-dashed border-border rounded-lg p-6 text-center">
-                  <Upload className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
-                  <p className="text-sm text-muted-foreground">{t('associations.form.uploadImage')}</p>
-                  <p className="text-xs text-muted-foreground mt-1">{t('associations.form.acceptedFormats')}</p>
+              <div className="space-y-4">
+                <h3 className="font-semibold text-foreground">{t('associations.form.logoBanner')}</h3>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label>Logo</Label>
+                    <div className="border-2 border-dashed border-border rounded-lg p-4 text-center hover:border-primary/50 transition-colors">
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        className="hidden"
+                        id="assoc-create-logo"
+                        onChange={(e) => {
+                          const f = e.target.files?.[0];
+                          setFormData((prev) => ({ ...prev, logoFile: f ?? null }));
+                          e.target.value = "";
+                        }}
+                      />
+                      <label htmlFor="assoc-create-logo" className="cursor-pointer flex flex-col items-center gap-2">
+                        <Upload className="h-8 w-8 text-muted-foreground" />
+                        <span className="text-sm text-muted-foreground">{t('associations.form.uploadImage')}</span>
+                        <span className="text-xs text-muted-foreground">{t('associations.form.acceptedFormats')}</span>
+                      </label>
+                      {formData.logoFile && (
+                        <div className="mt-2 flex items-center justify-center gap-2">
+                          <Badge variant="secondary">{formData.logoFile.name}</Badge>
+                          <button
+                            type="button"
+                            className="text-muted-foreground hover:text-destructive"
+                            aria-label="Remove logo"
+                            onClick={() => setFormData((prev) => ({ ...prev, logoFile: null }))}
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        </div>
+                      )}
+                      {editingAssociationId && selectedAssociation?.logoUrl && !formData.logoFile && (
+                        <img
+                          src={selectedAssociation.logoUrl}
+                          alt=""
+                          className="mt-3 mx-auto h-16 w-16 rounded-md object-cover border border-border"
+                        />
+                      )}
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Banner</Label>
+                    <div className="border-2 border-dashed border-border rounded-lg p-4 text-center hover:border-primary/50 transition-colors">
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        className="hidden"
+                        id="assoc-create-banner"
+                        onChange={(e) => {
+                          const f = e.target.files?.[0];
+                          setFormData((prev) => ({ ...prev, bannerFile: f ?? null }));
+                          e.target.value = "";
+                        }}
+                      />
+                      <label htmlFor="assoc-create-banner" className="cursor-pointer flex flex-col items-center gap-2">
+                        <Upload className="h-8 w-8 text-muted-foreground" />
+                        <span className="text-sm text-muted-foreground">Wide image (hero / header)</span>
+                        <span className="text-xs text-muted-foreground">{t('associations.form.acceptedFormats')}</span>
+                      </label>
+                      {formData.bannerFile && (
+                        <div className="mt-2 flex items-center justify-center gap-2">
+                          <Badge variant="secondary">{formData.bannerFile.name}</Badge>
+                          <button
+                            type="button"
+                            className="text-muted-foreground hover:text-destructive"
+                            aria-label="Remove banner"
+                            onClick={() => setFormData((prev) => ({ ...prev, bannerFile: null }))}
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        </div>
+                      )}
+                      {editingAssociationId && selectedAssociation?.coverUrl && !formData.bannerFile && (
+                        <img
+                          src={selectedAssociation.coverUrl}
+                          alt=""
+                          className="mt-3 mx-auto h-16 w-full max-w-xs rounded-md object-cover border border-border"
+                        />
+                      )}
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -954,8 +1091,19 @@ export default function Associations() {
             </div>
           </ScrollArea>
           <DialogFooter>
-            <Button variant="outline" onClick={() => { setCreateModalOpen(false); setFormData(initialFormData); }}>{t('common.cancel')}</Button>
-            <Button onClick={handleCreateAssociation}>{t('associations.createAssociation')}</Button>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setCreateModalOpen(false);
+                setEditingAssociationId(null);
+                setFormData(initialFormData);
+              }}
+            >
+              {t('common.cancel')}
+            </Button>
+            <Button onClick={handleCreateAssociation} disabled={createLoading || updateLoading}>
+              {editingAssociationId ? t('common.save') : t('associations.createAssociation')}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -1037,12 +1185,14 @@ export default function Associations() {
                       </TableHeader>
                       <TableBody>
                         {getCommunityNames(selectedAssociation.linkedCommunities).map((name, idx) => {
-                          const community = mockCommunities.find(c => c.name === name);
+                          const community = (communitiesData?.searchCommunitiesAdvanced.communities ?? []).find(
+                            (c) => c.name === name
+                          );
                           return (
                             <TableRow key={idx}>
                               <TableCell className="font-medium">{name}</TableCell>
-                              <TableCell>{community?.type || "-"}</TableCell>
-                              <TableCell>{community?.countriesServed.join(", ") || "-"}</TableCell>
+                              <TableCell>{community?.communityType?.name || "-"}</TableCell>
+                              <TableCell>-</TableCell>
                               <TableCell>
                                 <div className="flex gap-1">
                                   <Button variant="ghost" size="sm">{t('common.view')}</Button>
@@ -1070,12 +1220,12 @@ export default function Associations() {
                     </TableHeader>
                     <TableBody>
                       {selectedAssociation.assignedAdmins.map((adminId) => {
-                        const admin = mockAdmins.find(a => a.id === adminId);
+                        const admin = adminById.get(adminId);
                         return (
                           <TableRow key={adminId}>
-                            <TableCell className="font-medium">{admin?.name || adminId}</TableCell>
+                            <TableCell className="font-medium">{admin?.email || adminId}</TableCell>
                             <TableCell>{admin?.email || "-"}</TableCell>
-                            <TableCell>{admin?.role || "-"}</TableCell>
+                            <TableCell>{admin?.adminType || "-"}</TableCell>
                             <TableCell>
                               <div className="flex gap-1">
                                 <Button variant="ghost" size="sm">{t('common.edit')}</Button>
@@ -1143,7 +1293,13 @@ export default function Associations() {
           )}
           <DialogFooter>
             <Button variant="outline" onClick={() => setDetailModalOpen(false)}>{t('common.close')}</Button>
-            <Button onClick={() => { setDetailModalOpen(false); navigate(`/associations/${selectedAssociation?.id}/edit`); }}>
+            <Button
+              onClick={() => {
+                if (!selectedAssociation) return;
+                setDetailModalOpen(false);
+                openEditAssociationModal(selectedAssociation);
+              }}
+            >
               {t('associations.editAssociation')}
             </Button>
           </DialogFooter>
@@ -1235,8 +1391,8 @@ export default function Associations() {
           <div className="space-y-4 py-4">
             <MultiSelect
               options={communityOptions}
-              selected={selectedAssociation?.linkedCommunities || []}
-              onChange={() => {}}
+              selected={selectedLinkCommunityIds}
+              onChange={setSelectedLinkCommunityIds}
               placeholder={t('associations.selectCommunities')}
             />
           </div>
@@ -1245,7 +1401,14 @@ export default function Associations() {
             <Button onClick={async () => { 
               if (selectedAssociation) {
                 try {
-                  await linkAssociationMutation({ variables: { input: { associationId: selectedAssociation.id, communityId: selectedAssociation.linkedCommunities[0] ?? "" } } });
+                  const targetCommunityId = selectedLinkCommunityIds[0];
+                  if (!targetCommunityId) {
+                    toast({ title: t("associations.validationError"), description: t("associations.selectCommunities"), variant: "destructive" });
+                    return;
+                  }
+                  await linkAssociationMutation({
+                    variables: { input: { associationId: selectedAssociation.id, communityId: targetCommunityId } },
+                  });
                   toast({ title: t('associations.communityLinkSuccess') });
                 } catch {
                   toast({ title: "Error linking community", variant: "destructive" });

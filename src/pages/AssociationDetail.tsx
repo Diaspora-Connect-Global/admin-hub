@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import { Button } from "@/components/ui/button";
@@ -25,65 +25,19 @@ import {
   useLinkAssociation,
   useUnlinkAssociation,
   useGetAssociationAvatarUploadUrl,
+  useGetAssociationCoverUploadUrl,
+  useUpdateAssociation,
+  useAssignAssociationAdmin,
 } from "@/hooks/admin/useAssociation";
+import { uploadAssociationAvatar, uploadAssociationCover } from "@/lib/associationImageUpload";
+import { useGetUsers } from "@/hooks/admin";
 import { Loader2 } from "lucide-react";
 import { 
   ArrowLeft, Edit, Check, X, Link2, UserPlus, Users, FileText, 
   Briefcase, Store, Settings, History, Download, Upload, Eye,
   Trash2, Flag, MessageSquare, Globe, Mail, Phone, MapPin, Calendar,
-  Building2, Shield, AlertTriangle
+  Building2, Shield, AlertTriangle,
 } from "lucide-react";
-
-// Sample data
-const associationData = {
-  id: "ASC-001",
-  name: "Ghana Nurses Association - Belgium",
-  registration_id: "BE-GNA-2024-001",
-  country: "Belgium",
-  address: "123 Healthcare Street, Brussels 1000",
-  primary_contact: "Dr. Akua Mensah",
-  email: "contact@gna-belgium.org",
-  phone: "+32 2 123 4567",
-  website: "https://gna-belgium.org",
-  description: "Supporting Ghanaian nurses in Belgium with professional development, networking, and community support.",
-  verification_status: "Verified",
-  risk_score: 15,
-  vendor_enabled: true,
-  posting_enabled: true,
-  created_at: "2024-01-10",
-  linked_communities: [
-    { id: "COM-001", name: "Ghana Belgium Community", country: "Belgium" },
-    { id: "COM-002", name: "Healthcare Professionals Network", country: "Europe" }
-  ]
-};
-
-const sampleMembers = [
-  { id: "USR-001", name: "Akua Mensah", email: "akua@example.com", phone: "+32 471 234 567", role: "President", joined_at: "2024-01-10", status: "Active" },
-  { id: "USR-002", name: "Kwame Asante", email: "kwame@example.com", phone: "+32 472 345 678", role: "Secretary", joined_at: "2024-01-11", status: "Active" },
-  { id: "USR-003", name: "Ama Owusu", email: "ama@example.com", phone: "+32 473 456 789", role: "Member", joined_at: "2024-01-12", status: "Active" },
-];
-
-const samplePosts = [
-  { id: "PST-001", author: "Akua Mensah", content_preview: "Exciting news! Our annual conference...", likes: 45, comments: 12, created_at: "2024-01-15", status: "Published" },
-  { id: "PST-002", author: "Kwame Asante", content_preview: "New opportunities for healthcare...", likes: 32, comments: 8, created_at: "2024-01-14", status: "Published" },
-];
-
-const sampleOpportunities = [
-  { id: "OPP-001", title: "Senior Nurse Position", type: "Job", applications_count: 25, status: "Open", posted_at: "2024-01-12" },
-  { id: "OPP-002", title: "Healthcare Conference 2024", type: "Event", applications_count: 150, status: "Open", posted_at: "2024-01-10" },
-];
-
-const sampleDocuments = [
-  { id: "DOC-001", doc_type: "Registration Certificate", filename: "registration_cert.pdf", uploaded_by: "Akua Mensah", uploaded_at: "2024-01-10", verification_status: "Verified" },
-  { id: "DOC-002", doc_type: "Constitution", filename: "constitution.pdf", uploaded_by: "Akua Mensah", uploaded_at: "2024-01-10", verification_status: "Verified" },
-  { id: "DOC-003", doc_type: "Leadership ID", filename: "president_id.jpg", uploaded_by: "System", uploaded_at: "2024-01-11", verification_status: "Pending" },
-];
-
-const sampleAuditLogs = [
-  { timestamp: "2024-01-15 14:30:00", action: "Document Approved", performed_by: "Admin User", notes: "Registration certificate verified" },
-  { timestamp: "2024-01-12 10:15:00", action: "Association Approved", performed_by: "System Admin", notes: "Initial approval" },
-  { timestamp: "2024-01-10 09:00:00", action: "Association Created", performed_by: "System", notes: "Created via registration form" },
-];
 
 const getStatusBadge = (status: string) => {
   const styles: Record<string, string> = {
@@ -98,12 +52,6 @@ const getStatusBadge = (status: string) => {
   return <span className={styles[status] || "badge-status badge-muted"}>{status}</span>;
 };
 
-const getRiskBadge = (score: number) => {
-  if (score <= 30) return <Badge className="badge-status badge-success">Low Risk ({score})</Badge>;
-  if (score <= 60) return <Badge className="badge-status badge-warning">Medium Risk ({score})</Badge>;
-  return <Badge className="badge-status badge-destructive">High Risk ({score})</Badge>;
-};
-
 export default function AssociationDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -113,9 +61,40 @@ export default function AssociationDetail() {
   const { data: assocData, loading: assocLoading } = useGetAssociation(id ?? null);
   const association = assocData?.getAssociation;
 
+  const countriesLabel =
+    association?.countriesServed && association.countriesServed.length > 0
+      ? association.countriesServed.join(", ")
+      : "—";
+  const associationTypeLabel =
+    association?.associationType?.name ?? association?.associationTypeId ?? "—";
+
   const { data: membersData, loading: membersLoading, refetch: refetchMembers } =
     useGetAssociationMembers(id ?? null);
   const liveMembers = membersData?.getAssociationMembers.members ?? [];
+  const { data: usersData } = useGetUsers({ limit: 500, offset: 0, skip: false });
+  const users = (
+    usersData as { getUsers?: { items?: Array<{ id: string; email: string; displayName?: string | null }> } } | undefined
+  )?.getUsers?.items ?? [];
+  const userById = new Map(users.map((u) => [u.id, u]));
+  const associationAdmins = liveMembers
+    .filter((member) => {
+      const role = (member.role ?? "").toUpperCase();
+      return (
+        role.includes("ADMIN") ||
+        role === "OWNER" ||
+        role === "PRESIDENT" ||
+        role === "SECRETARY"
+      );
+    })
+    .map((member) => {
+      const user = userById.get(member.userId);
+      return {
+        id: member.userId,
+        name: user?.displayName || user?.email || member.userId,
+        email: user?.email || "—",
+        role: member.role || "Association Admin",
+      };
+    });
 
   const { data: pendingData, refetch: refetchPending } =
     useGetPendingMembershipRequests(id ?? null, "ASSOCIATION");
@@ -129,6 +108,9 @@ export default function AssociationDetail() {
   const [linkCommunityMutation] = useLinkAssociation();
   const [unlinkCommunityMutation] = useUnlinkAssociation();
   const [getAvatarUploadUrl] = useGetAssociationAvatarUploadUrl();
+  const [getCoverUploadUrl] = useGetAssociationCoverUploadUrl();
+  const [updateAssociationMutation, { loading: savingEdit }] = useUpdateAssociation();
+  const [assignAssociationAdminMutation, { loading: assigningAdmin }] = useAssignAssociationAdmin();
 
   // ── Member action handlers ─────────────────────────────────────────────────
   const handleApproveMembership = async (userId: string) => {
@@ -205,23 +187,145 @@ export default function AssociationDetail() {
     }
   };
 
-  // ── Avatar upload handler ──────────────────────────────────────────────────
-  const handleAvatarUpload = async (file: File) => {
-    if (!id) return;
-    try {
-      const { data } = await getAvatarUploadUrl({ variables: { associationId: id } });
-      if (!data) return;
-      await fetch(data.getAssociationAvatarUploadUrl.uploadUrl, { method: "PUT", body: file });
-      toast({ title: "Avatar uploaded — confirm with Update Association" });
-    } catch (err) {
-      toast({ title: "Error", description: err instanceof Error ? err.message : "Upload failed", variant: "destructive" });
-    }
-  };
-  const [vendorEnabled, setVendorEnabled] = useState(associationData.vendor_enabled);
-  const [postingEnabled, setPostingEnabled] = useState(associationData.posting_enabled);
+  const [vendorEnabled, setVendorEnabled] = useState(false);
+  const [postingEnabled, setPostingEnabled] = useState(true);
+  const [editOpen, setEditOpen] = useState(false);
+  const [linkCommunitiesOpen, setLinkCommunitiesOpen] = useState(false);
+  const [assignAdminOpen, setAssignAdminOpen] = useState(false);
+  const [assignAdminEmail, setAssignAdminEmail] = useState("");
+  const [assignAdminPassword, setAssignAdminPassword] = useState("");
   const [inviteMemberOpen, setInviteMemberOpen] = useState(false);
   const [suspendOpen, setSuspendOpen] = useState(false);
   const [rejectDocOpen, setRejectDocOpen] = useState(false);
+  const [editLogoFile, setEditLogoFile] = useState<File | null>(null);
+  const [editBannerFile, setEditBannerFile] = useState<File | null>(null);
+  const [editForm, setEditForm] = useState({
+    name: "",
+    description: "",
+    joinPolicy: "OPEN" as "OPEN" | "REQUEST" | "INVITE_ONLY",
+    visibility: "PUBLIC" as "PUBLIC" | "PRIVATE",
+    contactEmail: "",
+    contactPhone: "",
+    website: "",
+    address: "",
+  });
+
+  useEffect(() => {
+    if (!association) return;
+    setEditForm({
+      name: association.name ?? "",
+      description: association.description ?? "",
+      joinPolicy:
+        association.joinPolicy === "REQUEST" || association.joinPolicy === "INVITE_ONLY"
+          ? association.joinPolicy
+          : "OPEN",
+      visibility: association.visibility === "PRIVATE" ? "PRIVATE" : "PUBLIC",
+      contactEmail: association.contactEmail ?? "",
+      contactPhone: association.contactPhone ?? "",
+      website: association.website ?? "",
+      address: association.address ?? "",
+    });
+  }, [association]);
+
+  const handleSaveEdit = async () => {
+    if (!id) return;
+    if (!editForm.name.trim()) {
+      toast({ title: "Validation Error", description: "Name is required.", variant: "destructive" });
+      return;
+    }
+    try {
+      let avatarKey: string | undefined;
+      let coverKey: string | undefined;
+      if (editLogoFile) {
+        avatarKey = await uploadAssociationAvatar(id, editLogoFile, (opts) => getAvatarUploadUrl(opts));
+      }
+      if (editBannerFile) {
+        try {
+          coverKey = await uploadAssociationCover(id, editBannerFile, (opts) => getCoverUploadUrl(opts));
+        } catch (coverErr) {
+          toast({
+            title: "Banner upload failed",
+            description: coverErr instanceof Error ? coverErr.message : "Cover image could not be saved.",
+            variant: "destructive",
+          });
+        }
+      }
+      await updateAssociationMutation({
+        variables: {
+          input: {
+            id,
+            name: editForm.name.trim(),
+            description: editForm.description.trim() || undefined,
+            joinPolicy: editForm.joinPolicy,
+            visibility: editForm.visibility,
+            contactEmail: editForm.contactEmail.trim() || undefined,
+            contactPhone: editForm.contactPhone.trim() || undefined,
+            website: editForm.website.trim() || undefined,
+            address: editForm.address.trim() || undefined,
+            ...(avatarKey != null ? { avatarKey } : {}),
+            ...(coverKey != null ? { coverKey } : {}),
+          },
+        },
+      });
+      setEditLogoFile(null);
+      setEditBannerFile(null);
+      toast({ title: "Association updated" });
+      setEditOpen(false);
+    } catch (err) {
+      toast({
+        title: "Error",
+        description: err instanceof Error ? err.message : "Failed to update association",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleAssignAdmin = async () => {
+    if (!id) return;
+    const email = assignAdminEmail.trim();
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      toast({ title: "Validation Error", description: "Please enter a valid email.", variant: "destructive" });
+      return;
+    }
+    if (!assignAdminPassword.trim()) {
+      toast({ title: "Validation Error", description: "Password is required.", variant: "destructive" });
+      return;
+    }
+    if (assignAdminPassword.length < 8) {
+      toast({ title: "Validation Error", description: "Password must be at least 8 characters.", variant: "destructive" });
+      return;
+    }
+    try {
+      const result = await assignAssociationAdminMutation({
+        variables: {
+          input: {
+            entityId: id,
+            email,
+            password: assignAdminPassword,
+          },
+        },
+      });
+      const payload = result.data?.assignAssociationAdmin;
+      if (payload?.success) {
+        toast({ title: "Admin Assigned", description: payload.message || "Association admin assigned successfully." });
+        setAssignAdminOpen(false);
+        setAssignAdminEmail("");
+        setAssignAdminPassword("");
+      } else {
+        toast({
+          title: "Error",
+          description: payload?.message || "Failed to assign admin.",
+          variant: "destructive",
+        });
+      }
+    } catch (err) {
+      toast({
+        title: "Error",
+        description: err instanceof Error ? err.message : "Failed to assign admin.",
+        variant: "destructive",
+      });
+    }
+  };
 
   return (
     <AdminLayout>
@@ -233,24 +337,23 @@ export default function AssociationDetail() {
           </Button>
           <div className="flex-1">
             <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-semibold text-foreground">{association?.name ?? associationData.name}</h1>
-              {getStatusBadge(associationData.verification_status)}
-              {getRiskBadge(associationData.risk_score)}
+              <h1 className="text-2xl font-semibold text-foreground">{association?.name ?? "Association"}</h1>
+              {getStatusBadge(association?.membershipStatus ?? "Active")}
             </div>
             <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
-              <span className="font-mono">{associationData.registration_id}</span>
+              <span className="font-mono">{association?.id ?? "—"}</span>
               <span>•</span>
-              <span>{associationData.country}</span>
+              <span>{countriesLabel}</span>
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={() => navigate(`/associations/${id}/edit`)}>
+            <Button variant="outline" onClick={() => setEditOpen(true)}>
               <Edit className="mr-2 h-4 w-4" /> Edit
             </Button>
             <Button variant="outline" onClick={() => setLinkCommunitiesOpen(true)}>
               <Link2 className="mr-2 h-4 w-4" /> Link Community
             </Button>
-            <Button variant="outline" onClick={() => setInviteMemberOpen(true)}>
+            <Button variant="outline" onClick={() => setAssignAdminOpen(true)}>
               <UserPlus className="mr-2 h-4 w-4" /> Assign Admin
             </Button>
           </div>
@@ -282,55 +385,59 @@ export default function AssociationDetail() {
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
                       <p className="text-muted-foreground text-xs">Name</p>
-                      <p className="font-medium">{association?.name ?? associationData.name}</p>
+                      <p className="font-medium">{association?.name ?? "—"}</p>
                     </div>
                     <div>
-                      <p className="text-muted-foreground text-xs">Registration ID</p>
-                      <p className="font-mono">{associationData.registration_id}</p>
+                      <p className="text-muted-foreground text-xs">Association ID</p>
+                      <p className="font-mono">{association?.id ?? "—"}</p>
                     </div>
                     <div>
-                      <p className="text-muted-foreground text-xs">Country</p>
+                      <p className="text-muted-foreground text-xs">Type</p>
+                      <p>{associationTypeLabel}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground text-xs">Countries served</p>
                       <div className="flex items-center gap-2">
                         <Globe className="h-3 w-3 text-muted-foreground" />
-                        <p>{associationData.country}</p>
+                        <p>{countriesLabel}</p>
                       </div>
                     </div>
                     <div>
                       <p className="text-muted-foreground text-xs">Address</p>
                       <div className="flex items-center gap-2">
                         <MapPin className="h-3 w-3 text-muted-foreground" />
-                        <p>{associationData.address}</p>
+                        <p>{association?.address ?? "—"}</p>
                       </div>
                     </div>
                     <div>
-                      <p className="text-muted-foreground text-xs">Primary Contact</p>
-                      <p>{associationData.primary_contact}</p>
+                      <p className="text-muted-foreground text-xs">Website</p>
+                      <p>{association?.website ?? "—"}</p>
                     </div>
                     <div>
                       <p className="text-muted-foreground text-xs">Email</p>
                       <div className="flex items-center gap-2">
                         <Mail className="h-3 w-3 text-muted-foreground" />
-                        <p>{associationData.email}</p>
+                        <p>{association?.contactEmail ?? "—"}</p>
                       </div>
                     </div>
                     <div>
                       <p className="text-muted-foreground text-xs">Phone</p>
                       <div className="flex items-center gap-2">
                         <Phone className="h-3 w-3 text-muted-foreground" />
-                        <p>{associationData.phone}</p>
+                        <p>{association?.contactPhone ?? "—"}</p>
                       </div>
                     </div>
                     <div>
                       <p className="text-muted-foreground text-xs">Created</p>
                       <div className="flex items-center gap-2">
                         <Calendar className="h-3 w-3 text-muted-foreground" />
-                        <p>{associationData.created_at}</p>
+                        <p>{association?.createdAt ? new Date(association.createdAt).toLocaleDateString() : "—"}</p>
                       </div>
                     </div>
                   </div>
                   <div>
                     <p className="text-muted-foreground text-xs mb-1">Description</p>
-                    <p className="text-sm">{association?.description ?? associationData.description}</p>
+                    <p className="text-sm">{association?.description ?? "—"}</p>
                   </div>
                 </CardContent>
               </Card>
@@ -341,25 +448,44 @@ export default function AssociationDetail() {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-2">
-                    {associationData.linked_communities.map((community) => (
-                      <div key={community.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
-                        <div className="flex items-center gap-3">
-                          <Building2 className="h-4 w-4 text-muted-foreground" />
-                          <div>
-                            <p className="font-medium text-sm">{community.name}</p>
-                            <p className="text-xs text-muted-foreground">{community.country}</p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Button variant="ghost" size="sm">View</Button>
-                          <Button variant="ghost" size="sm" className="text-destructive" onClick={() => handleUnlinkCommunity(community.id)}>Unlink</Button>
-                        </div>
-                      </div>
-                    ))}
+                    <p className="text-sm text-muted-foreground">
+                      Linked communities are not returned by the current association detail query.
+                    </p>
                   </div>
                   <Button variant="outline" size="sm" className="mt-4" onClick={() => setLinkCommunitiesOpen(true)}>
                     <Link2 className="mr-2 h-4 w-4" /> Link Community
                   </Button>
+                </CardContent>
+              </Card>
+
+              <Card className="glass">
+                <CardHeader className="pb-2">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-base">Association Admins</CardTitle>
+                    <Button size="sm" variant="outline" onClick={() => setAssignAdminOpen(true)}>
+                      <UserPlus className="mr-2 h-4 w-4" /> Assign
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {associationAdmins.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">No admins assigned yet.</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {associationAdmins.map((admin) => (
+                        <div key={admin.id} className="flex items-center justify-between p-2 rounded-lg bg-muted/50">
+                          <div className="flex items-center gap-2">
+                            <Users className="h-4 w-4 text-muted-foreground" />
+                            <div>
+                              <p className="text-sm font-medium">{admin.name}</p>
+                              <p className="text-xs text-muted-foreground">{admin.email}</p>
+                            </div>
+                          </div>
+                          <Badge variant="secondary">{admin.role}</Badge>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </div>
@@ -476,24 +602,11 @@ export default function AssociationDetail() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {samplePosts.map((post) => (
-                      <TableRow key={post.id} className="border-border/50">
-                        <TableCell className="font-mono text-xs">{post.id}</TableCell>
-                        <TableCell>{post.author}</TableCell>
-                        <TableCell className="max-w-[200px] truncate">{post.content_preview}</TableCell>
-                        <TableCell>{post.likes}</TableCell>
-                        <TableCell>{post.comments}</TableCell>
-                        <TableCell className="text-muted-foreground">{post.created_at}</TableCell>
-                        <TableCell>{getStatusBadge(post.status)}</TableCell>
-                        <TableCell>
-                          <div className="flex gap-1">
-                            <Button variant="ghost" size="icon"><Eye className="h-4 w-4" /></Button>
-                            <Button variant="ghost" size="icon"><MessageSquare className="h-4 w-4" /></Button>
-                            <Button variant="ghost" size="icon" className="text-destructive"><Trash2 className="h-4 w-4" /></Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                    <TableRow>
+                      <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                        Posts are not available from the current backend query.
+                      </TableCell>
+                    </TableRow>
                   </TableBody>
                 </Table>
               </CardContent>
@@ -526,23 +639,11 @@ export default function AssociationDetail() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {sampleOpportunities.map((opp) => (
-                      <TableRow key={opp.id} className="border-border/50">
-                        <TableCell className="font-mono text-xs">{opp.id}</TableCell>
-                        <TableCell className="font-medium">{opp.title}</TableCell>
-                        <TableCell><Badge variant="outline">{opp.type}</Badge></TableCell>
-                        <TableCell>{opp.applications_count}</TableCell>
-                        <TableCell>{getStatusBadge(opp.status)}</TableCell>
-                        <TableCell className="text-muted-foreground">{opp.posted_at}</TableCell>
-                        <TableCell>
-                          <div className="flex gap-1">
-                            <Button variant="ghost" size="sm">View</Button>
-                            <Button variant="ghost" size="sm">Edit</Button>
-                            <Button variant="ghost" size="sm" className="text-warning">Close</Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                        Opportunities are not available from the current backend query.
+                      </TableCell>
+                    </TableRow>
                   </TableBody>
                 </Table>
               </CardContent>
@@ -602,29 +703,11 @@ export default function AssociationDetail() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {sampleDocuments.map((doc) => (
-                      <TableRow key={doc.id} className="border-border/50">
-                        <TableCell>{doc.doc_type}</TableCell>
-                        <TableCell className="font-mono text-xs">{doc.filename}</TableCell>
-                        <TableCell>{doc.uploaded_by}</TableCell>
-                        <TableCell className="text-muted-foreground">{doc.uploaded_at}</TableCell>
-                        <TableCell>{getStatusBadge(doc.verification_status)}</TableCell>
-                        <TableCell>
-                          <div className="flex gap-1">
-                            <Button variant="ghost" size="icon"><Eye className="h-4 w-4" /></Button>
-                            <Button variant="ghost" size="icon"><Download className="h-4 w-4" /></Button>
-                            {doc.verification_status === "Pending" && (
-                              <>
-                                <Button variant="ghost" size="icon" className="text-success"><Check className="h-4 w-4" /></Button>
-                                <Button variant="ghost" size="icon" className="text-destructive" onClick={() => setRejectDocOpen(true)}>
-                                  <X className="h-4 w-4" />
-                                </Button>
-                              </>
-                            )}
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                        Documents are not available from the current backend query.
+                      </TableCell>
+                    </TableRow>
                   </TableBody>
                 </Table>
               </CardContent>
@@ -701,14 +784,11 @@ export default function AssociationDetail() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {sampleAuditLogs.map((log, idx) => (
-                      <TableRow key={idx} className="border-border/50">
-                        <TableCell className="font-mono text-xs">{log.timestamp}</TableCell>
-                        <TableCell><Badge variant="secondary">{log.action}</Badge></TableCell>
-                        <TableCell>{log.performed_by}</TableCell>
-                        <TableCell className="text-muted-foreground">{log.notes}</TableCell>
-                      </TableRow>
-                    ))}
+                    <TableRow>
+                      <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                        Audit logs are not available from the current backend query.
+                      </TableCell>
+                    </TableRow>
                   </TableBody>
                 </Table>
               </CardContent>
@@ -737,6 +817,246 @@ export default function AssociationDetail() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setLinkCommunitiesOpen(false)}>Cancel</Button>
             <Button onClick={handleLinkCommunity} disabled={!linkCommunityId}>Link</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Association Modal */}
+      <Dialog
+        open={editOpen}
+        onOpenChange={(open) => {
+          setEditOpen(open);
+          if (!open) {
+            setEditLogoFile(null);
+            setEditBannerFile(null);
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-2xl max-h-[90vh]">
+          <DialogHeader>
+            <DialogTitle>Edit Association</DialogTitle>
+            <DialogDescription>Update association details.</DialogDescription>
+          </DialogHeader>
+          <ScrollArea className="max-h-[60vh] pr-4">
+            <div className="space-y-6 py-4">
+              <div className="space-y-4">
+                <h3 className="font-semibold text-foreground">Basic Information</h3>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-2 sm:col-span-2">
+                    <Label>Name <span className="text-destructive">*</span></Label>
+                    <Input
+                      value={editForm.name}
+                      onChange={(e) => setEditForm((prev) => ({ ...prev, name: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-2 sm:col-span-2">
+                    <Label>Description</Label>
+                    <Textarea
+                      value={editForm.description}
+                      onChange={(e) => setEditForm((prev) => ({ ...prev, description: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Join Policy</Label>
+                    <Select
+                      value={editForm.joinPolicy}
+                      onValueChange={(v: "OPEN" | "REQUEST" | "INVITE_ONLY") =>
+                        setEditForm((prev) => ({ ...prev, joinPolicy: v }))
+                      }
+                    >
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="OPEN">Open</SelectItem>
+                        <SelectItem value="REQUEST">Approval Required</SelectItem>
+                        <SelectItem value="INVITE_ONLY">Invite Only</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Visibility</Label>
+                    <Select
+                      value={editForm.visibility}
+                      onValueChange={(v: "PUBLIC" | "PRIVATE") =>
+                        setEditForm((prev) => ({ ...prev, visibility: v }))
+                      }
+                    >
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="PUBLIC">Public</SelectItem>
+                        <SelectItem value="PRIVATE">Private</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <h3 className="font-semibold text-foreground">Logo &amp; banner</h3>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label>Logo</Label>
+                    <div className="border-2 border-dashed border-border rounded-lg p-4 text-center hover:border-primary/50 transition-colors">
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        className="hidden"
+                        id="assoc-detail-logo"
+                        onChange={(e) => {
+                          const f = e.target.files?.[0];
+                          setEditLogoFile(f ?? null);
+                          e.target.value = "";
+                        }}
+                      />
+                      <label htmlFor="assoc-detail-logo" className="cursor-pointer flex flex-col items-center gap-2">
+                        <Upload className="h-8 w-8 text-muted-foreground" />
+                        <span className="text-sm text-muted-foreground">Upload logo</span>
+                        <span className="text-xs text-muted-foreground">JPG, PNG, WebP · up to 5MB</span>
+                      </label>
+                      {editLogoFile && (
+                        <div className="mt-2 flex items-center justify-center gap-2">
+                          <span className="text-xs text-muted-foreground truncate max-w-[180px]">{editLogoFile.name}</span>
+                          <button
+                            type="button"
+                            className="text-muted-foreground hover:text-destructive"
+                            aria-label="Remove logo"
+                            onClick={() => setEditLogoFile(null)}
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        </div>
+                      )}
+                      {!editLogoFile && association?.avatarUrl && (
+                        <img
+                          src={association.avatarUrl}
+                          alt=""
+                          className="mt-3 mx-auto h-16 w-16 rounded-md object-cover border border-border"
+                        />
+                      )}
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Banner</Label>
+                    <div className="border-2 border-dashed border-border rounded-lg p-4 text-center hover:border-primary/50 transition-colors">
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        className="hidden"
+                        id="assoc-detail-banner"
+                        onChange={(e) => {
+                          const f = e.target.files?.[0];
+                          setEditBannerFile(f ?? null);
+                          e.target.value = "";
+                        }}
+                      />
+                      <label htmlFor="assoc-detail-banner" className="cursor-pointer flex flex-col items-center gap-2">
+                        <Upload className="h-8 w-8 text-muted-foreground" />
+                        <span className="text-sm text-muted-foreground">Wide banner image</span>
+                        <span className="text-xs text-muted-foreground">JPG, PNG, WebP · up to 5MB</span>
+                      </label>
+                      {editBannerFile && (
+                        <div className="mt-2 flex items-center justify-center gap-2">
+                          <span className="text-xs text-muted-foreground truncate max-w-[180px]">{editBannerFile.name}</span>
+                          <button
+                            type="button"
+                            className="text-muted-foreground hover:text-destructive"
+                            aria-label="Remove banner"
+                            onClick={() => setEditBannerFile(null)}
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        </div>
+                      )}
+                      {!editBannerFile && association?.coverImageUrl && (
+                        <img
+                          src={association.coverImageUrl}
+                          alt=""
+                          className="mt-3 mx-auto h-16 w-full max-w-xs rounded-md object-cover border border-border"
+                        />
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <h3 className="font-semibold text-foreground">Contact Information</h3>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-2 sm:col-span-2">
+                    <Label>Address</Label>
+                    <Input
+                      value={editForm.address}
+                      onChange={(e) => setEditForm((prev) => ({ ...prev, address: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Email</Label>
+                    <Input
+                      type="email"
+                      value={editForm.contactEmail}
+                      onChange={(e) => setEditForm((prev) => ({ ...prev, contactEmail: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Phone</Label>
+                    <Input
+                      value={editForm.contactPhone}
+                      onChange={(e) => setEditForm((prev) => ({ ...prev, contactPhone: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-2 sm:col-span-2">
+                    <Label>Website</Label>
+                    <Input
+                      value={editForm.website}
+                      onChange={(e) => setEditForm((prev) => ({ ...prev, website: e.target.value }))}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </ScrollArea>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditOpen(false)} disabled={savingEdit}>Cancel</Button>
+            <Button onClick={handleSaveEdit} disabled={savingEdit}>
+              {savingEdit ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving...</> : "Save"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Assign Admin Modal */}
+      <Dialog open={assignAdminOpen} onOpenChange={setAssignAdminOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Assign Admin</DialogTitle>
+            <DialogDescription>Create and assign an association admin account.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Email</Label>
+              <Input
+                type="email"
+                placeholder="admin@example.com"
+                value={assignAdminEmail}
+                onChange={(e) => setAssignAdminEmail(e.target.value)}
+                disabled={assigningAdmin}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Password</Label>
+              <Input
+                type="password"
+                placeholder="SecurePass123!"
+                value={assignAdminPassword}
+                onChange={(e) => setAssignAdminPassword(e.target.value)}
+                disabled={assigningAdmin}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAssignAdminOpen(false)} disabled={assigningAdmin}>Cancel</Button>
+            <Button onClick={handleAssignAdmin} disabled={assigningAdmin}>
+              {assigningAdmin ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Assigning...</> : "Assign"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

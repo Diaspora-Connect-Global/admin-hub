@@ -13,6 +13,7 @@ import {
   GET_ASSOCIATION_MEMBERS,
   GET_PENDING_MEMBERSHIP_REQUESTS,
   GET_ASSOCIATION_AVATAR_UPLOAD_URL,
+  GET_ASSOCIATION_COVER_UPLOAD_URL,
   GET_ASSOCIATION_STATS,
   UPDATE_COMMUNITY,
   UPDATE_COMMUNITY_VISIBILITY,
@@ -114,6 +115,13 @@ interface AvatarUploadUrlResult {
   };
 }
 
+interface CoverUploadUrlResult {
+  getAssociationCoverUploadUrl: {
+    uploadUrl: string;
+    fileKey: string;
+  };
+}
+
 interface AssociationStatsResult {
   getAssociationStats: {
     totalMembers: number;
@@ -127,6 +135,10 @@ interface AssociationStatsResult {
 export function useCreateAssociation() {
   return useMutation<CreateAssociationResult, { input: CreateAssociationInput }>(
     CREATE_ASSOCIATION,
+    {
+      refetchQueries: [SEARCH_ASSOCIATIONS],
+      awaitRefetchQueries: true,
+    },
   );
 }
 
@@ -146,6 +158,11 @@ export function useSearchAssociations(input: SearchAssociationsInput) {
 export function useUpdateAssociation() {
   return useMutation<UpdateAssociationResult, { input: UpdateAssociationInput }>(
     UPDATE_ASSOCIATION,
+    {
+      /** Refetch list + any open detail so UI matches server after save. */
+      refetchQueries: [SEARCH_ASSOCIATIONS, GET_ASSOCIATION],
+      awaitRefetchQueries: true,
+    },
   );
 }
 
@@ -219,6 +236,12 @@ export function useGetPendingMembershipRequests(
 export function useGetAssociationAvatarUploadUrl() {
   return useMutation<AvatarUploadUrlResult, { associationId: string }>(
     GET_ASSOCIATION_AVATAR_UPLOAD_URL,
+  );
+}
+
+export function useGetAssociationCoverUploadUrl() {
+  return useMutation<CoverUploadUrlResult, { associationId: string }>(
+    GET_ASSOCIATION_COVER_UPLOAD_URL,
   );
 }
 
