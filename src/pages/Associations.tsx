@@ -23,7 +23,12 @@ import {
   Download, ChevronDown, Upload, Building2, Globe, Mail, Phone, LinkIcon,
   Loader2
 } from "lucide-react";
-import { useSearchAssociations, useCreateAssociation, useLinkAssociation } from "@/hooks/admin/useAssociation";
+import {
+  useSearchAssociations,
+  useCreateAssociation,
+  useLinkAssociation,
+  useAssignAssociationAdmin,
+} from "@/hooks/admin/useAssociation";
 import { useListAssociationTypes } from "@/hooks/admin/useEntityTypes";
 
 // Complete list of all countries
@@ -257,6 +262,9 @@ export default function Associations() {
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [assignAdminsModalOpen, setAssignAdminsModalOpen] = useState(false);
+  const [assocAdminEmail, setAssocAdminEmail] = useState("");
+  const [assocAdminPassword, setAssocAdminPassword] = useState("");
+  const [assocAdminConfirmPassword, setAssocAdminConfirmPassword] = useState("");
   const [linkCommunitiesModalOpen, setLinkCommunitiesModalOpen] = useState(false);
   const [selectedAssociation, setSelectedAssociation] = useState<typeof sampleAssociations[0] | null>(null);
   
@@ -267,6 +275,7 @@ export default function Associations() {
   const { data: searchData, loading: searchLoading } = useSearchAssociations({ limit: 50 });
   const [createAssociationMutation, { loading: createLoading }] = useCreateAssociation();
   const [linkAssociationMutation] = useLinkAssociation();
+  const [assignAssociationAdminMutation, { loading: assignAssocAdminLoading }] = useAssignAssociationAdmin();
   const { data: assocTypesData } = useListAssociationTypes();
 
   const apiAssociations = searchData?.searchAssociations.associations.map((a) => ({
@@ -351,6 +360,84 @@ export default function Associations() {
       return true;
     } catch {
       return false;
+    }
+  };
+
+  const resetAssocAssignAdminForm = () => {
+    setAssocAdminEmail("");
+    setAssocAdminPassword("");
+    setAssocAdminConfirmPassword("");
+  };
+
+  const handleAssignAdminsModalChange = (open: boolean) => {
+    setAssignAdminsModalOpen(open);
+    if (!open) resetAssocAssignAdminForm();
+  };
+
+  const handleSubmitAssignAssociationAdmin = async () => {
+    if (!selectedAssociation?.id) {
+      toast({ title: t("associations.validationError"), description: t("associations.fillRequired"), variant: "destructive" });
+      return;
+    }
+    const email = assocAdminEmail.trim();
+    if (!email || !validateEmail(email)) {
+      toast({ title: t("associations.validationError"), description: t("associations.invalidEmail"), variant: "destructive" });
+      return;
+    }
+    if (!assocAdminPassword.trim()) {
+      toast({
+        title: t("associations.validationError"),
+        description: t("communities.assignAdmin.passwordRequired"),
+        variant: "destructive",
+      });
+      return;
+    }
+    if (assocAdminPassword.length < 8) {
+      toast({
+        title: t("associations.validationError"),
+        description: t("communities.assignAdmin.passwordTooShort"),
+        variant: "destructive",
+      });
+      return;
+    }
+    if (assocAdminPassword !== assocAdminConfirmPassword) {
+      toast({
+        title: t("associations.validationError"),
+        description: t("communities.assignAdmin.passwordMismatch"),
+        variant: "destructive",
+      });
+      return;
+    }
+    try {
+      const result = await assignAssociationAdminMutation({
+        variables: {
+          input: {
+            entityId: selectedAssociation.id,
+            email,
+            password: assocAdminPassword,
+          },
+        },
+      });
+      const payload = result.data?.assignAssociationAdmin;
+      if (payload?.success) {
+        toast({
+          title: t("associations.adminAssignedSuccess"),
+          description: payload.message?.trim() || t("communities.assignAdmin.successCreate"),
+        });
+        handleAssignAdminsModalChange(false);
+      } else {
+        toast({
+          title: t("associations.validationError"),
+          description: payload?.message ?? t("communities.assignAdmin.requestFailed"),
+          variant: "destructive",
+        });
+      }
+    } catch (e) {
+      toast({
+        title: t("associations.validationError"),
+        description: e instanceof Error ? e.message : String(e),
+        variant: "destructive",
+      });
     }
   };
 
@@ -1077,27 +1164,63 @@ export default function Associations() {
         </DialogContent>
       </Dialog>
 
-      {/* Assign Admins Modal */}
-      <Dialog open={assignAdminsModalOpen} onOpenChange={setAssignAdminsModalOpen}>
+      {/* Assign Admins Modal — assignAssociationAdmin(entityId, email, password) */}
+      <Dialog open={assignAdminsModalOpen} onOpenChange={handleAssignAdminsModalChange}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>{t('associations.manageAdmins')}</DialogTitle>
             <DialogDescription>{t('associations.manageAdminsDesc', { name: selectedAssociation?.name })}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
-            <MultiSelect
-              options={mockAdmins.map(a => ({ label: `${a.name} (${a.email})`, value: a.id }))}
-              selected={selectedAssociation?.assignedAdmins || []}
-              onChange={() => {}}
-              placeholder={t('associations.form.selectAdminsPlaceholder')}
-            />
+            <div className="space-y-2">
+              <Label htmlFor="assoc-assign-email">{t('common.email')}</Label>
+              <Input
+                id="assoc-assign-email"
+                type="email"
+                autoComplete="off"
+                placeholder={t('communities.assignAdmin.emailPlaceholder')}
+                value={assocAdminEmail}
+                onChange={(e) => setAssocAdminEmail(e.target.value)}
+                disabled={assignAssocAdminLoading}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="assoc-assign-password">{t('communities.assignAdmin.initialPassword')}</Label>
+              <Input
+                id="assoc-assign-password"
+                type="password"
+                autoComplete="new-password"
+                value={assocAdminPassword}
+                onChange={(e) => setAssocAdminPassword(e.target.value)}
+                disabled={assignAssocAdminLoading}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="assoc-assign-confirm">{t('communities.assignAdmin.confirmPassword')}</Label>
+              <Input
+                id="assoc-assign-confirm"
+                type="password"
+                autoComplete="new-password"
+                value={assocAdminConfirmPassword}
+                onChange={(e) => setAssocAdminConfirmPassword(e.target.value)}
+                disabled={assignAssocAdminLoading}
+              />
+            </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setAssignAdminsModalOpen(false)}>{t('common.cancel')}</Button>
-            <Button onClick={() => { 
-              toast({ title: t('associations.adminAssignedSuccess') }); 
-              setAssignAdminsModalOpen(false); 
-            }}>{t('common.save')}</Button>
+            <Button type="button" variant="outline" onClick={() => handleAssignAdminsModalChange(false)} disabled={assignAssocAdminLoading}>
+              {t('common.cancel')}
+            </Button>
+            <Button type="button" onClick={handleSubmitAssignAssociationAdmin} disabled={assignAssocAdminLoading}>
+              {assignAssocAdminLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  {t('common.loading')}
+                </>
+              ) : (
+                t('communities.assignAdmin.createAdmin')
+              )}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

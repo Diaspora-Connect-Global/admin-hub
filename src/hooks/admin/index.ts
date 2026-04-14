@@ -362,6 +362,8 @@ export {
   useUpdateCommunity,
   useUpdateCommunityVisibility,
   useUpdateCommunityJoinPolicy,
+  useAssignCommunityAdmin,
+  useAssignAssociationAdmin,
   useSoftDeleteCommunity,
   useRestoreCommunity,
   useSearchCommunitiesAdvanced,

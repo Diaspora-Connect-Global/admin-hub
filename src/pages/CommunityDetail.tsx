@@ -26,8 +26,9 @@ import {
   useUpdateCommunity,
   useUpdateCommunityJoinPolicy,
   useUpdateCommunityVisibility,
+  useAssignCommunityAdmin,
 } from "@/hooks/admin";
-import { useCreateAdmin, useListAdmins, useAssignAdminRole } from "@/hooks/admin/useAdminAccounts";
+import { useListAdmins, useAssignAdminRole } from "@/hooks/admin/useAdminAccounts";
 import { useLinkAssociation } from "@/hooks/admin/useAssociation";
 import {
   countriesServedLabelsToIso2,
@@ -202,7 +203,7 @@ export default function CommunityDetail() {
   const [assignAdminSubmitting, setAssignAdminSubmitting] = useState(false);
   const { data: listAdminsData, loading: listAdminsLoading } = useListAdmins(200, 0);
   const [assignAdminRoleMutation] = useAssignAdminRole();
-  const [createAdminMutation] = useCreateAdmin();
+  const [assignCommunityAdminMutation] = useAssignCommunityAdmin();
 
   const adminAccounts = listAdminsData?.listAdmins?.admins ?? [];
   const eligibleExistingAdmins = id
@@ -436,28 +437,27 @@ export default function CommunityDetail() {
     }
     setAssignAdminSubmitting(true);
     try {
-      const result = await createAdminMutation({
+      const result = await assignCommunityAdminMutation({
         variables: {
           input: {
+            entityId: id,
             email,
             password: newAdminPassword,
-            adminType: "COMMUNITY_ADMIN",
-            scopeType: "COMMUNITY",
-            scopeId: id,
           },
         },
       });
-      if (result.data?.createAdmin?.success) {
+      const payload = result.data?.assignCommunityAdmin;
+      if (payload?.success) {
         toast({
           title: t("communities.assignAdmin.successTitle"),
-          description: t("communities.assignAdmin.successCreate"),
+          description: payload.message?.trim() || t("communities.assignAdmin.successCreate"),
         });
         handleAssignAdminDialogChange(false);
         await refetch();
       } else {
         toast({
           title: t("communities.validationError"),
-          description: result.data?.createAdmin?.message ?? t("communities.assignAdmin.requestFailed"),
+          description: payload?.message ?? t("communities.assignAdmin.requestFailed"),
           variant: "destructive",
         });
       }

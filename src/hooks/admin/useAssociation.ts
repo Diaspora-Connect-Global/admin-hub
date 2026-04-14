@@ -17,6 +17,8 @@ import {
   UPDATE_COMMUNITY,
   UPDATE_COMMUNITY_VISIBILITY,
   UPDATE_COMMUNITY_JOIN_POLICY,
+  ASSIGN_COMMUNITY_ADMIN,
+  ASSIGN_ASSOCIATION_ADMIN,
   SOFT_DELETE_COMMUNITY,
   RESTORE_COMMUNITY,
   SEARCH_COMMUNITIES_ADVANCED,
@@ -42,6 +44,8 @@ import {
   type UpdateCommunityInput,
   type UpdateCommunityVisibilityInput,
   type UpdateCommunityJoinPolicyInput,
+  type AssignAdminInput,
+  type AssignAdminPayload,
   type CommunityMutationPayload,
 } from "@/services/networks/graphql/admin/operations";
 
@@ -253,6 +257,20 @@ export function useUpdateCommunityJoinPolicy() {
     },
     { input: UpdateCommunityJoinPolicyInput }
   >(UPDATE_COMMUNITY_JOIN_POLICY);
+}
+
+export function useAssignCommunityAdmin() {
+  return useMutation<
+    { assignCommunityAdmin: AssignAdminPayload },
+    { input: AssignAdminInput }
+  >(ASSIGN_COMMUNITY_ADMIN);
+}
+
+export function useAssignAssociationAdmin() {
+  return useMutation<
+    { assignAssociationAdmin: AssignAdminPayload },
+    { input: AssignAdminInput }
+  >(ASSIGN_ASSOCIATION_ADMIN);
 }
 
 export function useSoftDeleteCommunity() {

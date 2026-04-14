@@ -1384,6 +1384,42 @@ export const UPDATE_COMMUNITY_JOIN_POLICY = gql`
   }
 `;
 
+/** assignCommunityAdmin / assignAssociationAdmin (entity-scoped admin provisioning). */
+export interface AssignAdminInput {
+  entityId: string;
+  email: string;
+  password: string;
+}
+
+export interface AssignAdminPayload {
+  success: boolean;
+  adminId?: string;
+  email?: string;
+  message?: string;
+}
+
+export const ASSIGN_COMMUNITY_ADMIN = gql`
+  mutation AssignCommunityAdmin($input: AssignAdminInput!) {
+    assignCommunityAdmin(input: $input) {
+      success
+      adminId
+      email
+      message
+    }
+  }
+`;
+
+export const ASSIGN_ASSOCIATION_ADMIN = gql`
+  mutation AssignAssociationAdmin($input: AssignAdminInput!) {
+    assignAssociationAdmin(input: $input) {
+      success
+      adminId
+      email
+      message
+    }
+  }
+`;
+
 export const SOFT_DELETE_COMMUNITY = gql`
   mutation SoftDeleteCommunity($communityId: ID!) {
     softDeleteCommunity(communityId: $communityId) {
