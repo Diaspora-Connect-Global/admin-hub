@@ -215,9 +215,41 @@ export function singleCountryLabelToIso2(label: string | null | undefined): stri
   return labelToIso2(String(label));
 }
 
-/** Map create/edit UI values to API `groupCreationPermission`. */
+/** UI values for “who can post” — maps to GraphQL `CommunityWhoCanPost`. */
+export type WhoCanPostUi = "ADMIN_ONLY" | "ALL_MEMBERS";
+
+/** Map community create/edit UI to GraphQL `CommunityWhoCanPost` (ADMINS_ONLY | MEMBERS | ANYONE). */
+export function whoCanPostUiToApi(ui: WhoCanPostUi): string {
+  return ui === "ALL_MEMBERS" ? "MEMBERS" : "ADMINS_ONLY";
+}
+
+/** Map API value to UI select state (accepts legacy ADMIN_ONLY / ALL_MEMBERS). */
+export function whoCanPostApiToUi(api: string | null | undefined): WhoCanPostUi {
+  const v = (api ?? "").trim();
+  if (v === "MEMBERS" || v === "ANYONE" || v === "ALL_MEMBERS") return "ALL_MEMBERS";
+  return "ADMIN_ONLY";
+}
+
+/** Association form uses “Admins Only” | “All Members” labels. */
+export function whoCanPostAssociationLabelToApi(label: string): string {
+  const t = label.trim();
+  if (t === "All Members" || t === "ALL_MEMBERS") return "MEMBERS";
+  return "ADMINS_ONLY";
+}
+
+/** Map API `GroupCreationPermission` to UI labels used in Selects. */
+export function groupCreationApiToUi(api: string | null | undefined): "Admins Only" | "Members" {
+  const v = (api ?? "").trim();
+  if (v === "MEMBERS" || v === "Members") return "Members";
+  return "Admins Only";
+}
+
+/** Map create/edit UI values to API `GroupCreationPermission` (ADMINS_ONLY | MEMBERS). */
 export function groupCreationUiToApi(value: string): string {
-  if (value === "Admins Only") return "ADMIN_ONLY";
+  if (value === "Admins Only") return "ADMINS_ONLY";
+  if (value === "Members") return "MEMBERS";
   const t = value.trim();
-  return t || "ADMIN_ONLY";
+  if (t === "ADMIN_ONLY") return "ADMINS_ONLY";
+  if (t === "ADMINS_ONLY" || t === "MEMBERS") return t;
+  return t || "ADMINS_ONLY";
 }

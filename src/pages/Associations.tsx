@@ -34,6 +34,7 @@ import {
   useGetAssociationCoverUploadUrl,
 } from "@/hooks/admin/useAssociation";
 import { uploadAssociationAvatar, uploadAssociationCover } from "@/lib/associationImageUpload";
+import type { UpdateAssociationInput } from "@/services/networks/graphql/admin/operations";
 import { useListAssociationTypes } from "@/hooks/admin/useEntityTypes";
 import { useListAdmins } from "@/hooks/admin/useAdminAccounts";
 
@@ -215,7 +216,10 @@ export default function Associations() {
     visibility: a.visibility ?? "PUBLIC",
     whoCanPost: a.whoCanPost ?? "All Members",
     logoUrl: a.avatarUrl ?? null,
-    coverUrl: a.coverImageUrl ?? null,
+    coverUrl:
+      "coverImageUrl" in a && (a as { coverImageUrl?: string | null }).coverImageUrl != null
+        ? (a as { coverImageUrl?: string | null }).coverImageUrl ?? null
+        : null,
     address: a.address ?? "",
     contactEmail: a.contactEmail ?? "",
     contactPhone: a.contactPhone ?? "",
@@ -282,6 +286,93 @@ export default function Associations() {
       return true;
     } catch {
       return false;
+    }
+  };
+
+  /** Never throws; toasts on failure. Retries update without `coverKey` if the API rejects it. */
+  const persistAssociationImages = async (associationId: string) => {
+    try {
+      let avatarKey: string | undefined;
+      let coverKey: string | undefined;
+      if (formData.logoFile) {
+        try {
+          avatarKey = await uploadAssociationAvatar(associationId, formData.logoFile, (opts) =>
+            getAvatarUploadUrl(opts),
+          );
+        } catch (logoErr) {
+          toast({
+            title: "Logo upload failed",
+            description: logoErr instanceof Error ? logoErr.message : "Could not upload logo.",
+            variant: "destructive",
+          });
+        }
+      }
+      if (formData.bannerFile) {
+        try {
+          coverKey = await uploadAssociationCover(associationId, formData.bannerFile, (opts) =>
+            getCoverUploadUrl(opts),
+          );
+        } catch (coverErr) {
+          toast({
+            title: "Banner upload failed",
+            description:
+              coverErr instanceof Error ? coverErr.message : "Cover upload failed (API may not support it yet).",
+            variant: "destructive",
+          });
+        }
+      }
+      if (avatarKey == null && coverKey == null) return;
+
+      const withKeys = (k: { avatarKey?: string; coverKey?: string }): UpdateAssociationInput => ({
+        id: associationId,
+        ...k,
+      });
+
+      try {
+        await updateAssociationMutation({
+          variables: {
+            input: withKeys({
+              ...(avatarKey != null ? { avatarKey } : {}),
+              ...(coverKey != null ? { coverKey } : {}),
+            }),
+          },
+        });
+      } catch (updateErr) {
+        if (coverKey != null) {
+          try {
+            await updateAssociationMutation({
+              variables: {
+                input: withKeys({
+                  ...(avatarKey != null ? { avatarKey } : {}),
+                }),
+              },
+            });
+            toast({
+              title: "Images partly saved",
+              description:
+                "Logo was linked if uploaded; banner could not be saved (coverKey may not be supported by the API yet).",
+            });
+          } catch (retryErr) {
+            toast({
+              title: "Could not save image metadata",
+              description: retryErr instanceof Error ? retryErr.message : "Update failed.",
+              variant: "destructive",
+            });
+          }
+        } else {
+          toast({
+            title: "Could not save image metadata",
+            description: updateErr instanceof Error ? updateErr.message : "Update failed.",
+            variant: "destructive",
+          });
+        }
+      }
+    } catch (e) {
+      toast({
+        title: "Image upload",
+        description: e instanceof Error ? e.message : "Something went wrong while uploading images.",
+        variant: "destructive",
+      });
     }
   };
 

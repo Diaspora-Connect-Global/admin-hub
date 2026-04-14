@@ -237,7 +237,15 @@ export default function AssociationDetail() {
       let avatarKey: string | undefined;
       let coverKey: string | undefined;
       if (editLogoFile) {
-        avatarKey = await uploadAssociationAvatar(id, editLogoFile, (opts) => getAvatarUploadUrl(opts));
+        try {
+          avatarKey = await uploadAssociationAvatar(id, editLogoFile, (opts) => getAvatarUploadUrl(opts));
+        } catch (logoErr) {
+          toast({
+            title: "Logo upload failed",
+            description: logoErr instanceof Error ? logoErr.message : "Could not upload logo.",
+            variant: "destructive",
+          });
+        }
       }
       if (editBannerFile) {
         try {
@@ -250,26 +258,58 @@ export default function AssociationDetail() {
           });
         }
       }
-      await updateAssociationMutation({
-        variables: {
-          input: {
-            id,
-            name: editForm.name.trim(),
-            description: editForm.description.trim() || undefined,
-            joinPolicy: editForm.joinPolicy,
-            visibility: editForm.visibility,
-            contactEmail: editForm.contactEmail.trim() || undefined,
-            contactPhone: editForm.contactPhone.trim() || undefined,
-            website: editForm.website.trim() || undefined,
-            address: editForm.address.trim() || undefined,
-            ...(avatarKey != null ? { avatarKey } : {}),
-            ...(coverKey != null ? { coverKey } : {}),
-          },
-        },
-      });
+      const baseInput = {
+        id,
+        name: editForm.name.trim(),
+        description: editForm.description.trim() || undefined,
+        joinPolicy: editForm.joinPolicy,
+        visibility: editForm.visibility,
+        contactEmail: editForm.contactEmail.trim() || undefined,
+        contactPhone: editForm.contactPhone.trim() || undefined,
+        website: editForm.website.trim() || undefined,
+        address: editForm.address.trim() || undefined,
+        ...(avatarKey != null ? { avatarKey } : {}),
+        ...(coverKey != null ? { coverKey } : {}),
+      };
+      let toastAfterSave: { title: string; description?: string } = { title: "Association updated" };
+      try {
+        await updateAssociationMutation({
+          variables: { input: baseInput },
+        });
+      } catch (updateErr) {
+        if (coverKey != null) {
+          try {
+            await updateAssociationMutation({
+              variables: {
+                input: {
+                  id,
+                  name: editForm.name.trim(),
+                  description: editForm.description.trim() || undefined,
+                  joinPolicy: editForm.joinPolicy,
+                  visibility: editForm.visibility,
+                  contactEmail: editForm.contactEmail.trim() || undefined,
+                  contactPhone: editForm.contactPhone.trim() || undefined,
+                  website: editForm.website.trim() || undefined,
+                  address: editForm.address.trim() || undefined,
+                  ...(avatarKey != null ? { avatarKey } : {}),
+                },
+              },
+            });
+            toastAfterSave = {
+              title: "Association updated",
+              description:
+                "Saved without linking the banner (coverKey may not be supported by the API yet).",
+            };
+          } catch (retryErr) {
+            throw retryErr;
+          }
+        } else {
+          throw updateErr;
+        }
+      }
       setEditLogoFile(null);
       setEditBannerFile(null);
-      toast({ title: "Association updated" });
+      toast(toastAfterSave);
       setEditOpen(false);
     } catch (err) {
       toast({

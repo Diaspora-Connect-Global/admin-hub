@@ -1078,7 +1078,6 @@ export const GET_ASSOCIATION = gql`
       visibility
       joinPolicy
       avatarUrl
-      coverImageUrl
       createdAt
       updatedAt
       memberCount
@@ -1130,7 +1129,6 @@ export const SEARCH_ASSOCIATIONS = gql`
         countriesServed
         membershipStatus
         avatarUrl
-        coverImageUrl
         createdAt
       }
       total
@@ -1139,6 +1137,8 @@ export const SEARCH_ASSOCIATIONS = gql`
     }
   }
 `;
+
+/** When the backend adds `coverImageUrl` on `Association`, add it to `GET_ASSOCIATION` and `SEARCH_ASSOCIATIONS` above. */
 
 export const UPDATE_ASSOCIATION = gql`
   mutation UpdateAssociation($input: UpdateAssociationInput!) {
