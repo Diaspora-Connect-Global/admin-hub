@@ -37,23 +37,6 @@ export function AdminHeader() {
 
         {/* Actions */}
         <div className="flex items-center gap-3">
-          {/* Time Range Picker */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="gap-2">
-                Last 30 days
-                <ChevronDown className="w-4 h-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="bg-popover border-border">
-              <DropdownMenuItem>Today</DropdownMenuItem>
-              <DropdownMenuItem>Last 7 days</DropdownMenuItem>
-              <DropdownMenuItem>Last 30 days</DropdownMenuItem>
-              <DropdownMenuItem>Last 90 days</DropdownMenuItem>
-              <DropdownMenuItem>Custom range</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-
           {/* Notifications */}
           <AdminNotificationBell />
 

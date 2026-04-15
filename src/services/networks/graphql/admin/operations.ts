@@ -1681,6 +1681,38 @@ export const LIST_COMMUNITY_MEMBERS = gql`
   }
 `;
 
+export const LIST_COMMUNITY_ADMINS = gql`
+  query ListCommunityAdmins($communityId: ID!, $limit: Int, $offset: Int) {
+    listCommunityAdmins(communityId: $communityId, limit: $limit, offset: $offset) {
+      admins {
+        id
+        email
+        status
+        adminType
+        roles {
+          id
+          roleType
+          scopeType
+          scopeId
+        }
+      }
+    }
+  }
+`;
+
+export const LIST_COMMUNITY_ASSOCIATIONS = gql`
+  query ListCommunityAssociations($communityId: ID!, $limit: Int, $offset: Int) {
+    listCommunityAssociations(communityId: $communityId, limit: $limit, offset: $offset) {
+      associations {
+        id
+        name
+        description
+      }
+      total
+    }
+  }
+`;
+
 export const LIST_ASSOCIATION_MEMBERS = gql`
   query ListAssociationMembers($associationId: ID!, $limit: Int, $offset: Int) {
     listAssociationMembers(associationId: $associationId, limit: $limit, offset: $offset) {

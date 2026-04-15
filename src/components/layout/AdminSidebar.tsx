@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { LayoutDashboard, Users, Wallet, AlertTriangle, CheckSquare, BarChart3, Settings, Bell, FileText, HeadphonesIcon, Shield, Store, Key, Activity, ChevronLeft, ChevronRight, LogOut, MessageSquare, Calendar, Briefcase, Landmark } from "lucide-react";
 import { cn } from "@/lib/utils";
 import logo from "@/assets/logo.svg";
-import { useAdminAuth } from "@/hooks/auth/useAdminAuth";
+import { useAdminAuth, getPortalRoleTranslationKey } from "@/hooks/auth/useAdminAuth";
 
 const navItems = [
   { id: "dashboard", titleKey: "nav.dashboard", icon: LayoutDashboard, path: "/" },
@@ -30,7 +30,8 @@ export function AdminSidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
   const { t } = useTranslation();
-  const { userEmail } = useAdminAuth();
+  const { userEmail, adminProfile } = useAdminAuth();
+  const roleTitleKey = getPortalRoleTranslationKey(adminProfile?.role?.name);
   
   const isActive = (path: string) => {
     if (path === "/") return location.pathname === "/";
@@ -78,7 +79,7 @@ export function AdminSidebar() {
           </div>
           {!collapsed && (
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-foreground truncate">{t('roles.systemAdmin')}</p>
+              <p className="text-sm font-medium text-foreground truncate">{t(roleTitleKey)}</p>
               <p className="text-xs text-muted-foreground truncate">{userEmail ?? "Admin"}</p>
             </div>
           )}

@@ -377,6 +377,8 @@ export {
   useGetBannedUsersList,
   useGetSuspendedUsersList,
   useListCommunityMembers,
+  useListCommunityAdmins,
+  useListCommunityAssociations,
   useListAssociationMembers,
   useSearchMembers,
   useGetCommunityAvatarUploadUrl,

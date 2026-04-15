@@ -174,7 +174,7 @@ export default function Login() {
             <CardHeader className="space-y-1">
               <CardTitle className="text-xl">Welcome back</CardTitle>
               <CardDescription>
-                Sign in to your admin account to continue
+                Sign in with a system, community, or association administrator account
               </CardDescription>
             </CardHeader>
             <CardContent>

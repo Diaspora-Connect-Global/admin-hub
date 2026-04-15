@@ -30,6 +30,7 @@ import {
   useAssignAssociationAdmin,
 } from "@/hooks/admin/useAssociation";
 import { uploadAssociationAvatar, uploadAssociationCover } from "@/lib/associationImageUpload";
+import { iso2OrLabelToDisplayName } from "@/lib/countriesServedIso";
 import { useGetUsers } from "@/hooks/admin";
 import { Loader2 } from "lucide-react";
 import { 
@@ -63,7 +64,10 @@ export default function AssociationDetail() {
 
   const countriesLabel =
     association?.countriesServed && association.countriesServed.length > 0
-      ? association.countriesServed.join(", ")
+      ? association.countriesServed
+          .map((c) => iso2OrLabelToDisplayName(c))
+          .filter(Boolean)
+          .join(", ")
       : "—";
   const associationTypeLabel =
     association?.associationType?.name ?? association?.associationTypeId ?? "—";

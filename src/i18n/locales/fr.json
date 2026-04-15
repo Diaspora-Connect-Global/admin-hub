@@ -472,6 +472,8 @@
     "assignedUsers": "Utilisateurs assignés",
     "systemAdmin": "Admin système",
     "communityAdmin": "Admin communauté",
+    "associationAdmin": "Admin association",
+    "moderator": "Modérateur",
     "supportAgent": "Agent support"
   },
   "systemHealth": {

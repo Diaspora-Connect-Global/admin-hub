@@ -32,6 +32,8 @@ import {
   GET_BANNED_USERS_LIST,
   GET_SUSPENDED_USERS_LIST,
   LIST_COMMUNITY_MEMBERS,
+  LIST_COMMUNITY_ADMINS,
+  LIST_COMMUNITY_ASSOCIATIONS,
   LIST_ASSOCIATION_MEMBERS,
   SEARCH_MEMBERS,
   GET_COMMUNITY_AVATAR_UPLOAD_URL,
@@ -404,6 +406,48 @@ export function useListCommunityMembers(communityId: string | null, limit = 20, 
       total: number;
     };
   }>(LIST_COMMUNITY_MEMBERS, {
+    variables: { communityId: communityId ?? "", limit, offset },
+    skip: !communityId,
+  });
+}
+
+export interface CommunityAdminListItem {
+  id: string;
+  email: string;
+  status: string;
+  adminType: string;
+  roles: Array<{
+    id: string;
+    roleType: string;
+    scopeType?: string | null;
+    scopeId?: string | null;
+  }>;
+}
+
+export function useListCommunityAdmins(communityId: string | null, limit = 20, offset = 0) {
+  return useQuery<{
+    listCommunityAdmins: {
+      admins: CommunityAdminListItem[];
+    };
+  }>(LIST_COMMUNITY_ADMINS, {
+    variables: { communityId: communityId ?? "", limit, offset },
+    skip: !communityId,
+  });
+}
+
+export interface CommunityLinkedAssociation {
+  id: string;
+  name: string;
+  description?: string | null;
+}
+
+export function useListCommunityAssociations(communityId: string | null, limit = 20, offset = 0) {
+  return useQuery<{
+    listCommunityAssociations: {
+      associations: CommunityLinkedAssociation[];
+      total: number;
+    };
+  }>(LIST_COMMUNITY_ASSOCIATIONS, {
     variables: { communityId: communityId ?? "", limit, offset },
     skip: !communityId,
   });

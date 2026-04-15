@@ -88,13 +88,18 @@ export default function Events() {
 
   const adminProfile = useSessionStore((state) => state.adminProfile);
   const adminRoleName = adminProfile?.role?.name ?? "UNKNOWN_ROLE";
-  const isSystemAdmin = adminRoleName === "SYSTEM_ADMIN" || adminRoleName === "SUPER_ADMIN";
+  const adminRoleUpper = adminRoleName.toUpperCase();
+  const canManageEvents =
+    adminRoleUpper === "SYSTEM_ADMIN" ||
+    adminRoleUpper === "SUPER_ADMIN" ||
+    adminRoleUpper === "COMMUNITY_ADMIN" ||
+    adminRoleUpper === "ASSOCIATION_ADMIN";
 
-  const ensureSystemAdmin = (actionLabel: string) => {
-    if (isSystemAdmin) return true;
+  const ensureEventAdmin = (actionLabel: string) => {
+    if (canManageEvents) return true;
     toast({
       title: "Permission denied",
-      description: `${actionLabel} requires SYSTEM_ADMIN or SUPER_ADMIN. Current role: ${adminRoleName}.`,
+      description: `${actionLabel} requires a system, community, or association admin. Current role: ${adminRoleName}.`,
       variant: "destructive",
     });
     return false;
@@ -186,7 +191,7 @@ export default function Events() {
   };
 
   const handleTogglePublish = async (event: Event) => {
-    if (!ensureSystemAdmin("Publishing events")) return;
+    if (!ensureEventAdmin("Publishing events")) return;
 
     if (event.status?.toUpperCase() === "PUBLISHED") {
       try {
@@ -208,19 +213,19 @@ export default function Events() {
   };
 
   const handleDelete = (event: Event) => {
-    if (!ensureSystemAdmin("Deleting events")) return;
+    if (!ensureEventAdmin("Deleting events")) return;
     setEventToDelete(event);
     setDeleteModalOpen(true);
   };
 
   const handleCancel = (event: Event) => {
-    if (!ensureSystemAdmin("Cancelling events")) return;
+    if (!ensureEventAdmin("Cancelling events")) return;
     setEventToCancel(event);
     setCancelModalOpen(true);
   };
 
   const handleConfirmCancel = async (reason: string) => {
-    if (!ensureSystemAdmin("Cancelling events")) return;
+    if (!ensureEventAdmin("Cancelling events")) return;
     if (!eventToCancel) return;
     try {
       await cancelEvent({ variables: { eventId: eventToCancel.id, reason } });
@@ -234,7 +239,7 @@ export default function Events() {
   };
 
   const handleConfirmDelete = async () => {
-    if (!ensureSystemAdmin("Deleting events")) return;
+    if (!ensureEventAdmin("Deleting events")) return;
     if (!eventToDelete) return;
     try {
       const deleteRes = await deleteEventAdmin({ variables: { eventId: eventToDelete.id } });
@@ -255,7 +260,7 @@ export default function Events() {
   };
 
   const handleCreateSubmit = async (data: EventFormData) => {
-    if (!ensureSystemAdmin(editingEventId ? "Updating events" : "Creating events")) return;
+    if (!ensureEventAdmin(editingEventId ? "Updating events" : "Creating events")) return;
 
     const ownerId = getUserId();
     if (!ownerId) {

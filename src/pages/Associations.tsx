@@ -36,6 +36,7 @@ import {
 import { uploadAssociationAvatar, uploadAssociationCover } from "@/lib/associationImageUpload";
 import { useListAssociationTypes } from "@/hooks/admin/useEntityTypes";
 import { useListAdmins } from "@/hooks/admin/useAdminAccounts";
+import { iso2OrLabelToDisplayName } from "@/lib/countriesServedIso";
 
 // Complete list of all countries
 const allCountries = [
@@ -693,7 +694,9 @@ export default function Associations() {
                       <TableCell>
                         <div className="flex flex-wrap gap-1 max-w-[150px]">
                           {assoc.countriesServed.slice(0, 2).map(country => (
-                            <Badge key={country} variant="secondary" className="text-xs">{country}</Badge>
+                            <Badge key={country} variant="secondary" className="text-xs">
+                              {iso2OrLabelToDisplayName(country)}
+                            </Badge>
                           ))}
                           {assoc.countriesServed.length > 2 && (
                             <Badge variant="secondary" className="text-xs">+{assoc.countriesServed.length - 2}</Badge>
@@ -1142,7 +1145,7 @@ export default function Associations() {
                       <Label className="text-muted-foreground">{t('associations.form.countriesServed')}</Label>
                       <div className="flex flex-wrap gap-1 mt-1">
                         {selectedAssociation.countriesServed.map(c => (
-                          <Badge key={c} variant="secondary">{c}</Badge>
+                          <Badge key={c} variant="secondary">{iso2OrLabelToDisplayName(c)}</Badge>
                         ))}
                       </div>
                     </div>

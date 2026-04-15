@@ -23,6 +23,7 @@ import type { CreateCommunityInput, Community } from "@/services/networks/graphq
 import {
   countriesServedLabelsToIso2,
   groupCreationUiToApi,
+  iso2OrLabelToDisplayName,
   singleCountryLabelToIso2,
 } from "@/lib/countriesServedIso";
 
@@ -513,7 +514,9 @@ export default function Communities() {
                       <TableCell>
                         <div className="flex flex-wrap gap-1">
                           {community.countriesServed.map((country) => (
-                            <Badge key={country} variant="outline" className="text-xs">{country}</Badge>
+                            <Badge key={country} variant="outline" className="text-xs">
+                              {iso2OrLabelToDisplayName(country)}
+                            </Badge>
                           ))}
                         </div>
                       </TableCell>
@@ -521,7 +524,10 @@ export default function Communities() {
                         {community.type === "Embassy" && community.embassyCountry && community.locationCountry ? (
                           <div className="flex items-center gap-1 text-xs">
                             <Globe className="h-3 w-3 text-blue-500" />
-                            <span>{community.embassyCountry} → {community.locationCountry}</span>
+                            <span>
+                              {iso2OrLabelToDisplayName(community.embassyCountry)} →{" "}
+                              {iso2OrLabelToDisplayName(community.locationCountry)}
+                            </span>
                           </div>
                         ) : (
                           <span className="text-muted-foreground">-</span>

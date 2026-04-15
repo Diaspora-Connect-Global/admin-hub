@@ -199,6 +199,38 @@ export const COUNTRY_LABEL_TO_ISO2: Record<string, string> = {
   "Zimbabwe": "ZW",
 };
 
+/** Reverse lookup: ISO 3166-1 alpha-2 → same country labels as {@link COUNTRY_LABEL_TO_ISO2}. */
+export const ISO2_TO_COUNTRY_LABEL: Record<string, string> = (() => {
+  const m: Record<string, string> = {};
+  for (const [label, iso] of Object.entries(COUNTRY_LABEL_TO_ISO2)) {
+    m[iso] = label;
+  }
+  return m;
+})();
+
+/**
+ * Turn an API value (usually ISO alpha-2 like `AL`, `DZ`) into the admin UI country name.
+ * If the value is already a full label (not exactly two letters), it is returned unchanged.
+ */
+export function iso2OrLabelToDisplayName(value: string | null | undefined): string {
+  if (value == null) return "";
+  const t = String(value).trim();
+  if (!t) return "";
+  if (/^[A-Za-z]{2}$/.test(t)) {
+    const iso = t.toUpperCase();
+    return ISO2_TO_COUNTRY_LABEL[iso] ?? iso;
+  }
+  return t;
+}
+
+/** Comma-separated country names for display (API stores ISO codes). */
+export function countriesServedIsoCodesToDisplayList(
+  codes: string[] | null | undefined,
+): string {
+  if (codes == null || codes.length === 0) return "";
+  return codes.map((c) => iso2OrLabelToDisplayName(c)).filter(Boolean).join(", ");
+}
+
 function labelToIso2(label: string): string {
   const t = label.trim();
   if (/^[A-Za-z]{2}$/.test(t)) return t.toUpperCase();

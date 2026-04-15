@@ -682,6 +682,8 @@
     "assignedUsers": "Assigned Users",
     "systemAdmin": "System Admin",
     "communityAdmin": "Community Admin",
+    "associationAdmin": "Association Admin",
+    "moderator": "Moderator",
     "supportAgent": "Support Agent"
   },
   "systemHealth": {

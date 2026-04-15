@@ -372,7 +372,7 @@ export default function Opportunities() {
       if (graphQLError?.extensions?.code === "FORBIDDEN" || graphQLError?.message?.toLowerCase().includes("forbidden")) {
         toast({
           title: "Permission Denied",
-          description: "You need SYSTEM_ADMIN role to create opportunities.",
+          description: "You do not have permission to create opportunities for this scope.",
           variant: "destructive",
         });
       } else {

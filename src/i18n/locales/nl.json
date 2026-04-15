@@ -472,6 +472,8 @@
     "assignedUsers": "Toegewezen gebruikers",
     "systemAdmin": "Systeembeheerder",
     "communityAdmin": "Communitybeheerder",
+    "associationAdmin": "Verenigingsbeheerder",
+    "moderator": "Moderator",
     "supportAgent": "Supportmedewerker"
   },
   "systemHealth": {

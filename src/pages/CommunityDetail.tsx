@@ -23,16 +23,21 @@ import {
   useGetCommunity,
   useGetUsers,
   useListCommunityMembers,
+  useListCommunityAdmins,
+  useListCommunityAssociations,
   useUpdateCommunity,
   useUpdateCommunityJoinPolicy,
   useUpdateCommunityVisibility,
   useAssignCommunityAdmin,
 } from "@/hooks/admin";
 import { useListAdmins, useAssignAdminRole } from "@/hooks/admin/useAdminAccounts";
-import { useLinkAssociation } from "@/hooks/admin/useAssociation";
+import { useLinkAssociation, useUnlinkAssociation } from "@/hooks/admin/useAssociation";
+import type { CommunityAdminListItem } from "@/hooks/admin/useAssociation";
 import {
   countriesServedLabelsToIso2,
+  countriesServedIsoCodesToDisplayList,
   groupCreationUiToApi,
+  iso2OrLabelToDisplayName,
   singleCountryLabelToIso2,
 } from "@/lib/countriesServedIso";
 import { useGetEventsByOwner } from "@/hooks/events";
@@ -42,6 +47,7 @@ import {
   ArrowLeft, Edit, Link2, UserPlus, Pause, Eye, Check, X, Trash2,
   MoreHorizontal, Download, Store, Unlink, Globe, Calendar, Users,
   FileText, Briefcase, History, Shield, Building2, Loader2, Upload,
+  ChevronLeft, ChevronRight,
 } from "lucide-react";
 
 const postsData = [
@@ -89,6 +95,16 @@ function joinPolicyFromCommunity(joinPolicy: string | undefined): "FREE" | "PAID
   return joinPolicy === "PAID" ? "PAID" : "FREE";
 }
 
+/** Matches GET_AUDIT_LOGS `items` selection in admin operations. */
+interface AuditLogItem {
+  resourceType?: string | null;
+  resourceId?: string | null;
+  ipAddress?: string | null;
+  createdAt?: string;
+  action?: string;
+  actorId?: string | null;
+}
+
 const getStatusBadge = (status: string) => {
   const styles: Record<string, string> = {
     "Active": "badge-status badge-success",
@@ -114,6 +130,12 @@ export default function CommunityDetail() {
   const [updateJoinPolicyMutation] = useUpdateCommunityJoinPolicy();
   const community = data?.getCommunity;
   const { data: membersData } = useListCommunityMembers(id ?? null, 50, 0);
+  const {
+    data: communityAdminsData,
+    loading: communityAdminsLoading,
+    error: communityAdminsError,
+    refetch: refetchCommunityAdmins,
+  } = useListCommunityAdmins(id ?? null, 20, 0);
   const { data: usersData } = useGetUsers({ limit: 500, offset: 0, skip: false });
   const { data: communityEventsData } = useGetEventsByOwner(
     id ? { ownerId: id, ownerType: "COMMUNITY", limit: 20, offset: 0 } : null,
@@ -129,6 +151,14 @@ export default function CommunityDetail() {
     limit: 20,
     offset: 0,
   });
+
+  const LINKED_ASSOCIATIONS_PAGE_SIZE = 20;
+  const [linkedAssociationsOffset, setLinkedAssociationsOffset] = useState(0);
+  const {
+    data: linkedAssociationsData,
+    loading: linkedAssociationsLoading,
+    refetch: refetchLinkedAssociations,
+  } = useListCommunityAssociations(id ?? null, LINKED_ASSOCIATIONS_PAGE_SIZE, linkedAssociationsOffset);
 
   const users = (
     usersData as { getUsers?: { items?: Array<{ id: string; email: string; displayName?: string | null }> } } | undefined
@@ -146,23 +176,43 @@ export default function CommunityDetail() {
       status: member.status,
     };
   });
-  const linkedAssociations: Array<{ id: string; name: string; country: string }> = [];
-  const communityAdmins = (community?.assignedAdminIds ?? []).map((adminId) => {
-    const user = userById.get(adminId);
-    return {
-      id: adminId,
-      name: user?.displayName || user?.email || adminId,
-      email: user?.email || "—",
-      role: "Community Admin",
-    };
-  });
+
+  const linkedAssociationsPayload = linkedAssociationsData?.listCommunityAssociations;
+  const linkedAssociations = linkedAssociationsPayload?.associations ?? [];
+  const linkedAssociationsTotal = linkedAssociationsPayload?.total ?? 0;
+
+  const listCommunityAdminsPayload = communityAdminsData?.listCommunityAdmins;
+  const adminsFromQuery: CommunityAdminListItem[] =
+    listCommunityAdminsPayload?.admins ??
+    (listCommunityAdminsPayload as { items?: CommunityAdminListItem[] } | undefined)?.items ??
+    [];
+
+  const adminsFromAssignedIds: CommunityAdminListItem[] = (community?.assignedAdminIds ?? []).map(
+    (userId) => {
+      const user = userById.get(userId);
+      return {
+        id: userId,
+        email: user?.email ?? userId,
+        status: "Assigned",
+        adminType: "Community admin",
+        roles: [],
+      };
+    },
+  );
+
+  const communityAdmins: CommunityAdminListItem[] =
+    adminsFromQuery.length > 0 ? adminsFromQuery : adminsFromAssignedIds;
+  const usingAssignedAdminFallback =
+    adminsFromQuery.length === 0 && adminsFromAssignedIds.length > 0;
   const communityEvents =
     (communityEventsData as { getEventsByOwner?: { events?: Array<{ id: string; title?: string; locationDetails?: { city?: string; venueName?: string; platform?: string } | null; startAt?: string; registrationCount?: number; status?: string }> } } | undefined)
       ?.getEventsByOwner?.events ?? [];
   const communityOpportunities =
     (opportunitiesData as { listOpportunities?: { opportunities?: Array<{ id: string; title?: string; type?: string; applicationCount?: number; status?: string; createdAt?: string }> } } | undefined)
       ?.listOpportunities?.opportunities ?? [];
-  const auditLogs = ((auditData as any)?.getAuditLogs?.items ?? []).map((log: any) => {
+  const auditLogs = (
+    (auditData as { getAuditLogs?: { items?: AuditLogItem[] } } | undefined)?.getAuditLogs?.items ?? []
+  ).map((log) => {
     const resource =
       log.resourceType && log.resourceId
         ? `${log.resourceType}: ${log.resourceId}`
@@ -181,6 +231,7 @@ export default function CommunityDetail() {
   const [postingEnabled, setPostingEnabled] = useState(true);
   const [linkAssociationOpen, setLinkAssociationOpen] = useState(false);
   const [selectedAssociationId, setSelectedAssociationId] = useState<string>("");
+  const [unlinkTarget, setUnlinkTarget] = useState<{ id: string; name: string } | null>(null);
 
   const { data: associationsData, loading: associationsLoading } = useDiscoverAssociations({
     limit: 1000,
@@ -194,6 +245,7 @@ export default function CommunityDetail() {
     )?.discoverAssociations?.associations ?? [];
 
   const [linkAssociationMutation, { loading: linkingAssociation }] = useLinkAssociation();
+  const [unlinkAssociationMutation, { loading: unlinkingAssociation }] = useUnlinkAssociation();
   const [assignAdminOpen, setAssignAdminOpen] = useState(false);
   const [assignAdminTab, setAssignAdminTab] = useState<"existing" | "create">("existing");
   const [selectedExistingAdminId, setSelectedExistingAdminId] = useState("");
@@ -244,6 +296,10 @@ export default function CommunityDetail() {
     embassyCountry: "",
     locationCountry: "",
   });
+
+  useEffect(() => {
+    setLinkedAssociationsOffset(0);
+  }, [id]);
 
   useEffect(() => {
     if (!community) return;
@@ -324,6 +380,7 @@ export default function CommunityDetail() {
         setLinkAssociationOpen(false);
         setSelectedAssociationId("");
         await refetch();
+        await refetchLinkedAssociations();
       } else {
         toast({
           title: t("communities.validationError"),
@@ -336,6 +393,42 @@ export default function CommunityDetail() {
       toast({
         title: t("communities.validationError"),
         description: message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleConfirmUnlinkAssociation = async () => {
+    if (!community?.id || !unlinkTarget) return;
+    try {
+      const result = await unlinkAssociationMutation({
+        variables: {
+          input: {
+            communityId: community.id,
+            associationId: unlinkTarget.id,
+          },
+        },
+      });
+      const payload = result.data?.unlinkAssociation;
+      if (payload?.success) {
+        toast({
+          title: "Association unlinked",
+          description: payload.message?.trim() || "The association was removed from this community.",
+        });
+        setUnlinkTarget(null);
+        await refetch();
+        await refetchLinkedAssociations();
+      } else {
+        toast({
+          title: t("communities.validationError"),
+          description: payload?.message ?? "Unlink failed.",
+          variant: "destructive",
+        });
+      }
+    } catch (e) {
+      toast({
+        title: t("communities.validationError"),
+        description: e instanceof Error ? e.message : "Unlink failed.",
         variant: "destructive",
       });
     }
@@ -382,6 +475,7 @@ export default function CommunityDetail() {
         });
         handleAssignAdminDialogChange(false);
         await refetch();
+        await refetchCommunityAdmins();
       } else {
         toast({
           title: t("communities.validationError"),
@@ -454,6 +548,7 @@ export default function CommunityDetail() {
         });
         handleAssignAdminDialogChange(false);
         await refetch();
+        await refetchCommunityAdmins();
       } else {
         toast({
           title: t("communities.validationError"),
@@ -635,8 +730,13 @@ export default function CommunityDetail() {
   }
 
   const countryLabel = community.countriesServed?.length
-    ? community.countriesServed.join(", ")
-    : community.embassyCountry ?? community.locationCountry ?? "—";
+    ? countriesServedIsoCodesToDisplayList(community.countriesServed)
+    : (() => {
+        const e = iso2OrLabelToDisplayName(community.embassyCountry);
+        const l = iso2OrLabelToDisplayName(community.locationCountry);
+        if (e && l) return `${e} → ${l}`;
+        return e || l || "—";
+      })();
 
   return (
     <AdminLayout>
@@ -721,13 +821,20 @@ export default function CommunityDetail() {
                       <p className="text-muted-foreground text-xs">Countries served</p>
                       <div className="flex items-center gap-2 flex-wrap">
                         <Globe className="h-3 w-3 text-muted-foreground shrink-0" />
-                        <p>{community.countriesServed?.length ? community.countriesServed.join(", ") : "—"}</p>
+                        <p>
+                          {community.countriesServed?.length
+                            ? countriesServedIsoCodesToDisplayList(community.countriesServed)
+                            : "—"}
+                        </p>
                       </div>
                     </div>
                     {community.embassyCountry && community.locationCountry && (
                       <div className="col-span-2">
                         <p className="text-muted-foreground text-xs">Embassy</p>
-                        <p>{community.embassyCountry} → {community.locationCountry}</p>
+                        <p>
+                          {iso2OrLabelToDisplayName(community.embassyCountry)} →{" "}
+                          {iso2OrLabelToDisplayName(community.locationCountry)}
+                        </p>
                       </div>
                     )}
                     <div className="col-span-2">
@@ -763,54 +870,165 @@ export default function CommunityDetail() {
               <div className="space-y-4">
                 <Card className="glass">
                   <CardHeader className="pb-2">
-                    <div className="flex items-center justify-between">
-                      <CardTitle className="text-base">Linked Associations</CardTitle>
+                    <div className="flex items-center justify-between gap-2">
+                      <div>
+                        <CardTitle className="text-base">
+                          Linked Associations
+                          <span className="text-muted-foreground font-normal">
+                            {" "}
+                            ({linkedAssociationsTotal})
+                          </span>
+                        </CardTitle>
+                        <CardDescription className="text-xs mt-0.5">
+                          Associations linked to this community.
+                        </CardDescription>
+                      </div>
                       <Button size="sm" variant="outline" onClick={() => setLinkAssociationOpen(true)}><Link2 className="mr-2 h-4 w-4" /> Link</Button>
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <div className="space-y-2">
-                      {linkedAssociations.map((assoc) => (
-                        <div key={assoc.id} className="flex items-center justify-between p-2 rounded-lg bg-muted/50">
-                          <div className="flex items-center gap-2">
-                            <Building2 className="h-4 w-4 text-muted-foreground" />
-                            <div>
-                              <p className="text-sm font-medium">{assoc.name}</p>
-                              <p className="text-xs text-muted-foreground">{assoc.country}</p>
+                    {linkedAssociationsLoading && linkedAssociations.length === 0 ? (
+                      <div className="flex items-center gap-2 py-4 text-muted-foreground text-sm">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Loading associations…
+                      </div>
+                    ) : linkedAssociations.length === 0 ? (
+                      <p className="text-sm text-muted-foreground py-2">No linked associations yet.</p>
+                    ) : (
+                      <>
+                        <div className="space-y-2">
+                          {linkedAssociations.map((assoc) => (
+                            <div key={assoc.id} className="flex items-start justify-between gap-2 p-2 rounded-lg bg-muted/50">
+                              <div className="flex items-start gap-2 min-w-0">
+                                <Building2 className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
+                                <div className="min-w-0">
+                                  <p className="text-sm font-medium">{assoc.name}</p>
+                                  <p className="text-xs text-muted-foreground line-clamp-2">
+                                    {assoc.description?.trim() || "—"}
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="flex gap-1 shrink-0">
+                                <Button variant="ghost" size="sm" onClick={() => navigate(`/associations/${assoc.id}`)}>View</Button>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  className="text-destructive"
+                                  onClick={() => setUnlinkTarget({ id: assoc.id, name: assoc.name })}
+                                  aria-label={t("communities.unlinkAssociation")}
+                                >
+                                  <Unlink className="h-4 w-4" />
+                                </Button>
+                              </div>
                             </div>
-                          </div>
-                          <div className="flex gap-1">
-                            <Button variant="ghost" size="sm" onClick={() => navigate(`/associations/${assoc.id}`)}>View</Button>
-                            <Button variant="ghost" size="sm" className="text-destructive"><Unlink className="h-4 w-4" /></Button>
-                          </div>
+                          ))}
                         </div>
-                      ))}
-                    </div>
+                        {linkedAssociationsTotal > 0 ? (
+                          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between pt-3 mt-2 border-t border-border/50 text-xs text-muted-foreground">
+                            <span>
+                              {linkedAssociationsOffset + 1}–
+                              {linkedAssociationsOffset + linkedAssociations.length} of{" "}
+                              {linkedAssociationsTotal}
+                            </span>
+                            {linkedAssociationsTotal > LINKED_ASSOCIATIONS_PAGE_SIZE ? (
+                              <div className="flex gap-1">
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-8"
+                                  disabled={linkedAssociationsOffset === 0}
+                                  onClick={() =>
+                                    setLinkedAssociationsOffset((o) =>
+                                      Math.max(0, o - LINKED_ASSOCIATIONS_PAGE_SIZE),
+                                    )
+                                  }
+                                >
+                                  <ChevronLeft className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-8"
+                                  disabled={
+                                    linkedAssociationsOffset + LINKED_ASSOCIATIONS_PAGE_SIZE >=
+                                    linkedAssociationsTotal
+                                  }
+                                  onClick={() =>
+                                    setLinkedAssociationsOffset((o) => o + LINKED_ASSOCIATIONS_PAGE_SIZE)
+                                  }
+                                >
+                                  <ChevronRight className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            ) : null}
+                          </div>
+                        ) : null}
+                      </>
+                    )}
                   </CardContent>
                 </Card>
 
                 <Card className="glass">
                   <CardHeader className="pb-2">
                     <div className="flex items-center justify-between">
-                      <CardTitle className="text-base">Community Admins</CardTitle>
+                      <div>
+                        <CardTitle className="text-base">Community Admins</CardTitle>
+                        <CardDescription className="text-xs mt-0.5 space-y-1">
+                          <span className="block">People with admin access to this community.</span>
+                          {communityAdminsError && usingAssignedAdminFallback ? (
+                            <span className="block text-destructive">
+                              Admin list request failed ({communityAdminsError.message}). Showing users from
+                              assigned admin IDs on this community.
+                            </span>
+                          ) : null}
+                        </CardDescription>
+                      </div>
                       <Button size="sm" variant="outline" onClick={() => setAssignAdminOpen(true)}><UserPlus className="mr-2 h-4 w-4" /> Assign</Button>
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <div className="space-y-2">
-                      {communityAdmins.map((admin) => (
-                        <div key={admin.id} className="flex items-center justify-between p-2 rounded-lg bg-muted/50">
-                          <div className="flex items-center gap-2">
-                            <Users className="h-4 w-4 text-muted-foreground" />
-                            <div>
-                              <p className="text-sm font-medium">{admin.name}</p>
-                              <p className="text-xs text-muted-foreground">{admin.email}</p>
+                    {communityAdminsLoading && communityAdmins.length === 0 ? (
+                      <div className="flex items-center gap-2 py-4 text-muted-foreground text-sm">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Loading admins…
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        {communityAdmins.length === 0 ? (
+                          <p className="text-sm text-muted-foreground py-2">No community admins yet.</p>
+                        ) : (
+                          communityAdmins.map((admin) => (
+                            <div key={admin.id} className="flex flex-col gap-2 p-3 rounded-lg bg-muted/50 sm:flex-row sm:items-start sm:justify-between">
+                              <div className="flex items-start gap-2 min-w-0">
+                                <Shield className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
+                                <div className="min-w-0 space-y-1">
+                                  <p className="text-sm font-medium truncate">{admin.email || "—"}</p>
+                                  <div className="flex flex-wrap gap-1">
+                                    <Badge variant="secondary" className="text-xs font-normal">{admin.status}</Badge>
+                                    <Badge variant="outline" className="text-xs font-normal">{admin.adminType}</Badge>
+                                  </div>
+                                  {admin.roles && admin.roles.length > 0 ? (
+                                    <div className="flex flex-wrap gap-1 pt-1">
+                                      {admin.roles.map((r) => (
+                                        <Badge key={r.id} variant="outline" className="text-[10px] font-normal max-w-full truncate">
+                                          {r.roleType}
+                                          {r.scopeType != null && r.scopeType !== "" ? ` · ${r.scopeType}` : ""}
+                                          {r.scopeId != null && r.scopeId !== "" ? ` · ${r.scopeId}` : ""}
+                                        </Badge>
+                                      ))}
+                                    </div>
+                                  ) : null}
+                                </div>
+                              </div>
+                              <Button variant="ghost" size="sm" className="text-destructive shrink-0 self-start">Remove</Button>
                             </div>
-                          </div>
-                          <Button variant="ghost" size="sm" className="text-destructive">Remove</Button>
-                        </div>
-                      ))}
-                    </div>
+                          ))
+                        )}
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               </div>
@@ -1599,6 +1817,48 @@ export default function CommunityDetail() {
                 t("communities.assignAdmin.assignRole")
               ) : (
                 t("communities.assignAdmin.createAdmin")
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Unlink association confirmation */}
+      <Dialog
+        open={unlinkTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setUnlinkTarget(null);
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{t("communities.unlinkAssociation")}</DialogTitle>
+            <DialogDescription>
+              {unlinkTarget ? (
+                <>
+                  Remove <span className="font-medium text-foreground">{unlinkTarget.name}</span> from this
+                  community? This does not delete the association.
+                </>
+              ) : null}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button type="button" variant="outline" onClick={() => setUnlinkTarget(null)}>
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              disabled={unlinkingAssociation}
+              onClick={() => void handleConfirmUnlinkAssociation()}
+            >
+              {unlinkingAssociation ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Unlinking…
+                </>
+              ) : (
+                t("associations.unlink")
               )}
             </Button>
           </DialogFooter>
