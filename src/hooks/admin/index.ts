@@ -209,14 +209,16 @@ export function useListCommunities(options: {
   offset?: number;
   searchTerm?: string;
   visibility?: string;
+  communityTypeId?: string;
 }) {
-  const { limit = 20, offset = 0, searchTerm, visibility } = options;
+  const { limit = 20, offset = 0, searchTerm, visibility, communityTypeId } = options;
   return useQuery<import("@/services/networks/graphql/admin").ListCommunitiesQueryResult>(LIST_COMMUNITIES, {
     variables: {
       limit,
       offset,
       searchTerm: searchTerm || undefined,
       visibility: visibility || undefined,
+      communityTypeId: communityTypeId || undefined,
     },
   });
 }

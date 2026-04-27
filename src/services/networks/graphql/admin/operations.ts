@@ -522,10 +522,10 @@ export interface ListCommunitiesQueryResult {
   listCommunities: CommunityListResponse;
 }
 
-/** listCommunities(limit, offset, searchTerm, visibility). */
+/** listCommunities(limit, offset, searchTerm, visibility, communityTypeId). */
 export const LIST_COMMUNITIES = gql`
-  query ListCommunities($limit: Int, $offset: Int, $searchTerm: String, $visibility: String) {
-    listCommunities(limit: $limit, offset: $offset, searchTerm: $searchTerm, visibility: $visibility) {
+  query ListCommunities($limit: Int, $offset: Int, $searchTerm: String, $visibility: String, $communityTypeId: String) {
+    listCommunities(limit: $limit, offset: $offset, searchTerm: $searchTerm, visibility: $visibility, communityTypeId: $communityTypeId) {
       communities {
         id
         name

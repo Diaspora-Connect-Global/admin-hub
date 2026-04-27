@@ -31,6 +31,8 @@ import {
   useAssignCommunityAdmin,
 } from "@/hooks/admin";
 import { useListAdmins, useAssignAdminRole } from "@/hooks/admin/useAdminAccounts";
+import { useListCommunityTypes } from "@/hooks/admin/useEntityTypes";
+import type { CommunityType } from "@/services/networks/graphql/admin";
 import { useLinkAssociation, useUnlinkAssociation } from "@/hooks/admin/useAssociation";
 import type { CommunityAdminListItem } from "@/hooks/admin/useAssociation";
 import {
@@ -60,7 +62,6 @@ const vendorItems = [
   { id: "ITM-002", title: "Kente Cloth", category: "Fashion", price: "$120", stock: 10, status: "Pending" },
 ];
 
-const typeOptions = ["Embassy", "NGO", "Church", "Association", "Club", "Other"];
 
 const allCountries = [
   "Afghanistan", "Albania", "Algeria", "Andorra", "Angola", "Antigua and Barbuda", "Argentina", "Armenia", "Australia", "Austria",
@@ -137,6 +138,8 @@ export default function CommunityDetail() {
     refetch: refetchCommunityAdmins,
   } = useListCommunityAdmins(id ?? null, 20, 0);
   const { data: usersData } = useGetUsers({ limit: 500, offset: 0, skip: false });
+  const { data: communityTypesData, loading: communityTypesLoading } = useListCommunityTypes();
+  const communityTypes: CommunityType[] = (communityTypesData as any)?.listCommunityTypes ?? [];
   const { data: communityEventsData } = useGetEventsByOwner(
     id ? { ownerId: id, ownerType: "COMMUNITY", limit: 20, offset: 0 } : null,
   );
@@ -594,7 +597,7 @@ export default function CommunityDetail() {
       });
       return;
     }
-    if (editForm.communityType === "Embassy") {
+    if (communityTypes.find(t => t.id === editForm.communityType)?.isEmbassy) {
       if (!editForm.embassyCountry.trim() || !editForm.locationCountry.trim()) {
         toast({
           title: t("communities.validationError"),
@@ -621,6 +624,8 @@ export default function CommunityDetail() {
 
     const countriesServed = countriesServedLabelsToIso2(editForm.countriesServed);
     const desiredJoinApi = joinPolicyToApi(editForm.joinPolicy);
+    const selectedEditType = communityTypes.find(t => t.id === editForm.communityType);
+    const isEditEmbassy = selectedEditType?.isEmbassy ?? false;
 
     try {
       const result = await updateCommunityMutation({
@@ -637,8 +642,8 @@ export default function CommunityDetail() {
             whoCanPost: editForm.whoCanPost,
             groupCreationPermission: groupCreationUiToApi(editForm.groupCreationPermission),
             communityRules: editForm.rules.trim(),
-            embassyCountry: singleCountryLabelToIso2(editForm.embassyCountry),
-            locationCountry: singleCountryLabelToIso2(editForm.locationCountry),
+            embassyCountry: isEditEmbassy ? singleCountryLabelToIso2(editForm.embassyCountry) : null,
+            locationCountry: isEditEmbassy ? singleCountryLabelToIso2(editForm.locationCountry) : null,
             communityTypeId: editForm.communityType.trim(),
           },
         },
@@ -1346,14 +1351,18 @@ export default function CommunityDetail() {
                   <Label>{t("communities.communityType")} <span className="text-destructive">*</span></Label>
                   <Select value={editForm.communityType} onValueChange={(value) => setEditForm((prev) => ({ ...prev, communityType: value }))}>
                     <SelectTrigger>
-                      <SelectValue placeholder={t("communities.form.selectType")} />
+                      <SelectValue placeholder={communityTypesLoading ? "Loading types..." : t("communities.form.selectType")} />
                     </SelectTrigger>
                     <SelectContent className="bg-popover border-border">
-                      {typeOptions.map((type) => (
-                        <SelectItem key={type} value={type}>
-                          {type}
-                        </SelectItem>
-                      ))}
+                      {communityTypesLoading ? (
+                        <SelectItem value="__loading__" disabled>Loading...</SelectItem>
+                      ) : communityTypes.length === 0 ? (
+                        <SelectItem value="__empty__" disabled>No types available</SelectItem>
+                      ) : (
+                        communityTypes.map((type) => (
+                          <SelectItem key={type.id} value={type.id}>{type.name}</SelectItem>
+                        ))
+                      )}
                     </SelectContent>
                   </Select>
                 </div>
@@ -1573,7 +1582,7 @@ export default function CommunityDetail() {
                 </div>
               )}
 
-              {editForm.communityType === "Embassy" && (
+              {communityTypes.find(t => t.id === editForm.communityType)?.isEmbassy && (
                 <div className="space-y-4">
                   <h3 className="text-sm font-semibold text-foreground border-b border-border pb-2 flex items-center gap-2">
                     <Globe className="h-4 w-4 text-blue-500" />

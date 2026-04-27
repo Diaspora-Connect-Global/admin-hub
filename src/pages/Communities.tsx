@@ -16,10 +16,11 @@ import { Switch } from "@/components/ui/switch";
 import { Card, CardContent } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { MultiSelect } from "@/components/ui/multi-select";
-import { Search, Plus, MoreHorizontal, Eye, Edit, Link2, Pause, ChevronDown, Download, FileJson, BarChart3, Trash2, Upload, Globe, Loader2 } from "lucide-react";
+import { Search, Plus, MoreHorizontal, Eye, Edit, Link2, Pause, ChevronDown, Download, FileJson, BarChart3, Trash2, Upload, Globe, Loader2, X } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { useCreateCommunity, useDiscoverAssociations, useGetUsers, useListCommunities } from "@/hooks/admin";
-import type { CreateCommunityInput, Community } from "@/services/networks/graphql/admin";
+import { useListCommunityTypes } from "@/hooks/admin/useEntityTypes";
+import type { CreateCommunityInput, Community, CommunityType } from "@/services/networks/graphql/admin";
 import {
   countriesServedLabelsToIso2,
   groupCreationUiToApi,
@@ -85,7 +86,6 @@ const allCountries = [
 ];
 
 const countryOptions = allCountries.map(country => ({ label: country, value: country }));
-const typeOptions = ["Embassy", "NGO", "Church", "Association", "Club", "Other"];
 
 interface CommunityAdminDraft {
   email: string;
@@ -154,6 +154,7 @@ export default function Communities() {
   const [searchTerm, setSearchTerm] = useState("");
   const [countryFilter, setCountryFilter] = useState("all");
   const [visibilityFilter, setVisibilityFilter] = useState("all");
+  const [typeFilter, setTypeFilter] = useState("all");
   const [sortBy, setSortBy] = useState("name-az");
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(20);
@@ -166,13 +167,14 @@ export default function Communities() {
 
   useEffect(() => {
     setPage(0);
-  }, [searchTerm, visibilityFilter]);
+  }, [searchTerm, visibilityFilter, typeFilter]);
 
   const { data: listData, loading: listLoading, error: listError, refetch: refetchCommunities } = useListCommunities({
     limit: pageSize,
     offset: page * pageSize,
     searchTerm: searchTerm || undefined,
     visibility: visibilityFilter === "all" ? undefined : visibilityFilter,
+    communityTypeId: typeFilter === "all" ? undefined : typeFilter,
   });
 
   const apiCommunities = listData?.listCommunities?.communities ?? [];
@@ -195,6 +197,9 @@ export default function Communities() {
   const adminUserOptions = (
     usersData as { getUsers?: { items?: Array<{ id: string; email: string; displayName?: string | null }> } } | undefined
   )?.getUsers?.items ?? [];
+
+  const { data: communityTypesData, loading: communityTypesLoading } = useListCommunityTypes();
+  const communityTypes: CommunityType[] = (communityTypesData as any)?.listCommunityTypes ?? [];
 
   const filteredCommunities = rows
     .filter((community) => {
@@ -272,11 +277,24 @@ export default function Communities() {
       }
     }
 
+    const selectedType = communityTypes.find(t => t.id === formData.communityType);
+    const isEmbassy = selectedType?.isEmbassy ?? false;
+
+    if (isEmbassy) {
+      if (!formData.embassyCountry) {
+        toast({ title: t('communities.validationError'), description: "Embassy communities must specify the country the embassy represents.", variant: "destructive" });
+        return;
+      }
+      if (!formData.locationCountry) {
+        toast({ title: t('communities.validationError'), description: "Embassy communities must specify the country where the embassy is located.", variant: "destructive" });
+        return;
+      }
+    }
+
     const joinPolicyApi: CreateCommunityInput["joinPolicy"] =
       formData.joinPolicy === "FREE" ? "OPEN" : "PAID";
     const paymentTypeApi: CreateCommunityInput["paymentType"] =
       formData.joinPolicy === "FREE" ? "NONE" : formData.paymentType;
-    const isEmbassy = formData.communityType === "Embassy";
 
     const input: CreateCommunityInput = {
       name: formData.communityName.trim(),
@@ -444,6 +462,15 @@ export default function Communities() {
                   <SelectItem value="PRIVATE">Private</SelectItem>
                 </SelectContent>
               </Select>
+              <Select value={typeFilter} onValueChange={setTypeFilter}>
+                <SelectTrigger className="w-[160px]"><SelectValue placeholder="Type" /></SelectTrigger>
+                <SelectContent className="bg-popover border-border">
+                  <SelectItem value="all">All Types</SelectItem>
+                  {communityTypes.map((type) => (
+                    <SelectItem key={type.id} value={type.id}>{type.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <Select value={sortBy} onValueChange={setSortBy}>
                 <SelectTrigger className="w-[180px]"><SelectValue placeholder={t('communities.sortBy')} /></SelectTrigger>
                 <SelectContent className="bg-popover border-border">
@@ -471,6 +498,7 @@ export default function Communities() {
                       />
                     </TableHead>
                     <TableHead>{t('communities.communityName')}</TableHead>
+                    <TableHead>Type</TableHead>
                     <TableHead>{t('communities.countriesServed')}</TableHead>
                     <TableHead>{t('communities.embassyInfo')}</TableHead>
                     <TableHead>{t('communities.associationsLinked')}</TableHead>
@@ -484,20 +512,20 @@ export default function Communities() {
                 <TableBody>
                   {listLoading ? (
                     <TableRow>
-                      <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={11} className="text-center py-8 text-muted-foreground">
                         <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2" />
                         {t('common.loading') || "Loading..."}
                       </TableCell>
                     </TableRow>
                   ) : listError ? (
                     <TableRow>
-                      <TableCell colSpan={10} className="text-center py-8 text-destructive">
+                      <TableCell colSpan={11} className="text-center py-8 text-destructive">
                         {listError.message}
                       </TableCell>
                     </TableRow>
                   ) : filteredCommunities.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={11} className="text-center py-8 text-muted-foreground">
                         {t('communities.noCommunities') || "No communities found."}
                       </TableCell>
                     </TableRow>
@@ -511,6 +539,13 @@ export default function Communities() {
                         />
                       </TableCell>
                       <TableCell className="font-medium">{community.name}</TableCell>
+                      <TableCell>
+                        {community.type !== "—" ? (
+                          <Badge variant="outline" className="text-xs whitespace-nowrap">{community.type}</Badge>
+                        ) : (
+                          <span className="text-muted-foreground text-xs">—</span>
+                        )}
+                      </TableCell>
                       <TableCell>
                         <div className="flex flex-wrap gap-1">
                           {community.countriesServed.map((country) => (
@@ -642,11 +677,19 @@ export default function Communities() {
                 <div className="space-y-2">
                   <Label>{t('communities.communityType')} <span className="text-destructive">*</span></Label>
                   <Select value={formData.communityType} onValueChange={(value) => setFormData({ ...formData, communityType: value })}>
-                    <SelectTrigger><SelectValue placeholder={t('communities.form.selectType')} /></SelectTrigger>
+                    <SelectTrigger>
+                      <SelectValue placeholder={communityTypesLoading ? "Loading types..." : t('communities.form.selectType')} />
+                    </SelectTrigger>
                     <SelectContent className="bg-popover border-border">
-                      {typeOptions.map((type) => (
-                        <SelectItem key={type} value={type}>{type}</SelectItem>
-                      ))}
+                      {communityTypesLoading ? (
+                        <SelectItem value="__loading__" disabled>Loading...</SelectItem>
+                      ) : communityTypes.length === 0 ? (
+                        <SelectItem value="__empty__" disabled>No types available</SelectItem>
+                      ) : (
+                        communityTypes.map((type) => (
+                          <SelectItem key={type.id} value={type.id}>{type.name}</SelectItem>
+                        ))
+                      )}
                     </SelectContent>
                   </Select>
                 </div>
@@ -920,7 +963,7 @@ export default function Communities() {
               )}
 
               {/* Embassy Information Section - Conditional */}
-              {formData.communityType === "Embassy" && (
+              {communityTypes.find(t => t.id === formData.communityType)?.isEmbassy && (
                 <div className="space-y-4">
                   <h3 className="text-sm font-semibold text-foreground border-b border-border pb-2 flex items-center gap-2">
                     <Globe className="h-4 w-4 text-blue-500" />
