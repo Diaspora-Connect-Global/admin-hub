@@ -50,39 +50,12 @@ import {
   useListAdmins,
   useRevokeAdminRole,
   useUpdateAdminStatus,
+  useGetRoleDefinitions,
 } from "@/hooks/admin/useAdminAccounts";
 import { CreateAdminModal } from "@/components/admin/CreateAdminModal";
 import { UpdateAdminStatusModal } from "@/components/admin/UpdateAdminStatusModal";
 import { AssignRoleModal } from "@/components/admin/AssignRoleModal";
-import type { AdminAccount } from "@/services/networks/graphql/admin";
-
-// Sample roles data
-const rolesData = [
-  {
-    id: 1,
-    name: "System Admin",
-    description: "Full platform access with all permissions",
-    assignedUsers: 3,
-    createdAt: "2023-01-01",
-    isSystem: true,
-  },
-  {
-    id: 2,
-    name: "Community Admin",
-    description: "Manage communities and their members",
-    assignedUsers: 24,
-    createdAt: "2023-01-15",
-    isSystem: true,
-  },
-  {
-    id: 3,
-    name: "Association Admin",
-    description: "Manage association accounts and settings",
-    assignedUsers: 12,
-    createdAt: "2023-02-01",
-    isSystem: true,
-  },
-];
+import type { AdminAccount, RoleDefinition } from "@/services/networks/graphql/admin";
 
 const resources = [
   { id: "users", label: "Users" },
@@ -222,9 +195,7 @@ export default function RolesPermissions() {
   const { toast } = useToast();
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState("roles");
-  const [selectedRole, setSelectedRole] = useState<(typeof rolesData)[0] | null>(
-    null
-  );
+  const [selectedRole, setSelectedRole] = useState<RoleDefinition | null>(null);
   const [selectedAdmin, setSelectedAdmin] = useState<AdminAccount | null>(null);
   const [permissions, setPermissions] = useState<
     Record<string, Record<string, boolean>>
@@ -239,6 +210,13 @@ export default function RolesPermissions() {
   const [searchFilter, setSearchFilter] = useState("");
   const [adminSearchFilter, setAdminSearchFilter] = useState("");
 
+  // Role definitions from backend
+  const { data: roleDefsData, loading: roleDefsLoading } = useGetRoleDefinitions();
+  const rolesData: RoleDefinition[] = roleDefsData?.getRoleDefinitions?.roles ?? [];
+  const filteredRoles = rolesData.filter(r =>
+    !searchFilter || r.name.toLowerCase().includes(searchFilter.toLowerCase())
+  );
+
   // Admin accounts queries
   const {
     data: adminsData,
@@ -249,7 +227,7 @@ export default function RolesPermissions() {
 
   const [revokeRoleMutation] = useRevokeAdminRole();
 
-  const selectRole = (role: (typeof rolesData)[0]) => {
+  const selectRole = (role: RoleDefinition) => {
     setSelectedRole(role);
     setPermissions(
       rolePermissionsMap[role.name] || communityAdminPermissions
@@ -402,10 +380,10 @@ export default function RolesPermissions() {
                       Description
                     </TableHead>
                     <TableHead className="text-muted-foreground">
-                      Assigned Users
+                      Scope
                     </TableHead>
                     <TableHead className="text-muted-foreground">
-                      Created
+                      Permissions
                     </TableHead>
                     <TableHead className="text-muted-foreground text-right">
                       Actions
@@ -413,7 +391,21 @@ export default function RolesPermissions() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {rolesData.map((role) => (
+                  {roleDefsLoading && (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center py-6 text-muted-foreground">
+                        Loading roles...
+                      </TableCell>
+                    </TableRow>
+                  )}
+                  {!roleDefsLoading && filteredRoles.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center py-6 text-muted-foreground">
+                        No roles found.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                  {filteredRoles.map((role) => (
                     <TableRow
                       key={role.id}
                       className="border-border hover:bg-secondary/50 cursor-pointer"
@@ -433,15 +425,15 @@ export default function RolesPermissions() {
                         </div>
                       </TableCell>
                       <TableCell className="text-muted-foreground">
-                        {role.description}
+                        {role.description ?? "—"}
                       </TableCell>
                       <TableCell>
                         <Badge variant="secondary" className="bg-secondary">
-                          {role.assignedUsers} users
+                          {role.scopeType}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-muted-foreground">
-                        {role.createdAt}
+                        {role.permissions.length} permissions
                       </TableCell>
                       <TableCell className="text-right">
                         <DropdownMenu>
@@ -848,10 +840,9 @@ export default function RolesPermissions() {
               <DialogDescription>
                 Are you sure you want to delete "{selectedRole?.name}"? This
                 action cannot be undone.
-                {selectedRole && selectedRole.assignedUsers > 0 && (
+                {selectedRole && !selectedRole.isSystem && (
                   <span className="block mt-2 text-warning">
-                    Warning: {selectedRole.assignedUsers} users are assigned to
-                    this role.
+                    Warning: Any users assigned to this role will lose its permissions.
                   </span>
                 )}
               </DialogDescription>

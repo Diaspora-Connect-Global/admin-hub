@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { format } from "date-fns";
+import { format, subDays, startOfDay, endOfDay } from "date-fns";
+import { useGetAuditLogs } from "@/hooks/admin";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -43,272 +44,99 @@ import {
   CalendarIcon,
   ChevronDown,
   ChevronRight,
-  X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { logger } from "@/lib/logger";
 
-const log = logger.child("AuditLogs");
+const logger_ = logger.child("AuditLogs");
 
-// Sample data matching new spec
-const auditLogs = [
-  { 
-    id: 1, 
-    timestamp: "2024-01-15 14:32:05", 
-    user: "admin@system.com",
-    role: "System Admin",
-    action: "Login", 
-    entity: "Auth", 
-    entityId: "SESSION-001", 
-    description: "Admin logged in successfully",
-    ip: "192.168.1.45",
-    oldValue: null,
-    newValue: null,
-    device: "MacBook Pro",
-    browser: "Chrome 120.0",
-    location: "Lagos, Nigeria",
-    serverNotes: null
-  },
-  { 
-    id: 2, 
-    timestamp: "2024-01-15 14:28:12", 
-    user: "admin@system.com",
-    role: "System Admin",
-    action: "Escrow Action", 
-    entity: "Escrow", 
-    entityId: "ESC-5678", 
-    description: "Released $2,500 to vendor after buyer confirmation",
-    ip: "192.168.1.45",
-    oldValue: "Held",
-    newValue: "Released",
-    device: "MacBook Pro",
-    browser: "Chrome 120.0",
-    location: "Lagos, Nigeria",
-    serverNotes: "Auto-approved based on buyer confirmation"
-  },
-  { 
-    id: 3, 
-    timestamp: "2024-01-15 14:15:00", 
-    user: "support@system.com",
-    role: "Community Admin",
-    action: "Approval", 
-    entity: "Community", 
-    entityId: "COM-001", 
-    description: "Approved new community registration for Ghana Belgium Diaspora",
-    ip: "192.168.1.50",
-    oldValue: "Pending",
-    newValue: "Active",
-    device: "Windows PC",
-    browser: "Firefox 121.0",
-    location: "Accra, Ghana",
-    serverNotes: null
-  },
-  { 
-    id: 4, 
-    timestamp: "2024-01-15 13:45:22", 
-    user: "admin@system.com",
-    role: "System Admin",
-    action: "Settings Change", 
-    entity: "Settings", 
-    entityId: "escrow_rules", 
-    description: "Updated two-admin approval threshold",
-    ip: "192.168.1.45",
-    oldValue: "$5,000",
-    newValue: "$10,000",
-    device: "MacBook Pro",
-    browser: "Chrome 120.0",
-    location: "Lagos, Nigeria",
-    serverNotes: "Changed per compliance review"
-  },
-  { 
-    id: 5, 
-    timestamp: "2024-01-15 13:30:10", 
-    user: "finance@system.com",
-    role: "Finance Admin",
-    action: "Create", 
-    entity: "Vendor", 
-    entityId: "VND-9012", 
-    description: "Created new vendor account for TechSupply Ltd",
-    ip: "192.168.1.60",
-    oldValue: null,
-    newValue: "Active",
-    device: "Windows PC",
-    browser: "Edge 120.0",
-    location: "Nairobi, Kenya",
-    serverNotes: "KYC verified"
-  },
-  { 
-    id: 6, 
-    timestamp: "2024-01-15 12:55:33", 
-    user: "support@system.com",
-    role: "Community Admin",
-    action: "Update", 
-    entity: "User", 
-    entityId: "USR-5555", 
-    description: "Reset password for user upon request",
-    ip: "192.168.1.50",
-    oldValue: "********",
-    newValue: "********",
-    device: "Windows PC",
-    browser: "Firefox 121.0",
-    location: "Accra, Ghana",
-    serverNotes: "User verified via support ticket #12345"
-  },
-  { 
-    id: 7, 
-    timestamp: "2024-01-15 12:20:45", 
-    user: "admin@system.com",
-    role: "System Admin",
-    action: "Delete", 
-    entity: "Post", 
-    entityId: "PST-3456", 
-    description: "Deleted post for violating community guidelines",
-    ip: "192.168.1.45",
-    oldValue: "Published",
-    newValue: "Deleted",
-    device: "MacBook Pro",
-    browser: "Chrome 120.0",
-    location: "Lagos, Nigeria",
-    serverNotes: "Multiple user reports"
-  },
-  { 
-    id: 8, 
-    timestamp: "2024-01-15 11:45:00", 
-    user: "admin@system.com",
-    role: "System Admin",
-    action: "Role Change", 
-    entity: "User", 
-    entityId: "USR-7890", 
-    description: "Promoted user to Community Admin role",
-    ip: "192.168.1.45",
-    oldValue: "User",
-    newValue: "Community Admin",
-    device: "MacBook Pro",
-    browser: "Chrome 120.0",
-    location: "Lagos, Nigeria",
-    serverNotes: null
-  },
-  { 
-    id: 9, 
-    timestamp: "2024-01-15 10:30:00", 
-    user: "support@system.com",
-    role: "Community Admin",
-    action: "Link/Unlink", 
-    entity: "Association", 
-    entityId: "ASC-001", 
-    description: "Linked Ghana Youth Association to Accra Community",
-    ip: "192.168.1.50",
-    oldValue: null,
-    newValue: "Linked to COM-002",
-    device: "Windows PC",
-    browser: "Firefox 121.0",
-    location: "Accra, Ghana",
-    serverNotes: null
-  },
-  { 
-    id: 10, 
-    timestamp: "2024-01-15 09:15:00", 
-    user: "moderator@system.com",
-    role: "Moderator",
-    action: "Post Moderation", 
-    entity: "Post", 
-    entityId: "PST-9999", 
-    description: "Flagged post for review - potential spam content",
-    ip: "192.168.1.70",
-    oldValue: "Published",
-    newValue: "Under Review",
-    device: "iPhone 15",
-    browser: "Safari Mobile",
-    location: "London, UK",
-    serverNotes: "AI flagged as 85% spam probability"
-  },
-];
-
-const actionTypes = [
-  "Login",
-  "Create",
-  "Update",
-  "Delete",
-  "Approval",
-  "Escrow Action",
-  "Settings Change",
-  "Role Change",
-  "Link/Unlink",
-  "Post Moderation"
-];
-
-const users = [
-  "admin@system.com",
-  "support@system.com",
-  "finance@system.com",
-  "moderator@system.com"
-];
-
-const getRoleBadge = (role: string) => {
-  const styles: Record<string, string> = {
-    "System Admin": "bg-primary/20 text-primary border-primary/30",
-    "Community Admin": "bg-info/20 text-info border-info/30",
-    "Finance Admin": "bg-success/20 text-success border-success/30",
-    "Moderator": "bg-warning/20 text-warning border-warning/30",
-  };
-  return styles[role] || "bg-muted text-muted-foreground border-border";
-};
+interface AuditLogEntry {
+  id: string;
+  actorId: string;
+  action: string;
+  resourceType: string;
+  resourceId: string;
+  createdAt: string;
+  ipAddress?: string | null;
+}
 
 const getActionBadge = (action: string) => {
   const styles: Record<string, string> = {
-    "Login": "bg-secondary text-secondary-foreground border-border",
-    "Create": "bg-success/20 text-success border-success/30",
-    "Update": "bg-info/20 text-info border-info/30",
-    "Delete": "bg-destructive/20 text-destructive border-destructive/30",
-    "Approval": "bg-success/20 text-success border-success/30",
-    "Escrow Action": "bg-warning/20 text-warning border-warning/30",
-    "Settings Change": "bg-primary/20 text-primary border-primary/30",
-    "Role Change": "bg-primary/20 text-primary border-primary/30",
-    "Link/Unlink": "bg-info/20 text-info border-info/30",
-    "Post Moderation": "bg-warning/20 text-warning border-warning/30",
+    LOGIN: "bg-secondary text-secondary-foreground border-border",
+    CREATE: "bg-success/20 text-success border-success/30",
+    UPDATE: "bg-info/20 text-info border-info/30",
+    DELETE: "bg-destructive/20 text-destructive border-destructive/30",
+    BAN: "bg-destructive/20 text-destructive border-destructive/30",
+    UNBAN: "bg-success/20 text-success border-success/30",
+    REMOVE_CONTENT: "bg-destructive/20 text-destructive border-destructive/30",
+    ASSIGN_ROLE: "bg-primary/20 text-primary border-primary/30",
+    REVOKE_ROLE: "bg-warning/20 text-warning border-warning/30",
+    RESOLVE_DISPUTE: "bg-success/20 text-success border-success/30",
+    FREEZE_ESCROW: "bg-warning/20 text-warning border-warning/30",
+    RELEASE_ESCROW: "bg-success/20 text-success border-success/30",
   };
   return styles[action] || "bg-muted text-muted-foreground border-border";
 };
+
+function dateRangeToIso(dateRange: string, selectedDate?: Date): { fromDate?: string; toDate?: string } {
+  const now = new Date();
+  if (dateRange === "today") return { fromDate: startOfDay(now).toISOString(), toDate: endOfDay(now).toISOString() };
+  if (dateRange === "7days") return { fromDate: subDays(now, 7).toISOString() };
+  if (dateRange === "30days") return { fromDate: subDays(now, 30).toISOString() };
+  if (dateRange === "custom" && selectedDate) return { fromDate: startOfDay(selectedDate).toISOString(), toDate: endOfDay(selectedDate).toISOString() };
+  return {};
+}
 
 export default function AuditLogs() {
   const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState("");
   const [dateRange, setDateRange] = useState<string>("all");
   const [selectedDate, setSelectedDate] = useState<Date>();
-  const [userFilter, setUserFilter] = useState<string>("all");
   const [actionFilter, setActionFilter] = useState<string>("all");
-  const [expandedRows, setExpandedRows] = useState<number[]>([]);
-  const [selectedLog, setSelectedLog] = useState<typeof auditLogs[0] | null>(null);
+  const [expandedRows, setExpandedRows] = useState<string[]>([]);
+  const [selectedLog, setSelectedLog] = useState<AuditLogEntry | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const [offset, setOffset] = useState(0);
+  const PAGE_SIZE = 50;
 
-  const toggleRow = (id: number) => {
-    setExpandedRows(prev => 
+  const { fromDate, toDate } = useMemo(() => dateRangeToIso(dateRange, selectedDate), [dateRange, selectedDate]);
+
+  const { data, loading } = useGetAuditLogs({
+    action: actionFilter !== "all" ? actionFilter : undefined,
+    fromDate,
+    toDate,
+    limit: PAGE_SIZE,
+    offset,
+  });
+
+  const auditLogs: AuditLogEntry[] = data?.getAuditLogs?.items ?? [];
+  const total: number = data?.getAuditLogs?.total ?? 0;
+
+  const filteredLogs = useMemo(() => {
+    if (!searchQuery) return auditLogs;
+    const q = searchQuery.toLowerCase();
+    return auditLogs.filter(l =>
+      l.actorId.toLowerCase().includes(q) ||
+      l.action.toLowerCase().includes(q) ||
+      l.resourceType.toLowerCase().includes(q) ||
+      l.resourceId.toLowerCase().includes(q)
+    );
+  }, [auditLogs, searchQuery]);
+
+  const toggleRow = (id: string) => {
+    setExpandedRows(prev =>
       prev.includes(id) ? prev.filter(r => r !== id) : [...prev, id]
     );
   };
 
-  const openDetails = (log: typeof auditLogs[0]) => {
-    setSelectedLog(log);
+  const openDetails = (entry: AuditLogEntry) => {
+    setSelectedLog(entry);
     setDetailsOpen(true);
   };
 
   const exportCsv = () => {
-    // Implementation for CSV export
-    log.info("Exporting CSV");
+    logger_.info("Exporting CSV");
   };
-
-  const filteredLogs = auditLogs.filter(log => {
-    const matchesSearch = searchQuery === "" || 
-      log.user.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      log.action.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      log.entity.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      log.description.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    const matchesUser = userFilter === "all" || log.user === userFilter;
-    const matchesAction = actionFilter === "all" || log.action === actionFilter;
-    
-    return matchesSearch && matchesUser && matchesAction;
-  });
 
   return (
     <AdminLayout>
@@ -392,29 +220,25 @@ export default function AuditLogs() {
             </PopoverContent>
           </Popover>
 
-          {/* User Filter */}
-          <Select value={userFilter} onValueChange={setUserFilter}>
-            <SelectTrigger className="bg-secondary border-border w-[200px]">
-              <SelectValue placeholder="User" />
-            </SelectTrigger>
-            <SelectContent className="bg-popover border-border">
-              <SelectItem value="all">All Users</SelectItem>
-              {users.map((user) => (
-                <SelectItem key={user} value={user}>{user}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
           {/* Action Filter */}
-          <Select value={actionFilter} onValueChange={setActionFilter}>
+          <Select value={actionFilter} onValueChange={(v) => { setActionFilter(v); setOffset(0); }}>
             <SelectTrigger className="bg-secondary border-border w-[180px]">
               <SelectValue placeholder="Action Type" />
             </SelectTrigger>
             <SelectContent className="bg-popover border-border">
               <SelectItem value="all">All Actions</SelectItem>
-              {actionTypes.map((action) => (
-                <SelectItem key={action} value={action}>{action}</SelectItem>
-              ))}
+              <SelectItem value="LOGIN">Login</SelectItem>
+              <SelectItem value="CREATE">Create</SelectItem>
+              <SelectItem value="UPDATE">Update</SelectItem>
+              <SelectItem value="DELETE">Delete</SelectItem>
+              <SelectItem value="BAN">Ban</SelectItem>
+              <SelectItem value="UNBAN">Unban</SelectItem>
+              <SelectItem value="REMOVE_CONTENT">Remove Content</SelectItem>
+              <SelectItem value="ASSIGN_ROLE">Assign Role</SelectItem>
+              <SelectItem value="REVOKE_ROLE">Revoke Role</SelectItem>
+              <SelectItem value="RESOLVE_DISPUTE">Resolve Dispute</SelectItem>
+              <SelectItem value="FREEZE_ESCROW">Freeze Escrow</SelectItem>
+              <SelectItem value="RELEASE_ESCROW">Release Escrow</SelectItem>
             </SelectContent>
           </Select>
 
@@ -431,84 +255,82 @@ export default function AuditLogs() {
               <TableRow className="border-border hover:bg-transparent bg-muted/50">
                 <TableHead className="w-8"></TableHead>
                 <TableHead className="text-muted-foreground">Timestamp</TableHead>
-                <TableHead className="text-muted-foreground">User</TableHead>
-                <TableHead className="text-muted-foreground">Role</TableHead>
+                <TableHead className="text-muted-foreground">Actor ID</TableHead>
                 <TableHead className="text-muted-foreground">Action</TableHead>
-                <TableHead className="text-muted-foreground">Entity</TableHead>
-                <TableHead className="text-muted-foreground">Entity ID</TableHead>
-                <TableHead className="text-muted-foreground">Description</TableHead>
+                <TableHead className="text-muted-foreground">Resource Type</TableHead>
+                <TableHead className="text-muted-foreground">Resource ID</TableHead>
                 <TableHead className="text-muted-foreground">IP Address</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredLogs.map((log) => (
-                <Collapsible key={log.id} asChild open={expandedRows.includes(log.id)}>
+              {loading && (
+                <TableRow>
+                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                    Loading audit logs...
+                  </TableCell>
+                </TableRow>
+              )}
+              {!loading && filteredLogs.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                    No audit logs found.
+                  </TableCell>
+                </TableRow>
+              )}
+              {filteredLogs.map((entry) => (
+                <Collapsible key={entry.id} asChild open={expandedRows.includes(entry.id)}>
                   <>
                     <CollapsibleTrigger asChild>
-                      <TableRow 
+                      <TableRow
                         className="border-border hover:bg-secondary/50 cursor-pointer"
-                        onClick={() => toggleRow(log.id)}
+                        onClick={() => toggleRow(entry.id)}
                       >
                         <TableCell className="w-8">
-                          {expandedRows.includes(log.id) ? (
+                          {expandedRows.includes(entry.id) ? (
                             <ChevronDown className="w-4 h-4 text-muted-foreground" />
                           ) : (
                             <ChevronRight className="w-4 h-4 text-muted-foreground" />
                           )}
                         </TableCell>
-                        <TableCell className="font-mono text-xs text-muted-foreground">{log.timestamp}</TableCell>
-                        <TableCell className="text-sm">{log.user}</TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className={cn("text-xs", getRoleBadge(log.role))}>
-                            {log.role}
-                          </Badge>
+                        <TableCell className="font-mono text-xs text-muted-foreground">
+                          {format(new Date(entry.createdAt), "yyyy-MM-dd HH:mm:ss")}
+                        </TableCell>
+                        <TableCell className="font-mono text-xs text-muted-foreground max-w-[140px] truncate">
+                          {entry.actorId}
                         </TableCell>
                         <TableCell>
-                          <Badge variant="outline" className={cn("text-xs", getActionBadge(log.action))}>
-                            {log.action}
+                          <Badge variant="outline" className={cn("text-xs", getActionBadge(entry.action))}>
+                            {entry.action}
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-sm">{log.entity}</TableCell>
-                        <TableCell className="font-mono text-xs text-muted-foreground">{log.entityId}</TableCell>
-                        <TableCell className="max-w-[200px] truncate text-sm text-muted-foreground">{log.description}</TableCell>
-                        <TableCell className="font-mono text-xs text-muted-foreground">{log.ip}</TableCell>
+                        <TableCell className="text-sm">{entry.resourceType}</TableCell>
+                        <TableCell className="font-mono text-xs text-muted-foreground max-w-[120px] truncate">
+                          {entry.resourceId}
+                        </TableCell>
+                        <TableCell className="font-mono text-xs text-muted-foreground">
+                          {entry.ipAddress ?? "—"}
+                        </TableCell>
                       </TableRow>
                     </CollapsibleTrigger>
                     <CollapsibleContent asChild>
                       <TableRow className="bg-muted/30 border-border hover:bg-muted/30">
-                        <TableCell colSpan={9} className="p-4">
-                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                        <TableCell colSpan={7} className="p-4">
+                          <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
                             <div>
-                              <span className="text-muted-foreground block text-xs mb-1">Full Action Description</span>
-                              <span>{log.description}</span>
+                              <span className="text-muted-foreground block text-xs mb-1">Full Actor ID</span>
+                              <span className="font-mono text-xs break-all">{entry.actorId}</span>
                             </div>
                             <div>
-                              <span className="text-muted-foreground block text-xs mb-1">Old Value</span>
-                              <span className="font-mono">{log.oldValue || "—"}</span>
+                              <span className="text-muted-foreground block text-xs mb-1">Full Resource ID</span>
+                              <span className="font-mono text-xs break-all">{entry.resourceId}</span>
                             </div>
                             <div>
-                              <span className="text-muted-foreground block text-xs mb-1">New Value</span>
-                              <span className="font-mono">{log.newValue || "—"}</span>
-                            </div>
-                            <div>
-                              <span className="text-muted-foreground block text-xs mb-1">Device</span>
-                              <span>{log.device}</span>
-                            </div>
-                            <div>
-                              <span className="text-muted-foreground block text-xs mb-1">Browser</span>
-                              <span>{log.browser}</span>
-                            </div>
-                            <div>
-                              <span className="text-muted-foreground block text-xs mb-1">Location (approx)</span>
-                              <span>{log.location}</span>
-                            </div>
-                            <div className="md:col-span-2">
-                              <span className="text-muted-foreground block text-xs mb-1">Server Notes</span>
-                              <span>{log.serverNotes || "—"}</span>
+                              <span className="text-muted-foreground block text-xs mb-1">IP Address</span>
+                              <span className="font-mono">{entry.ipAddress ?? "—"}</span>
                             </div>
                           </div>
                           <div className="mt-4 flex justify-end">
-                            <Button variant="outline" size="sm" onClick={() => openDetails(log)}>
+                            <Button variant="outline" size="sm" onClick={() => openDetails(entry)}>
                               View Full Details
                             </Button>
                           </div>
@@ -524,10 +346,16 @@ export default function AuditLogs() {
 
         {/* Pagination */}
         <div className="flex items-center justify-between text-sm">
-          <span className="text-muted-foreground">Showing {filteredLogs.length} of {auditLogs.length} logs</span>
+          <span className="text-muted-foreground">
+            Showing {offset + 1}–{Math.min(offset + PAGE_SIZE, total)} of {total} logs
+          </span>
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" disabled>Previous</Button>
-            <Button variant="outline" size="sm">Next</Button>
+            <Button variant="outline" size="sm" disabled={offset === 0} onClick={() => setOffset(Math.max(0, offset - PAGE_SIZE))}>
+              Previous
+            </Button>
+            <Button variant="outline" size="sm" disabled={offset + PAGE_SIZE >= total} onClick={() => setOffset(offset + PAGE_SIZE)}>
+              Next
+            </Button>
           </div>
         </div>
 
@@ -542,7 +370,7 @@ export default function AuditLogs() {
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
                     <span className="text-muted-foreground block text-xs mb-1">Timestamp</span>
-                    <span className="font-mono">{selectedLog.timestamp}</span>
+                    <span className="font-mono">{format(new Date(selectedLog.createdAt), "yyyy-MM-dd HH:mm:ss")}</span>
                   </div>
                   <div>
                     <span className="text-muted-foreground block text-xs mb-1">Action</span>
@@ -550,47 +378,21 @@ export default function AuditLogs() {
                       {selectedLog.action}
                     </Badge>
                   </div>
-                  <div>
-                    <span className="text-muted-foreground block text-xs mb-1">Performed By</span>
-                    <span>{selectedLog.user}</span>
+                  <div className="col-span-2">
+                    <span className="text-muted-foreground block text-xs mb-1">Actor ID</span>
+                    <span className="font-mono text-xs break-all">{selectedLog.actorId}</span>
                   </div>
                   <div>
-                    <span className="text-muted-foreground block text-xs mb-1">Role</span>
-                    <Badge variant="outline" className={cn("text-xs", getRoleBadge(selectedLog.role))}>
-                      {selectedLog.role}
-                    </Badge>
+                    <span className="text-muted-foreground block text-xs mb-1">Resource Type</span>
+                    <span>{selectedLog.resourceType}</span>
                   </div>
                   <div>
-                    <span className="text-muted-foreground block text-xs mb-1">Device</span>
-                    <span>{selectedLog.device}</span>
+                    <span className="text-muted-foreground block text-xs mb-1">Resource ID</span>
+                    <span className="font-mono text-xs break-all">{selectedLog.resourceId}</span>
                   </div>
                   <div>
                     <span className="text-muted-foreground block text-xs mb-1">IP Address</span>
-                    <span className="font-mono">{selectedLog.ip}</span>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground block text-xs mb-1">Entity</span>
-                    <span>{selectedLog.entity}</span>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground block text-xs mb-1">Entity ID</span>
-                    <span className="font-mono">{selectedLog.entityId}</span>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground block text-xs mb-1">Old Value</span>
-                    <span className="font-mono">{selectedLog.oldValue || "—"}</span>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground block text-xs mb-1">New Value</span>
-                    <span className="font-mono">{selectedLog.newValue || "—"}</span>
-                  </div>
-                </div>
-                <div className="border-t border-border pt-4">
-                  <span className="text-muted-foreground block text-xs mb-1">Metadata</span>
-                  <div className="bg-muted/50 rounded-md p-3 text-sm font-mono text-xs">
-                    <div>Browser: {selectedLog.browser}</div>
-                    <div>Location: {selectedLog.location}</div>
-                    {selectedLog.serverNotes && <div>Notes: {selectedLog.serverNotes}</div>}
+                    <span className="font-mono">{selectedLog.ipAddress ?? "—"}</span>
                   </div>
                 </div>
                 <div className="flex justify-end pt-2">

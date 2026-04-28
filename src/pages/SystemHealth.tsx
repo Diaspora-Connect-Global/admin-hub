@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { useGetSystemHealth } from "@/hooks/admin";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -151,13 +152,26 @@ export default function SystemHealth() {
   const [selectedAlert, setSelectedAlert] = useState<typeof criticalAlerts[0] | null>(null);
   const [acknowledgeNote, setAcknowledgeNote] = useState("");
 
+  const { data: healthData, loading: healthLoading, refetch: refetchHealth } = useGetSystemHealth();
+  const systemHealth = healthData?.getSystemHealth;
+  const liveServices = systemHealth?.services ?? [];
+
+  const filteredServices = liveServices.filter((svc) => {
+    const matchesSearch = !searchQuery || svc.service.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesStatus = statusFilter === "all" || svc.status.toLowerCase() === statusFilter.toLowerCase();
+    return matchesSearch && matchesStatus;
+  });
+
   const getStatusIcon = (status: string) => {
-    switch (status) {
-      case "Healthy":
+    switch (status.toLowerCase()) {
+      case "healthy":
+      case "up":
         return <CheckCircle className="h-5 w-5 text-green-500" />;
-      case "Warning":
+      case "warning":
+      case "degraded":
         return <AlertTriangle className="h-5 w-5 text-yellow-500" />;
-      case "Critical":
+      case "critical":
+      case "down":
         return <XCircle className="h-5 w-5 text-red-500" />;
       default:
         return <Clock className="h-5 w-5 text-muted-foreground" />;
@@ -184,12 +198,14 @@ export default function SystemHealth() {
     );
   };
 
-  const handleRefresh = () => {
+  const handleRefresh = async () => {
     setIsRefreshing(true);
-    setTimeout(() => {
-      setIsRefreshing(false);
+    try {
+      await refetchHealth();
       toast({ title: "Refreshed", description: "System health data updated." });
-    }, 1500);
+    } finally {
+      setIsRefreshing(false);
+    }
   };
 
   const handleAcknowledgeAlert = () => {
@@ -254,39 +270,60 @@ export default function SystemHealth() {
           </Button>
         </div>
 
+        {/* Overall status banner */}
+        {systemHealth && (
+          <div className={`flex items-center gap-3 px-4 py-3 rounded-lg border text-sm font-medium ${
+            systemHealth.overallStatus === "healthy" ? "bg-green-500/10 border-green-500/30 text-green-600" :
+            systemHealth.overallStatus === "degraded" ? "bg-yellow-500/10 border-yellow-500/30 text-yellow-600" :
+            "bg-red-500/10 border-red-500/30 text-red-600"
+          }`}>
+            {getStatusIcon(systemHealth.overallStatus)}
+            Overall system status: <span className="font-bold capitalize">{systemHealth.overallStatus}</span>
+            {systemHealth.checkedAt && (
+              <span className="ml-auto text-xs font-normal text-muted-foreground">
+                Last checked: {new Date(systemHealth.checkedAt).toLocaleTimeString()}
+              </span>
+            )}
+          </div>
+        )}
+
         {/* Service Status Cards */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {serviceStatuses.map((service) => (
-            <Card key={service.name}>
+          {healthLoading && (
+            <Card className="col-span-full">
+              <CardContent className="py-8 text-center text-muted-foreground">Loading service status...</CardContent>
+            </Card>
+          )}
+          {!healthLoading && filteredServices.length === 0 && liveServices.length > 0 && (
+            <Card className="col-span-full">
+              <CardContent className="py-8 text-center text-muted-foreground">No services match filters.</CardContent>
+            </Card>
+          )}
+          {filteredServices.map((svc) => (
+            <Card key={svc.service}>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium flex items-center gap-2">
-                  <service.icon className="h-4 w-4 text-muted-foreground" />
-                  {service.name}
+                  <Server className="h-4 w-4 text-muted-foreground" />
+                  {svc.service}
                 </CardTitle>
-                {getStatusIcon(service.status)}
+                {getStatusIcon(svc.status)}
               </CardHeader>
               <CardContent>
                 <div className="flex items-center justify-between mb-3">
-                  {getStatusBadge(service.status)}
-                  <Button variant="ghost" size="sm">
-                    <Eye className="h-4 w-4 mr-1" /> Details
-                  </Button>
+                  {getStatusBadge(svc.status)}
                 </div>
-                <div className="space-y-2">
-                  {service.metrics.map((metric, idx) => (
-                    <div key={idx} className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">{metric.label}</span>
-                      <span className="font-medium">
-                        {"status" in metric ? (
-                          <span className={metric.status === "Healthy" ? "text-green-500" : "text-yellow-500"}>
-                            {metric.status} ({metric.latency})
-                          </span>
-                        ) : (
-                          metric.value
-                        )}
-                      </span>
+                <div className="space-y-2 text-sm">
+                  {svc.latencyMs != null && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">Latency</span>
+                      <span className="font-medium">{svc.latencyMs}ms</span>
                     </div>
-                  ))}
+                  )}
+                  {svc.error && (
+                    <div className="text-destructive text-xs mt-1 truncate" title={svc.error}>
+                      {svc.error}
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>

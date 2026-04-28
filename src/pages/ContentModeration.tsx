@@ -1,5 +1,11 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useTranslation } from "react-i18next";
+import {
+  useGetReports,
+  useUpdateReportStatus,
+  useAdminRemoveContent,
+  useBulkRemoveContent,
+} from "@/hooks/admin";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -66,106 +72,40 @@ import {
   ShoppingBag,
 } from "lucide-react";
 
-// Mock data
-const mockContent = [
-  {
-    id: "CNT-001",
-    type: "Post",
-    title_excerpt: "Looking for business partners in Belgium for import/export...",
-    author: "John Doe",
-    author_avatar: "",
-    community_association: "Belgian Ghanaians",
-    status: "Pending Approval",
-    submitted_at: "2024-11-30 10:15",
-    last_updated: "2024-11-30 10:15",
-    full_content: "Looking for business partners in Belgium for import/export of agricultural products. I have established connections with farmers in Ghana and am seeking reliable partners in the EU. Please reach out if interested in collaboration.",
-    media: ["https://images.unsplash.com/photo-1560493676-04071c5f467b?w=400"],
-    likes: 24,
-    comments: 8,
-    shares: 3,
-    saves: 12,
-  },
-  {
-    id: "CNT-002",
-    type: "Comment",
-    title_excerpt: "This is a great initiative! I've been working on something similar...",
-    author: "Jane Smith",
-    author_avatar: "",
-    community_association: "Belgian Ghanaians",
-    status: "Approved",
-    submitted_at: "2024-11-29 16:45",
-    last_updated: "2024-11-29 17:00",
-    full_content: "This is a great initiative! I've been working on something similar in the tech space. Would love to connect and discuss potential synergies.",
-    media: [],
-    likes: 5,
-    comments: 2,
-    shares: 0,
-    saves: 1,
-  },
-  {
-    id: "CNT-003",
-    type: "Opportunity",
-    title_excerpt: "Senior Software Engineer - Remote Position Available",
-    author: "TechCorp Ghana",
-    author_avatar: "",
-    community_association: "Tech Entrepreneurs Network",
-    status: "Pending Approval",
-    submitted_at: "2024-11-28 11:30",
-    last_updated: "2024-11-28 11:30",
-    full_content: "We are looking for a Senior Software Engineer to join our remote team. Requirements: 5+ years experience, proficiency in React, Node.js, and cloud technologies. Competitive salary and benefits package.",
-    media: [],
-    likes: 45,
-    comments: 12,
-    shares: 28,
-    saves: 67,
-  },
-  {
-    id: "CNT-004",
-    type: "Vendor Listing",
-    title_excerpt: "Authentic Ghanaian Kente Cloth - Premium Quality",
-    author: "AfriCraft Store",
-    author_avatar: "",
-    community_association: "Belgian Ghanaians",
-    status: "Flagged",
-    submitted_at: "2024-11-27 09:00",
-    last_updated: "2024-11-28 14:30",
-    full_content: "Authentic handwoven Kente cloth from Ghana. Premium quality traditional patterns. Available in various sizes and designs. Perfect for special occasions.",
-    media: ["https://images.unsplash.com/photo-1590735213920-68192a487bc2?w=400"],
-    likes: 89,
-    comments: 15,
-    shares: 34,
-    saves: 112,
-  },
-  {
-    id: "CNT-005",
-    type: "Post",
-    title_excerpt: "Community meetup this Saturday at Grand Place!",
-    author: "Community Events",
-    author_avatar: "",
-    community_association: "Belgian Ghanaians",
-    status: "Rejected",
-    submitted_at: "2024-11-25 14:20",
-    last_updated: "2024-11-26 10:00",
-    full_content: "Join us this Saturday at Grand Place for our monthly community meetup. Food, music, and networking. All are welcome!",
-    media: [],
-    likes: 0,
-    comments: 0,
-    shares: 0,
-    saves: 0,
-  },
-];
+interface ReportItem {
+  id: string;
+  reporterId: string;
+  targetType: string;
+  targetId: string;
+  reason: string;
+  description?: string | null;
+  status: string;
+  createdAt: string;
+  reviewedBy?: string | null;
+  reviewedAt?: string | null;
+  resolutionNotes?: string | null;
+}
 
-const mockAuditLogs = [
-  { timestamp: "2024-11-30 10:15", action: "Content Submitted", performed_by: "John Doe", notes: "New post created" },
-  { timestamp: "2024-11-30 10:20", action: "Auto-flagged", performed_by: "System", notes: "Contains keywords requiring review" },
-];
+function targetTypeToLabel(targetType: string): string {
+  const map: Record<string, string> = {
+    POST: "Post",
+    COMMENT: "Comment",
+    OPPORTUNITY: "Opportunity",
+    VENDOR_PRODUCT: "Vendor Listing",
+    EVENT: "Event",
+  };
+  return map[targetType] ?? targetType;
+}
 
-const mockInteractions = [
-  { user: "Alice Brown", action: "Liked", timestamp: "2024-11-30 11:00" },
-  { user: "Bob Wilson", action: "Commented", timestamp: "2024-11-30 11:15" },
-  { user: "Charlie Davis", action: "Saved", timestamp: "2024-11-30 11:30" },
-  { user: "Diana Evans", action: "Shared", timestamp: "2024-11-30 12:00" },
-];
+function reportStatusToDisplay(status: string): string {
+  const map: Record<string, string> = {
+    PENDING: "Pending Approval",
+    RESOLVED: "Approved",
+    DISMISSED: "Rejected",
+    FLAGGED: "Flagged",
+  };
+  return map[status] ?? status;
+}
 
 export default function ContentModeration() {
   const { toast } = useToast();
@@ -174,7 +114,7 @@ export default function ContentModeration() {
   const [contentTypeFilter, setContentTypeFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [selectedContent, setSelectedContent] = useState<string[]>([]);
-  const [selectedItem, setSelectedItem] = useState<typeof mockContent[0] | null>(null);
+  const [selectedItem, setSelectedItem] = useState<ReportItem | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
 
   // Modal states
@@ -190,6 +130,38 @@ export default function ContentModeration() {
   const [flagSeverity, setFlagSeverity] = useState("Medium");
   const [bulkAction, setBulkAction] = useState("Approve");
   const [bulkNote, setBulkNote] = useState("");
+
+  // Backend: map UI status filter → GraphQL ReportStatus enum
+  const gqlStatus = statusFilter === "Pending Approval" ? "PENDING"
+    : statusFilter === "Approved" ? "RESOLVED"
+    : statusFilter === "Rejected" ? "DISMISSED"
+    : undefined;
+  const gqlTargetType = contentTypeFilter === "Post" ? "POST"
+    : contentTypeFilter === "Comment" ? "COMMENT"
+    : contentTypeFilter === "Opportunity" ? "OPPORTUNITY"
+    : contentTypeFilter === "Vendor Listing" ? "VENDOR_PRODUCT"
+    : undefined;
+
+  const { data: reportsData, loading: reportsLoading, refetch: refetchReports } = useGetReports({
+    status: gqlStatus,
+    targetType: gqlTargetType,
+    limit: 50,
+    offset: 0,
+  });
+
+  const [updateReportStatus, { loading: updatingReport }] = useUpdateReportStatus();
+  const [adminRemoveContent] = useAdminRemoveContent();
+
+  const reports: ReportItem[] = useMemo(() => {
+    const raw = reportsData?.getReports?.items ?? [];
+    if (!searchQuery) return raw;
+    const q = searchQuery.toLowerCase();
+    return raw.filter((r: ReportItem) =>
+      r.targetId.toLowerCase().includes(q) ||
+      r.reason.toLowerCase().includes(q) ||
+      (r.description ?? "").toLowerCase().includes(q)
+    );
+  }, [reportsData, searchQuery]);
 
   const getStatusBadge = (status: string) => {
     const variants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
@@ -217,7 +189,7 @@ export default function ContentModeration() {
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
-      setSelectedContent(mockContent.map((c) => c.id));
+      setSelectedContent(reports.map((r) => r.id));
     } else {
       setSelectedContent([]);
     }
@@ -231,27 +203,51 @@ export default function ContentModeration() {
     }
   };
 
-  const openContentDetail = (item: typeof mockContent[0]) => {
+  const openContentDetail = (item: ReportItem) => {
     setSelectedItem(item);
     setIsDetailOpen(true);
   };
 
-  const handleApprove = () => {
-    toast({ title: "Success", description: "Content approved successfully." });
+  const handleApprove = async () => {
+    if (!selectedItem) return;
+    try {
+      await updateReportStatus({ variables: { input: { reportId: selectedItem.id, status: "RESOLVED", resolutionNotes: approveNote || undefined } } });
+      toast({ title: "Success", description: "Report resolved successfully." });
+      refetchReports();
+    } catch (e) {
+      toast({ title: "Error", description: (e as Error).message, variant: "destructive" });
+    }
     setIsApproveModalOpen(false);
     setApproveNote("");
   };
 
-  const handleReject = () => {
-    toast({ title: "Success", description: "Content rejected." });
+  const handleReject = async () => {
+    if (!selectedItem) return;
+    try {
+      await updateReportStatus({ variables: { input: { reportId: selectedItem.id, status: "DISMISSED", resolutionNotes: rejectReason || undefined } } });
+      toast({ title: "Success", description: "Report dismissed." });
+      refetchReports();
+    } catch (e) {
+      toast({ title: "Error", description: (e as Error).message, variant: "destructive" });
+    }
     setIsRejectModalOpen(false);
     setRejectReason("");
   };
 
-  const handleFlag = () => {
-    toast({ title: "Success", description: "Content flagged for review." });
+  const handleRemoveContent = async (item: ReportItem) => {
+    try {
+      await adminRemoveContent({ variables: { contentType: item.targetType, contentId: item.targetId, reason: flagReason || "Admin removal" } });
+      toast({ title: "Success", description: "Content removed." });
+      refetchReports();
+    } catch (e) {
+      toast({ title: "Error", description: (e as Error).message, variant: "destructive" });
+    }
     setIsFlagModalOpen(false);
     setFlagReason("");
+  };
+
+  const handleFlag = () => {
+    if (selectedItem) handleRemoveContent(selectedItem);
   };
 
   const handleBulkAction = () => {
@@ -359,22 +355,39 @@ export default function ContentModeration() {
               <TableRow>
                 <TableHead className="w-12">
                   <Checkbox
-                    checked={selectedContent.length === mockContent.length}
+                    checked={reports.length > 0 && selectedContent.length === reports.length}
                     onCheckedChange={handleSelectAll}
                   />
                 </TableHead>
-                <TableHead>Content ID</TableHead>
+                <TableHead>Report ID</TableHead>
                 <TableHead>Type</TableHead>
-                <TableHead>Title / Excerpt</TableHead>
-                <TableHead>Author</TableHead>
-                <TableHead>Community</TableHead>
+                <TableHead>Reason</TableHead>
+                <TableHead>Reporter</TableHead>
+                <TableHead>Target ID</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Submitted</TableHead>
+                <TableHead>Reported</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {mockContent.map((item) => (
+              {reportsLoading && (
+                <TableRow>
+                  <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                    Loading reports...
+                  </TableCell>
+                </TableRow>
+              )}
+              {!reportsLoading && reports.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                    No reports found.
+                  </TableCell>
+                </TableRow>
+              )}
+              {reports.map((item) => {
+                const displayType = targetTypeToLabel(item.targetType);
+                const displayStatus = reportStatusToDisplay(item.status);
+                return (
                 <TableRow key={item.id}>
                   <TableCell>
                     <Checkbox
@@ -382,24 +395,24 @@ export default function ContentModeration() {
                       onCheckedChange={(checked) => handleSelectContent(item.id, checked as boolean)}
                     />
                   </TableCell>
-                  <TableCell className="font-medium">{item.id}</TableCell>
+                  <TableCell className="font-medium font-mono text-xs">{item.id.slice(0, 8)}…</TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
-                      {getTypeIcon(item.type)}
-                      <span>{item.type}</span>
+                      {getTypeIcon(displayType)}
+                      <span>{displayType}</span>
                     </div>
                   </TableCell>
-                  <TableCell className="max-w-[200px] truncate">{item.title_excerpt}</TableCell>
-                  <TableCell>{item.author}</TableCell>
-                  <TableCell>{item.community_association}</TableCell>
-                  <TableCell>{getStatusBadge(item.status)}</TableCell>
-                  <TableCell className="text-sm">{item.submitted_at}</TableCell>
+                  <TableCell className="max-w-[200px] truncate">{item.reason}</TableCell>
+                  <TableCell className="font-mono text-xs max-w-[100px] truncate">{item.reporterId}</TableCell>
+                  <TableCell className="font-mono text-xs max-w-[100px] truncate">{item.targetId}</TableCell>
+                  <TableCell>{getStatusBadge(displayStatus)}</TableCell>
+                  <TableCell className="text-sm">{new Date(item.createdAt).toLocaleDateString()}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-1">
                       <Button variant="ghost" size="icon" onClick={() => openContentDetail(item)}>
                         <Eye className="h-4 w-4" />
                       </Button>
-                      {item.status === "Pending Approval" && (
+                      {item.status === "PENDING" && (
                         <>
                           <Button variant="ghost" size="icon" onClick={() => { setSelectedItem(item); setIsApproveModalOpen(true); }}>
                             <Check className="h-4 w-4 text-green-500" />
@@ -412,22 +425,11 @@ export default function ContentModeration() {
                       <Button variant="ghost" size="icon" onClick={() => { setSelectedItem(item); setIsFlagModalOpen(true); }}>
                         <Flag className="h-4 w-4 text-orange-500" />
                       </Button>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="bg-popover">
-                          <DropdownMenuItem>
-                            <Download className="mr-2 h-4 w-4" /> Export Content Data
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
                     </div>
                   </TableCell>
                 </TableRow>
-              ))}
+                );
+              })}
             </TableBody>
           </Table>
         </div>
@@ -439,147 +441,79 @@ export default function ContentModeration() {
               <>
                 <SheetHeader>
                   <SheetTitle className="flex items-center gap-3">
-                    {getTypeIcon(selectedItem.type)}
-                    {selectedItem.type}
+                    {getTypeIcon(targetTypeToLabel(selectedItem.targetType))}
+                    {targetTypeToLabel(selectedItem.targetType)} Report
                   </SheetTitle>
                   <div className="flex flex-wrap items-center gap-2 text-sm">
-                    <Badge variant="outline">{selectedItem.id}</Badge>
-                    {getStatusBadge(selectedItem.status)}
+                    <Badge variant="outline" className="font-mono text-xs">{selectedItem.id.slice(0, 8)}…</Badge>
+                    {getStatusBadge(reportStatusToDisplay(selectedItem.status))}
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    By {selectedItem.author} in {selectedItem.community_association}
+                    Reported by <span className="font-mono">{selectedItem.reporterId}</span>
                   </p>
                 </SheetHeader>
 
                 <div className="flex gap-2 mt-4">
-                  {selectedItem.status === "Pending Approval" && (
+                  {selectedItem.status === "PENDING" && (
                     <>
                       <Button size="sm" onClick={() => { setIsDetailOpen(false); setIsApproveModalOpen(true); }}>
-                        <Check className="mr-2 h-4 w-4" /> Approve
+                        <Check className="mr-2 h-4 w-4" /> Resolve
                       </Button>
                       <Button variant="destructive" size="sm" onClick={() => { setIsDetailOpen(false); setIsRejectModalOpen(true); }}>
-                        <X className="mr-2 h-4 w-4" /> Reject
+                        <X className="mr-2 h-4 w-4" /> Dismiss
                       </Button>
                     </>
                   )}
                   <Button variant="outline" size="sm" onClick={() => { setIsDetailOpen(false); setIsFlagModalOpen(true); }}>
-                    <Flag className="mr-2 h-4 w-4" /> Flag
+                    <Flag className="mr-2 h-4 w-4" /> Remove Content
                   </Button>
                 </div>
 
                 <Tabs defaultValue="overview" className="mt-6">
-                  <TabsList className="grid w-full grid-cols-3">
+                  <TabsList className="grid w-full grid-cols-2">
                     <TabsTrigger value="overview">Overview</TabsTrigger>
-                    <TabsTrigger value="reactions">Reactions</TabsTrigger>
-                    <TabsTrigger value="audit">Audit</TabsTrigger>
+                    <TabsTrigger value="audit">Review History</TabsTrigger>
                   </TabsList>
 
                   <TabsContent value="overview" className="space-y-4 mt-4">
                     <div className="p-4 rounded-lg border bg-card space-y-3">
-                      <h4 className="font-semibold">Content Details</h4>
+                      <h4 className="font-semibold">Report Details</h4>
                       <div className="grid grid-cols-2 gap-4 text-sm">
-                        <div><span className="text-muted-foreground">Content ID:</span> <span className="ml-2">{selectedItem.id}</span></div>
-                        <div><span className="text-muted-foreground">Type:</span> <span className="ml-2">{selectedItem.type}</span></div>
-                        <div><span className="text-muted-foreground">Status:</span> <span className="ml-2">{selectedItem.status}</span></div>
-                        <div><span className="text-muted-foreground">Author:</span> <span className="ml-2">{selectedItem.author}</span></div>
-                        <div><span className="text-muted-foreground">Community:</span> <span className="ml-2">{selectedItem.community_association}</span></div>
-                        <div><span className="text-muted-foreground">Submitted:</span> <span className="ml-2">{selectedItem.submitted_at}</span></div>
+                        <div><span className="text-muted-foreground">Report ID:</span> <span className="ml-2 font-mono text-xs">{selectedItem.id}</span></div>
+                        <div><span className="text-muted-foreground">Content Type:</span> <span className="ml-2">{targetTypeToLabel(selectedItem.targetType)}</span></div>
+                        <div><span className="text-muted-foreground">Status:</span> <span className="ml-2">{reportStatusToDisplay(selectedItem.status)}</span></div>
+                        <div><span className="text-muted-foreground">Reported:</span> <span className="ml-2">{new Date(selectedItem.createdAt).toLocaleString()}</span></div>
+                        <div className="col-span-2"><span className="text-muted-foreground">Target ID:</span> <span className="ml-2 font-mono text-xs">{selectedItem.targetId}</span></div>
+                        <div className="col-span-2"><span className="text-muted-foreground">Reporter ID:</span> <span className="ml-2 font-mono text-xs">{selectedItem.reporterId}</span></div>
                       </div>
                     </div>
                     <div className="p-4 rounded-lg border bg-card space-y-3">
-                      <h4 className="font-semibold">Content Preview</h4>
-                      <p className="text-sm text-muted-foreground whitespace-pre-wrap">{selectedItem.full_content}</p>
-                      {selectedItem.media.length > 0 && (
-                        <div className="flex gap-2 mt-3">
-                          {selectedItem.media.map((url, idx) => (
-                            <img key={idx} src={url} alt="Content media" className="w-32 h-32 object-cover rounded-lg" />
-                          ))}
-                        </div>
+                      <h4 className="font-semibold">Reason &amp; Description</h4>
+                      <p className="text-sm font-medium">{selectedItem.reason}</p>
+                      {selectedItem.description && (
+                        <p className="text-sm text-muted-foreground whitespace-pre-wrap">{selectedItem.description}</p>
                       )}
                     </div>
+                    {selectedItem.resolutionNotes && (
+                      <div className="p-4 rounded-lg border bg-card space-y-2">
+                        <h4 className="font-semibold">Resolution Notes</h4>
+                        <p className="text-sm text-muted-foreground">{selectedItem.resolutionNotes}</p>
+                      </div>
+                    )}
                   </TabsContent>
 
-                  <TabsContent value="reactions" className="mt-4 space-y-4">
-                    <div className="grid grid-cols-4 gap-4">
-                      <Card>
-                        <CardContent className="pt-4 text-center">
-                          <Heart className="h-6 w-6 mx-auto text-red-500 mb-2" />
-                          <div className="text-2xl font-bold">{selectedItem.likes}</div>
-                          <div className="text-xs text-muted-foreground">Likes</div>
-                        </CardContent>
-                      </Card>
-                      <Card>
-                        <CardContent className="pt-4 text-center">
-                          <MessageCircle className="h-6 w-6 mx-auto text-blue-500 mb-2" />
-                          <div className="text-2xl font-bold">{selectedItem.comments}</div>
-                          <div className="text-xs text-muted-foreground">Comments</div>
-                        </CardContent>
-                      </Card>
-                      <Card>
-                        <CardContent className="pt-4 text-center">
-                          <Share2 className="h-6 w-6 mx-auto text-green-500 mb-2" />
-                          <div className="text-2xl font-bold">{selectedItem.shares}</div>
-                          <div className="text-xs text-muted-foreground">Shares</div>
-                        </CardContent>
-                      </Card>
-                      <Card>
-                        <CardContent className="pt-4 text-center">
-                          <Bookmark className="h-6 w-6 mx-auto text-yellow-500 mb-2" />
-                          <div className="text-2xl font-bold">{selectedItem.saves}</div>
-                          <div className="text-xs text-muted-foreground">Saves</div>
-                        </CardContent>
-                      </Card>
-                    </div>
-                    <Card>
-                      <CardHeader>
-                        <CardTitle className="text-sm">Recent Interactions</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-3">
-                          {mockInteractions.map((interaction, idx) => (
-                            <div key={idx} className="flex items-center justify-between text-sm">
-                              <div className="flex items-center gap-2">
-                                <Avatar className="h-6 w-6">
-                                  <AvatarFallback>{interaction.user.split(" ").map(n => n[0]).join("")}</AvatarFallback>
-                                </Avatar>
-                                <span>{interaction.user}</span>
-                                <Badge variant="outline" className="text-xs">{interaction.action}</Badge>
-                              </div>
-                              <span className="text-muted-foreground text-xs">{interaction.timestamp}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </TabsContent>
-
-                  <TabsContent value="audit" className="mt-4">
-                    <div className="flex justify-end mb-2">
-                      <Button variant="outline" size="sm">
-                        <Download className="mr-2 h-4 w-4" /> Export Audit (CSV)
-                      </Button>
-                    </div>
-                    <div className="rounded-lg border">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Timestamp</TableHead>
-                            <TableHead>Action</TableHead>
-                            <TableHead>Performed By</TableHead>
-                            <TableHead>Notes</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {mockAuditLogs.map((log, idx) => (
-                            <TableRow key={idx}>
-                              <TableCell className="text-sm">{log.timestamp}</TableCell>
-                              <TableCell>{log.action}</TableCell>
-                              <TableCell>{log.performed_by}</TableCell>
-                              <TableCell className="max-w-xs truncate">{log.notes}</TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
+                  <TabsContent value="audit" className="mt-4 space-y-3">
+                    <div className="p-4 rounded-lg border bg-card space-y-2 text-sm">
+                      {selectedItem.reviewedAt ? (
+                        <>
+                          <div><span className="text-muted-foreground">Reviewed at:</span> <span className="ml-2">{new Date(selectedItem.reviewedAt).toLocaleString()}</span></div>
+                          {selectedItem.reviewedBy && (
+                            <div><span className="text-muted-foreground">Reviewed by:</span> <span className="ml-2 font-mono text-xs">{selectedItem.reviewedBy}</span></div>
+                          )}
+                        </>
+                      ) : (
+                        <p className="text-muted-foreground">Not yet reviewed.</p>
+                      )}
                     </div>
                   </TabsContent>
                 </Tabs>
@@ -592,9 +526,9 @@ export default function ContentModeration() {
         <Dialog open={isApproveModalOpen} onOpenChange={setIsApproveModalOpen}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Approve Content</DialogTitle>
+              <DialogTitle>Resolve Report</DialogTitle>
               <DialogDescription>
-                Are you sure you want to approve this content? Approved content will be visible to all platform users.
+                Mark this report as resolved. The content will be considered reviewed.
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
@@ -609,7 +543,7 @@ export default function ContentModeration() {
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setIsApproveModalOpen(false)}>Cancel</Button>
-              <Button onClick={handleApprove}>Approve</Button>
+              <Button onClick={handleApprove} disabled={updatingReport}>Resolve</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -645,9 +579,9 @@ export default function ContentModeration() {
         <Dialog open={isFlagModalOpen} onOpenChange={setIsFlagModalOpen}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Flag Content</DialogTitle>
+              <DialogTitle>Remove Content</DialogTitle>
               <DialogDescription>
-                Flag this content for further review.
+                Remove the reported content from the platform. This action cannot be undone.
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
@@ -675,7 +609,7 @@ export default function ContentModeration() {
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setIsFlagModalOpen(false)}>Cancel</Button>
-              <Button className="bg-orange-500 hover:bg-orange-600" onClick={handleFlag} disabled={!flagReason.trim()}>Flag</Button>
+              <Button variant="destructive" onClick={handleFlag} disabled={!flagReason.trim()}>Remove</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
