@@ -305,11 +305,16 @@ export {
   useAdminUnfreezeEscrow,
   useAdminForceReleaseEscrow,
   useAdminResolveDispute,
+  useGetSystemAlerts,
+  useAcknowledgeAlert,
+  useGetPerformanceMetrics,
   type DashboardStats,
   type SystemHealth,
   type PlatformAnalytics,
   type AdminDispute,
   type AdminEscrow,
+  type SystemAlert,
+  type PerformanceMetricPoint,
 } from "./useDashboard";
 
 export {
@@ -340,8 +345,12 @@ export {
   useFlagConversation,
   useReviewConversation,
   useUpdateChatSetting,
+  useListDMConversations,
+  useListGroupConversations,
   type FlaggedConversation,
   type ChatSetting,
+  type AdminDMConversationItem,
+  type AdminGroupConversationItem,
 } from "./useChatManagement";
 
 export {
@@ -360,6 +369,24 @@ export {
   useGetRoleDefinitions,
   useCreateRoleDefinition,
 } from "./useAdminAccounts";
+
+export {
+  useListPushNotifications,
+  useListInAppNotifications,
+  useListNotificationTemplates,
+  useGetNotificationAnalytics,
+} from "./useNotificationListing";
+
+export {
+  useGetCommunityEngagementStats,
+  useGetTopAssociations,
+} from "./useCommunityAnalytics";
+
+export {
+  useGetEscrowAttachments,
+  type EscrowAttachment,
+  type EscrowAttachmentListResponse,
+} from "./useEscrowAttachments";
 
 export {
   useUpdateCommunity,
@@ -387,3 +414,26 @@ export {
   useGetCommunityCoverUploadUrl,
   useDeleteEntityImage,
 } from "./useAssociation";
+
+export {
+  useGetUserPosts,
+  useGetUserGroups,
+  useGetUserOpportunities,
+  useGetUserTransactions,
+  type UserPostListResponse,
+  type UserGroupListResponse,
+  type UserOpportunityListResponse,
+  type UserTransactionListResponse,
+} from "./useUserSubResources";
+
+export {
+  useGetVendorSalesAnalytics,
+  type VendorSalesAnalyticsResponse,
+} from "./useVendorAnalytics";
+
+export {
+  useGetChatVolumeAnalytics,
+  type ChatVolumeAnalyticsData,
+  type ChatVolumeDataPoint,
+  type ActiveChatStat,
+} from "./useChatAnalytics";

@@ -9,14 +9,19 @@ import {
   ADMIN_UNFREEZE_ESCROW,
   ADMIN_RESOLVE_DISPUTE,
   ADMIN_FORCE_RELEASE_ESCROW,
+  GET_SYSTEM_ALERTS,
+  ACKNOWLEDGE_ALERT,
+  GET_PERFORMANCE_METRICS,
   type DashboardStats,
   type SystemHealth,
   type PlatformAnalytics,
   type AdminDispute,
   type AdminEscrow,
+  type SystemAlert,
+  type PerformanceMetricPoint,
 } from "@/services/networks/graphql/admin";
 
-export type { DashboardStats, SystemHealth, PlatformAnalytics, AdminDispute, AdminEscrow };
+export type { DashboardStats, SystemHealth, PlatformAnalytics, AdminDispute, AdminEscrow, SystemAlert, PerformanceMetricPoint };
 
 /** Maps Dashboard date-range control values to `getPlatformAnalytics(period)` API strings. */
 export function dashboardDateRangeToAnalyticsPeriod(
@@ -99,4 +104,20 @@ export function useAdminForceReleaseEscrow() {
 
 export function useAdminResolveDispute() {
   return useMutation(ADMIN_RESOLVE_DISPUTE);
+}
+
+export function useGetSystemAlerts() {
+  return useQuery<{ getSystemAlerts: SystemAlert[] }>(GET_SYSTEM_ALERTS, {
+    pollInterval: 60000,
+  });
+}
+
+export function useAcknowledgeAlert() {
+  return useMutation<{ acknowledgeAlert: { success: boolean; message: string } }, { id: string; note: string }>(ACKNOWLEDGE_ALERT);
+}
+
+export function useGetPerformanceMetrics() {
+  return useQuery<{ getPerformanceMetrics: PerformanceMetricPoint[] }>(GET_PERFORMANCE_METRICS, {
+    pollInterval: 30000,
+  });
 }

@@ -5,11 +5,25 @@ import {
   FLAG_CONVERSATION,
   REVIEW_CONVERSATION,
   UPDATE_CHAT_SETTING,
+  LIST_DM_CONVERSATIONS,
+  LIST_GROUP_CONVERSATIONS,
+  GET_CONVERSATION_MEMBERS,
   type FlaggedConversation,
   type ChatSetting,
+  type AdminDMConversationItem,
+  type AdminGroupConversationItem,
+  type ConversationMemberItem,
+  type AdminDMConversationsData,
+  type AdminGroupConversationsData,
 } from "@/services/networks/graphql/admin";
 
-export type { FlaggedConversation, ChatSetting };
+export type {
+  FlaggedConversation,
+  ChatSetting,
+  AdminDMConversationItem,
+  AdminGroupConversationItem,
+  ConversationMemberItem,
+};
 
 export function useGetFlaggedConversations(options: {
   status?: string;
@@ -55,4 +69,42 @@ export function useUpdateChatSetting() {
   >(UPDATE_CHAT_SETTING, {
     refetchQueries: [{ query: GET_CHAT_SETTINGS }],
   });
+}
+
+export function useListDMConversations(options: {
+  limit?: number;
+  offset?: number;
+  flagged?: boolean;
+} = {}) {
+  return useQuery<{ listDMConversations: AdminDMConversationsData }>(
+    LIST_DM_CONVERSATIONS,
+    {
+      variables: {
+        filters: {
+          limit: options.limit ?? 50,
+          offset: options.offset ?? 0,
+          flagged: options.flagged,
+        },
+      },
+    }
+  );
+}
+
+export function useListGroupConversations(options: {
+  limit?: number;
+  offset?: number;
+  flagged?: boolean;
+} = {}) {
+  return useQuery<{ listGroupConversations: AdminGroupConversationsData }>(
+    LIST_GROUP_CONVERSATIONS,
+    {
+      variables: {
+        filters: {
+          limit: options.limit ?? 50,
+          offset: options.offset ?? 0,
+          flagged: options.flagged,
+        },
+      },
+    }
+  );
 }

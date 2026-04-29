@@ -472,6 +472,156 @@ export const DELETE_ALL_NOTIFICATIONS = gql`
   }
 `;
 
+// ============================================================================
+// Notification Listing Operations
+// ============================================================================
+
+export const LIST_PUSH_NOTIFICATIONS = gql`
+  query ListPushNotifications($filters: ListPushNotificationsFilters) {
+    listPushNotifications(filters: $filters) {
+      items {
+        id
+        title
+        type
+        recipientCount
+        status
+        sentAt
+        openRate
+      }
+      total
+    }
+  }
+`;
+
+export const LIST_IN_APP_NOTIFICATIONS = gql`
+  query ListInAppNotifications($filters: ListInAppNotificationsFilters) {
+    listInAppNotifications(filters: $filters) {
+      items {
+        id
+        title
+        type
+        priority
+        targetAudience
+        active
+        viewCount
+        createdAt
+      }
+      total
+    }
+  }
+`;
+
+export const LIST_NOTIFICATION_TEMPLATES = gql`
+  query ListNotificationTemplates($filters: ListNotificationTemplatesFilters) {
+    listNotificationTemplates(filters: $filters) {
+      items {
+        id
+        name
+        type
+        category
+        usageCount
+        status
+        lastUpdatedAt
+      }
+      total
+    }
+  }
+`;
+
+export const GET_NOTIFICATION_ANALYTICS = gql`
+  query GetNotificationAnalytics($period: String!) {
+    getNotificationAnalytics(period: $period) {
+      volumeByDay {
+        date
+        pushCount
+        inAppCount
+        emailCount
+      }
+      deliveryRateByHour {
+        hour
+        deliveredPct
+        failedPct
+      }
+      typeDistribution {
+        type
+        count
+      }
+    }
+  }
+`;
+
+// --- TypeScript interfaces for the notification listing responses ---
+
+export interface AdminPushNotificationItem {
+  id: string;
+  title: string;
+  type: string;
+  recipientCount: number;
+  status: string;
+  sentAt?: string;
+  openRate?: number;
+}
+
+export interface AdminPushNotificationListResponse {
+  items: AdminPushNotificationItem[];
+  total: number;
+}
+
+export interface AdminInAppNotificationItem {
+  id: string;
+  title: string;
+  type: string;
+  priority: string;
+  targetAudience: string;
+  active: boolean;
+  viewCount: number;
+  createdAt: string;
+}
+
+export interface AdminInAppNotificationListResponse {
+  items: AdminInAppNotificationItem[];
+  total: number;
+}
+
+export interface AdminNotificationTemplateItem {
+  id: string;
+  name: string;
+  type: string;
+  category: string;
+  usageCount: number;
+  status: string;
+  lastUpdatedAt?: string;
+}
+
+export interface AdminNotificationTemplateListResponse {
+  items: AdminNotificationTemplateItem[];
+  total: number;
+}
+
+export interface NotificationVolumeByDay {
+  date: string;
+  pushCount: number;
+  inAppCount: number;
+  emailCount: number;
+}
+
+export interface NotificationDeliveryRateByHour {
+  hour: number;
+  deliveredPct: number;
+  failedPct: number;
+}
+
+export interface NotificationTypeDistribution {
+  type: string;
+  count: number;
+}
+
+export interface NotificationAnalyticsData {
+  volumeByDay: NotificationVolumeByDay[];
+  deliveryRateByHour: NotificationDeliveryRateByHour[];
+  typeDistribution: NotificationTypeDistribution[];
+}
+
 /** CommunityType (list communities response). */
 export interface CommunityType {
   id: string;
@@ -1846,6 +1996,44 @@ export const ADMIN_LIST_ESCROWS = gql`
   }
 `;
 
+// ── Escrow Attachments ────────────────────────────────────────────────────────
+
+export interface EscrowAttachment {
+  id: string;
+  escrowId: string;
+  fileName: string;
+  fileType: string;
+  fileSize: number;
+  uploadedById: string;
+  uploadedByName: string;
+  url: string;
+  createdAt: string;
+}
+
+export interface EscrowAttachmentListResponse {
+  items: EscrowAttachment[];
+  total: number;
+}
+
+export const GET_ESCROW_ATTACHMENTS = gql`
+  query GetEscrowAttachments($escrowId: String!, $limit: Int, $offset: Int) {
+    getEscrowAttachments(escrowId: $escrowId, limit: $limit, offset: $offset) {
+      items {
+        id
+        escrowId
+        fileName
+        fileType
+        fileSize
+        uploadedById
+        uploadedByName
+        url
+        createdAt
+      }
+      total
+    }
+  }
+`;
+
 export const ADMIN_FREEZE_ESCROW = gql`
   mutation AdminFreezeEscrow($escrowId: ID!, $disputeId: ID!, $reason: String!) {
     adminFreezeEscrow(escrowId: $escrowId, disputeId: $disputeId, reason: $reason) {
@@ -1869,6 +2057,135 @@ export const ADMIN_UNBAN_USER = gql`
     adminUnbanUser(userId: $userId, reason: $reason) {
       success
       message
+    }
+  }
+`;
+
+// ─── System Alerts & Performance Metrics ─────────────────────────────────────
+
+export interface SystemAlert {
+  id: string;
+  type: string;
+  component: string;
+  severity: string;
+  timestamp: string;
+  status: string;
+  message?: string;
+}
+
+export const GET_SYSTEM_ALERTS = gql`
+  query GetSystemAlerts {
+    getSystemAlerts {
+      id
+      type
+      component
+      severity
+      timestamp
+      status
+      message
+    }
+  }
+`;
+
+export const ACKNOWLEDGE_ALERT = gql`
+  mutation AcknowledgeAlert($id: ID!, $note: String!) {
+    acknowledgeAlert(id: $id, note: $note) {
+      success
+      message
+    }
+  }
+`;
+
+export interface PerformanceMetricPoint {
+  label: string;
+  value: number;
+  unit?: string;
+  timestamp?: string;
+}
+
+export const GET_PERFORMANCE_METRICS = gql`
+  query GetPerformanceMetrics {
+    getPerformanceMetrics {
+      label
+      value
+      unit
+      timestamp
+    }
+  }
+`;
+
+// ─── Community Engagement Stats (time-series + top communities) ──────────────
+
+export interface EngagementDataPoint {
+  date: string;
+  posts: number;
+  reactions: number;
+  comments: number;
+}
+
+export interface CommunityEngagementStatFull {
+  communityId: string;
+  communityName: string;
+  posts: number;
+  reactions: number;
+  comments: number;
+  activeMembers: number;
+}
+
+export interface CommunityEngagementStatsData {
+  byDay: EngagementDataPoint[];
+  topCommunities: CommunityEngagementStatFull[];
+}
+
+export const GET_COMMUNITY_ENGAGEMENT_STATS = gql`
+  query GetCommunityEngagementStats($period: String) {
+    getCommunityEngagementStatsFull(period: $period) {
+      byDay {
+        date
+        posts
+        reactions
+        comments
+      }
+      topCommunities {
+        communityId
+        communityName
+        posts
+        reactions
+        comments
+        activeMembers
+      }
+    }
+  }
+`;
+
+// ─── Association Ranking ──────────────────────────────────────────────────────
+
+export interface AssociationRankingItem {
+  associationId: string;
+  associationName: string;
+  communityName: string;
+  posts: number;
+  opportunities: number;
+  vendors: number;
+  reactions: number;
+}
+
+export interface AssociationRankingData {
+  items: AssociationRankingItem[];
+}
+
+export const GET_TOP_ASSOCIATIONS = gql`
+  query GetTopAssociations($limit: Int) {
+    getTopAssociations(limit: $limit) {
+      items {
+        associationId
+        associationName
+        communityName
+        posts
+        opportunities
+        vendors
+        reactions
+      }
     }
   }
 `;
@@ -2253,6 +2570,333 @@ export const UPDATE_CHAT_SETTING = gql`
       value
       description
       updatedBy
+    }
+  }
+`;
+
+// ─── Admin Conversation Listing ───────────────────────────────────────────
+
+export interface AdminDMConversationItem {
+  id: string;
+  participant1Id: string;
+  participant1Name?: string;
+  participant2Id: string;
+  participant2Name?: string;
+  messageCount: number;
+  lastMessageAt?: string;
+  flagged: boolean;
+  createdAt?: string;
+}
+
+export interface AdminDMConversationsData {
+  items: AdminDMConversationItem[];
+  total: number;
+}
+
+export interface AdminGroupConversationItem {
+  id: string;
+  name: string;
+  groupId?: string;
+  communityId?: string;
+  memberCount: number;
+  messageCount: number;
+  createdBy?: string;
+  lastMessageAt?: string;
+  flagged: boolean;
+  createdAt?: string;
+}
+
+export interface AdminGroupConversationsData {
+  items: AdminGroupConversationItem[];
+  total: number;
+}
+
+export interface ConversationMemberItem {
+  userId: string;
+  displayName: string;
+  joinedAt?: string;
+  role: string;
+}
+
+export const LIST_DM_CONVERSATIONS = gql`
+  query ListDMConversations($filters: AdminDMConversationsFilters) {
+    listDMConversations(filters: $filters) {
+      items {
+        id
+        participant1Id
+        participant1Name
+        participant2Id
+        participant2Name
+        messageCount
+        lastMessageAt
+        flagged
+        createdAt
+      }
+      total
+    }
+  }
+`;
+
+export const LIST_GROUP_CONVERSATIONS = gql`
+  query ListGroupConversations($filters: AdminGroupConversationsFilters) {
+    listGroupConversations(filters: $filters) {
+      items {
+        id
+        name
+        groupId
+        communityId
+        memberCount
+        messageCount
+        createdBy
+        lastMessageAt
+        flagged
+        createdAt
+      }
+      total
+    }
+  }
+`;
+
+export const GET_CONVERSATION_MEMBERS = gql`
+  query GetConversationMembers($conversationId: ID!) {
+    getConversationMembers(conversationId: $conversationId) {
+      userId
+      displayName
+      joinedAt
+      role
+    }
+  }
+`;
+
+// ─── Chat Volume Analytics ─────────────────────────────────────────────────
+
+export interface ChatVolumeDataPoint {
+  date: string;
+  dm: number;
+  group: number;
+}
+
+export interface ActiveChatStat {
+  chatId: string;
+  chatName: string;
+  /** "DM" | "GROUP" */
+  chatType: string;
+  memberCount: number;
+  messageCount: number;
+  lastActiveAt: string;
+}
+
+export interface ChatVolumeAnalyticsData {
+  byDay: ChatVolumeDataPoint[];
+  dmCount: number;
+  groupCount: number;
+  totalMessages: number;
+  topActiveChats: ActiveChatStat[];
+}
+
+export const GET_CHAT_VOLUME_ANALYTICS = gql`
+  query GetChatVolumeAnalytics($period: String) {
+    getChatVolumeAnalytics(period: $period) {
+      byDay {
+        date
+        dm
+        group
+      }
+      dmCount
+      groupCount
+      totalMessages
+      topActiveChats {
+        chatId
+        chatName
+        chatType
+        memberCount
+        messageCount
+        lastActiveAt
+      }
+    }
+  }
+`;
+
+// ─── User Sub-Resources ───────────────────────────────────────────────────────
+
+export const GET_USER_POSTS = gql`
+  query GetUserPosts($userId: String!, $limit: Int, $offset: Int) {
+    getUserPosts(userId: $userId, limit: $limit, offset: $offset) {
+      items {
+        id
+        content
+        postType
+        communityId
+        communityName
+        likeCount
+        commentCount
+        createdAt
+        status
+      }
+      total
+    }
+  }
+`;
+
+export const GET_USER_GROUPS = gql`
+  query GetUserGroups($userId: String!, $limit: Int, $offset: Int) {
+    getUserGroups(userId: $userId, limit: $limit, offset: $offset) {
+      items {
+        id
+        name
+        communityId
+        communityName
+        memberCount
+        role
+        joinedAt
+      }
+      total
+    }
+  }
+`;
+
+export const GET_USER_OPPORTUNITIES = gql`
+  query GetUserOpportunities($userId: String!, $limit: Int, $offset: Int) {
+    getUserOpportunities(userId: $userId, limit: $limit, offset: $offset) {
+      items {
+        id
+        title
+        type
+        communityId
+        communityName
+        status
+        applicants
+        postedAt
+      }
+      total
+    }
+  }
+`;
+
+export const GET_USER_TRANSACTIONS = gql`
+  query GetUserTransactions($userId: String!, $limit: Int, $offset: Int) {
+    getUserTransactions(userId: $userId, limit: $limit, offset: $offset) {
+      items {
+        id
+        type
+        amount
+        currency
+        status
+        description
+        createdAt
+      }
+      total
+    }
+  }
+`;
+
+// TypeScript interfaces for user sub-resource responses
+
+export interface UserPost {
+  id: string;
+  content?: string;
+  postType?: string;
+  communityId?: string;
+  communityName?: string;
+  likeCount: number;
+  commentCount: number;
+  createdAt: string;
+  status?: string;
+}
+
+export interface UserPostListResponse {
+  items: UserPost[];
+  total: number;
+}
+
+export interface UserGroup {
+  id: string;
+  name: string;
+  communityId?: string;
+  communityName?: string;
+  memberCount: number;
+  role?: string;
+  joinedAt?: string;
+}
+
+export interface UserGroupListResponse {
+  items: UserGroup[];
+  total: number;
+}
+
+export interface UserOpportunity {
+  id: string;
+  title: string;
+  type?: string;
+  communityId?: string;
+  communityName?: string;
+  status?: string;
+  applicants: number;
+  postedAt?: string;
+}
+
+export interface UserOpportunityListResponse {
+  items: UserOpportunity[];
+  total: number;
+}
+
+export interface UserTransaction {
+  id: string;
+  type?: string;
+  amount: number;
+  currency?: string;
+  status?: string;
+  description?: string;
+  createdAt: string;
+}
+
+export interface UserTransactionListResponse {
+  items: UserTransaction[];
+  total: number;
+}
+
+// ─── Vendor Sales Analytics ───────────────────────────────────────────────────
+
+export interface SalesDataPoint {
+  date: string;
+  sales: number;
+  orders: number;
+}
+
+export interface VendorSalesStat {
+  vendorId: string;
+  vendorName: string;
+  productsSold: number;
+  revenue: number;
+  currency: string;
+  rating?: number;
+}
+
+export interface VendorSalesAnalyticsResponse {
+  byDay: SalesDataPoint[];
+  topVendors: VendorSalesStat[];
+  totalRevenue: number;
+  totalOrders: number;
+}
+
+export const GET_VENDOR_SALES_ANALYTICS = gql`
+  query GetVendorSalesAnalytics($period: String) {
+    getVendorSalesAnalytics(period: $period) {
+      byDay {
+        date
+        sales
+        orders
+      }
+      topVendors {
+        vendorId
+        vendorName
+        productsSold
+        revenue
+        currency
+        rating
+      }
+      totalRevenue
+      totalOrders
     }
   }
 `;

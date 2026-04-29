@@ -63,21 +63,12 @@ import {
   useAdminForceReleaseEscrow,
   useAdminFreezeEscrow,
   useAdminUnfreezeEscrow,
+  useGetAuditLogs,
+  useGetEscrowAttachments,
   type AdminEscrow,
+  type EscrowAttachment,
 } from "@/hooks/admin";
 
-const mockHistory = [
-  { timestamp: "2024-01-18 10:00", action: "Funds Released", performedBy: "Admin User", notes: "Full release approved" },
-  { timestamp: "2024-01-16 14:30", action: "Milestone Verified", performedBy: "System", notes: "Phase 1 completion confirmed" },
-  { timestamp: "2024-01-15 10:30", action: "Transaction Funded", performedBy: "John Doe", notes: "Initial funding completed" },
-  { timestamp: "2024-01-15 09:00", action: "Transaction Created", performedBy: "John Doe", notes: "Escrow transaction initiated" },
-];
-
-const mockAttachments = [
-  { name: "invoice_001.pdf", uploadedBy: "John Doe", uploadedAt: "2024-01-15", size: "245 KB" },
-  { name: "contract_signed.pdf", uploadedBy: "ABC Contractors", uploadedAt: "2024-01-14", size: "1.2 MB" },
-  { name: "delivery_proof.jpg", uploadedBy: "ABC Contractors", uploadedAt: "2024-01-17", size: "856 KB" },
-];
 
 // Map API uppercase statuses to display labels
 const STATUS_DISPLAY: Record<AdminEscrow["status"], string> = {
@@ -117,6 +108,15 @@ export default function EscrowManagement() {
   const [forceRelease, { loading: releasing }] = useAdminForceReleaseEscrow();
   const [freezeEscrow, { loading: freezing }] = useAdminFreezeEscrow();
   const [unfreezeEscrow, { loading: unfreezing }] = useAdminUnfreezeEscrow();
+
+  const { data: escrowAuditData } = useGetAuditLogs({
+    resourceId: selectedEscrow?.id ?? null,
+    resourceType: "escrow",
+    limit: 20,
+  });
+
+  const { data: attachmentsData, loading: attachmentsLoading } =
+    useGetEscrowAttachments(selectedEscrow?.id ?? null, 50);
 
   const escrows: AdminEscrow[] = data?.adminListEscrows?.escrows ?? [];
   const total: number = data?.adminListEscrows?.total ?? 0;
@@ -616,20 +616,24 @@ export default function EscrowManagement() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {mockHistory.map((entry, index) => (
-                          <TableRow key={index} className="border-border">
-                            <TableCell className="text-muted-foreground text-sm">
-                              {entry.timestamp}
-                            </TableCell>
-                            <TableCell className="text-foreground">{entry.action}</TableCell>
-                            <TableCell className="text-muted-foreground">
-                              {entry.performedBy}
-                            </TableCell>
-                            <TableCell className="text-muted-foreground text-sm">
-                              {entry.notes}
-                            </TableCell>
-                          </TableRow>
-                        ))}
+                        {(escrowAuditData?.getAuditLogs?.items ?? []).length === 0 ? (
+                          <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground py-6">No audit events found for this escrow</TableCell></TableRow>
+                        ) : (
+                          (escrowAuditData?.getAuditLogs?.items ?? []).map((entry: { id: string; actorId?: string; action: string; createdAt: string; ipAddress?: string }) => (
+                            <TableRow key={entry.id} className="border-border">
+                              <TableCell className="text-muted-foreground text-sm">
+                                {new Date(entry.createdAt).toLocaleString()}
+                              </TableCell>
+                              <TableCell className="text-foreground">{entry.action}</TableCell>
+                              <TableCell className="text-muted-foreground">
+                                {entry.actorId ? entry.actorId.slice(0, 8) + "…" : "System"}
+                              </TableCell>
+                              <TableCell className="text-muted-foreground text-sm">
+                                {entry.ipAddress ?? "—"}
+                              </TableCell>
+                            </TableRow>
+                          ))
+                        )}
                       </TableBody>
                     </Table>
                   </div>
@@ -644,27 +648,65 @@ export default function EscrowManagement() {
                       <Upload className="h-4 w-4 mr-2" /> Upload File
                     </Button>
                   </div>
-                  <div className="space-y-2">
-                    {mockAttachments.map((file, index) => (
-                      <div
-                        key={index}
-                        className="flex items-center justify-between p-3 bg-muted/30 rounded-lg border border-border"
-                      >
-                        <div className="flex items-center gap-3">
-                          <FileText className="h-5 w-5 text-muted-foreground" />
-                          <div>
-                            <p className="text-foreground text-sm font-medium">{file.name}</p>
-                            <p className="text-muted-foreground text-xs">
-                              Uploaded by {file.uploadedBy} on {file.uploadedAt} • {file.size}
-                            </p>
-                          </div>
-                        </div>
-                        <Button variant="ghost" size="sm">
-                          <Download className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
+                  {attachmentsLoading ? (
+                    <div className="py-8 text-center text-sm text-muted-foreground">
+                      Loading attachments…
+                    </div>
+                  ) : (attachmentsData?.getEscrowAttachments?.items ?? []).length === 0 ? (
+                    <div className="rounded-lg border border-dashed border-border p-6 text-center">
+                      <FileText className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+                      <p className="text-sm text-muted-foreground">No attachments found for this escrow.</p>
+                    </div>
+                  ) : (
+                    <div className="border border-border rounded-lg overflow-hidden">
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="border-border">
+                            <TableHead>File Name</TableHead>
+                            <TableHead>Type</TableHead>
+                            <TableHead>Size</TableHead>
+                            <TableHead>Uploaded By</TableHead>
+                            <TableHead>Date</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {(attachmentsData?.getEscrowAttachments?.items ?? []).map(
+                            (attachment: EscrowAttachment) => (
+                              <TableRow key={attachment.id} className="border-border">
+                                <TableCell className="font-medium text-foreground">
+                                  <a
+                                    href={attachment.url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="flex items-center gap-2 hover:underline"
+                                  >
+                                    <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
+                                    {attachment.fileName}
+                                  </a>
+                                </TableCell>
+                                <TableCell className="text-muted-foreground text-xs uppercase">
+                                  {attachment.fileType}
+                                </TableCell>
+                                <TableCell className="text-muted-foreground text-sm">
+                                  {attachment.fileSize >= 1024 * 1024
+                                    ? `${(attachment.fileSize / (1024 * 1024)).toFixed(1)} MB`
+                                    : attachment.fileSize >= 1024
+                                    ? `${(attachment.fileSize / 1024).toFixed(1)} KB`
+                                    : `${attachment.fileSize} B`}
+                                </TableCell>
+                                <TableCell className="text-muted-foreground text-sm">
+                                  {attachment.uploadedByName}
+                                </TableCell>
+                                <TableCell className="text-muted-foreground text-sm">
+                                  {formatDate(attachment.createdAt)}
+                                </TableCell>
+                              </TableRow>
+                            ),
+                          )}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  )}
                 </div>
               </TabsContent>
             </Tabs>

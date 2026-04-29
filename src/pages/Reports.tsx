@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import { Input } from "@/components/ui/input";
@@ -59,156 +59,191 @@ import {
   ResponsiveContainer,
   Legend,
 } from "recharts";
+import {
+  useAdminListEscrows,
+  useAdminListDisputes,
+  useGetSystemHealth,
+  useGetPlatformAnalytics,
+  useGetUsers,
+  useGetAuditLogs,
+  useGetVendorSalesAnalytics,
+  useGetCommunityEngagementStats,
+  useGetTopAssociations,
+  useGetChatVolumeAnalytics,
+} from "@/hooks/admin";
 
-// Mock data for charts
-const userGrowthData = [
-  { date: "Jan 1", newUsers: 120, activeUsers: 890 },
-  { date: "Jan 8", newUsers: 145, activeUsers: 920 },
-  { date: "Jan 15", newUsers: 160, activeUsers: 980 },
-  { date: "Jan 22", newUsers: 180, activeUsers: 1050 },
-  { date: "Jan 29", newUsers: 210, activeUsers: 1120 },
-  { date: "Feb 5", newUsers: 195, activeUsers: 1180 },
-  { date: "Feb 12", newUsers: 230, activeUsers: 1250 },
-];
-
-const communityEngagementData = [
-  { community: "Lagos Tech", posts: 245, reactions: 1890 },
-  { community: "Accra Business", posts: 189, reactions: 1420 },
-  { community: "Nairobi Creatives", posts: 156, reactions: 1100 },
-  { community: "Cape Town Dev", posts: 134, reactions: 980 },
-  { community: "Kigali Startup", posts: 98, reactions: 720 },
-];
-
-const vendorSalesData = [
-  { date: "Jan 1", sales: 45000 },
-  { date: "Jan 8", sales: 52000 },
-  { date: "Jan 15", sales: 48000 },
-  { date: "Jan 22", sales: 61000 },
-  { date: "Jan 29", sales: 58000 },
-  { date: "Feb 5", sales: 72000 },
-  { date: "Feb 12", sales: 68000 },
-];
-
-const escrowStatusData = [
-  { name: "Funded", value: 45, color: "hsl(var(--primary))" },
-  { name: "Released", value: 32, color: "hsl(142, 72%, 42%)" },
-  { name: "Pending", value: 15, color: "hsl(38, 92%, 50%)" },
-  { name: "Disputed", value: 8, color: "hsl(var(--destructive))" },
-];
-
-const disputeTypeData = [
-  { name: "Transaction", value: 35, color: "hsl(var(--primary))" },
-  { name: "Escrow", value: 28, color: "hsl(262, 83%, 58%)" },
-  { name: "Content", value: 18, color: "hsl(38, 92%, 50%)" },
-  { name: "Vendor Issue", value: 12, color: "hsl(142, 72%, 42%)" },
-  { name: "Community", value: 7, color: "hsl(var(--destructive))" },
-];
-
-const systemHealthData = [
-  { name: "Healthy", value: 85, color: "hsl(142, 72%, 42%)" },
-  { name: "Warning", value: 10, color: "hsl(38, 92%, 50%)" },
-  { name: "Critical", value: 5, color: "hsl(var(--destructive))" },
-];
-
-// Chat Analytics Data
-const chatVolumeData = [
-  { date: "Jan 1", dm: 4500, group: 2800 },
-  { date: "Jan 8", dm: 5200, group: 3100 },
-  { date: "Jan 15", dm: 4800, group: 2900 },
-  { date: "Jan 22", dm: 6100, group: 3500 },
-  { date: "Jan 29", dm: 5800, group: 3200 },
-  { date: "Feb 5", dm: 6400, group: 3800 },
-  { date: "Feb 12", dm: 7100, group: 4200 },
-];
-
-const chatTypeDistribution = [
-  { name: "Direct Messages", value: 68, color: "hsl(var(--primary))" },
-  { name: "Group Chats", value: 32, color: "hsl(262, 83%, 58%)" },
-];
-
-const topActiveChats = [
-  { id: "GRP-001", name: "NYC Diaspora Community", type: "Group", members: 156, messages: 4521, lastActive: "2024-01-15" },
-  { id: "GRP-002", name: "Tech Professionals", type: "Group", members: 89, messages: 1247, lastActive: "2024-01-15" },
-  { id: "DM-001", name: "John Smith ↔ Jane Doe", type: "DM", members: 2, messages: 512, lastActive: "2024-01-15" },
-  { id: "GRP-003", name: "Cultural Exchange", type: "Group", members: 234, messages: 8956, lastActive: "2024-01-14" },
-  { id: "DM-002", name: "Mike Johnson ↔ Sarah Wilson", type: "DM", members: 2, messages: 289, lastActive: "2024-01-14" },
-];
-
-// Mock table data
-const topActiveUsers = [
-  { id: "USR-001", name: "Adaeze Okoro", communities: 5, posts: 89, reactions: 456, opportunities: 12 },
-  { id: "USR-002", name: "Kwame Asante", communities: 4, posts: 72, reactions: 389, opportunities: 8 },
-  { id: "USR-003", name: "Fatima Diallo", communities: 6, posts: 65, reactions: 342, opportunities: 15 },
-  { id: "USR-004", name: "Chidi Nwosu", communities: 3, posts: 58, reactions: 298, opportunities: 6 },
-  { id: "USR-005", name: "Amina Traore", communities: 4, posts: 51, reactions: 267, opportunities: 9 },
-];
-
-const topAssociations = [
-  { name: "Lagos Tech Hub", community: "Lagos Tech", posts: 156, opportunities: 45, vendors: 23, reactions: 2890 },
-  { name: "Accra Business Network", community: "Accra Business", posts: 134, opportunities: 38, vendors: 18, reactions: 2340 },
-  { name: "Nairobi Creatives Collective", community: "Nairobi Creatives", posts: 98, opportunities: 28, vendors: 12, reactions: 1780 },
-  { name: "Cape Town Dev Alliance", community: "Cape Town Dev", posts: 87, opportunities: 22, vendors: 15, reactions: 1560 },
-  { name: "Kigali Startup Foundation", community: "Kigali Startup", posts: 76, opportunities: 19, vendors: 9, reactions: 1230 },
-];
-
-const topVendors = [
-  { name: "TechSupply Africa", products: 234, revenue: "$45,600", rating: 4.8 },
-  { name: "Craft & Culture Co", products: 189, revenue: "$38,200", rating: 4.7 },
-  { name: "AgriTech Solutions", products: 156, revenue: "$32,100", rating: 4.6 },
-  { name: "Fashion Forward Lagos", products: 134, revenue: "$28,900", rating: 4.5 },
-  { name: "Digital Services Hub", products: 98, revenue: "$24,500", rating: 4.4 },
-];
-
-const recentEscrowTransactions = [
-  { id: "ESC-2024-001", createdBy: "Adaeze Okoro", recipient: "TechSupply Africa", amount: "$2,500", status: "Funded", createdAt: "2024-01-15" },
-  { id: "ESC-2024-002", createdBy: "Kwame Asante", recipient: "Craft & Culture Co", amount: "$1,800", status: "Released", createdAt: "2024-01-14" },
-  { id: "ESC-2024-003", createdBy: "Fatima Diallo", recipient: "AgriTech Solutions", amount: "$3,200", status: "Pending", createdAt: "2024-01-13" },
-  { id: "ESC-2024-004", createdBy: "Chidi Nwosu", recipient: "Fashion Forward", amount: "$950", status: "Disputed", createdAt: "2024-01-12" },
-  { id: "ESC-2024-005", createdBy: "Amina Traore", recipient: "Digital Services", amount: "$4,100", status: "Funded", createdAt: "2024-01-11" },
-];
-
-const recentDisputes = [
-  { id: "DSP-001", type: "Transaction", status: "Open", priority: "High", createdBy: "Chidi Nwosu", assignedAdmin: "Admin Sarah", createdAt: "2024-01-15" },
-  { id: "DSP-002", type: "Escrow", status: "In Review", priority: "Critical", createdBy: "Kwame Asante", assignedAdmin: "Admin Mike", createdAt: "2024-01-14" },
-  { id: "DSP-003", type: "Content", status: "Resolved", priority: "Medium", createdBy: "Fatima Diallo", assignedAdmin: "Admin Sarah", createdAt: "2024-01-13" },
-  { id: "DSP-004", type: "Vendor Issue", status: "Open", priority: "Low", createdBy: "Adaeze Okoro", assignedAdmin: "Unassigned", createdAt: "2024-01-12" },
-  { id: "DSP-005", type: "Community", status: "Escalated", priority: "High", createdBy: "Amina Traore", assignedAdmin: "Admin Mike", createdAt: "2024-01-11" },
-];
-
-const recentSystemEvents = [
-  { id: "EVT-001", service: "Authentication", type: "Info", status: "Healthy", timestamp: "2024-01-15 14:30", notes: "Normal operation" },
-  { id: "EVT-002", service: "Database", type: "Warning", status: "Warning", timestamp: "2024-01-15 13:45", notes: "High query load detected" },
-  { id: "EVT-003", service: "Storage", type: "Info", status: "Healthy", timestamp: "2024-01-15 12:00", notes: "Backup completed" },
-  { id: "EVT-004", service: "API Gateway", type: "Error", status: "Critical", timestamp: "2024-01-15 11:30", notes: "Rate limit exceeded" },
-  { id: "EVT-005", service: "Email Service", type: "Info", status: "Healthy", timestamp: "2024-01-15 10:15", notes: "Queue cleared" },
-];
 
 const statusConfig: Record<string, { label: string; className: string }> = {
-  Funded: { label: "Funded", className: "bg-primary/20 text-primary border-primary/30" },
-  Released: { label: "Released", className: "bg-success/20 text-success border-success/30" },
-  Pending: { label: "Pending", className: "bg-warning/20 text-warning border-warning/30" },
-  Disputed: { label: "Disputed", className: "bg-destructive/20 text-destructive border-destructive/30" },
-  Open: { label: "Open", className: "bg-primary/20 text-primary border-primary/30" },
-  "In Review": { label: "In Review", className: "bg-warning/20 text-warning border-warning/30" },
-  Resolved: { label: "Resolved", className: "bg-success/20 text-success border-success/30" },
-  Escalated: { label: "Escalated", className: "bg-destructive/20 text-destructive border-destructive/30" },
-  Healthy: { label: "Healthy", className: "bg-success/20 text-success border-success/30" },
-  Warning: { label: "Warning", className: "bg-warning/20 text-warning border-warning/30" },
-  Critical: { label: "Critical", className: "bg-destructive/20 text-destructive border-destructive/30" },
+  // Escrow statuses
+  PENDING: { label: "Pending", className: "bg-warning/20 text-warning border-warning/30" },
+  HELD: { label: "Held", className: "bg-primary/20 text-primary border-primary/30" },
+  RELEASED: { label: "Released", className: "bg-success/20 text-success border-success/30" },
+  REFUNDED: { label: "Refunded", className: "bg-muted text-muted-foreground border-border" },
+  FROZEN: { label: "Frozen", className: "bg-destructive/20 text-destructive border-destructive/30" },
+  DISPUTED: { label: "Disputed", className: "bg-destructive/20 text-destructive border-destructive/30" },
+  // Dispute statuses
+  OPEN: { label: "Open", className: "bg-primary/20 text-primary border-primary/30" },
+  UNDER_REVIEW: { label: "Under Review", className: "bg-warning/20 text-warning border-warning/30" },
+  RESOLVED: { label: "Resolved", className: "bg-success/20 text-success border-success/30" },
+  CLOSED: { label: "Closed", className: "bg-muted text-muted-foreground border-border" },
+  ESCALATED: { label: "Escalated", className: "bg-destructive/20 text-destructive border-destructive/30" },
+  // Service health
+  healthy: { label: "Healthy", className: "bg-success/20 text-success border-success/30" },
+  down: { label: "Down", className: "bg-destructive/20 text-destructive border-destructive/30" },
 };
 
-const priorityConfig: Record<string, { label: string; className: string }> = {
-  Low: { label: "Low", className: "bg-muted text-muted-foreground border-border" },
-  Medium: { label: "Medium", className: "bg-primary/20 text-primary border-primary/30" },
-  High: { label: "High", className: "bg-warning/20 text-warning border-warning/30" },
-  Critical: { label: "Critical", className: "bg-destructive/20 text-destructive border-destructive/30" },
+const ESCROW_COLORS: Record<string, string> = {
+  HELD: "hsl(var(--primary))",
+  RELEASED: "hsl(142, 72%, 42%)",
+  PENDING: "hsl(38, 92%, 50%)",
+  DISPUTED: "hsl(var(--destructive))",
+  FROZEN: "hsl(262, 83%, 58%)",
+  REFUNDED: "hsl(200, 60%, 50%)",
 };
+
+const DISPUTE_STATUS_COLORS: Record<string, string> = {
+  OPEN: "hsl(var(--primary))",
+  UNDER_REVIEW: "hsl(38, 92%, 50%)",
+  RESOLVED: "hsl(142, 72%, 42%)",
+  CLOSED: "hsl(200, 60%, 50%)",
+  ESCALATED: "hsl(var(--destructive))",
+};
+
+function formatAmount(amount: number, currency?: string) {
+  return `${currency ?? "USD"} ${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+function truncateId(id: string) {
+  return id.length > 12 ? `${id.slice(0, 8)}…` : id;
+}
 
 export default function Reports() {
   const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState("");
   const [reportType, setReportType] = useState("all");
   const [activeTab, setActiveTab] = useState("users");
+  const [vendorPeriod, setVendorPeriod] = useState<string>("last_30_days");
+
+  // ── Real data queries ─────────────────────────────────────────────────────
+  const { data: analyticsData, refetch: refetchAnalytics } = useGetPlatformAnalytics("last_30_days");
+  const { data: usersData, refetch: refetchUsers } = useGetUsers({ limit: 10, skip: false });
+  const { data: escrowData, refetch: refetchEscrows } = useAdminListEscrows({ limit: 20 });
+  const { data: disputeData, refetch: refetchDisputes } = useAdminListDisputes({ limit: 20 });
+  const { data: healthData, refetch: refetchHealth } = useGetSystemHealth();
+  const { data: auditData, refetch: refetchAudit } = useGetAuditLogs({ limit: 10 });
+  const { data: vendorAnalyticsData, loading: vendorAnalyticsLoading, refetch: refetchVendorAnalytics } =
+    useGetVendorSalesAnalytics(vendorPeriod);
+  const [communityPeriod] = useState("last_30_days");
+  const {
+    data: communityEngagementData,
+    loading: communityEngagementLoading,
+    refetch: refetchCommunityEngagement,
+  } = useGetCommunityEngagementStats(communityPeriod);
+  const {
+    data: topAssociationsData,
+    loading: topAssociationsLoading,
+    refetch: refetchTopAssociations,
+  } = useGetTopAssociations(10);
+
+  const [chatPeriod] = useState("last_7_days");
+  const {
+    data: chatAnalyticsData,
+    loading: chatAnalyticsLoading,
+    refetch: refetchChatAnalytics,
+  } = useGetChatVolumeAnalytics(chatPeriod);
+
+  // ── Derived chart data ────────────────────────────────────────────────────
+  const userGrowthData = useMemo(() => {
+    return (analyticsData?.getPlatformAnalytics?.registrationsByDay ?? []).map((pt) => ({
+      date: pt.date,
+      newUsers: pt.value,
+    }));
+  }, [analyticsData]);
+
+  const escrowStatusData = useMemo(() => {
+    const escrows = escrowData?.adminListEscrows?.escrows ?? [];
+    if (!escrows.length) return [];
+    const counts: Record<string, number> = {};
+    for (const e of escrows) counts[e.status] = (counts[e.status] || 0) + 1;
+    const total = escrows.length;
+    return Object.entries(counts).map(([name, count]) => ({
+      name,
+      value: Math.round((count / total) * 100),
+      color: ESCROW_COLORS[name] ?? "hsl(var(--primary))",
+    }));
+  }, [escrowData]);
+
+  const disputeStatusData = useMemo(() => {
+    const disputes = disputeData?.adminListDisputes?.disputes ?? [];
+    if (!disputes.length) return [];
+    const counts: Record<string, number> = {};
+    for (const d of disputes) counts[d.status] = (counts[d.status] || 0) + 1;
+    const total = disputes.length;
+    return Object.entries(counts).map(([name, count]) => ({
+      name,
+      value: Math.round((count / total) * 100),
+      color: DISPUTE_STATUS_COLORS[name] ?? "hsl(var(--primary))",
+    }));
+  }, [disputeData]);
+
+  const systemHealthPieData = useMemo(() => {
+    const services = healthData?.getSystemHealth?.services ?? [];
+    if (!services.length) return [];
+    const healthy = services.filter((s) => s.status === "healthy").length;
+    const down = services.length - healthy;
+    const total = services.length;
+    return [
+      { name: "Healthy", value: Math.round((healthy / total) * 100), color: "hsl(142, 72%, 42%)" },
+      { name: "Down", value: Math.round((down / total) * 100), color: "hsl(var(--destructive))" },
+    ].filter((d) => d.value > 0);
+  }, [healthData]);
+
+  // Chat analytics derived data
+  const chatVolumeByDay = useMemo(() => {
+    return chatAnalyticsData?.getChatVolumeAnalytics?.byDay ?? [];
+  }, [chatAnalyticsData]);
+
+  const chatTypePieData = useMemo(() => {
+    const analytics = chatAnalyticsData?.getChatVolumeAnalytics;
+    if (!analytics) return [];
+    const dm = analytics.dmCount ?? 0;
+    const group = analytics.groupCount ?? 0;
+    const total = dm + group;
+    if (total === 0) return [];
+    return [
+      { name: "Direct Messages", value: Math.round((dm / total) * 100), color: "hsl(var(--primary))" },
+      { name: "Group Chats", value: Math.round((group / total) * 100), color: "hsl(262, 83%, 58%)" },
+    ];
+  }, [chatAnalyticsData]);
+
+  const topActiveChats = useMemo(() => {
+    return chatAnalyticsData?.getChatVolumeAnalytics?.topActiveChats ?? [];
+  }, [chatAnalyticsData]);
+
+  function handleRefresh() {
+    refetchAnalytics();
+    refetchUsers();
+    refetchEscrows();
+    refetchDisputes();
+    refetchHealth();
+    refetchAudit();
+    refetchVendorAnalytics();
+    refetchCommunityEngagement();
+    refetchTopAssociations();
+    refetchChatAnalytics();
+  }
+
+  const escrows = escrowData?.adminListEscrows?.escrows ?? [];
+  const disputes = disputeData?.adminListDisputes?.disputes ?? [];
+  const users = usersData?.getUsers?.items ?? [];
+  const auditItems = auditData?.getAuditLogs?.items ?? [];
+  const services = healthData?.getSystemHealth?.services ?? [];
+
+  // ── Vendor analytics ──────────────────────────────────────────────────────
+  const vendorSalesByDay = vendorAnalyticsData?.getVendorSalesAnalytics?.byDay ?? [];
+  const topVendors = vendorAnalyticsData?.getVendorSalesAnalytics?.topVendors ?? [];
+  const vendorTotalRevenue = vendorAnalyticsData?.getVendorSalesAnalytics?.totalRevenue ?? 0;
+  const vendorTotalOrders = vendorAnalyticsData?.getVendorSalesAnalytics?.totalOrders ?? 0;
 
   return (
     <AdminLayout>
@@ -222,7 +257,7 @@ export default function Reports() {
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" className="gap-2">
+            <Button variant="outline" size="sm" className="gap-2" onClick={handleRefresh}>
               <RefreshCw className="h-4 w-4" />
               Refresh
             </Button>
@@ -324,8 +359,8 @@ export default function Reports() {
           <TabsContent value="users" className="space-y-6">
             <div className="glass rounded-xl p-5">
               <div className="mb-4">
-                <h3 className="font-semibold text-foreground">User Growth Over Time</h3>
-                <p className="text-sm text-muted-foreground">Shows new and active users over time</p>
+                <h3 className="font-semibold text-foreground">User Registrations Over Time</h3>
+                <p className="text-sm text-muted-foreground">New user registrations per day (last 30 days)</p>
               </div>
               <div className="h-[300px]">
                 <ResponsiveContainer width="100%" height="100%">
@@ -341,8 +376,7 @@ export default function Reports() {
                       }}
                     />
                     <Legend />
-                    <Line type="monotone" dataKey="newUsers" stroke="hsl(var(--primary))" strokeWidth={2} name="New Users" />
-                    <Line type="monotone" dataKey="activeUsers" stroke="hsl(142, 72%, 42%)" strokeWidth={2} name="Active Users" />
+                    <Line type="monotone" dataKey="newUsers" stroke="hsl(var(--primary))" strokeWidth={2} name="New Users" dot={false} />
                   </LineChart>
                 </ResponsiveContainer>
               </div>
@@ -350,37 +384,43 @@ export default function Reports() {
 
             <div className="glass rounded-xl p-5">
               <div className="mb-4">
-                <h3 className="font-semibold text-foreground">Top Active Users</h3>
-                <p className="text-sm text-muted-foreground">Users with highest engagement metrics</p>
+                <h3 className="font-semibold text-foreground">Recent Users</h3>
+                <p className="text-sm text-muted-foreground">Latest registered accounts on the platform</p>
               </div>
               <Table>
                 <TableHeader>
                   <TableRow className="border-border/50 hover:bg-transparent">
                     <TableHead>User ID</TableHead>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Communities</TableHead>
-                    <TableHead>Posts</TableHead>
-                    <TableHead>Reactions</TableHead>
-                    <TableHead>Opportunities</TableHead>
+                    <TableHead>Display Name</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Joined</TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {topActiveUsers.map((user) => (
-                    <TableRow key={user.id} className="border-border/50">
-                      <TableCell className="font-mono text-sm">{user.id}</TableCell>
-                      <TableCell className="font-medium">{user.name}</TableCell>
-                      <TableCell>{user.communities}</TableCell>
-                      <TableCell>{user.posts}</TableCell>
-                      <TableCell>{user.reactions}</TableCell>
-                      <TableCell>{user.opportunities}</TableCell>
-                      <TableCell>
-                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                          <Eye className="h-4 w-4" />
-                        </Button>
+                  {users.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center text-muted-foreground py-6">
+                        No users found
                       </TableCell>
                     </TableRow>
-                  ))}
+                  ) : (
+                    users.map((user: { id: string; email: string; displayName?: string; createdAt: string }) => (
+                      <TableRow key={user.id} className="border-border/50">
+                        <TableCell className="font-mono text-sm">{truncateId(user.id)}</TableCell>
+                        <TableCell className="font-medium">{user.displayName ?? "—"}</TableCell>
+                        <TableCell className="text-muted-foreground">{user.email}</TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {new Date(user.createdAt).toLocaleDateString()}
+                        </TableCell>
+                        <TableCell>
+                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
                 </TableBody>
               </Table>
             </div>
@@ -390,34 +430,70 @@ export default function Reports() {
           <TabsContent value="communities" className="space-y-6">
             <div className="glass rounded-xl p-5">
               <div className="mb-4">
-                <h3 className="font-semibold text-foreground">Posts & Engagement by Community</h3>
-                <p className="text-sm text-muted-foreground">Compare engagement across communities</p>
+                <h3 className="font-semibold text-foreground">Posts &amp; Reactions Over Time</h3>
+                <p className="text-sm text-muted-foreground">
+                  Daily posts and reactions across all communities (last 30 days)
+                </p>
               </div>
               <div className="h-[300px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={communityEngagementData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
-                    <XAxis dataKey="community" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} />
-                    <YAxis tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: "hsl(var(--card))",
-                        border: "1px solid hsl(var(--border))",
-                        borderRadius: "8px",
-                      }}
-                    />
-                    <Legend />
-                    <Bar dataKey="posts" fill="hsl(var(--primary))" name="Posts" radius={[4, 4, 0, 0]} />
-                    <Bar dataKey="reactions" fill="hsl(142, 72%, 42%)" name="Reactions" radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
+                {communityEngagementLoading ? (
+                  <div className="h-full flex items-center justify-center">
+                    <p className="text-muted-foreground text-sm">Loading...</p>
+                  </div>
+                ) : (
+                  communityEngagementData?.getCommunityEngagementStatsFull?.byDay ?? []
+                ).length === 0 ? (
+                  <div className="h-full flex items-center justify-center">
+                    <p className="text-muted-foreground text-sm">No engagement data available</p>
+                  </div>
+                ) : (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      data={communityEngagementData!.getCommunityEngagementStatsFull.byDay}
+                    >
+                      <CartesianGrid
+                        strokeDasharray="3 3"
+                        stroke="hsl(var(--border))"
+                        opacity={0.3}
+                      />
+                      <XAxis
+                        dataKey="date"
+                        tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }}
+                      />
+                      <YAxis tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: "hsl(var(--card))",
+                          border: "1px solid hsl(var(--border))",
+                          borderRadius: "8px",
+                        }}
+                      />
+                      <Legend />
+                      <Bar
+                        dataKey="posts"
+                        fill="hsl(var(--primary))"
+                        name="Posts"
+                        radius={[2, 2, 0, 0]}
+                      />
+                      <Bar
+                        dataKey="reactions"
+                        fill="hsl(142, 72%, 42%)"
+                        name="Reactions"
+                        radius={[2, 2, 0, 0]}
+                      />
+                    </BarChart>
+                  </ResponsiveContainer>
+                )}
               </div>
             </div>
 
             <div className="glass rounded-xl p-5">
               <div className="mb-4">
                 <h3 className="font-semibold text-foreground">Top Performing Associations</h3>
-                <p className="text-sm text-muted-foreground">Associations with highest activity</p>
+                <p className="text-sm text-muted-foreground">
+                  Associations with highest activity across posts, opportunities, vendors, and
+                  reactions
+                </p>
               </div>
               <Table>
                 <TableHeader>
@@ -432,21 +508,37 @@ export default function Reports() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {topAssociations.map((assoc, index) => (
-                    <TableRow key={index} className="border-border/50">
-                      <TableCell className="font-medium">{assoc.name}</TableCell>
-                      <TableCell>{assoc.community}</TableCell>
-                      <TableCell>{assoc.posts}</TableCell>
-                      <TableCell>{assoc.opportunities}</TableCell>
-                      <TableCell>{assoc.vendors}</TableCell>
-                      <TableCell>{assoc.reactions}</TableCell>
-                      <TableCell>
-                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                          <Eye className="h-4 w-4" />
-                        </Button>
+                  {topAssociationsLoading ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center text-muted-foreground py-6">
+                        Loading...
                       </TableCell>
                     </TableRow>
-                  ))}
+                  ) : (topAssociationsData?.getTopAssociations?.items ?? []).length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center text-muted-foreground py-6">
+                        No association data available
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    topAssociationsData!.getTopAssociations.items.map((assoc) => (
+                      <TableRow key={assoc.associationId} className="border-border/50">
+                        <TableCell className="font-medium">{assoc.associationName}</TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {assoc.communityName}
+                        </TableCell>
+                        <TableCell>{assoc.posts.toLocaleString()}</TableCell>
+                        <TableCell>{assoc.opportunities.toLocaleString()}</TableCell>
+                        <TableCell>{assoc.vendors.toLocaleString()}</TableCell>
+                        <TableCell>{assoc.reactions.toLocaleString()}</TableCell>
+                        <TableCell>
+                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
                 </TableBody>
               </Table>
             </div>
@@ -454,35 +546,109 @@ export default function Reports() {
 
           {/* Vendor & Marketplace Tab */}
           <TabsContent value="vendors" className="space-y-6">
-            <div className="glass rounded-xl p-5">
-              <div className="mb-4">
-                <h3 className="font-semibold text-foreground">Vendor Sales Over Time</h3>
-                <p className="text-sm text-muted-foreground">Total sales volume trend</p>
+            {/* Period selector + summary row */}
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-3">
+                <Select value={vendorPeriod} onValueChange={setVendorPeriod}>
+                  <SelectTrigger className="w-[180px] bg-background/50 border-border/50">
+                    <SelectValue placeholder="Period" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-card border-border">
+                    <SelectItem value="last_7_days">Last 7 days</SelectItem>
+                    <SelectItem value="last_30_days">Last 30 days</SelectItem>
+                    <SelectItem value="last_90_days">Last 90 days</SelectItem>
+                    <SelectItem value="last_365_days">Last 365 days</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
-              <div className="h-[300px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={vendorSalesData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
-                    <XAxis dataKey="date" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} />
-                    <YAxis tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} tickFormatter={(value) => `$${value / 1000}k`} />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: "hsl(var(--card))",
-                        border: "1px solid hsl(var(--border))",
-                        borderRadius: "8px",
-                      }}
-                      formatter={(value: number) => [`$${value.toLocaleString()}`, "Sales"]}
-                    />
-                    <Line type="monotone" dataKey="sales" stroke="hsl(var(--primary))" strokeWidth={2} />
-                  </LineChart>
-                </ResponsiveContainer>
+              <div className="flex items-center gap-6 text-sm">
+                <span className="text-muted-foreground">
+                  Total Revenue:{" "}
+                  <span className="font-semibold text-foreground">
+                    {formatAmount(vendorTotalRevenue)}
+                  </span>
+                </span>
+                <span className="text-muted-foreground">
+                  Total Orders:{" "}
+                  <span className="font-semibold text-foreground">
+                    {vendorTotalOrders.toLocaleString()}
+                  </span>
+                </span>
               </div>
             </div>
 
+            {/* Sales Over Time chart */}
+            <div className="glass rounded-xl p-5">
+              <div className="mb-4">
+                <h3 className="font-semibold text-foreground">Vendor Sales Over Time</h3>
+                <p className="text-sm text-muted-foreground">Daily sales revenue across all vendors</p>
+              </div>
+              <div className="h-[300px]">
+                {vendorAnalyticsLoading ? (
+                  <div className="h-full flex items-center justify-center">
+                    <p className="text-muted-foreground text-sm">Loading…</p>
+                  </div>
+                ) : vendorSalesByDay.length === 0 ? (
+                  <div className="h-full flex items-center justify-center">
+                    <p className="text-muted-foreground text-sm">
+                      No sales data available for this period
+                    </p>
+                  </div>
+                ) : (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={vendorSalesByDay}>
+                      <CartesianGrid
+                        strokeDasharray="3 3"
+                        stroke="hsl(var(--border))"
+                        opacity={0.3}
+                      />
+                      <XAxis
+                        dataKey="date"
+                        tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }}
+                      />
+                      <YAxis tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: "hsl(var(--card))",
+                          border: "1px solid hsl(var(--border))",
+                          borderRadius: "8px",
+                        }}
+                        formatter={(value: number, name: string) =>
+                          name === "sales"
+                            ? [formatAmount(value), "Revenue"]
+                            : [value.toLocaleString(), "Orders"]
+                        }
+                      />
+                      <Legend />
+                      <Line
+                        type="monotone"
+                        dataKey="sales"
+                        stroke="hsl(var(--primary))"
+                        strokeWidth={2}
+                        name="Revenue"
+                        dot={false}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="orders"
+                        stroke="hsl(142, 72%, 42%)"
+                        strokeWidth={2}
+                        name="Orders"
+                        dot={false}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                )}
+              </div>
+            </div>
+
+            {/* Top Selling Vendors table */}
             <div className="glass rounded-xl p-5">
               <div className="mb-4">
                 <h3 className="font-semibold text-foreground">Top Selling Vendors</h3>
-                <p className="text-sm text-muted-foreground">Vendors with highest revenue</p>
+                <p className="text-sm text-muted-foreground">
+                  Vendors with highest revenue for the selected period
+                </p>
               </div>
               <Table>
                 <TableHeader>
@@ -495,23 +661,41 @@ export default function Reports() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {topVendors.map((vendor, index) => (
-                    <TableRow key={index} className="border-border/50">
-                      <TableCell className="font-medium">{vendor.name}</TableCell>
-                      <TableCell>{vendor.products}</TableCell>
-                      <TableCell className="font-semibold text-success">{vendor.revenue}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className="bg-warning/20 text-warning border-warning/30">
-                          ⭐ {vendor.rating}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                          <Eye className="h-4 w-4" />
-                        </Button>
+                  {vendorAnalyticsLoading ? (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center text-muted-foreground py-6">
+                        Loading…
                       </TableCell>
                     </TableRow>
-                  ))}
+                  ) : topVendors.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center text-muted-foreground py-6">
+                        No vendor data available for this period
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    topVendors.map((v) => (
+                      <TableRow key={v.vendorId} className="border-border/50">
+                        <TableCell className="font-medium">{v.vendorName}</TableCell>
+                        <TableCell>{v.productsSold.toLocaleString()}</TableCell>
+                        <TableCell className="font-semibold">
+                          {formatAmount(v.revenue, v.currency)}
+                        </TableCell>
+                        <TableCell>
+                          {v.rating != null ? (
+                            <span className="text-sm">{v.rating.toFixed(1)} / 5.0</span>
+                          ) : (
+                            <span className="text-muted-foreground text-sm">—</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
                 </TableBody>
               </Table>
             </div>
@@ -547,10 +731,11 @@ export default function Reports() {
                           border: "1px solid hsl(var(--border))",
                           borderRadius: "8px",
                         }}
+                        formatter={(value) => [`${value}%`, ""]}
                       />
                       <Legend
                         verticalAlign="bottom"
-                        formatter={(value) => <span className="text-muted-foreground text-sm">{value}</span>}
+                        formatter={(value) => <span className="text-muted-foreground text-sm">{statusConfig[value]?.label ?? value}</span>}
                       />
                     </PieChart>
                   </ResponsiveContainer>
@@ -563,15 +748,19 @@ export default function Reports() {
                   <p className="text-sm text-muted-foreground">Key escrow metrics</p>
                 </div>
                 <div className="space-y-4">
-                  {escrowStatusData.map((item, index) => (
-                    <div key={index} className="flex items-center justify-between p-3 rounded-lg bg-background/50">
-                      <div className="flex items-center gap-3">
-                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }} />
-                        <span className="text-sm font-medium">{item.name}</span>
+                  {escrowStatusData.length === 0 ? (
+                    <p className="text-sm text-muted-foreground text-center py-4">No escrow data available</p>
+                  ) : (
+                    escrowStatusData.map((item, index) => (
+                      <div key={index} className="flex items-center justify-between p-3 rounded-lg bg-background/50">
+                        <div className="flex items-center gap-3">
+                          <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }} />
+                          <span className="text-sm font-medium">{statusConfig[item.name]?.label ?? item.name}</span>
+                        </div>
+                        <span className="text-lg font-bold">{item.value}%</span>
                       </div>
-                      <span className="text-lg font-bold">{item.value}%</span>
-                    </div>
-                  ))}
+                    ))
+                  )}
                 </div>
               </div>
             </div>
@@ -585,8 +774,7 @@ export default function Reports() {
                 <TableHeader>
                   <TableRow className="border-border/50 hover:bg-transparent">
                     <TableHead>Transaction ID</TableHead>
-                    <TableHead>Created By</TableHead>
-                    <TableHead>Recipient</TableHead>
+                    <TableHead>Payment Intent</TableHead>
                     <TableHead>Amount</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Created At</TableHead>
@@ -594,25 +782,36 @@ export default function Reports() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {recentEscrowTransactions.map((txn) => (
-                    <TableRow key={txn.id} className="border-border/50">
-                      <TableCell className="font-mono text-sm">{txn.id}</TableCell>
-                      <TableCell>{txn.createdBy}</TableCell>
-                      <TableCell>{txn.recipient}</TableCell>
-                      <TableCell className="font-semibold">{txn.amount}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className={statusConfig[txn.status]?.className}>
-                          {statusConfig[txn.status]?.label}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">{txn.createdAt}</TableCell>
-                      <TableCell>
-                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                          <Eye className="h-4 w-4" />
-                        </Button>
+                  {escrows.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center text-muted-foreground py-6">
+                        No escrow transactions found
                       </TableCell>
                     </TableRow>
-                  ))}
+                  ) : (
+                    escrows.map((e) => (
+                      <TableRow key={e.id} className="border-border/50">
+                        <TableCell className="font-mono text-sm">{truncateId(e.id)}</TableCell>
+                        <TableCell className="font-mono text-sm text-muted-foreground">
+                          {e.paymentIntentId ? truncateId(e.paymentIntentId) : "—"}
+                        </TableCell>
+                        <TableCell className="font-semibold">{formatAmount(e.totalAmount, e.currency)}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className={statusConfig[e.status]?.className}>
+                            {statusConfig[e.status]?.label ?? e.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {new Date(e.createdAt).toLocaleDateString()}
+                        </TableCell>
+                        <TableCell>
+                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
                 </TableBody>
               </Table>
             </div>
@@ -623,14 +822,14 @@ export default function Reports() {
             <div className="grid gap-6 md:grid-cols-2">
               <div className="glass rounded-xl p-5">
                 <div className="mb-4">
-                  <h3 className="font-semibold text-foreground">Disputes by Type</h3>
-                  <p className="text-sm text-muted-foreground">Distribution of dispute categories</p>
+                  <h3 className="font-semibold text-foreground">Disputes by Status</h3>
+                  <p className="text-sm text-muted-foreground">Distribution of dispute statuses</p>
                 </div>
                 <div className="h-[250px]">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie
-                        data={disputeTypeData}
+                        data={disputeStatusData}
                         cx="50%"
                         cy="50%"
                         innerRadius={50}
@@ -638,7 +837,7 @@ export default function Reports() {
                         paddingAngle={2}
                         dataKey="value"
                       >
-                        {disputeTypeData.map((entry, index) => (
+                        {disputeStatusData.map((entry, index) => (
                           <Cell key={`cell-${index}`} fill={entry.color} />
                         ))}
                       </Pie>
@@ -648,10 +847,11 @@ export default function Reports() {
                           border: "1px solid hsl(var(--border))",
                           borderRadius: "8px",
                         }}
+                        formatter={(value) => [`${value}%`, ""]}
                       />
                       <Legend
                         verticalAlign="bottom"
-                        formatter={(value) => <span className="text-muted-foreground text-sm">{value}</span>}
+                        formatter={(value) => <span className="text-muted-foreground text-sm">{statusConfig[value]?.label ?? value}</span>}
                       />
                     </PieChart>
                   </ResponsiveContainer>
@@ -661,18 +861,22 @@ export default function Reports() {
               <div className="glass rounded-xl p-5">
                 <div className="mb-4">
                   <h3 className="font-semibold text-foreground">Dispute Summary</h3>
-                  <p className="text-sm text-muted-foreground">Breakdown by type</p>
+                  <p className="text-sm text-muted-foreground">Breakdown by status</p>
                 </div>
                 <div className="space-y-4">
-                  {disputeTypeData.map((item, index) => (
-                    <div key={index} className="flex items-center justify-between p-3 rounded-lg bg-background/50">
-                      <div className="flex items-center gap-3">
-                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }} />
-                        <span className="text-sm font-medium">{item.name}</span>
+                  {disputeStatusData.length === 0 ? (
+                    <p className="text-sm text-muted-foreground text-center py-4">No dispute data available</p>
+                  ) : (
+                    disputeStatusData.map((item, index) => (
+                      <div key={index} className="flex items-center justify-between p-3 rounded-lg bg-background/50">
+                        <div className="flex items-center gap-3">
+                          <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }} />
+                          <span className="text-sm font-medium">{statusConfig[item.name]?.label ?? item.name}</span>
+                        </div>
+                        <span className="text-lg font-bold">{item.value}%</span>
                       </div>
-                      <span className="text-lg font-bold">{item.value}%</span>
-                    </div>
-                  ))}
+                    ))
+                  )}
                 </div>
               </div>
             </div>
@@ -686,40 +890,50 @@ export default function Reports() {
                 <TableHeader>
                   <TableRow className="border-border/50 hover:bg-transparent">
                     <TableHead>Dispute ID</TableHead>
-                    <TableHead>Type</TableHead>
+                    <TableHead>Escrow ID</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead>Priority</TableHead>
-                    <TableHead>Created By</TableHead>
-                    <TableHead>Assigned Admin</TableHead>
+                    <TableHead>Reason</TableHead>
+                    <TableHead>Raised By</TableHead>
                     <TableHead>Created At</TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {recentDisputes.map((dispute) => (
-                    <TableRow key={dispute.id} className="border-border/50">
-                      <TableCell className="font-mono text-sm">{dispute.id}</TableCell>
-                      <TableCell>{dispute.type}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className={statusConfig[dispute.status]?.className}>
-                          {statusConfig[dispute.status]?.label}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className={priorityConfig[dispute.priority]?.className}>
-                          {priorityConfig[dispute.priority]?.label}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>{dispute.createdBy}</TableCell>
-                      <TableCell>{dispute.assignedAdmin}</TableCell>
-                      <TableCell className="text-muted-foreground">{dispute.createdAt}</TableCell>
-                      <TableCell>
-                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                          <Eye className="h-4 w-4" />
-                        </Button>
+                  {disputes.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center text-muted-foreground py-6">
+                        No disputes found
                       </TableCell>
                     </TableRow>
-                  ))}
+                  ) : (
+                    disputes.map((d) => (
+                      <TableRow key={d.id} className="border-border/50">
+                        <TableCell className="font-mono text-sm">{truncateId(d.id)}</TableCell>
+                        <TableCell className="font-mono text-sm text-muted-foreground">
+                          {d.escrowId ? truncateId(d.escrowId) : "—"}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className={statusConfig[d.status]?.className}>
+                            {statusConfig[d.status]?.label ?? d.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="max-w-[160px] truncate text-muted-foreground">
+                          {d.reason ?? "—"}
+                        </TableCell>
+                        <TableCell className="font-mono text-sm">
+                          {d.raisedBy ? truncateId(d.raisedBy) : "—"}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {new Date(d.createdAt).toLocaleDateString()}
+                        </TableCell>
+                        <TableCell>
+                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
                 </TableBody>
               </Table>
             </div>
@@ -737,7 +951,7 @@ export default function Reports() {
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie
-                        data={systemHealthData}
+                        data={systemHealthPieData}
                         cx="50%"
                         cy="50%"
                         innerRadius={50}
@@ -745,7 +959,7 @@ export default function Reports() {
                         paddingAngle={2}
                         dataKey="value"
                       >
-                        {systemHealthData.map((entry, index) => (
+                        {systemHealthPieData.map((entry, index) => (
                           <Cell key={`cell-${index}`} fill={entry.color} />
                         ))}
                       </Pie>
@@ -755,6 +969,7 @@ export default function Reports() {
                           border: "1px solid hsl(var(--border))",
                           borderRadius: "8px",
                         }}
+                        formatter={(value) => [`${value}%`, ""]}
                       />
                       <Legend
                         verticalAlign="bottom"
@@ -770,57 +985,77 @@ export default function Reports() {
                   <h3 className="font-semibold text-foreground">Health Summary</h3>
                   <p className="text-sm text-muted-foreground">Service status breakdown</p>
                 </div>
-                <div className="space-y-4">
-                  {systemHealthData.map((item, index) => (
-                    <div key={index} className="flex items-center justify-between p-3 rounded-lg bg-background/50">
-                      <div className="flex items-center gap-3">
-                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }} />
-                        <span className="text-sm font-medium">{item.name}</span>
+                <div className="space-y-3">
+                  {services.length === 0 ? (
+                    <p className="text-sm text-muted-foreground text-center py-4">No service data available</p>
+                  ) : (
+                    services.map((svc, index) => (
+                      <div key={index} className="flex items-center justify-between p-3 rounded-lg bg-background/50">
+                        <div className="flex items-center gap-3">
+                          <div
+                            className="w-3 h-3 rounded-full"
+                            style={{ backgroundColor: svc.status === "healthy" ? "hsl(142, 72%, 42%)" : "hsl(var(--destructive))" }}
+                          />
+                          <span className="text-sm font-medium capitalize">{svc.service}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {svc.latencyMs != null && (
+                            <span className="text-xs text-muted-foreground">{svc.latencyMs}ms</span>
+                          )}
+                          <Badge variant="outline" className={statusConfig[svc.status]?.className}>
+                            {statusConfig[svc.status]?.label ?? svc.status}
+                          </Badge>
+                        </div>
                       </div>
-                      <span className="text-lg font-bold">{item.value}%</span>
-                    </div>
-                  ))}
+                    ))
+                  )}
                 </div>
               </div>
             </div>
 
             <div className="glass rounded-xl p-5">
               <div className="mb-4">
-                <h3 className="font-semibold text-foreground">Recent System Events</h3>
-                <p className="text-sm text-muted-foreground">Latest system events and alerts</p>
+                <h3 className="font-semibold text-foreground">Recent Audit Events</h3>
+                <p className="text-sm text-muted-foreground">Latest admin actions and system events</p>
               </div>
               <Table>
                 <TableHeader>
                   <TableRow className="border-border/50 hover:bg-transparent">
                     <TableHead>Event ID</TableHead>
-                    <TableHead>Service</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Status</TableHead>
+                    <TableHead>Actor</TableHead>
+                    <TableHead>Action</TableHead>
+                    <TableHead>Resource Type</TableHead>
+                    <TableHead>Resource ID</TableHead>
                     <TableHead>Timestamp</TableHead>
-                    <TableHead>Notes</TableHead>
-                    <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {recentSystemEvents.map((event) => (
-                    <TableRow key={event.id} className="border-border/50">
-                      <TableCell className="font-mono text-sm">{event.id}</TableCell>
-                      <TableCell className="font-medium">{event.service}</TableCell>
-                      <TableCell>{event.type}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className={statusConfig[event.status]?.className}>
-                          {statusConfig[event.status]?.label}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">{event.timestamp}</TableCell>
-                      <TableCell className="text-muted-foreground">{event.notes}</TableCell>
-                      <TableCell>
-                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                          <Eye className="h-4 w-4" />
-                        </Button>
+                  {auditItems.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center text-muted-foreground py-6">
+                        No audit events found
                       </TableCell>
                     </TableRow>
-                  ))}
+                  ) : (
+                    auditItems.map((ev: { id: string; actorId?: string; action: string; resourceType?: string; resourceId?: string; createdAt: string }) => (
+                      <TableRow key={ev.id} className="border-border/50">
+                        <TableCell className="font-mono text-sm">{truncateId(ev.id)}</TableCell>
+                        <TableCell className="font-mono text-sm">{ev.actorId ? truncateId(ev.actorId) : "—"}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 font-mono text-xs">
+                            {ev.action}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">{ev.resourceType ?? "—"}</TableCell>
+                        <TableCell className="font-mono text-sm text-muted-foreground">
+                          {ev.resourceId ? truncateId(ev.resourceId) : "—"}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {new Date(ev.createdAt).toLocaleString()}
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
                 </TableBody>
               </Table>
             </div>
@@ -829,69 +1064,90 @@ export default function Reports() {
           {/* Chat Analytics Tab */}
           <TabsContent value="chats" className="space-y-6">
             <div className="grid gap-6 lg:grid-cols-2">
+              {/* Chart 1: BarChart - Message Volume by Day */}
               <div className="glass rounded-xl p-5">
                 <div className="mb-4">
                   <h3 className="font-semibold text-foreground">Message Volume Over Time</h3>
-                  <p className="text-sm text-muted-foreground">DM vs Group chat message throughput (metadata counts)</p>
+                  <p className="text-sm text-muted-foreground">DM vs Group message counts by day (metadata only)</p>
                 </div>
                 <div className="h-[300px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={chatVolumeData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
-                      <XAxis dataKey="date" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} />
-                      <YAxis tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} />
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: "hsl(var(--card))",
-                          border: "1px solid hsl(var(--border))",
-                          borderRadius: "8px",
-                        }}
-                      />
-                      <Legend />
-                      <Bar dataKey="dm" fill="hsl(var(--primary))" name="Direct Messages" radius={[4, 4, 0, 0]} />
-                      <Bar dataKey="group" fill="hsl(262, 83%, 58%)" name="Group Chats" radius={[4, 4, 0, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
+                  {chatAnalyticsLoading ? (
+                    <div className="flex items-center justify-center h-full text-muted-foreground text-sm">Loading…</div>
+                  ) : chatVolumeByDay.length === 0 ? (
+                    <div className="flex items-center justify-center h-full text-muted-foreground text-sm">No data for selected period</div>
+                  ) : (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={chatVolumeByDay}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
+                        <XAxis dataKey="date" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }} />
+                        <YAxis tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }} />
+                        <Tooltip
+                          contentStyle={{
+                            backgroundColor: "hsl(var(--card))",
+                            border: "1px solid hsl(var(--border))",
+                            borderRadius: "8px",
+                          }}
+                        />
+                        <Legend />
+                        <Bar dataKey="dm" name="Direct Messages" fill="hsl(var(--primary))" radius={[3, 3, 0, 0]} />
+                        <Bar dataKey="group" name="Group Chats" fill="hsl(262, 83%, 58%)" radius={[3, 3, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  )}
                 </div>
               </div>
 
+              {/* Chart 2: PieChart - DM vs Group split */}
               <div className="glass rounded-xl p-5">
                 <div className="mb-4">
                   <h3 className="font-semibold text-foreground">Chat Type Distribution</h3>
-                  <p className="text-sm text-muted-foreground">Proportion of DM vs Group conversations</p>
+                  <p className="text-sm text-muted-foreground">
+                    {chatAnalyticsData?.getChatVolumeAnalytics
+                      ? `Total messages: ${(chatAnalyticsData.getChatVolumeAnalytics.totalMessages ?? 0).toLocaleString()}`
+                      : "DM vs Group conversation split"}
+                  </p>
                 </div>
                 <div className="h-[300px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={chatTypeDistribution}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={60}
-                        outerRadius={100}
-                        paddingAngle={2}
-                        dataKey="value"
-                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                        labelLine={false}
-                      >
-                        {chatTypeDistribution.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
-                      </Pie>
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: "hsl(var(--card))",
-                          border: "1px solid hsl(var(--border))",
-                          borderRadius: "8px",
-                        }}
-                        formatter={(value) => [`${value}%`, ""]}
-                      />
-                    </PieChart>
-                  </ResponsiveContainer>
+                  {chatAnalyticsLoading ? (
+                    <div className="flex items-center justify-center h-full text-muted-foreground text-sm">Loading…</div>
+                  ) : chatTypePieData.length === 0 ? (
+                    <div className="flex items-center justify-center h-full text-muted-foreground text-sm">No data available</div>
+                  ) : (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={chatTypePieData}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={60}
+                          outerRadius={90}
+                          paddingAngle={3}
+                          dataKey="value"
+                        >
+                          {chatTypePieData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.color} />
+                          ))}
+                        </Pie>
+                        <Tooltip
+                          contentStyle={{
+                            backgroundColor: "hsl(var(--card))",
+                            border: "1px solid hsl(var(--border))",
+                            borderRadius: "8px",
+                          }}
+                          formatter={(value) => [`${value}%`, ""]}
+                        />
+                        <Legend
+                          verticalAlign="bottom"
+                          formatter={(value) => <span className="text-muted-foreground text-sm">{value}</span>}
+                        />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  )}
                 </div>
               </div>
             </div>
 
+            {/* Top Active Chats Table */}
             <div className="glass rounded-xl p-5">
               <div className="mb-4">
                 <h3 className="font-semibold text-foreground">Most Active Chats</h3>
@@ -910,25 +1166,49 @@ export default function Reports() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {topActiveChats.map((chat) => (
-                    <TableRow key={chat.id} className="border-border/50">
-                      <TableCell className="font-mono text-sm">{chat.id}</TableCell>
-                      <TableCell className="font-medium">{chat.name}</TableCell>
-                      <TableCell>
-                        <Badge variant={chat.type === "DM" ? "secondary" : "outline"}>
-                          {chat.type}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>{chat.members}</TableCell>
-                      <TableCell>{chat.messages.toLocaleString()}</TableCell>
-                      <TableCell className="text-muted-foreground">{chat.lastActive}</TableCell>
-                      <TableCell>
-                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
+                  {chatAnalyticsLoading ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center text-muted-foreground py-6">Loading…</TableCell>
                     </TableRow>
-                  ))}
+                  ) : topActiveChats.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center text-muted-foreground py-6">No active chats found</TableCell>
+                    </TableRow>
+                  ) : (
+                    topActiveChats.map((chat) => (
+                      <TableRow key={chat.chatId} className="border-border/50">
+                        <TableCell className="font-mono text-sm">{truncateId(chat.chatId)}</TableCell>
+                        <TableCell className="max-w-[180px] truncate font-medium">{chat.chatName}</TableCell>
+                        <TableCell>
+                          <Badge
+                            variant="outline"
+                            className={
+                              chat.chatType === "DM"
+                                ? "bg-primary/10 text-primary border-primary/20"
+                                : "bg-purple-500/10 text-purple-600 border-purple-500/20"
+                            }
+                          >
+                            {chat.chatType}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-1">
+                            <Users className="h-3 w-3 text-muted-foreground" />
+                            {chat.memberCount}
+                          </div>
+                        </TableCell>
+                        <TableCell className="font-semibold">{chat.messageCount.toLocaleString()}</TableCell>
+                        <TableCell className="text-muted-foreground text-sm">
+                          {new Date(chat.lastActiveAt).toLocaleDateString()}
+                        </TableCell>
+                        <TableCell>
+                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
                 </TableBody>
               </Table>
             </div>

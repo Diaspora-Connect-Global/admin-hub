@@ -74,122 +74,31 @@ const resources = [
 
 const actions = ["view", "create", "edit", "delete", "approve", "export"];
 
-// Sample permissions for System Admin (all enabled)
-const systemAdminPermissions: Record<string, Record<string, boolean>> = {};
-resources.forEach((r) => {
-  systemAdminPermissions[r.id] = {};
-  actions.forEach((a) => {
-    systemAdminPermissions[r.id][a] = true;
+/**
+ * Converts a flat string[] of permissions from the API (e.g. ["users:view", "disputes:edit"])
+ * into the resource/action matrix this component uses internally.
+ * Unrecognised permission strings that don't match "resource:action" are ignored.
+ */
+function buildPermissionMatrix(
+  permissionStrings: string[]
+): Record<string, Record<string, boolean>> {
+  const matrix: Record<string, Record<string, boolean>> = {};
+  resources.forEach((r) => {
+    matrix[r.id] = {};
+    actions.forEach((a) => {
+      matrix[r.id][a] = false;
+    });
   });
-});
+  permissionStrings.forEach((p) => {
+    const [resource, action] = p.split(":");
+    if (resource && action && matrix[resource] && actions.includes(action)) {
+      matrix[resource][action] = true;
+    }
+  });
+  return matrix;
+}
 
-// Sample permissions for Community Admin
-const communityAdminPermissions: Record<string, Record<string, boolean>> = {
-  users: {
-    view: true,
-    create: false,
-    edit: false,
-    delete: false,
-    approve: false,
-    export: true,
-  },
-  escrow: {
-    view: true,
-    create: false,
-    edit: false,
-    delete: false,
-    approve: false,
-    export: false,
-  },
-  disputes: {
-    view: true,
-    create: true,
-    edit: true,
-    delete: false,
-    approve: false,
-    export: false,
-  },
-  communities: {
-    view: true,
-    create: false,
-    edit: true,
-    delete: false,
-    approve: false,
-    export: true,
-  },
-  associations: {
-    view: false,
-    create: false,
-    edit: false,
-    delete: false,
-    approve: false,
-    export: false,
-  },
-  vendors: {
-    view: true,
-    create: false,
-    edit: false,
-    delete: false,
-    approve: false,
-    export: false,
-  },
-  marketplace: {
-    view: true,
-    create: false,
-    edit: false,
-    delete: false,
-    approve: false,
-    export: false,
-  },
-  groups_messaging: {
-    view: true,
-    create: true,
-    edit: true,
-    delete: true,
-    approve: false,
-    export: false,
-  },
-  events: {
-    view: true,
-    create: true,
-    edit: true,
-    delete: true,
-    approve: false,
-    export: true,
-  },
-  reports: {
-    view: true,
-    create: false,
-    edit: false,
-    delete: false,
-    approve: false,
-    export: true,
-  },
-  settings: {
-    view: false,
-    create: false,
-    edit: false,
-    delete: false,
-    approve: false,
-    export: false,
-  },
-  audit_logs: {
-    view: false,
-    create: false,
-    edit: false,
-    delete: false,
-    approve: false,
-    export: false,
-  },
-};
-
-const rolePermissionsMap: Record<
-  string,
-  Record<string, Record<string, boolean>>
-> = {
-  "System Admin": systemAdminPermissions,
-  "Community Admin": communityAdminPermissions,
-};
+const emptyPermissionMatrix = buildPermissionMatrix([]);
 
 export default function RolesPermissions() {
   const { toast } = useToast();
@@ -199,7 +108,7 @@ export default function RolesPermissions() {
   const [selectedAdmin, setSelectedAdmin] = useState<AdminAccount | null>(null);
   const [permissions, setPermissions] = useState<
     Record<string, Record<string, boolean>>
-  >(systemAdminPermissions);
+  >(emptyPermissionMatrix);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [createAdminOpen, setCreateAdminOpen] = useState(false);
@@ -229,9 +138,7 @@ export default function RolesPermissions() {
 
   const selectRole = (role: RoleDefinition) => {
     setSelectedRole(role);
-    setPermissions(
-      rolePermissionsMap[role.name] || communityAdminPermissions
-    );
+    setPermissions(buildPermissionMatrix(role.permissions));
     setActiveTab("permissions");
   };
 

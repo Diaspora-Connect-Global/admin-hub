@@ -1,5 +1,12 @@
 import { useState } from "react";
-import { useGetBroadcastCampaigns, useSendBroadcast } from "@/hooks/admin";
+import {
+  useGetBroadcastCampaigns,
+  useSendBroadcast,
+  useListPushNotifications,
+  useListInAppNotifications,
+  useListNotificationTemplates,
+  useGetNotificationAnalytics,
+} from "@/hooks/admin";
 import { useTranslation } from "react-i18next";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -40,111 +47,40 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-} from "@/components/ui/chart";
-import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from "recharts";
+  BarChart,
+  Bar,
+  LineChart,
+  Line,
+  PieChart,
+  Pie,
+  Cell,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Legend,
+} from "recharts";
 import {
-  Bell,
   Send,
   Megaphone,
-  FileText,
-  Settings,
   Search,
   MoreHorizontal,
   Plus,
   Eye,
-  Edit,
-  Trash2,
   Copy,
-  Users,
-  Globe,
   Smartphone,
   Mail,
   CheckCircle,
-  XCircle,
   Clock,
   TrendingUp,
-  Filter,
   RefreshCw,
   Zap,
   Target,
-  Calendar,
+  BarChart2,
 } from "lucide-react";
 
-// Mock data
-const dashboardStats = {
-  totalSent: 284591,
-  deliveryRate: 98.2,
-  openRate: 42.7,
-  clickRate: 12.4,
-  pendingBroadcasts: 3,
-  activeTemplates: 24,
-};
-
-const notificationVolumeData = [
-  { day: "Mon", push: 4500, inApp: 2800, email: 1200 },
-  { day: "Tue", push: 5200, inApp: 3100, email: 1400 },
-  { day: "Wed", push: 4800, inApp: 2900, email: 1100 },
-  { day: "Thu", push: 6100, inApp: 3500, email: 1600 },
-  { day: "Fri", push: 5800, inApp: 3200, email: 1500 },
-  { day: "Sat", push: 3200, inApp: 2100, email: 800 },
-  { day: "Sun", push: 2900, inApp: 1800, email: 700 },
-];
-
-const deliveryTrendData = [
-  { hour: "00:00", delivered: 95, failed: 5 },
-  { hour: "04:00", delivered: 97, failed: 3 },
-  { hour: "08:00", delivered: 98, failed: 2 },
-  { hour: "12:00", delivered: 99, failed: 1 },
-  { hour: "16:00", delivered: 97, failed: 3 },
-  { hour: "20:00", delivered: 96, failed: 4 },
-];
-
-const notificationTypeDistribution = [
-  { name: "Push", value: 45, color: "hsl(var(--chart-1))" },
-  { name: "In-App", value: 35, color: "hsl(var(--chart-2))" },
-  { name: "Email", value: 20, color: "hsl(var(--chart-3))" },
-];
-
-const pushNotifications = [
-  { id: "PN-001", title: "New message from John", type: "Chat", recipients: 1, status: "delivered", sentAt: "2024-01-15 15:30", openRate: "100%" },
-  { id: "PN-002", title: "Your escrow is ready", type: "Transaction", recipients: 1, status: "delivered", sentAt: "2024-01-15 14:22", openRate: "100%" },
-  { id: "PN-003", title: "Community event tomorrow", type: "Event", recipients: 1247, status: "delivered", sentAt: "2024-01-15 13:45", openRate: "45%" },
-  { id: "PN-004", title: "Payment received", type: "Transaction", recipients: 1, status: "delivered", sentAt: "2024-01-15 12:10", openRate: "100%" },
-  { id: "PN-005", title: "Weekly digest", type: "Marketing", recipients: 8924, status: "sending", sentAt: "2024-01-15 11:55", openRate: "-" },
-];
-
-const inAppNotifications = [
-  { id: "IA-001", title: "Welcome to the platform!", type: "Onboarding", priority: "High", targetAudience: "New Users", active: true, views: 12847 },
-  { id: "IA-002", title: "Complete your profile", type: "Reminder", priority: "Medium", targetAudience: "Incomplete Profiles", active: true, views: 5623 },
-  { id: "IA-003", title: "New feature: Video calls", type: "Announcement", priority: "Low", targetAudience: "All Users", active: true, views: 34521 },
-  { id: "IA-004", title: "Security update required", type: "Alert", priority: "Critical", targetAudience: "Affected Users", active: false, views: 892 },
-];
-
-const broadcasts = [
-  { id: "BC-001", title: "Platform Maintenance Notice", type: "System", audience: "All Users", audienceCount: 45892, status: "scheduled", scheduledAt: "2024-01-16 02:00", createdBy: "Admin" },
-  { id: "BC-002", title: "New Year Promotion", type: "Marketing", audience: "Active Users", audienceCount: 32145, status: "sent", scheduledAt: "2024-01-01 00:00", createdBy: "Marketing Team" },
-  { id: "BC-003", title: "Terms of Service Update", type: "Legal", audience: "All Users", audienceCount: 45892, status: "sent", scheduledAt: "2023-12-20 10:00", createdBy: "Legal Team" },
-  { id: "BC-004", title: "Community Guidelines Reminder", type: "Policy", audience: "Flagged Users", audienceCount: 234, status: "draft", scheduledAt: "-", createdBy: "Trust & Safety" },
-];
-
-const templates = [
-  { id: "TPL-001", name: "Welcome Email", type: "Email", category: "Onboarding", lastUpdated: "2024-01-10", usageCount: 12458, status: "active" },
-  { id: "TPL-002", name: "Transaction Complete", type: "Push", category: "Transaction", lastUpdated: "2024-01-08", usageCount: 45892, status: "active" },
-  { id: "TPL-003", name: "Password Reset", type: "Email", category: "Security", lastUpdated: "2024-01-05", usageCount: 3421, status: "active" },
-  { id: "TPL-004", name: "Weekly Digest", type: "Email", category: "Marketing", lastUpdated: "2024-01-12", usageCount: 8924, status: "active" },
-  { id: "TPL-005", name: "Event Reminder", type: "Push", category: "Events", lastUpdated: "2024-01-03", usageCount: 2156, status: "inactive" },
-];
-
-const chartConfig = {
-  push: { label: "Push", color: "hsl(var(--chart-1))" },
-  inApp: { label: "In-App", color: "hsl(var(--chart-2))" },
-  email: { label: "Email", color: "hsl(var(--chart-3))" },
-  delivered: { label: "Delivered", color: "hsl(var(--chart-1))" },
-  failed: { label: "Failed", color: "hsl(var(--destructive))" },
-};
+const PIE_COLORS = ["#6366f1", "#22d3ee", "#f59e0b", "#10b981", "#f43f5e"];
 
 export default function NotificationsBroadcasts() {
   const { t } = useTranslation();
@@ -152,8 +88,16 @@ export default function NotificationsBroadcasts() {
   const [searchQuery, setSearchQuery] = useState("");
   const [createBroadcastModal, setCreateBroadcastModal] = useState(false);
   const [createTemplateModal, setCreateTemplateModal] = useState(false);
-  const [viewBroadcastModal, setViewBroadcastModal] = useState<typeof broadcasts[0] | null>(null);
-  const [viewTemplateModal, setViewTemplateModal] = useState<typeof templates[0] | null>(null);
+
+  // Push tab filter state
+  const [pushStatusFilter, setPushStatusFilter] = useState("all");
+
+  // In-App tab filter state
+  const [inAppPriorityFilter, setInAppPriorityFilter] = useState("all");
+
+  // Templates tab filter state
+  const [templateTypeFilter, setTemplateTypeFilter] = useState("all");
+  const [templateStatusFilter, setTemplateStatusFilter] = useState("all");
 
   // Broadcast form state
   const [broadcastForm, setBroadcastForm] = useState({
@@ -162,11 +106,61 @@ export default function NotificationsBroadcasts() {
     targetAudience: "ALL_USERS" as "ALL_USERS" | "VENDORS" | "SPECIFIC_USERS",
   });
 
-  const { data: broadcastsData, loading: broadcastsLoading, refetch: refetchBroadcasts } = useGetBroadcastCampaigns({ limit: 50 });
+  // ─── Data hooks ───────────────────────────────────────────────────────────
+  const {
+    data: broadcastsData,
+    loading: broadcastsLoading,
+    refetch: refetchBroadcasts,
+  } = useGetBroadcastCampaigns({ limit: 50 });
   const [sendBroadcastMutation, { loading: sendingBroadcast }] = useSendBroadcast();
 
-  const liveBroadcasts = broadcastsData?.getBroadcastCampaigns?.campaigns ?? broadcasts;
+  const { data: analyticsData, loading: analyticsLoading } =
+    useGetNotificationAnalytics("last_7_days");
 
+  const { data: pushData, loading: pushLoading } = useListPushNotifications({
+    status: pushStatusFilter === "all" ? undefined : pushStatusFilter,
+    limit: 50,
+  });
+
+  const { data: inAppData, loading: inAppLoading } = useListInAppNotifications({
+    priority: inAppPriorityFilter === "all" ? undefined : inAppPriorityFilter,
+    limit: 50,
+  });
+
+  const { data: templatesData, loading: templatesLoading } = useListNotificationTemplates({
+    type: templateTypeFilter === "all" ? undefined : templateTypeFilter,
+    status: templateStatusFilter === "all" ? undefined : templateStatusFilter,
+    limit: 50,
+  });
+
+  // ─── Derived values ───────────────────────────────────────────────────────
+  const liveBroadcasts = broadcastsData?.getBroadcastCampaigns?.campaigns ?? [];
+  const sentCount = liveBroadcasts.filter(
+    (b) => (b.status ?? "").toLowerCase() === "sent",
+  ).length;
+  const pendingCount = liveBroadcasts.filter((b) =>
+    ["scheduled", "sending"].includes((b.status ?? "").toLowerCase()),
+  ).length;
+
+  const analytics = analyticsData?.getNotificationAnalytics;
+  const volumeByDay = analytics?.volumeByDay ?? [];
+  const deliveryRateByHour = analytics?.deliveryRateByHour ?? [];
+  const typeDistribution = analytics?.typeDistribution ?? [];
+
+  // Average delivery rate across all hours
+  const avgDeliveryRate =
+    deliveryRateByHour.length > 0
+      ? (
+          deliveryRateByHour.reduce((sum, h) => sum + h.deliveredPct, 0) /
+          deliveryRateByHour.length
+        ).toFixed(1)
+      : null;
+
+  const pushItems = pushData?.listPushNotifications?.items ?? [];
+  const inAppItems = inAppData?.listInAppNotifications?.items ?? [];
+  const templateItems = templatesData?.listNotificationTemplates?.items ?? [];
+
+  // ─── Helpers ──────────────────────────────────────────────────────────────
   const handleSendBroadcast = async () => {
     if (!broadcastForm.title || !broadcastForm.body) return;
     try {
@@ -180,37 +174,52 @@ export default function NotificationsBroadcasts() {
   };
 
   const getStatusBadge = (status: string) => {
-    switch (status) {
+    switch (status.toLowerCase()) {
       case "delivered":
       case "sent":
-        return <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30">Delivered</Badge>;
+        return (
+          <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30">
+            Delivered
+          </Badge>
+        );
       case "sending":
-        return <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30">Sending</Badge>;
+        return (
+          <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30">Sending</Badge>
+        );
       case "scheduled":
-        return <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30">Scheduled</Badge>;
+        return (
+          <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30">Scheduled</Badge>
+        );
       case "draft":
         return <Badge variant="secondary">Draft</Badge>;
       case "failed":
         return <Badge variant="destructive">Failed</Badge>;
+      case "active":
+        return <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30">Active</Badge>;
+      case "inactive":
+        return <Badge variant="secondary">Inactive</Badge>;
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
   };
 
   const getPriorityBadge = (priority: string) => {
-    switch (priority) {
-      case "Critical":
-        return <Badge variant="destructive">{priority}</Badge>;
-      case "High":
-        return <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30">{priority}</Badge>;
-      case "Medium":
-        return <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30">{priority}</Badge>;
-      case "Low":
-        return <Badge variant="secondary">{priority}</Badge>;
+    switch (priority.toLowerCase()) {
+      case "critical":
+        return <Badge variant="destructive">Critical</Badge>;
+      case "high":
+        return <Badge className="bg-orange-500/20 text-orange-400 border-orange-500/30">High</Badge>;
+      case "medium":
+        return <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30">Medium</Badge>;
+      case "low":
+        return <Badge variant="secondary">Low</Badge>;
       default:
         return <Badge variant="outline">{priority}</Badge>;
     }
   };
+
+  // Format hour label for the delivery rate chart (e.g. "14" → "14:00")
+  const formatHour = (h: number) => `${String(h).padStart(2, "0")}:00`;
 
   return (
     <AdminLayout>
@@ -218,13 +227,15 @@ export default function NotificationsBroadcasts() {
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-foreground">{t('notifications.title')}</h1>
+            <h1 className="text-2xl font-bold text-foreground">
+              {t("notifications.title")}
+            </h1>
             <p className="text-muted-foreground mt-1">
               Manage push notifications, in-app alerts, and system-wide broadcasts.
             </p>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" size="sm">
+            <Button variant="outline" size="sm" onClick={() => refetchBroadcasts()}>
               <RefreshCw className="mr-2 h-4 w-4" /> Refresh
             </Button>
             <Button size="sm" onClick={() => setCreateBroadcastModal(true)}>
@@ -243,154 +254,228 @@ export default function NotificationsBroadcasts() {
             <TabsTrigger value="settings">Settings</TabsTrigger>
           </TabsList>
 
-          {/* Dashboard Tab */}
+          {/* ───────── Dashboard Tab ───────────────────────────────────────── */}
           <TabsContent value="dashboard" className="space-y-6">
             {/* Stat Cards */}
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
               <Card className="cursor-pointer hover:border-primary/30 transition-colors">
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-medium">Total Sent</CardTitle>
+                  <CardTitle className="text-sm font-medium">Broadcasts Sent</CardTitle>
                   <Send className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{dashboardStats.totalSent.toLocaleString()}</div>
-                  <p className="text-xs text-muted-foreground">This month</p>
+                  <div className="text-2xl font-bold">
+                    {broadcastsLoading ? "—" : sentCount}
+                  </div>
+                  <p className="text-xs text-muted-foreground">Delivered campaigns</p>
                 </CardContent>
               </Card>
+
               <Card className="cursor-pointer hover:border-primary/30 transition-colors">
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-medium">Delivery Rate</CardTitle>
-                  <CheckCircle className="h-4 w-4 text-emerald-500" />
+                  <CardTitle className="text-sm font-medium">Total Campaigns</CardTitle>
+                  <Megaphone className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold text-emerald-500">{dashboardStats.deliveryRate}%</div>
-                  <p className="text-xs text-muted-foreground">Successfully delivered</p>
+                  <div className="text-2xl font-bold">
+                    {broadcastsLoading ? "—" : liveBroadcasts.length}
+                  </div>
+                  <p className="text-xs text-muted-foreground">All time</p>
                 </CardContent>
               </Card>
-              <Card className="cursor-pointer hover:border-primary/30 transition-colors">
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-medium">Open Rate</CardTitle>
-                  <Eye className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{dashboardStats.openRate}%</div>
-                  <p className="text-xs text-muted-foreground">Notifications opened</p>
-                </CardContent>
-              </Card>
-              <Card className="cursor-pointer hover:border-primary/30 transition-colors">
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-medium">Click Rate</CardTitle>
-                  <TrendingUp className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{dashboardStats.clickRate}%</div>
-                  <p className="text-xs text-muted-foreground">Engagement rate</p>
-                </CardContent>
-              </Card>
+
               <Card className="cursor-pointer hover:border-amber-500/30 transition-colors border-amber-500/20">
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                   <CardTitle className="text-sm font-medium">Pending</CardTitle>
                   <Clock className="h-4 w-4 text-amber-500" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold text-amber-500">{dashboardStats.pendingBroadcasts}</div>
-                  <p className="text-xs text-muted-foreground">Scheduled broadcasts</p>
+                  <div className="text-2xl font-bold text-amber-500">
+                    {broadcastsLoading ? "—" : pendingCount}
+                  </div>
+                  <p className="text-xs text-muted-foreground">Scheduled / sending</p>
                 </CardContent>
               </Card>
+
               <Card className="cursor-pointer hover:border-primary/30 transition-colors">
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-medium">Templates</CardTitle>
-                  <FileText className="h-4 w-4 text-muted-foreground" />
+                  <CardTitle className="text-sm font-medium">Delivery Rate</CardTitle>
+                  <CheckCircle className="h-4 w-4 text-emerald-500" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{dashboardStats.activeTemplates}</div>
-                  <p className="text-xs text-muted-foreground">Active templates</p>
+                  <div className="text-2xl font-bold text-emerald-500">
+                    {analyticsLoading
+                      ? "—"
+                      : avgDeliveryRate !== null
+                      ? `${avgDeliveryRate}%`
+                      : "—"}
+                  </div>
+                  <p className="text-xs text-muted-foreground">Avg over 24 h</p>
                 </CardContent>
               </Card>
             </div>
 
             {/* Charts */}
             <div className="grid gap-6 lg:grid-cols-2">
+              {/* Volume by Day — Bar Chart */}
               <Card>
                 <CardHeader>
                   <CardTitle>Notification Volume (7 Days)</CardTitle>
                   <CardDescription>Notifications sent by channel</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <ChartContainer config={chartConfig} className="h-[300px]">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={notificationVolumeData}>
-                        <XAxis dataKey="day" />
-                        <YAxis />
-                        <ChartTooltip content={<ChartTooltipContent />} />
-                        <Bar dataKey="push" fill="var(--color-push)" radius={[4, 4, 0, 0]} />
-                        <Bar dataKey="inApp" fill="var(--color-inApp)" radius={[4, 4, 0, 0]} />
-                        <Bar dataKey="email" fill="var(--color-email)" radius={[4, 4, 0, 0]} />
+                  {analyticsLoading ? (
+                    <div className="h-[300px] flex items-center justify-center text-muted-foreground">
+                      <RefreshCw className="h-5 w-5 animate-spin mr-2" /> Loading…
+                    </div>
+                  ) : volumeByDay.length === 0 ? (
+                    <div className="h-[300px] flex flex-col items-center justify-center gap-3 text-muted-foreground border border-dashed rounded-lg">
+                      <BarChart2 className="h-8 w-8 opacity-40" />
+                      <p className="text-sm">No volume data available</p>
+                    </div>
+                  ) : (
+                    <ResponsiveContainer width="100%" height={300}>
+                      <BarChart data={volumeByDay} margin={{ top: 4, right: 8, left: -20, bottom: 4 }}>
+                        <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                        <XAxis
+                          dataKey="date"
+                          tick={{ fontSize: 11 }}
+                          tickFormatter={(v: string) => v.slice(5)}
+                        />
+                        <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
+                        <Tooltip
+                          contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8 }}
+                          labelStyle={{ color: "hsl(var(--foreground))", fontSize: 12 }}
+                          itemStyle={{ fontSize: 12 }}
+                        />
+                        <Legend wrapperStyle={{ fontSize: 12 }} />
+                        <Bar dataKey="pushCount" name="Push" fill="#6366f1" radius={[3, 3, 0, 0]} />
+                        <Bar dataKey="inAppCount" name="In-App" fill="#22d3ee" radius={[3, 3, 0, 0]} />
+                        <Bar dataKey="emailCount" name="Email" fill="#f59e0b" radius={[3, 3, 0, 0]} />
                       </BarChart>
                     </ResponsiveContainer>
-                  </ChartContainer>
+                  )}
                 </CardContent>
               </Card>
 
+              {/* Delivery Rate by Hour — Line Chart */}
               <Card>
                 <CardHeader>
                   <CardTitle>Delivery Performance</CardTitle>
                   <CardDescription>Success rate over 24 hours</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <ChartContainer config={chartConfig} className="h-[300px]">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={deliveryTrendData}>
-                        <XAxis dataKey="hour" />
-                        <YAxis domain={[90, 100]} />
-                        <ChartTooltip content={<ChartTooltipContent />} />
-                        <Line type="monotone" dataKey="delivered" stroke="var(--color-delivered)" strokeWidth={2} dot={false} />
+                  {analyticsLoading ? (
+                    <div className="h-[300px] flex items-center justify-center text-muted-foreground">
+                      <RefreshCw className="h-5 w-5 animate-spin mr-2" /> Loading…
+                    </div>
+                  ) : deliveryRateByHour.length === 0 ? (
+                    <div className="h-[300px] flex flex-col items-center justify-center gap-3 text-muted-foreground border border-dashed rounded-lg">
+                      <TrendingUp className="h-8 w-8 opacity-40" />
+                      <p className="text-sm">No delivery data available</p>
+                    </div>
+                  ) : (
+                    <ResponsiveContainer width="100%" height={300}>
+                      <LineChart
+                        data={deliveryRateByHour}
+                        margin={{ top: 4, right: 8, left: -20, bottom: 4 }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                        <XAxis
+                          dataKey="hour"
+                          tick={{ fontSize: 11 }}
+                          tickFormatter={formatHour}
+                          interval={3}
+                        />
+                        <YAxis
+                          tick={{ fontSize: 11 }}
+                          domain={[0, 100]}
+                          tickFormatter={(v: number) => `${v}%`}
+                        />
+                        <Tooltip
+                          contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8 }}
+                          labelStyle={{ color: "hsl(var(--foreground))", fontSize: 12 }}
+                          labelFormatter={(v: number) => formatHour(v)}
+                          itemStyle={{ fontSize: 12 }}
+                          formatter={(value: number) => [`${value}%`]}
+                        />
+                        <Legend wrapperStyle={{ fontSize: 12 }} />
+                        <Line
+                          type="monotone"
+                          dataKey="deliveredPct"
+                          name="Delivered %"
+                          stroke="#10b981"
+                          strokeWidth={2}
+                          dot={false}
+                        />
+                        <Line
+                          type="monotone"
+                          dataKey="failedPct"
+                          name="Failed %"
+                          stroke="#f43f5e"
+                          strokeWidth={2}
+                          dot={false}
+                          strokeDasharray="4 2"
+                        />
                       </LineChart>
                     </ResponsiveContainer>
-                  </ChartContainer>
+                  )}
                 </CardContent>
               </Card>
             </div>
 
-            {/* Distribution & Recent */}
+            {/* Type Distribution Pie + Recent Broadcasts */}
             <div className="grid gap-6 lg:grid-cols-3">
+              {/* Type Distribution Pie */}
               <Card>
                 <CardHeader>
-                  <CardTitle>Channel Distribution</CardTitle>
-                  <CardDescription>Notifications by type</CardDescription>
+                  <CardTitle>Type Distribution</CardTitle>
+                  <CardDescription>Breakdown by notification type</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="h-[200px]">
-                    <ResponsiveContainer width="100%" height="100%">
+                  {analyticsLoading ? (
+                    <div className="h-[250px] flex items-center justify-center text-muted-foreground">
+                      <RefreshCw className="h-5 w-5 animate-spin mr-2" /> Loading…
+                    </div>
+                  ) : typeDistribution.length === 0 ||
+                    typeDistribution.every((t) => t.count === 0) ? (
+                    <div className="h-[250px] flex flex-col items-center justify-center gap-3 text-muted-foreground border border-dashed rounded-lg">
+                      <BarChart2 className="h-8 w-8 opacity-40" />
+                      <p className="text-sm">No distribution data</p>
+                    </div>
+                  ) : (
+                    <ResponsiveContainer width="100%" height={250}>
                       <PieChart>
                         <Pie
-                          data={notificationTypeDistribution}
+                          data={typeDistribution}
+                          dataKey="count"
+                          nameKey="type"
                           cx="50%"
                           cy="50%"
-                          innerRadius={50}
                           outerRadius={80}
-                          paddingAngle={2}
-                          dataKey="value"
+                          label={({ type, percent }) =>
+                            `${type} ${(percent * 100).toFixed(0)}%`
+                          }
+                          labelLine={false}
                         >
-                          {notificationTypeDistribution.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={entry.color} />
+                          {typeDistribution.map((_, idx) => (
+                            <Cell
+                              key={`cell-${idx}`}
+                              fill={PIE_COLORS[idx % PIE_COLORS.length]}
+                            />
                           ))}
                         </Pie>
-                        <ChartTooltip />
+                        <Tooltip
+                          contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8 }}
+                          itemStyle={{ fontSize: 12 }}
+                        />
                       </PieChart>
                     </ResponsiveContainer>
-                  </div>
-                  <div className="flex justify-center gap-4 mt-4">
-                    {notificationTypeDistribution.map((item) => (
-                      <div key={item.name} className="flex items-center gap-2">
-                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }} />
-                        <span className="text-sm text-muted-foreground">{item.name} ({item.value}%)</span>
-                      </div>
-                    ))}
-                  </div>
+                  )}
                 </CardContent>
               </Card>
 
+              {/* Recent Broadcasts */}
               <Card className="lg:col-span-2">
                 <CardHeader>
                   <CardTitle>Recent Broadcasts</CardTitle>
@@ -401,20 +486,52 @@ export default function NotificationsBroadcasts() {
                     <TableHeader>
                       <TableRow>
                         <TableHead>Title</TableHead>
-                        <TableHead>Type</TableHead>
                         <TableHead>Audience</TableHead>
+                        <TableHead>Recipients</TableHead>
                         <TableHead>Status</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {broadcasts.slice(0, 4).map((broadcast) => (
-                        <TableRow key={broadcast.id}>
-                          <TableCell className="font-medium">{broadcast.title}</TableCell>
-                          <TableCell><Badge variant="outline">{broadcast.type}</Badge></TableCell>
-                          <TableCell className="text-muted-foreground">{broadcast.audienceCount.toLocaleString()}</TableCell>
-                          <TableCell>{getStatusBadge(broadcast.status)}</TableCell>
+                      {broadcastsLoading ? (
+                        <TableRow>
+                          <TableCell
+                            colSpan={4}
+                            className="text-center text-muted-foreground py-8"
+                          >
+                            Loading…
+                          </TableCell>
                         </TableRow>
-                      ))}
+                      ) : liveBroadcasts.length === 0 ? (
+                        <TableRow>
+                          <TableCell
+                            colSpan={4}
+                            className="text-center text-muted-foreground py-8"
+                          >
+                            No broadcasts yet
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        liveBroadcasts.slice(0, 5).map((broadcast) => (
+                          <TableRow key={broadcast.id}>
+                            <TableCell className="font-medium">{broadcast.title}</TableCell>
+                            <TableCell className="text-muted-foreground">
+                              {broadcast.targetAudience ??
+                                (broadcast as any).audience ??
+                                "—"}
+                            </TableCell>
+                            <TableCell>
+                              {(
+                                broadcast.recipientCount ??
+                                (broadcast as any).audienceCount ??
+                                0
+                              ).toLocaleString()}
+                            </TableCell>
+                            <TableCell>
+                              {getStatusBadge((broadcast.status ?? "").toLowerCase())}
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
                     </TableBody>
                   </Table>
                 </CardContent>
@@ -422,7 +539,7 @@ export default function NotificationsBroadcasts() {
             </div>
           </TabsContent>
 
-          {/* Push Notifications Tab */}
+          {/* ───────── Push Notifications Tab ─────────────────────────────── */}
           <TabsContent value="push" className="space-y-4">
             <Card>
               <CardHeader>
@@ -441,25 +558,14 @@ export default function NotificationsBroadcasts() {
                       className="pl-9"
                     />
                   </div>
-                  <Select defaultValue="all">
-                    <SelectTrigger className="w-[150px]">
-                      <SelectValue placeholder="Type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Types</SelectItem>
-                      <SelectItem value="chat">Chat</SelectItem>
-                      <SelectItem value="transaction">Transaction</SelectItem>
-                      <SelectItem value="event">Event</SelectItem>
-                      <SelectItem value="marketing">Marketing</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <Select defaultValue="all">
+                  <Select value={pushStatusFilter} onValueChange={setPushStatusFilter}>
                     <SelectTrigger className="w-[150px]">
                       <SelectValue placeholder="Status" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">All Status</SelectItem>
                       <SelectItem value="delivered">Delivered</SelectItem>
+                      <SelectItem value="sent">Sent</SelectItem>
                       <SelectItem value="sending">Sending</SelectItem>
                       <SelectItem value="failed">Failed</SelectItem>
                     </SelectContent>
@@ -481,47 +587,89 @@ export default function NotificationsBroadcasts() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {pushNotifications.map((notification) => (
-                      <TableRow key={notification.id}>
-                        <TableCell className="font-mono text-sm">{notification.id}</TableCell>
-                        <TableCell className="font-medium">{notification.title}</TableCell>
-                        <TableCell><Badge variant="outline">{notification.type}</Badge></TableCell>
-                        <TableCell>{notification.recipients.toLocaleString()}</TableCell>
-                        <TableCell>{getStatusBadge(notification.status)}</TableCell>
-                        <TableCell className="text-muted-foreground">{notification.sentAt}</TableCell>
-                        <TableCell>{notification.openRate}</TableCell>
-                        <TableCell>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon">
-                                <MoreHorizontal className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem>
-                                <Eye className="mr-2 h-4 w-4" /> View Details
-                              </DropdownMenuItem>
-                              <DropdownMenuItem>
-                                <Copy className="mr-2 h-4 w-4" /> Resend
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+                    {pushLoading ? (
+                      <TableRow>
+                        <TableCell
+                          colSpan={8}
+                          className="text-center text-muted-foreground py-8"
+                        >
+                          <RefreshCw className="inline h-4 w-4 animate-spin mr-2" /> Loading…
                         </TableCell>
                       </TableRow>
-                    ))}
+                    ) : pushItems.length === 0 ? (
+                      <TableRow>
+                        <TableCell
+                          colSpan={8}
+                          className="text-center text-muted-foreground py-8"
+                        >
+                          No push notifications found
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      pushItems
+                        .filter((item) =>
+                          searchQuery
+                            ? item.title
+                                .toLowerCase()
+                                .includes(searchQuery.toLowerCase())
+                            : true,
+                        )
+                        .map((item) => (
+                          <TableRow key={item.id}>
+                            <TableCell className="text-xs font-mono text-muted-foreground truncate max-w-[80px]">
+                              {item.id.slice(-8)}
+                            </TableCell>
+                            <TableCell className="font-medium">{item.title}</TableCell>
+                            <TableCell className="text-muted-foreground capitalize">
+                              {item.type}
+                            </TableCell>
+                            <TableCell>{item.recipientCount.toLocaleString()}</TableCell>
+                            <TableCell>{getStatusBadge(item.status)}</TableCell>
+                            <TableCell className="text-muted-foreground text-sm">
+                              {item.sentAt
+                                ? new Date(item.sentAt).toLocaleDateString()
+                                : "—"}
+                            </TableCell>
+                            <TableCell className="text-sm">
+                              {item.openRate != null
+                                ? `${(item.openRate * 100).toFixed(1)}%`
+                                : "—"}
+                            </TableCell>
+                            <TableCell>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="icon">
+                                    <MoreHorizontal className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem>
+                                    <Eye className="mr-2 h-4 w-4" /> View
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem>
+                                    <Copy className="mr-2 h-4 w-4" /> Duplicate
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                    )}
                   </TableBody>
                 </Table>
               </CardContent>
             </Card>
           </TabsContent>
 
-          {/* In-App Notifications Tab */}
+          {/* ───────── In-App Notifications Tab ───────────────────────────── */}
           <TabsContent value="inapp" className="space-y-4">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
                 <div>
                   <CardTitle>In-App Notifications</CardTitle>
-                  <CardDescription>Manage banners, alerts, and tooltips shown within the app.</CardDescription>
+                  <CardDescription>
+                    Manage banners, alerts, and tooltips shown within the app.
+                  </CardDescription>
                 </div>
                 <Button size="sm">
                   <Plus className="mr-2 h-4 w-4" /> Create Alert
@@ -539,19 +687,10 @@ export default function NotificationsBroadcasts() {
                       className="pl-9"
                     />
                   </div>
-                  <Select defaultValue="all">
-                    <SelectTrigger className="w-[150px]">
-                      <SelectValue placeholder="Type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Types</SelectItem>
-                      <SelectItem value="onboarding">Onboarding</SelectItem>
-                      <SelectItem value="reminder">Reminder</SelectItem>
-                      <SelectItem value="announcement">Announcement</SelectItem>
-                      <SelectItem value="alert">Alert</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <Select defaultValue="all">
+                  <Select
+                    value={inAppPriorityFilter}
+                    onValueChange={setInAppPriorityFilter}
+                  >
                     <SelectTrigger className="w-[150px]">
                       <SelectValue placeholder="Priority" />
                     </SelectTrigger>
@@ -580,52 +719,91 @@ export default function NotificationsBroadcasts() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {inAppNotifications.map((notification) => (
-                      <TableRow key={notification.id}>
-                        <TableCell className="font-mono text-sm">{notification.id}</TableCell>
-                        <TableCell className="font-medium">{notification.title}</TableCell>
-                        <TableCell><Badge variant="outline">{notification.type}</Badge></TableCell>
-                        <TableCell>{getPriorityBadge(notification.priority)}</TableCell>
-                        <TableCell className="text-muted-foreground">{notification.targetAudience}</TableCell>
-                        <TableCell>{notification.views.toLocaleString()}</TableCell>
-                        <TableCell>
-                          <Switch checked={notification.active} />
-                        </TableCell>
-                        <TableCell>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon">
-                                <MoreHorizontal className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem>
-                                <Eye className="mr-2 h-4 w-4" /> Preview
-                              </DropdownMenuItem>
-                              <DropdownMenuItem>
-                                <Edit className="mr-2 h-4 w-4" /> Edit
-                              </DropdownMenuItem>
-                              <DropdownMenuItem className="text-destructive">
-                                <Trash2 className="mr-2 h-4 w-4" /> Delete
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+                    {inAppLoading ? (
+                      <TableRow>
+                        <TableCell
+                          colSpan={8}
+                          className="text-center text-muted-foreground py-8"
+                        >
+                          <RefreshCw className="inline h-4 w-4 animate-spin mr-2" /> Loading…
                         </TableCell>
                       </TableRow>
-                    ))}
+                    ) : inAppItems.length === 0 ? (
+                      <TableRow>
+                        <TableCell
+                          colSpan={8}
+                          className="text-center text-muted-foreground py-8"
+                        >
+                          No in-app notifications found
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      inAppItems
+                        .filter((item) =>
+                          searchQuery
+                            ? item.title
+                                .toLowerCase()
+                                .includes(searchQuery.toLowerCase())
+                            : true,
+                        )
+                        .map((item) => (
+                          <TableRow key={item.id}>
+                            <TableCell className="text-xs font-mono text-muted-foreground truncate max-w-[80px]">
+                              {item.id.slice(-8)}
+                            </TableCell>
+                            <TableCell className="font-medium">{item.title}</TableCell>
+                            <TableCell className="text-muted-foreground capitalize">
+                              {item.type}
+                            </TableCell>
+                            <TableCell>{getPriorityBadge(item.priority)}</TableCell>
+                            <TableCell className="text-muted-foreground capitalize">
+                              {item.targetAudience.replace(/_/g, " ")}
+                            </TableCell>
+                            <TableCell>{item.viewCount.toLocaleString()}</TableCell>
+                            <TableCell>
+                              {item.active ? (
+                                <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30">
+                                  Active
+                                </Badge>
+                              ) : (
+                                <Badge variant="secondary">Inactive</Badge>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="icon">
+                                    <MoreHorizontal className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem>
+                                    <Eye className="mr-2 h-4 w-4" /> View
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem>
+                                    <Copy className="mr-2 h-4 w-4" /> Duplicate
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                    )}
                   </TableBody>
                 </Table>
               </CardContent>
             </Card>
           </TabsContent>
 
-          {/* Broadcasts Tab */}
+          {/* ───────── Broadcasts Tab ─────────────────────────────────────── */}
           <TabsContent value="broadcasts" className="space-y-4">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
                 <div>
                   <CardTitle>System Broadcasts</CardTitle>
-                  <CardDescription>Send announcements to all users or specific segments.</CardDescription>
+                  <CardDescription>
+                    Send announcements to all users or specific segments.
+                  </CardDescription>
                 </div>
                 <Button size="sm" onClick={() => setCreateBroadcastModal(true)}>
                   <Megaphone className="mr-2 h-4 w-4" /> New Broadcast
@@ -643,18 +821,6 @@ export default function NotificationsBroadcasts() {
                       className="pl-9"
                     />
                   </div>
-                  <Select defaultValue="all">
-                    <SelectTrigger className="w-[150px]">
-                      <SelectValue placeholder="Type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Types</SelectItem>
-                      <SelectItem value="system">System</SelectItem>
-                      <SelectItem value="marketing">Marketing</SelectItem>
-                      <SelectItem value="legal">Legal</SelectItem>
-                      <SelectItem value="policy">Policy</SelectItem>
-                    </SelectContent>
-                  </Select>
                   <Select defaultValue="all">
                     <SelectTrigger className="w-[150px]">
                       <SelectValue placeholder="Status" />
@@ -683,53 +849,87 @@ export default function NotificationsBroadcasts() {
                   <TableBody>
                     {broadcastsLoading ? (
                       <TableRow>
-                        <TableCell colSpan={6} className="text-center text-muted-foreground py-8">Loading...</TableCell>
+                        <TableCell
+                          colSpan={6}
+                          className="text-center text-muted-foreground py-8"
+                        >
+                          <RefreshCw className="inline h-4 w-4 animate-spin mr-2" /> Loading…
+                        </TableCell>
                       </TableRow>
                     ) : liveBroadcasts.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={6} className="text-center text-muted-foreground py-8">No broadcasts yet</TableCell>
-                      </TableRow>
-                    ) : liveBroadcasts.map((broadcast) => (
-                      <TableRow key={broadcast.id}>
-                        <TableCell className="font-medium">{broadcast.title}</TableCell>
-                        <TableCell className="text-muted-foreground">{broadcast.targetAudience ?? (broadcast as any).audience}</TableCell>
-                        <TableCell>{(broadcast.recipientCount ?? (broadcast as any).audienceCount ?? 0).toLocaleString()}</TableCell>
-                        <TableCell>{getStatusBadge((broadcast.status ?? "").toLowerCase())}</TableCell>
-                        <TableCell className="text-muted-foreground">
-                          {broadcast.sentAt ? new Date(broadcast.sentAt).toLocaleDateString() : (broadcast as any).scheduledAt ?? "—"}
-                        </TableCell>
-                        <TableCell>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon">
-                                <MoreHorizontal className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem>
-                                <Eye className="mr-2 h-4 w-4" /> View
-                              </DropdownMenuItem>
-                              <DropdownMenuItem>
-                                <Copy className="mr-2 h-4 w-4" /> Duplicate
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+                        <TableCell
+                          colSpan={6}
+                          className="text-center text-muted-foreground py-8"
+                        >
+                          No broadcasts yet
                         </TableCell>
                       </TableRow>
-                    ))}
+                    ) : (
+                      liveBroadcasts
+                        .filter((b) =>
+                          searchQuery
+                            ? b.title.toLowerCase().includes(searchQuery.toLowerCase())
+                            : true,
+                        )
+                        .map((broadcast) => (
+                          <TableRow key={broadcast.id}>
+                            <TableCell className="font-medium">
+                              {broadcast.title}
+                            </TableCell>
+                            <TableCell className="text-muted-foreground">
+                              {broadcast.targetAudience ?? (broadcast as any).audience}
+                            </TableCell>
+                            <TableCell>
+                              {(
+                                broadcast.recipientCount ??
+                                (broadcast as any).audienceCount ??
+                                0
+                              ).toLocaleString()}
+                            </TableCell>
+                            <TableCell>
+                              {getStatusBadge((broadcast.status ?? "").toLowerCase())}
+                            </TableCell>
+                            <TableCell className="text-muted-foreground">
+                              {broadcast.sentAt
+                                ? new Date(broadcast.sentAt).toLocaleDateString()
+                                : (broadcast as any).scheduledAt ?? "—"}
+                            </TableCell>
+                            <TableCell>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="icon">
+                                    <MoreHorizontal className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem>
+                                    <Eye className="mr-2 h-4 w-4" /> View
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem>
+                                    <Copy className="mr-2 h-4 w-4" /> Duplicate
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                    )}
                   </TableBody>
                 </Table>
               </CardContent>
             </Card>
           </TabsContent>
 
-          {/* Templates Tab */}
+          {/* ───────── Templates Tab ──────────────────────────────────────── */}
           <TabsContent value="templates" className="space-y-4">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
                 <div>
                   <CardTitle>Notification Templates</CardTitle>
-                  <CardDescription>Manage reusable notification templates with dynamic placeholders.</CardDescription>
+                  <CardDescription>
+                    Manage reusable notification templates with dynamic placeholders.
+                  </CardDescription>
                 </div>
                 <Button size="sm" onClick={() => setCreateTemplateModal(true)}>
                   <Plus className="mr-2 h-4 w-4" /> Create Template
@@ -747,7 +947,7 @@ export default function NotificationsBroadcasts() {
                       className="pl-9"
                     />
                   </div>
-                  <Select defaultValue="all">
+                  <Select value={templateTypeFilter} onValueChange={setTemplateTypeFilter}>
                     <SelectTrigger className="w-[150px]">
                       <SelectValue placeholder="Type" />
                     </SelectTrigger>
@@ -758,16 +958,17 @@ export default function NotificationsBroadcasts() {
                       <SelectItem value="sms">SMS</SelectItem>
                     </SelectContent>
                   </Select>
-                  <Select defaultValue="all">
+                  <Select
+                    value={templateStatusFilter}
+                    onValueChange={setTemplateStatusFilter}
+                  >
                     <SelectTrigger className="w-[150px]">
-                      <SelectValue placeholder="Category" />
+                      <SelectValue placeholder="Status" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">All Categories</SelectItem>
-                      <SelectItem value="onboarding">Onboarding</SelectItem>
-                      <SelectItem value="transaction">Transaction</SelectItem>
-                      <SelectItem value="security">Security</SelectItem>
-                      <SelectItem value="marketing">Marketing</SelectItem>
+                      <SelectItem value="all">All Status</SelectItem>
+                      <SelectItem value="active">Active</SelectItem>
+                      <SelectItem value="inactive">Inactive</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -787,59 +988,77 @@ export default function NotificationsBroadcasts() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {templates.map((template) => (
-                      <TableRow key={template.id}>
-                        <TableCell className="font-mono text-sm">{template.id}</TableCell>
-                        <TableCell className="font-medium">{template.name}</TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className="gap-1">
-                            {template.type === "Push" && <Smartphone className="h-3 w-3" />}
-                            {template.type === "Email" && <Mail className="h-3 w-3" />}
-                            {template.type}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-muted-foreground">{template.category}</TableCell>
-                        <TableCell className="text-muted-foreground">{template.lastUpdated}</TableCell>
-                        <TableCell>{template.usageCount.toLocaleString()}</TableCell>
-                        <TableCell>
-                          {template.status === "active" ? (
-                            <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30">Active</Badge>
-                          ) : (
-                            <Badge variant="secondary">Inactive</Badge>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon">
-                                <MoreHorizontal className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => setViewTemplateModal(template)}>
-                                <Eye className="mr-2 h-4 w-4" /> Preview
-                              </DropdownMenuItem>
-                              <DropdownMenuItem>
-                                <Edit className="mr-2 h-4 w-4" /> Edit
-                              </DropdownMenuItem>
-                              <DropdownMenuItem>
-                                <Copy className="mr-2 h-4 w-4" /> Duplicate
-                              </DropdownMenuItem>
-                              <DropdownMenuItem className="text-destructive">
-                                <Trash2 className="mr-2 h-4 w-4" /> Delete
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+                    {templatesLoading ? (
+                      <TableRow>
+                        <TableCell
+                          colSpan={8}
+                          className="text-center text-muted-foreground py-8"
+                        >
+                          <RefreshCw className="inline h-4 w-4 animate-spin mr-2" /> Loading…
                         </TableCell>
                       </TableRow>
-                    ))}
+                    ) : templateItems.length === 0 ? (
+                      <TableRow>
+                        <TableCell
+                          colSpan={8}
+                          className="text-center text-muted-foreground py-8"
+                        >
+                          No templates found
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      templateItems
+                        .filter((item) =>
+                          searchQuery
+                            ? item.name.toLowerCase().includes(searchQuery.toLowerCase())
+                            : true,
+                        )
+                        .map((item) => (
+                          <TableRow key={item.id}>
+                            <TableCell className="text-xs font-mono text-muted-foreground truncate max-w-[80px]">
+                              {item.id.slice(-8)}
+                            </TableCell>
+                            <TableCell className="font-medium">{item.name}</TableCell>
+                            <TableCell className="capitalize text-muted-foreground">
+                              {item.type}
+                            </TableCell>
+                            <TableCell className="capitalize text-muted-foreground">
+                              {item.category}
+                            </TableCell>
+                            <TableCell className="text-muted-foreground text-sm">
+                              {item.lastUpdatedAt
+                                ? new Date(item.lastUpdatedAt).toLocaleDateString()
+                                : "—"}
+                            </TableCell>
+                            <TableCell>{item.usageCount.toLocaleString()}</TableCell>
+                            <TableCell>{getStatusBadge(item.status)}</TableCell>
+                            <TableCell>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="icon">
+                                    <MoreHorizontal className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem>
+                                    <Eye className="mr-2 h-4 w-4" /> View
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem>
+                                    <Copy className="mr-2 h-4 w-4" /> Duplicate
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                    )}
                   </TableBody>
                 </Table>
               </CardContent>
             </Card>
           </TabsContent>
 
-          {/* Settings Tab */}
+          {/* ───────── Settings Tab ────────────────────────────────────────── */}
           <TabsContent value="settings" className="space-y-6">
             <div className="grid gap-6 lg:grid-cols-2">
               {/* Push Notification Settings */}
@@ -848,20 +1067,26 @@ export default function NotificationsBroadcasts() {
                   <CardTitle className="flex items-center gap-2">
                     <Smartphone className="h-5 w-5" /> Push Notification Settings
                   </CardTitle>
-                  <CardDescription>Configure push notification delivery preferences.</CardDescription>
+                  <CardDescription>
+                    Configure push notification delivery preferences.
+                  </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="flex items-center justify-between">
                     <div>
                       <Label>Enable Push Notifications</Label>
-                      <p className="text-sm text-muted-foreground">Allow system to send push notifications</p>
+                      <p className="text-sm text-muted-foreground">
+                        Allow system to send push notifications
+                      </p>
                     </div>
                     <Switch defaultChecked />
                   </div>
                   <div className="flex items-center justify-between">
                     <div>
                       <Label>Silent Hours</Label>
-                      <p className="text-sm text-muted-foreground">Suppress non-urgent notifications at night</p>
+                      <p className="text-sm text-muted-foreground">
+                        Suppress non-urgent notifications at night
+                      </p>
                     </div>
                     <Switch defaultChecked />
                   </div>
@@ -874,7 +1099,9 @@ export default function NotificationsBroadcasts() {
                         </SelectTrigger>
                         <SelectContent>
                           {Array.from({ length: 24 }, (_, i) => (
-                            <SelectItem key={i} value={i.toString()}>{i.toString().padStart(2, '0')}:00</SelectItem>
+                            <SelectItem key={i} value={i.toString()}>
+                              {i.toString().padStart(2, "0")}:00
+                            </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
@@ -885,7 +1112,9 @@ export default function NotificationsBroadcasts() {
                         </SelectTrigger>
                         <SelectContent>
                           {Array.from({ length: 24 }, (_, i) => (
-                            <SelectItem key={i} value={i.toString()}>{i.toString().padStart(2, '0')}:00</SelectItem>
+                            <SelectItem key={i} value={i.toString()}>
+                              {i.toString().padStart(2, "0")}:00
+                            </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
@@ -894,7 +1123,9 @@ export default function NotificationsBroadcasts() {
                   <div className="flex items-center justify-between">
                     <div>
                       <Label>Rich Notifications</Label>
-                      <p className="text-sm text-muted-foreground">Include images and action buttons</p>
+                      <p className="text-sm text-muted-foreground">
+                        Include images and action buttons
+                      </p>
                     </div>
                     <Switch defaultChecked />
                   </div>
@@ -913,7 +1144,9 @@ export default function NotificationsBroadcasts() {
                   <div className="flex items-center justify-between">
                     <div>
                       <Label>Enable Email Notifications</Label>
-                      <p className="text-sm text-muted-foreground">Allow system to send email notifications</p>
+                      <p className="text-sm text-muted-foreground">
+                        Allow system to send email notifications
+                      </p>
                     </div>
                     <Switch defaultChecked />
                   </div>
@@ -928,7 +1161,9 @@ export default function NotificationsBroadcasts() {
                   <div className="flex items-center justify-between">
                     <div>
                       <Label>Email Footer</Label>
-                      <p className="text-sm text-muted-foreground">Include unsubscribe link and address</p>
+                      <p className="text-sm text-muted-foreground">
+                        Include unsubscribe link and address
+                      </p>
                     </div>
                     <Switch defaultChecked />
                   </div>
@@ -996,14 +1231,18 @@ export default function NotificationsBroadcasts() {
                   <div className="flex items-center justify-between">
                     <div>
                       <Label>Respect User Preferences</Label>
-                      <p className="text-sm text-muted-foreground">Honor opt-out settings per category</p>
+                      <p className="text-sm text-muted-foreground">
+                        Honor opt-out settings per category
+                      </p>
                     </div>
                     <Switch defaultChecked />
                   </div>
                   <div className="flex items-center justify-between">
                     <div>
                       <Label>A/B Testing</Label>
-                      <p className="text-sm text-muted-foreground">Enable split testing for broadcasts</p>
+                      <p className="text-sm text-muted-foreground">
+                        Enable split testing for broadcasts
+                      </p>
                     </div>
                     <Switch />
                   </div>
@@ -1039,7 +1278,12 @@ export default function NotificationsBroadcasts() {
               <Label>Target Audience</Label>
               <Select
                 value={broadcastForm.targetAudience}
-                onValueChange={(v) => setBroadcastForm((f) => ({ ...f, targetAudience: v as typeof f.targetAudience }))}
+                onValueChange={(v) =>
+                  setBroadcastForm((f) => ({
+                    ...f,
+                    targetAudience: v as typeof f.targetAudience,
+                  }))
+                }
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select audience" />
@@ -1093,7 +1337,9 @@ export default function NotificationsBroadcasts() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setCreateBroadcastModal(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setCreateBroadcastModal(false)}>
+              Cancel
+            </Button>
             <Button
               disabled={sendingBroadcast || !broadcastForm.title || !broadcastForm.body}
               onClick={handleSendBroadcast}
@@ -1109,7 +1355,9 @@ export default function NotificationsBroadcasts() {
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>Create Notification Template</DialogTitle>
-            <DialogDescription>Create a reusable template with dynamic placeholders.</DialogDescription>
+            <DialogDescription>
+              Create a reusable template with dynamic placeholders.
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
@@ -1149,7 +1397,9 @@ export default function NotificationsBroadcasts() {
             <div className="space-y-2">
               <Label>Title Template</Label>
               <Input placeholder="e.g., Hello {{user_name}}!" />
-              <p className="text-xs text-muted-foreground">Use {"{{variable}}"} for dynamic content</p>
+              <p className="text-xs text-muted-foreground">
+                Use {"{{variable}}"} for dynamic content
+              </p>
             </div>
             <div className="space-y-2">
               <Label>Body Template</Label>
@@ -1158,112 +1408,26 @@ export default function NotificationsBroadcasts() {
             <div className="rounded-lg border border-dashed p-4">
               <p className="text-sm font-medium mb-2">Available Placeholders:</p>
               <div className="flex flex-wrap gap-2">
-                {["{{user_name}}", "{{user_email}}", "{{amount}}", "{{date}}", "{{link}}"].map((placeholder) => (
-                  <Badge key={placeholder} variant="secondary" className="cursor-pointer hover:bg-secondary/80">
-                    {placeholder}
-                  </Badge>
-                ))}
+                {["{{user_name}}", "{{user_email}}", "{{amount}}", "{{date}}", "{{link}}"].map(
+                  (placeholder) => (
+                    <Badge
+                      key={placeholder}
+                      variant="secondary"
+                      className="cursor-pointer hover:bg-secondary/80"
+                    >
+                      {placeholder}
+                    </Badge>
+                  ),
+                )}
               </div>
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setCreateTemplateModal(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setCreateTemplateModal(false)}>
+              Cancel
+            </Button>
             <Button>Create Template</Button>
           </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* View Broadcast Modal */}
-      <Dialog open={!!viewBroadcastModal} onOpenChange={() => setViewBroadcastModal(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Broadcast Details</DialogTitle>
-          </DialogHeader>
-          {viewBroadcastModal && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm text-muted-foreground">ID</p>
-                  <p className="font-mono">{viewBroadcastModal.id}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Status</p>
-                  {getStatusBadge(viewBroadcastModal.status)}
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Type</p>
-                  <p>{viewBroadcastModal.type}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Audience</p>
-                  <p>{viewBroadcastModal.audience}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Recipients</p>
-                  <p>{viewBroadcastModal.audienceCount.toLocaleString()}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Scheduled</p>
-                  <p>{viewBroadcastModal.scheduledAt}</p>
-                </div>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Title</p>
-                <p className="font-medium">{viewBroadcastModal.title}</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Created By</p>
-                <p>{viewBroadcastModal.createdBy}</p>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {/* View Template Modal */}
-      <Dialog open={!!viewTemplateModal} onOpenChange={() => setViewTemplateModal(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Template Preview</DialogTitle>
-          </DialogHeader>
-          {viewTemplateModal && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm text-muted-foreground">ID</p>
-                  <p className="font-mono">{viewTemplateModal.id}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Status</p>
-                  {viewTemplateModal.status === "active" ? (
-                    <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30">Active</Badge>
-                  ) : (
-                    <Badge variant="secondary">Inactive</Badge>
-                  )}
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Type</p>
-                  <p>{viewTemplateModal.type}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Category</p>
-                  <p>{viewTemplateModal.category}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Usage Count</p>
-                  <p>{viewTemplateModal.usageCount.toLocaleString()}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Last Updated</p>
-                  <p>{viewTemplateModal.lastUpdated}</p>
-                </div>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Name</p>
-                <p className="font-medium">{viewTemplateModal.name}</p>
-              </div>
-            </div>
-          )}
         </DialogContent>
       </Dialog>
     </AdminLayout>

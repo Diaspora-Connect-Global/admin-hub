@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useAdminListDisputes, useAdminResolveDispute } from "@/hooks/admin";
+import { useAdminListDisputes, useAdminResolveDispute, useGetAuditLogs } from "@/hooks/admin";
 import { useTranslation } from "react-i18next";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import { Button } from "@/components/ui/button";
@@ -70,48 +70,6 @@ import {
 } from "lucide-react";
 
 
-const mockConversation = [
-  {
-    id: "MSG-001",
-    sender: "John Doe",
-    sender_type: "user",
-    message: "I completed a transaction 5 days ago but the escrow funds have not been released. Transaction ID: TXN-45892. The buyer has confirmed delivery.",
-    attachments: ["delivery_confirmation.pdf"],
-    timestamp: "2024-11-30 10:15",
-  },
-  {
-    id: "MSG-002",
-    sender: "Admin Sarah",
-    sender_type: "admin",
-    message: "Hi John, thank you for reaching out. I'm investigating your case now. Can you please confirm the exact date the buyer confirmed delivery?",
-    attachments: [],
-    timestamp: "2024-11-30 11:30",
-  },
-  {
-    id: "MSG-003",
-    sender: "John Doe",
-    sender_type: "user",
-    message: "The buyer confirmed on November 25th. I have attached a screenshot of the confirmation notification.",
-    attachments: ["confirmation_screenshot.png"],
-    timestamp: "2024-11-30 12:45",
-  },
-  {
-    id: "MSG-004",
-    sender: "Admin Sarah",
-    sender_type: "admin",
-    message: "I've identified the issue. There was a hold placed on escrow releases due to a system update. I've escalated this to the finance team. Your funds should be released within 24-48 hours.",
-    attachments: [],
-    timestamp: "2024-11-30 14:32",
-  },
-];
-
-const mockHistory = [
-  { timestamp: "2024-11-30 14:32", action: "Comment Added", performed_by: "Admin Sarah", notes: "Escalated to finance team for fund release" },
-  { timestamp: "2024-11-30 11:30", action: "Comment Added", performed_by: "Admin Sarah", notes: "Initial response sent to user" },
-  { timestamp: "2024-11-30 10:20", action: "Dispute Assigned", performed_by: "System", notes: "Auto-assigned to Admin Sarah based on dispute type" },
-  { timestamp: "2024-11-30 10:15", action: "Dispute Created", performed_by: "John Doe", notes: "New dispute submitted" },
-];
-
 const admins = ["Admin Sarah", "Admin Mike", "Admin John", "Admin Lisa", "System Admin"];
 
 export default function DisputesResolution() {
@@ -135,6 +93,13 @@ export default function DisputesResolution() {
 
   // Resolve mutation
   const [resolveDispute, { loading: resolveLoading }] = useAdminResolveDispute();
+
+  // Audit trail for selected dispute
+  const { data: disputeAuditData } = useGetAuditLogs({
+    resourceId: selectedDispute?.id ?? null,
+    resourceType: "dispute",
+    limit: 20,
+  });
 
   // Resolve form state
   const [resolveOutcome, setResolveOutcome] = useState("RESOLVED");
@@ -541,51 +506,10 @@ export default function DisputesResolution() {
                   </TabsContent>
 
                   <TabsContent value="conversation" className="mt-4">
-                    <div className="space-y-4">
-                      <ScrollArea className="h-[300px] rounded-lg border p-4">
-                        <div className="space-y-4">
-                          {mockConversation.map((msg) => (
-                            <div key={msg.id} className={`flex gap-3 ${msg.sender_type === "admin" ? "flex-row-reverse" : ""}`}>
-                              <Avatar className="h-8 w-8">
-                                <AvatarFallback className={msg.sender_type === "admin" ? "bg-primary text-primary-foreground" : ""}>
-                                  {msg.sender.split(" ").map(n => n[0]).join("")}
-                                </AvatarFallback>
-                              </Avatar>
-                              <div className={`flex-1 max-w-[80%] ${msg.sender_type === "admin" ? "text-right" : ""}`}>
-                                <div className="flex items-center gap-2 mb-1">
-                                  <span className="text-sm font-medium">{msg.sender}</span>
-                                  <span className="text-xs text-muted-foreground">{msg.timestamp}</span>
-                                </div>
-                                <div className={`p-3 rounded-lg text-sm ${msg.sender_type === "admin" ? "bg-primary text-primary-foreground ml-auto" : "bg-muted"}`}>
-                                  {msg.message}
-                                </div>
-                                {msg.attachments.length > 0 && (
-                                  <div className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
-                                    <Paperclip className="h-3 w-3" />
-                                    {msg.attachments.join(", ")}
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </ScrollArea>
-                      <div className="flex gap-2">
-                        <Textarea
-                          placeholder="Write your message..."
-                          value={newMessage}
-                          onChange={(e) => setNewMessage(e.target.value)}
-                          className="flex-1"
-                        />
-                        <div className="flex flex-col gap-2">
-                          <Button variant="outline" size="icon">
-                            <Paperclip className="h-4 w-4" />
-                          </Button>
-                          <Button size="icon" onClick={handleSendMessage}>
-                            <Send className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
+                    <div className="rounded-lg border border-dashed border-border p-8 text-center space-y-2">
+                      <FileText className="h-8 w-8 text-muted-foreground mx-auto" />
+                      <p className="text-sm font-medium text-muted-foreground">Dispute conversation not available</p>
+                      <p className="text-xs text-muted-foreground">Admin messaging for disputes is not yet exposed via the API. Use the resolution panel below to update the dispute status.</p>
                     </div>
                   </TabsContent>
 
@@ -606,14 +530,18 @@ export default function DisputesResolution() {
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {mockHistory.map((log, idx) => (
-                            <TableRow key={idx}>
-                              <TableCell className="text-sm">{log.timestamp}</TableCell>
-                              <TableCell>{log.action}</TableCell>
-                              <TableCell>{log.performed_by}</TableCell>
-                              <TableCell className="max-w-xs truncate">{log.notes}</TableCell>
-                            </TableRow>
-                          ))}
+                          {(disputeAuditData?.getAuditLogs?.items ?? []).length === 0 ? (
+                            <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground py-6">No audit events found for this dispute</TableCell></TableRow>
+                          ) : (
+                            (disputeAuditData?.getAuditLogs?.items ?? []).map((log: { id: string; actorId?: string; action: string; createdAt: string; ipAddress?: string }) => (
+                              <TableRow key={log.id}>
+                                <TableCell className="text-sm">{new Date(log.createdAt).toLocaleString()}</TableCell>
+                                <TableCell>{log.action}</TableCell>
+                                <TableCell className="font-mono text-xs">{log.actorId ? log.actorId.slice(0, 8) + "…" : "System"}</TableCell>
+                                <TableCell className="max-w-xs truncate text-muted-foreground">{log.ipAddress ?? "—"}</TableCell>
+                              </TableRow>
+                            ))
+                          )}
                         </TableBody>
                       </Table>
                     </div>

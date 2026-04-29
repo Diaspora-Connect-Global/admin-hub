@@ -5,6 +5,9 @@ import {
   useGetChatSettings,
   useReviewConversation,
   useUpdateChatSetting,
+  useListDMConversations,
+  useListGroupConversations,
+  useGetChatVolumeAnalytics,
 } from "@/hooks/admin";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -36,19 +39,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-} from "@/components/ui/chart";
-import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Cell } from "recharts";
-import {
   MessageSquare,
   Activity,
   Sparkles,
@@ -62,72 +52,9 @@ import {
   Eye,
   Users,
   Mail,
-  UserMinus,
-  ArrowUp,
   Lock,
-  Settings,
-  Filter,
+  BarChart2,
 } from "lucide-react";
-
-// Mock data
-const dashboardStats = {
-  totalActiveConversations: 12847,
-  dailyActiveChats: 3421,
-  newChatsToday: 287,
-  flaggedChats: 23,
-};
-
-const messageVolumeData = [
-  { day: "Mon", dm: 4500, group: 2800 },
-  { day: "Tue", dm: 5200, group: 3100 },
-  { day: "Wed", dm: 4800, group: 2900 },
-  { day: "Thu", dm: 6100, group: 3500 },
-  { day: "Fri", dm: 5800, group: 3200 },
-  { day: "Sat", dm: 3200, group: 2100 },
-  { day: "Sun", dm: 2900, group: 1800 },
-];
-
-const peakHoursData = [
-  { hour: "00", value: 12 }, { hour: "02", value: 8 }, { hour: "04", value: 5 },
-  { hour: "06", value: 15 }, { hour: "08", value: 45 }, { hour: "10", value: 78 },
-  { hour: "12", value: 95 }, { hour: "14", value: 88 }, { hour: "16", value: 82 },
-  { hour: "18", value: 75 }, { hour: "20", value: 68 }, { hour: "22", value: 35 },
-];
-
-const recentFlags = [
-  { id: "F001", chatType: "Group", flagReason: "Spam detected", reportCount: 5, createdAt: "2024-01-15 14:23" },
-  { id: "F002", chatType: "DM", flagReason: "Harassment report", reportCount: 2, createdAt: "2024-01-15 13:45" },
-  { id: "F003", chatType: "Group", flagReason: "Suspicious activity", reportCount: 8, createdAt: "2024-01-15 12:10" },
-];
-
-const dmConversations = [
-  { dmId: "DM-001", userA: "John Smith", userB: "Jane Doe", messageCount: 247, lastActive: "2024-01-15 15:30", flagCount: 0 },
-  { dmId: "DM-002", userA: "Mike Johnson", userB: "Sarah Wilson", messageCount: 89, lastActive: "2024-01-15 14:22", flagCount: 1 },
-  { dmId: "DM-003", userA: "Alex Brown", userB: "Emily Davis", messageCount: 512, lastActive: "2024-01-15 13:45", flagCount: 0 },
-  { dmId: "DM-004", userA: "Chris Lee", userB: "Taylor Moore", messageCount: 156, lastActive: "2024-01-15 12:10", flagCount: 2 },
-  { dmId: "DM-005", userA: "Jordan Kim", userB: "Casey White", messageCount: 78, lastActive: "2024-01-15 11:55", flagCount: 0 },
-];
-
-const groupChats = [
-  { groupId: "GRP-001", name: "NYC Diaspora Community", creator: "John Smith", memberCount: 156, messageCount: 4521, lastActive: "2024-01-15 15:30", flagCount: 0, visibility: "Public" },
-  { groupId: "GRP-002", name: "Tech Professionals", creator: "Sarah Wilson", memberCount: 89, messageCount: 1247, lastActive: "2024-01-15 14:22", flagCount: 1, visibility: "Private" },
-  { groupId: "GRP-003", name: "Cultural Exchange", creator: "Mike Johnson", memberCount: 234, messageCount: 8956, lastActive: "2024-01-15 13:45", flagCount: 0, visibility: "Public" },
-  { groupId: "GRP-004", name: "Business Network", creator: "Emily Davis", memberCount: 67, messageCount: 892, lastActive: "2024-01-15 12:10", flagCount: 3, visibility: "Private" },
-];
-
-
-const groupMembers = [
-  { id: "M1", name: "John Smith", role: "Admin", joinedAt: "2024-01-01" },
-  { id: "M2", name: "Sarah Wilson", role: "Moderator", joinedAt: "2024-01-05" },
-  { id: "M3", name: "Mike Johnson", role: "Member", joinedAt: "2024-01-08" },
-  { id: "M4", name: "Emily Davis", role: "Member", joinedAt: "2024-01-10" },
-  { id: "M5", name: "Alex Brown", role: "Member", joinedAt: "2024-01-12" },
-];
-
-const chartConfig = {
-  dm: { label: "Direct Messages", color: "hsl(var(--chart-1))" },
-  group: { label: "Group Chats", color: "hsl(var(--chart-2))" },
-};
 
 // Settings key constants
 const SETTING_KEYS = {
@@ -137,11 +64,14 @@ const SETTING_KEYS = {
   MESSAGE_RETENTION_DAYS: "message_retention_days",
 } as const;
 
+type DmMetadata = { dmId: string; userA: string; userB: string; messageCount: number; lastActive: string; flagCount: number };
+type GroupDetail = { groupId: string; name: string; creator: string; memberCount: number; messageCount: number; lastActive: string; flagCount: number; visibility: string };
+
 export default function ChatManagement() {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState("dashboard");
-  const [dmMetadataModal, setDmMetadataModal] = useState<typeof dmConversations[0] | null>(null);
-  const [groupDetailModal, setGroupDetailModal] = useState<typeof groupChats[0] | null>(null);
+  const [dmMetadataModal, setDmMetadataModal] = useState<DmMetadata | null>(null);
+  const [groupDetailModal, setGroupDetailModal] = useState<GroupDetail | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
 
   // --- Flagged Chats live data ---
@@ -152,12 +82,41 @@ export default function ChatManagement() {
   } = useGetFlaggedConversations({ page: 1, limit: 50 });
   const flaggedConversations = flaggedData?.getFlaggedConversations?.conversations ?? [];
 
+  // --- DM Conversations live data ---
+  const {
+    data: dmData,
+    loading: dmLoading,
+  } = useListDMConversations({ limit: 50 });
+  const dmConversations = dmData?.listDMConversations?.items ?? [];
+  const dmTotal = dmData?.listDMConversations?.total ?? 0;
+
+  // --- Group Conversations live data ---
+  const {
+    data: groupData,
+    loading: groupLoading,
+  } = useListGroupConversations({ limit: 50 });
+  const groupConversations = groupData?.listGroupConversations?.items ?? [];
+  const groupTotal = groupData?.listGroupConversations?.total ?? 0;
+
+  // Combined flagged count from DM + Group lists
+  const dmFlaggedCount = dmConversations.filter((c) => c.flagged).length;
+  const groupFlaggedCount = groupConversations.filter((c) => c.flagged).length;
+  const combinedFlaggedCount = flaggedLoading && dmLoading && groupLoading
+    ? null
+    : flaggedConversations.length + dmFlaggedCount + groupFlaggedCount;
+
   const [reviewConversation, { loading: reviewLoading }] = useReviewConversation();
 
   const handleReviewAction = async (id: string, newStatus: string) => {
     await reviewConversation({ variables: { id, newStatus } });
     refetchFlagged();
   };
+
+  // --- Chat Volume Analytics ---
+  const { data: chatAnalyticsData, loading: chatAnalyticsLoading } = useGetChatVolumeAnalytics("last_7_days");
+  const totalMessages = chatAnalyticsData?.getChatVolumeAnalytics?.totalMessages ?? null;
+  const dmCount = chatAnalyticsData?.getChatVolumeAnalytics?.dmCount ?? null;
+  const groupCount = chatAnalyticsData?.getChatVolumeAnalytics?.groupCount ?? null;
 
   // --- Settings live data ---
   const { data: settingsData, loading: settingsLoading } = useGetChatSettings();
@@ -225,32 +184,50 @@ export default function ChatManagement() {
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
               <Card className="cursor-pointer hover:border-primary/30 transition-colors">
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-medium">Total Active Conversations</CardTitle>
+                  <CardTitle className="text-sm font-medium">Total Messages (7 days)</CardTitle>
                   <MessageSquare className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{dashboardStats.totalActiveConversations.toLocaleString()}</div>
-                  <p className="text-xs text-muted-foreground">DM + Group chats</p>
+                  <div className="text-2xl font-bold">
+                    {chatAnalyticsLoading
+                      ? "…"
+                      : totalMessages === null
+                      ? "—"
+                      : totalMessages.toLocaleString()}
+                  </div>
+                  <p className="text-xs text-muted-foreground">Across all chat types</p>
                 </CardContent>
               </Card>
               <Card className="cursor-pointer hover:border-primary/30 transition-colors">
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-medium">Daily Active Chats</CardTitle>
+                  <CardTitle className="text-sm font-medium">Direct Messages</CardTitle>
                   <Activity className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{dashboardStats.dailyActiveChats.toLocaleString()}</div>
-                  <p className="text-xs text-muted-foreground">Active in last 24h</p>
+                  <div className="text-2xl font-bold">
+                    {chatAnalyticsLoading
+                      ? "…"
+                      : dmCount === null
+                      ? "—"
+                      : dmCount.toLocaleString()}
+                  </div>
+                  <p className="text-xs text-muted-foreground">DM conversations active</p>
                 </CardContent>
               </Card>
               <Card className="cursor-pointer hover:border-primary/30 transition-colors">
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-medium">New Chats Today</CardTitle>
+                  <CardTitle className="text-sm font-medium">Group Chats</CardTitle>
                   <Sparkles className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{dashboardStats.newChatsToday}</div>
-                  <p className="text-xs text-muted-foreground">Initiated today</p>
+                  <div className="text-2xl font-bold">
+                    {chatAnalyticsLoading
+                      ? "…"
+                      : groupCount === null
+                      ? "—"
+                      : groupCount.toLocaleString()}
+                  </div>
+                  <p className="text-xs text-muted-foreground">Group conversations active</p>
                 </CardContent>
               </Card>
               <Card className="cursor-pointer hover:border-destructive/30 transition-colors border-destructive/20">
@@ -259,13 +236,15 @@ export default function ChatManagement() {
                   <ShieldAlert className="h-4 w-4 text-destructive" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold text-destructive">{dashboardStats.flaggedChats}</div>
+                  <div className="text-2xl font-bold text-destructive">
+                    {combinedFlaggedCount === null ? "—" : combinedFlaggedCount}
+                  </div>
                   <p className="text-xs text-muted-foreground">Requires review</p>
                 </CardContent>
               </Card>
             </div>
 
-            {/* Charts */}
+            {/* Charts — no analytics API available */}
             <div className="grid gap-6 lg:grid-cols-2">
               <Card>
                 <CardHeader>
@@ -273,17 +252,10 @@ export default function ChatManagement() {
                   <CardDescription>Encrypted message throughput - metadata counts only</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <ChartContainer config={chartConfig} className="h-[300px]">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={messageVolumeData}>
-                        <XAxis dataKey="day" />
-                        <YAxis />
-                        <ChartTooltip content={<ChartTooltipContent />} />
-                        <Bar dataKey="dm" fill="var(--color-dm)" radius={[4, 4, 0, 0]} />
-                        <Bar dataKey="group" fill="var(--color-group)" radius={[4, 4, 0, 0]} />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </ChartContainer>
+                  <div className="h-[300px] flex flex-col items-center justify-center gap-3 text-muted-foreground border border-dashed rounded-lg">
+                    <BarChart2 className="h-8 w-8 opacity-40" />
+                    <p className="text-sm">Historical analytics not yet available</p>
+                  </div>
                 </CardContent>
               </Card>
 
@@ -293,54 +265,56 @@ export default function ChatManagement() {
                   <CardDescription>Aggregated activity by hour (UTC)</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="h-[300px] flex items-end gap-1">
-                    {peakHoursData.map((item) => (
-                      <div key={item.hour} className="flex-1 flex flex-col items-center gap-1">
-                        <div
-                          className="w-full rounded-t transition-all"
-                          style={{
-                            height: `${(item.value / 100) * 250}px`,
-                            backgroundColor: `hsl(var(--chart-1) / ${0.3 + (item.value / 100) * 0.7})`,
-                          }}
-                        />
-                        <span className="text-[10px] text-muted-foreground">{item.hour}</span>
-                      </div>
-                    ))}
+                  <div className="h-[300px] flex flex-col items-center justify-center gap-3 text-muted-foreground border border-dashed rounded-lg">
+                    <BarChart2 className="h-8 w-8 opacity-40" />
+                    <p className="text-sm">Historical analytics not yet available</p>
                   </div>
                 </CardContent>
               </Card>
             </div>
 
-            {/* Recent Flags */}
+            {/* Recent Flags — wired from live flaggedConversations */}
             <Card>
               <CardHeader>
                 <CardTitle>Recent Flags (Metadata Only)</CardTitle>
                 <CardDescription>Content not visible - E2E encrypted</CardDescription>
               </CardHeader>
               <CardContent>
-                {recentFlags.length === 0 ? (
-                  <p className="text-muted-foreground text-center py-8">No flagged chats today</p>
+                {flaggedLoading ? (
+                  <p className="text-muted-foreground text-center py-8">Loading…</p>
+                ) : flaggedConversations.length === 0 ? (
+                  <p className="text-muted-foreground text-center py-8">No flagged chats</p>
                 ) : (
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Chat Type</TableHead>
+                        <TableHead>Conversation ID</TableHead>
                         <TableHead>Flag Reason</TableHead>
-                        <TableHead>Reports</TableHead>
+                        <TableHead>Status</TableHead>
                         <TableHead>Created At</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {recentFlags.map((flag) => (
+                      {flaggedConversations.slice(0, 5).map((flag) => (
                         <TableRow key={flag.id}>
+                          <TableCell className="font-mono text-sm">{flag.conversationId}</TableCell>
+                          <TableCell>{flag.flagReason}</TableCell>
                           <TableCell>
-                            <Badge variant={flag.chatType === "DM" ? "secondary" : "outline"}>
-                              {flag.chatType}
+                            <Badge
+                              variant={
+                                flag.status === "SUSPENDED"
+                                  ? "destructive"
+                                  : flag.status === "REVIEWED"
+                                  ? "secondary"
+                                  : "outline"
+                              }
+                            >
+                              {flag.status}
                             </Badge>
                           </TableCell>
-                          <TableCell>{flag.flagReason}</TableCell>
-                          <TableCell>{flag.reportCount}</TableCell>
-                          <TableCell className="text-muted-foreground">{flag.createdAt}</TableCell>
+                          <TableCell className="text-muted-foreground">
+                            {flag.createdAt ? new Date(flag.createdAt).toLocaleString() : "—"}
+                          </TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
@@ -388,52 +362,116 @@ export default function ChatManagement() {
                       <TableHead>User B</TableHead>
                       <TableHead>Messages</TableHead>
                       <TableHead>Last Active</TableHead>
-                      <TableHead>Flags</TableHead>
+                      <TableHead>Flagged</TableHead>
                       <TableHead className="w-[50px]">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {dmConversations.map((dm) => (
-                      <TableRow key={dm.dmId}>
-                        <TableCell className="font-mono text-sm">{dm.dmId}</TableCell>
-                        <TableCell>{dm.userA}</TableCell>
-                        <TableCell>{dm.userB}</TableCell>
-                        <TableCell>{dm.messageCount}</TableCell>
-                        <TableCell className="text-muted-foreground">{dm.lastActive}</TableCell>
-                        <TableCell>
-                          {dm.flagCount > 0 ? (
-                            <Badge variant="destructive">{dm.flagCount}</Badge>
-                          ) : (
-                            <span className="text-muted-foreground">-</span>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon">
-                                <MoreHorizontal className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => setDmMetadataModal(dm)}>
-                                <Info className="mr-2 h-4 w-4" /> View Metadata
-                              </DropdownMenuItem>
-                              <DropdownMenuItem>
-                                <UserSearch className="mr-2 h-4 w-4" /> View Users
-                              </DropdownMenuItem>
-                              <DropdownMenuItem>
-                                <Archive className="mr-2 h-4 w-4" /> Archive Chat
-                              </DropdownMenuItem>
-                              <DropdownMenuItem>
-                                <Shield className="mr-2 h-4 w-4" /> View Flags
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+                    {dmLoading ? (
+                      <TableRow>
+                        <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                          Loading…
                         </TableCell>
                       </TableRow>
-                    ))}
+                    ) : dmConversations.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                          No direct message conversations found
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      dmConversations
+                        .filter((dm) =>
+                          !searchQuery ||
+                          dm.participant1Id.includes(searchQuery) ||
+                          dm.participant2Id.includes(searchQuery) ||
+                          (dm.participant1Name ?? "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          (dm.participant2Name ?? "").toLowerCase().includes(searchQuery.toLowerCase())
+                        )
+                        .map((dm) => (
+                          <TableRow key={dm.id}>
+                            <TableCell className="font-mono text-sm">{dm.id}</TableCell>
+                            <TableCell>
+                              <div className="flex flex-col">
+                                <span className="text-sm">{dm.participant1Name ?? "—"}</span>
+                                <span className="text-xs text-muted-foreground font-mono">{dm.participant1Id}</span>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex flex-col">
+                                <span className="text-sm">{dm.participant2Name ?? "—"}</span>
+                                <span className="text-xs text-muted-foreground font-mono">{dm.participant2Id}</span>
+                              </div>
+                            </TableCell>
+                            <TableCell>{dm.messageCount}</TableCell>
+                            <TableCell className="text-muted-foreground text-sm">
+                              {dm.lastMessageAt ? new Date(dm.lastMessageAt).toLocaleString() : "—"}
+                            </TableCell>
+                            <TableCell>
+                              {dm.flagged ? (
+                                <Badge variant="destructive">Flagged</Badge>
+                              ) : (
+                                <Badge variant="outline">Clean</Badge>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() =>
+                                      setDmMetadataModal({
+                                        dmId: dm.id,
+                                        userA: dm.participant1Name ?? dm.participant1Id,
+                                        userB: dm.participant2Name ?? dm.participant2Id,
+                                        messageCount: dm.messageCount,
+                                        lastActive: dm.lastMessageAt
+                                          ? new Date(dm.lastMessageAt).toLocaleString()
+                                          : "—",
+                                        flagCount: dm.flagged ? 1 : 0,
+                                      })
+                                    }
+                                  >
+                                    <MoreHorizontal className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem
+                                    onClick={() =>
+                                      setDmMetadataModal({
+                                        dmId: dm.id,
+                                        userA: dm.participant1Name ?? dm.participant1Id,
+                                        userB: dm.participant2Name ?? dm.participant2Id,
+                                        messageCount: dm.messageCount,
+                                        lastActive: dm.lastMessageAt
+                                          ? new Date(dm.lastMessageAt).toLocaleString()
+                                          : "—",
+                                        flagCount: dm.flagged ? 1 : 0,
+                                      })
+                                    }
+                                  >
+                                    <Info className="mr-2 h-4 w-4" /> View Metadata
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem>
+                                    <UserSearch className="mr-2 h-4 w-4" /> View Participants
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem className="text-destructive">
+                                    <Archive className="mr-2 h-4 w-4" /> Archive Conversation
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                    )}
                   </TableBody>
                 </Table>
+                {!dmLoading && dmTotal > dmConversations.length && (
+                  <p className="text-xs text-muted-foreground text-center pt-2">
+                    Showing {dmConversations.length} of {dmTotal} conversations
+                  </p>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
@@ -476,53 +514,110 @@ export default function ChatManagement() {
                       <TableHead>Members</TableHead>
                       <TableHead>Messages</TableHead>
                       <TableHead>Last Active</TableHead>
-                      <TableHead>Flags</TableHead>
+                      <TableHead>Flagged</TableHead>
                       <TableHead className="w-[50px]">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {groupChats.map((group) => (
-                      <TableRow key={group.groupId}>
-                        <TableCell className="font-mono text-sm">{group.groupId}</TableCell>
-                        <TableCell className="font-medium">{group.name}</TableCell>
-                        <TableCell>{group.creator}</TableCell>
-                        <TableCell>{group.memberCount}</TableCell>
-                        <TableCell>{group.messageCount.toLocaleString()}</TableCell>
-                        <TableCell className="text-muted-foreground">{group.lastActive}</TableCell>
-                        <TableCell>
-                          {group.flagCount > 0 ? (
-                            <Badge variant="destructive">{group.flagCount}</Badge>
-                          ) : (
-                            <span className="text-muted-foreground">-</span>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon">
-                                <MoreHorizontal className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => setGroupDetailModal(group)}>
-                                <Eye className="mr-2 h-4 w-4" /> View Group
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => setGroupDetailModal(group)}>
-                                <Users className="mr-2 h-4 w-4" /> Manage Members
-                              </DropdownMenuItem>
-                              <DropdownMenuItem>
-                                <Shield className="mr-2 h-4 w-4" /> View Flags
-                              </DropdownMenuItem>
-                              <DropdownMenuItem className="text-destructive">
-                                <Archive className="mr-2 h-4 w-4" /> Archive Group
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+                    {groupLoading ? (
+                      <TableRow>
+                        <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
+                          Loading…
                         </TableCell>
                       </TableRow>
-                    ))}
+                    ) : groupConversations.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
+                          No group conversations found
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      groupConversations.map((grp) => (
+                        <TableRow key={grp.id}>
+                          <TableCell className="font-mono text-sm">{grp.id}</TableCell>
+                          <TableCell className="font-medium">{grp.name}</TableCell>
+                          <TableCell className="text-muted-foreground font-mono text-sm">
+                            {grp.createdBy ?? "—"}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-1">
+                              <Users className="h-3 w-3 text-muted-foreground" />
+                              {grp.memberCount}
+                            </div>
+                          </TableCell>
+                          <TableCell>{grp.messageCount}</TableCell>
+                          <TableCell className="text-muted-foreground text-sm">
+                            {grp.lastMessageAt ? new Date(grp.lastMessageAt).toLocaleString() : "—"}
+                          </TableCell>
+                          <TableCell>
+                            {grp.flagged ? (
+                              <Badge variant="destructive">Flagged</Badge>
+                            ) : (
+                              <Badge variant="outline">Clean</Badge>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() =>
+                                    setGroupDetailModal({
+                                      groupId: grp.id,
+                                      name: grp.name,
+                                      creator: grp.createdBy ?? "—",
+                                      memberCount: grp.memberCount,
+                                      messageCount: grp.messageCount,
+                                      lastActive: grp.lastMessageAt
+                                        ? new Date(grp.lastMessageAt).toLocaleString()
+                                        : "—",
+                                      flagCount: grp.flagged ? 1 : 0,
+                                      visibility: grp.communityId ? "Community" : "Standalone",
+                                    })
+                                  }
+                                >
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem
+                                  onClick={() =>
+                                    setGroupDetailModal({
+                                      groupId: grp.id,
+                                      name: grp.name,
+                                      creator: grp.createdBy ?? "—",
+                                      memberCount: grp.memberCount,
+                                      messageCount: grp.messageCount,
+                                      lastActive: grp.lastMessageAt
+                                        ? new Date(grp.lastMessageAt).toLocaleString()
+                                        : "—",
+                                      flagCount: grp.flagged ? 1 : 0,
+                                      visibility: grp.communityId ? "Community" : "Standalone",
+                                    })
+                                  }
+                                >
+                                  <Info className="mr-2 h-4 w-4" /> View Details
+                                </DropdownMenuItem>
+                                <DropdownMenuItem>
+                                  <UserSearch className="mr-2 h-4 w-4" /> View Members
+                                </DropdownMenuItem>
+                                <DropdownMenuItem className="text-destructive">
+                                  <Archive className="mr-2 h-4 w-4" /> Archive Group
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
                   </TableBody>
                 </Table>
+                {!groupLoading && groupTotal > groupConversations.length && (
+                  <p className="text-xs text-muted-foreground text-center pt-2">
+                    Showing {groupConversations.length} of {groupTotal} conversations
+                  </p>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
@@ -801,39 +896,7 @@ export default function ChatManagement() {
                 {/* Members */}
                 <div className="border-t pt-4">
                   <h4 className="font-medium mb-3">Members ({groupDetailModal.memberCount})</h4>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Name</TableHead>
-                        <TableHead>Role</TableHead>
-                        <TableHead>Joined</TableHead>
-                        <TableHead className="w-[100px]">Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {groupMembers.map((member) => (
-                        <TableRow key={member.id}>
-                          <TableCell>{member.name}</TableCell>
-                          <TableCell>
-                            <Badge variant={member.role === "Admin" ? "default" : member.role === "Moderator" ? "secondary" : "outline"}>
-                              {member.role}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-muted-foreground">{member.joinedAt}</TableCell>
-                          <TableCell>
-                            <div className="flex gap-1">
-                              <Button variant="ghost" size="icon" className="h-8 w-8">
-                                <ArrowUp className="h-3 w-3" />
-                              </Button>
-                              <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive">
-                                <UserMinus className="h-3 w-3" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                  <p className="text-sm text-muted-foreground">Member details not yet available via API</p>
                 </div>
 
                 {/* Flags */}

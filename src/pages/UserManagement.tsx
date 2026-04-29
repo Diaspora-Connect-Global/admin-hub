@@ -2,7 +2,15 @@ import { useState, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import { useGetUsers } from "@/hooks/user";
-import { useDiscoverAssociations, useListCommunities } from "@/hooks/admin";
+import {
+  useDiscoverAssociations,
+  useListCommunities,
+  useGetAuditLogs,
+  useGetUserPosts,
+  useGetUserGroups,
+  useGetUserOpportunities,
+  useGetUserTransactions,
+} from "@/hooks/admin";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -71,40 +79,6 @@ function mapApiUserToRow(item: {
   };
 }
 
-const userCommunities = [
-  { id: "COM-001", name: "Ghana Belgium Community", country: "Belgium" },
-  { id: "COM-002", name: "African Professionals Network", country: "Europe" },
-];
-
-const userAssociations = [
-  { id: "ASC-001", name: "Ghana Nurses Association", country: "Belgium" },
-];
-
-const userPosts = [
-  { id: "PST-001", contentPreview: "Excited about the upcoming community event!", media: "1 image", likesCount: 25, commentsCount: 8, createdAt: "2024-01-15", status: "Published" },
-  { id: "PST-002", contentPreview: "Sharing some thoughts on diaspora networking...", media: "-", likesCount: 12, commentsCount: 3, createdAt: "2024-01-12", status: "Published" },
-];
-
-const userGroups = [
-  { id: "GRP-001", name: "Healthcare Professionals", roleInGroup: "Member", joinedAt: "2024-01-10" },
-  { id: "GRP-002", name: "Brussels Ghanaians", roleInGroup: "Admin", joinedAt: "2024-01-08" },
-];
-
-const userOpportunities = [
-  { id: "OPP-001", title: "Senior Nurse Position", type: "Job", status: "Applied", appliedAt: "2024-01-14", outcome: "Pending" },
-  { id: "OPP-002", title: "Healthcare Conference", type: "Event", status: "Applied", appliedAt: "2024-01-10", outcome: "Accepted" },
-];
-
-const userTransactions = [
-  { id: "TXN-001", type: "Payment", amount: "$150.00", status: "Completed", createdAt: "2024-01-15", relatedEntity: "Vendor Purchase" },
-  { id: "TXN-002", type: "Escrow", amount: "$500.00", status: "Held", createdAt: "2024-01-12", relatedEntity: "Service Contract" },
-];
-
-const userAuditLogs = [
-  { timestamp: "2024-01-15 14:30:00", action: "Login", performedBy: "Self", notes: "-" },
-  { timestamp: "2024-01-14 10:15:00", action: "Profile Update", performedBy: "Self", notes: "Updated bio" },
-  { timestamp: "2024-01-10 09:00:00", action: "Role Change", performedBy: "Admin User", notes: "Assigned Community Admin role" },
-];
 
 const getStatusBadge = (status: string) => {
   const styles: Record<string, string> = {
@@ -177,6 +151,16 @@ export default function UserManagement() {
   const associationOptions = (
     associationsData as { discoverAssociations?: { associations?: { id: string; name: string }[] } } | undefined
   )?.discoverAssociations?.associations ?? [];
+
+  const { data: userAuditData } = useGetAuditLogs({
+    actorId: selectedUser?.id ?? null,
+    limit: 20,
+  });
+
+  const { data: userPostsData, loading: userPostsLoading } = useGetUserPosts(selectedUser?.id ?? null, 20);
+  const { data: userGroupsData, loading: userGroupsLoading } = useGetUserGroups(selectedUser?.id ?? null, 20);
+  const { data: userOppsData, loading: userOppsLoading } = useGetUserOpportunities(selectedUser?.id ?? null, 20);
+  const { data: userTxData, loading: userTxLoading } = useGetUserTransactions(selectedUser?.id ?? null, 20);
 
   const filteredUsers = users.filter((user) => {
     const matchesSearch = user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -429,39 +413,50 @@ export default function UserManagement() {
                     </CardContent>
                   </Card>
                   <Card className="glass">
-                    <CardHeader className="pb-2"><CardTitle className="text-sm">Community Memberships ({userCommunities.length})</CardTitle></CardHeader>
+                    <CardHeader className="pb-2"><CardTitle className="text-sm">Community & Association Memberships</CardTitle></CardHeader>
                     <CardContent>
-                      {userCommunities.map((c) => (
-                        <div key={c.id} className="flex items-center justify-between p-2 rounded-lg bg-muted/50 mb-2">
-                          <div className="flex items-center gap-2"><Building2 className="h-4 w-4 text-muted-foreground" /><div><p className="text-sm font-medium">{c.name}</p><p className="text-xs text-muted-foreground">{c.country}</p></div></div>
-                          <div className="flex gap-1"><Button variant="ghost" size="sm">View</Button><Button variant="ghost" size="sm" className="text-destructive">Remove</Button></div>
-                        </div>
-                      ))}
-                    </CardContent>
-                  </Card>
-                  <Card className="glass">
-                    <CardHeader className="pb-2"><CardTitle className="text-sm">Association Memberships ({userAssociations.length})</CardTitle></CardHeader>
-                    <CardContent>
-                      {userAssociations.map((a) => (
-                        <div key={a.id} className="flex items-center justify-between p-2 rounded-lg bg-muted/50 mb-2">
-                          <div className="flex items-center gap-2"><Users className="h-4 w-4 text-muted-foreground" /><div><p className="text-sm font-medium">{a.name}</p><p className="text-xs text-muted-foreground">{a.country}</p></div></div>
-                          <div className="flex gap-1"><Button variant="ghost" size="sm">View</Button><Button variant="ghost" size="sm" className="text-destructive">Remove</Button></div>
-                        </div>
-                      ))}
+                      <p className="text-xs text-muted-foreground py-2">Membership details are managed via the Communities and Associations pages.</p>
                     </CardContent>
                   </Card>
                 </TabsContent>
 
                 <TabsContent value="posts" className="mt-4">
                   <Card className="glass">
-                    <CardHeader className="pb-2"><CardTitle className="text-sm">Posts & Reactions ({userPosts.length})</CardTitle><CardDescription>All posts by the user including reactions and comments.</CardDescription></CardHeader>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm">Posts & Reactions</CardTitle>
+                      <CardDescription>Recent posts by this user across all communities.</CardDescription>
+                    </CardHeader>
                     <CardContent className="p-0">
                       <Table>
-                        <TableHeader><TableRow><TableHead>Post ID</TableHead><TableHead>Content</TableHead><TableHead>Media</TableHead><TableHead>Likes</TableHead><TableHead>Comments</TableHead><TableHead>Created At</TableHead><TableHead>Status</TableHead><TableHead>Actions</TableHead></TableRow></TableHeader>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Content</TableHead>
+                            <TableHead>Type</TableHead>
+                            <TableHead>Community</TableHead>
+                            <TableHead>Likes</TableHead>
+                            <TableHead>Comments</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead>Posted At</TableHead>
+                          </TableRow>
+                        </TableHeader>
                         <TableBody>
-                          {userPosts.map((p) => (
-                            <TableRow key={p.id}><TableCell className="font-mono text-xs">{p.id}</TableCell><TableCell className="max-w-[150px] truncate">{p.contentPreview}</TableCell><TableCell>{p.media}</TableCell><TableCell>{p.likesCount}</TableCell><TableCell>{p.commentsCount}</TableCell><TableCell className="text-muted-foreground">{p.createdAt}</TableCell><TableCell>{getStatusBadge(p.status)}</TableCell><TableCell><Button variant="ghost" size="sm">View</Button></TableCell></TableRow>
-                          ))}
+                          {userPostsLoading ? (
+                            <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-6">Loading posts...</TableCell></TableRow>
+                          ) : (userPostsData?.getUserPosts?.items ?? []).length === 0 ? (
+                            <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-6">No posts found for this user.</TableCell></TableRow>
+                          ) : (
+                            (userPostsData?.getUserPosts?.items ?? []).map((post) => (
+                              <TableRow key={post.id}>
+                                <TableCell className="max-w-[180px] truncate text-sm">{post.content ?? "—"}</TableCell>
+                                <TableCell><Badge variant="secondary">{post.postType ?? "—"}</Badge></TableCell>
+                                <TableCell className="text-muted-foreground text-xs">{post.communityName ?? "—"}</TableCell>
+                                <TableCell className="text-muted-foreground">{post.likeCount}</TableCell>
+                                <TableCell className="text-muted-foreground">{post.commentCount}</TableCell>
+                                <TableCell>{post.status ? getStatusBadge(post.status) : "—"}</TableCell>
+                                <TableCell className="text-muted-foreground text-xs">{post.createdAt ? new Date(post.createdAt).toLocaleDateString() : "—"}</TableCell>
+                              </TableRow>
+                            ))
+                          )}
                         </TableBody>
                       </Table>
                     </CardContent>
@@ -470,14 +465,37 @@ export default function UserManagement() {
 
                 <TabsContent value="groups" className="mt-4">
                   <Card className="glass">
-                    <CardHeader className="pb-2"><CardTitle className="text-sm">Groups ({userGroups.length})</CardTitle><CardDescription>Groups the user has joined.</CardDescription></CardHeader>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm">Groups</CardTitle>
+                      <CardDescription>Groups the user has joined.</CardDescription>
+                    </CardHeader>
                     <CardContent className="p-0">
                       <Table>
-                        <TableHeader><TableRow><TableHead>Group Name</TableHead><TableHead>Role</TableHead><TableHead>Joined At</TableHead><TableHead>Actions</TableHead></TableRow></TableHeader>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Group Name</TableHead>
+                            <TableHead>Community</TableHead>
+                            <TableHead>Members</TableHead>
+                            <TableHead>Role</TableHead>
+                            <TableHead>Joined At</TableHead>
+                          </TableRow>
+                        </TableHeader>
                         <TableBody>
-                          {userGroups.map((g) => (
-                            <TableRow key={g.id}><TableCell className="font-medium">{g.name}</TableCell><TableCell><Badge variant="secondary">{g.roleInGroup}</Badge></TableCell><TableCell className="text-muted-foreground">{g.joinedAt}</TableCell><TableCell><Button variant="ghost" size="sm">View</Button><Button variant="ghost" size="sm" className="text-destructive">Remove</Button></TableCell></TableRow>
-                          ))}
+                          {userGroupsLoading ? (
+                            <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-6">Loading groups...</TableCell></TableRow>
+                          ) : (userGroupsData?.getUserGroups?.items ?? []).length === 0 ? (
+                            <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-6">No groups found for this user.</TableCell></TableRow>
+                          ) : (
+                            (userGroupsData?.getUserGroups?.items ?? []).map((group) => (
+                              <TableRow key={group.id}>
+                                <TableCell className="font-medium text-sm">{group.name}</TableCell>
+                                <TableCell className="text-muted-foreground text-xs">{group.communityName ?? "—"}</TableCell>
+                                <TableCell className="text-muted-foreground"><div className="flex items-center gap-1"><Users className="h-3 w-3" />{group.memberCount}</div></TableCell>
+                                <TableCell><Badge variant="secondary">{group.role ?? "Member"}</Badge></TableCell>
+                                <TableCell className="text-muted-foreground text-xs">{group.joinedAt ? new Date(group.joinedAt).toLocaleDateString() : "—"}</TableCell>
+                              </TableRow>
+                            ))
+                          )}
                         </TableBody>
                       </Table>
                     </CardContent>
@@ -486,14 +504,39 @@ export default function UserManagement() {
 
                 <TabsContent value="opportunities" className="mt-4">
                   <Card className="glass">
-                    <CardHeader className="pb-2"><CardTitle className="text-sm">Opportunities Applied & Received</CardTitle><CardDescription>Track all opportunities the user applied for and outcomes.</CardDescription></CardHeader>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm">Opportunities</CardTitle>
+                      <CardDescription>Opportunities this user posted or applied to.</CardDescription>
+                    </CardHeader>
                     <CardContent className="p-0">
                       <Table>
-                        <TableHeader><TableRow><TableHead>Title</TableHead><TableHead>Type</TableHead><TableHead>Status</TableHead><TableHead>Applied At</TableHead><TableHead>Outcome</TableHead><TableHead>Actions</TableHead></TableRow></TableHeader>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Title</TableHead>
+                            <TableHead>Type</TableHead>
+                            <TableHead>Community</TableHead>
+                            <TableHead>Applicants</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead>Posted At</TableHead>
+                          </TableRow>
+                        </TableHeader>
                         <TableBody>
-                          {userOpportunities.map((o) => (
-                            <TableRow key={o.id}><TableCell className="font-medium">{o.title}</TableCell><TableCell><Badge variant="outline">{o.type}</Badge></TableCell><TableCell>{getStatusBadge(o.status)}</TableCell><TableCell className="text-muted-foreground">{o.appliedAt}</TableCell><TableCell>{getStatusBadge(o.outcome)}</TableCell><TableCell><Button variant="ghost" size="sm">View</Button></TableCell></TableRow>
-                          ))}
+                          {userOppsLoading ? (
+                            <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-6">Loading opportunities...</TableCell></TableRow>
+                          ) : (userOppsData?.getUserOpportunities?.items ?? []).length === 0 ? (
+                            <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-6">No opportunities found for this user.</TableCell></TableRow>
+                          ) : (
+                            (userOppsData?.getUserOpportunities?.items ?? []).map((opp) => (
+                              <TableRow key={opp.id}>
+                                <TableCell className="font-medium text-sm max-w-[160px] truncate">{opp.title}</TableCell>
+                                <TableCell><Badge variant="secondary">{opp.type ?? "—"}</Badge></TableCell>
+                                <TableCell className="text-muted-foreground text-xs">{opp.communityName ?? "—"}</TableCell>
+                                <TableCell className="text-muted-foreground">{opp.applicants}</TableCell>
+                                <TableCell>{opp.status ? getStatusBadge(opp.status) : "—"}</TableCell>
+                                <TableCell className="text-muted-foreground text-xs">{opp.postedAt ? new Date(opp.postedAt).toLocaleDateString() : "—"}</TableCell>
+                              </TableRow>
+                            ))
+                          )}
                         </TableBody>
                       </Table>
                     </CardContent>
@@ -502,14 +545,41 @@ export default function UserManagement() {
 
                 <TabsContent value="transactions" className="mt-4">
                   <Card className="glass">
-                    <CardHeader className="pb-2"><CardTitle className="text-sm">Transactions</CardTitle><CardDescription>All escrow or platform transactions the user participated in.</CardDescription></CardHeader>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm">Transactions</CardTitle>
+                      <CardDescription>All escrow or platform transactions this user participated in.</CardDescription>
+                    </CardHeader>
                     <CardContent className="p-0">
                       <Table>
-                        <TableHeader><TableRow><TableHead>Transaction ID</TableHead><TableHead>Type</TableHead><TableHead>Amount</TableHead><TableHead>Status</TableHead><TableHead>Date</TableHead><TableHead>Related Entity</TableHead><TableHead>Actions</TableHead></TableRow></TableHeader>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>ID</TableHead>
+                            <TableHead>Type</TableHead>
+                            <TableHead>Amount</TableHead>
+                            <TableHead>Currency</TableHead>
+                            <TableHead>Description</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead>Date</TableHead>
+                          </TableRow>
+                        </TableHeader>
                         <TableBody>
-                          {userTransactions.map((t) => (
-                            <TableRow key={t.id}><TableCell className="font-mono text-xs">{t.id}</TableCell><TableCell>{t.type}</TableCell><TableCell>{t.amount}</TableCell><TableCell>{getStatusBadge(t.status)}</TableCell><TableCell className="text-muted-foreground">{t.createdAt}</TableCell><TableCell>{t.relatedEntity}</TableCell><TableCell><Button variant="ghost" size="sm">View</Button></TableCell></TableRow>
-                          ))}
+                          {userTxLoading ? (
+                            <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-6">Loading transactions...</TableCell></TableRow>
+                          ) : (userTxData?.getUserTransactions?.items ?? []).length === 0 ? (
+                            <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-6">No transactions found for this user.</TableCell></TableRow>
+                          ) : (
+                            (userTxData?.getUserTransactions?.items ?? []).map((tx) => (
+                              <TableRow key={tx.id}>
+                                <TableCell className="font-mono text-xs text-muted-foreground">{tx.id.slice(0, 8)}…</TableCell>
+                                <TableCell><Badge variant="secondary">{tx.type ?? "—"}</Badge></TableCell>
+                                <TableCell className="font-medium">{tx.amount.toFixed(2)}</TableCell>
+                                <TableCell className="text-muted-foreground">{tx.currency ?? "USD"}</TableCell>
+                                <TableCell className="text-muted-foreground text-xs max-w-[140px] truncate">{tx.description ?? "—"}</TableCell>
+                                <TableCell>{tx.status ? getStatusBadge(tx.status) : "—"}</TableCell>
+                                <TableCell className="text-muted-foreground text-xs">{new Date(tx.createdAt).toLocaleDateString()}</TableCell>
+                              </TableRow>
+                            ))
+                          )}
                         </TableBody>
                       </Table>
                     </CardContent>
@@ -518,14 +588,18 @@ export default function UserManagement() {
 
                 <TabsContent value="audit" className="mt-4">
                   <Card className="glass">
-                    <CardHeader className="pb-2"><div className="flex items-center justify-between"><CardTitle className="text-sm">Audit Log</CardTitle><Button size="sm" variant="outline"><Download className="mr-2 h-4 w-4" /> Export CSV</Button></div><CardDescription>Logs of user-related actions performed by admins.</CardDescription></CardHeader>
+                    <CardHeader className="pb-2"><div className="flex items-center justify-between"><CardTitle className="text-sm">Audit Log</CardTitle><Button size="sm" variant="outline"><Download className="mr-2 h-4 w-4" /> Export CSV</Button></div><CardDescription>Logs of admin actions where this user is the actor.</CardDescription></CardHeader>
                     <CardContent className="p-0">
                       <Table>
-                        <TableHeader><TableRow><TableHead>Timestamp</TableHead><TableHead>Action</TableHead><TableHead>Performed By</TableHead><TableHead>Notes</TableHead></TableRow></TableHeader>
+                        <TableHeader><TableRow><TableHead>Timestamp</TableHead><TableHead>Action</TableHead><TableHead>Resource Type</TableHead><TableHead>Resource ID</TableHead></TableRow></TableHeader>
                         <TableBody>
-                          {userAuditLogs.map((l, idx) => (
-                            <TableRow key={idx}><TableCell className="font-mono text-xs">{l.timestamp}</TableCell><TableCell><Badge variant="secondary">{l.action}</Badge></TableCell><TableCell>{l.performedBy}</TableCell><TableCell className="text-muted-foreground">{l.notes}</TableCell></TableRow>
-                          ))}
+                          {(userAuditData?.getAuditLogs?.items ?? []).length === 0 ? (
+                            <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground py-6">No audit events found for this user</TableCell></TableRow>
+                          ) : (
+                            (userAuditData?.getAuditLogs?.items ?? []).map((l: { id: string; action: string; resourceType?: string; resourceId?: string; createdAt: string }) => (
+                              <TableRow key={l.id}><TableCell className="font-mono text-xs">{new Date(l.createdAt).toLocaleString()}</TableCell><TableCell><Badge variant="secondary">{l.action}</Badge></TableCell><TableCell className="text-muted-foreground">{l.resourceType ?? "—"}</TableCell><TableCell className="font-mono text-xs text-muted-foreground">{l.resourceId ? l.resourceId.slice(0, 8) + "…" : "—"}</TableCell></TableRow>
+                            ))
+                          )}
                         </TableBody>
                       </Table>
                     </CardContent>

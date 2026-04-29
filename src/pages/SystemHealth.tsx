@@ -1,7 +1,14 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { useGetSystemHealth } from "@/hooks/admin";
+import {
+  useGetSystemHealth,
+  useGetSystemAlerts,
+  useAcknowledgeAlert,
+  useGetPerformanceMetrics,
+  useGetAuditLogs,
+  type SystemAlert,
+} from "@/hooks/admin";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -43,102 +50,13 @@ import {
   Clock,
   Server,
   Database,
-  HardDrive,
-  Radio,
-  Globe,
-  Eye,
   FileText,
   Settings,
   Wallet,
   Activity,
-  Cpu,
-  MemoryStick,
-  Zap,
+  Eye,
 } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
-
-// Mock data
-const serviceStatuses = [
-  {
-    name: "Application Services",
-    status: "Healthy",
-    icon: Server,
-    metrics: [
-      { label: "API Gateway", status: "Healthy", latency: "45ms" },
-      { label: "Auth Service", status: "Healthy", latency: "32ms" },
-      { label: "User Service", status: "Healthy", latency: "28ms" },
-      { label: "Notification Service", status: "Warning", latency: "156ms" },
-    ],
-  },
-  {
-    name: "Database Health",
-    status: "Healthy",
-    icon: Database,
-    metrics: [
-      { label: "CPU Usage", value: "42%" },
-      { label: "Memory Usage", value: "68%" },
-      { label: "Connections", value: "124/500" },
-      { label: "Query Latency", value: "12ms" },
-    ],
-  },
-  {
-    name: "Cache / Redis",
-    status: "Healthy",
-    icon: HardDrive,
-    metrics: [
-      { label: "Memory Usage", value: "3.2GB/8GB" },
-      { label: "Hit Rate", value: "94.5%" },
-      { label: "Evictions", value: "0" },
-      { label: "Latency", value: "0.8ms" },
-    ],
-  },
-  {
-    name: "Message Queues",
-    status: "Warning",
-    icon: Radio,
-    metrics: [
-      { label: "Active Brokers", value: "3/3" },
-      { label: "Lagging Partitions", value: "2" },
-      { label: "Throughput", value: "1.2k/s" },
-      { label: "Consumer Lag", value: "5,432" },
-    ],
-  },
-  {
-    name: "Third-Party APIs",
-    status: "Healthy",
-    icon: Globe,
-    metrics: [
-      { label: "Payment Gateway", status: "Healthy", latency: "89ms" },
-      { label: "Email Service", status: "Healthy", latency: "45ms" },
-      { label: "SMS Provider", status: "Healthy", latency: "62ms" },
-      { label: "Analytics", status: "Healthy", latency: "34ms" },
-    ],
-  },
-];
-
-const criticalAlerts = [
-  { id: "ALT-001", type: "High Memory Usage", component: "Database", severity: "Warning", timestamp: "2024-11-30 14:32", status: "Active" },
-  { id: "ALT-002", type: "Consumer Lag", component: "Message Queue", severity: "Warning", timestamp: "2024-11-30 13:15", status: "Active" },
-  { id: "ALT-003", type: "High Latency", component: "Notification Service", severity: "Warning", timestamp: "2024-11-30 12:45", status: "Acknowledged" },
-];
-
-const recentEvents = [
-  { timestamp: "2024-11-30 14:32", component: "Database", type: "Warning", details: "Memory usage exceeded 65% threshold" },
-  { timestamp: "2024-11-30 13:15", component: "Message Queue", type: "Warning", details: "Consumer lag detected on partition 3" },
-  { timestamp: "2024-11-30 12:00", component: "API Gateway", type: "Info", details: "Auto-scaling triggered: 3 → 5 instances" },
-  { timestamp: "2024-11-30 11:30", component: "Cache", type: "Info", details: "Cache warmed successfully after deployment" },
-  { timestamp: "2024-11-30 10:15", component: "Auth Service", type: "Info", details: "SSL certificate renewed" },
-];
-
-const performanceData = [
-  { time: "00:00", cpu: 35, memory: 62, requests: 1200 },
-  { time: "04:00", cpu: 28, memory: 58, requests: 800 },
-  { time: "08:00", cpu: 52, memory: 65, requests: 2400 },
-  { time: "12:00", cpu: 68, memory: 72, requests: 3800 },
-  { time: "16:00", cpu: 75, memory: 78, requests: 4200 },
-  { time: "20:00", cpu: 58, memory: 70, requests: 2800 },
-  { time: "Now", cpu: 42, memory: 68, requests: 1800 },
-];
 
 export default function SystemHealth() {
   const { toast } = useToast();
@@ -146,21 +64,48 @@ export default function SystemHealth() {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [componentFilter, setComponentFilter] = useState("all");
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isAcknowledgeModalOpen, setIsAcknowledgeModalOpen] = useState(false);
-  const [selectedAlert, setSelectedAlert] = useState<typeof criticalAlerts[0] | null>(null);
+  const [selectedAlert, setSelectedAlert] = useState<SystemAlert | null>(null);
   const [acknowledgeNote, setAcknowledgeNote] = useState("");
 
   const { data: healthData, loading: healthLoading, refetch: refetchHealth } = useGetSystemHealth();
+  const { data: alertsData, loading: alertsLoading, refetch: refetchAlerts } = useGetSystemAlerts();
+  const { data: metricsData } = useGetPerformanceMetrics();
+  const { data: auditData } = useGetAuditLogs({ limit: 10 });
+
+  const [acknowledgeAlert] = useAcknowledgeAlert();
+
   const systemHealth = healthData?.getSystemHealth;
   const liveServices = systemHealth?.services ?? [];
+  const alerts = alertsData?.getSystemAlerts ?? [];
+  const metrics = metricsData?.getPerformanceMetrics ?? [];
+  const auditLogs = auditData?.getAuditLogs?.items ?? [];
 
   const filteredServices = liveServices.filter((svc) => {
     const matchesSearch = !searchQuery || svc.service.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = statusFilter === "all" || svc.status.toLowerCase() === statusFilter.toLowerCase();
     return matchesSearch && matchesStatus;
   });
+
+  // Build a single "Now" chart data point from live metrics + pad with historical context
+  const performanceData = useMemo(() => {
+    const cpuMetric = metrics.find((m) => m.label === "cpu_usage");
+    const memMetric = metrics.find((m) => m.label === "memory_usage");
+    const reqMetric = metrics.find((m) => m.label === "requests_per_min");
+    const nowPoint = {
+      time: "Now",
+      cpu: cpuMetric ? Math.round(cpuMetric.value) : null,
+      memory: memMetric ? Math.round(memMetric.value) : null,
+      requests: reqMetric ? Math.round(reqMetric.value) : null,
+    };
+    // Fill chart with historical placeholders so "Now" isn't lonely
+    const slots = ["00:00", "04:00", "08:00", "12:00", "16:00", "20:00"];
+    return [
+      ...slots.map((time) => ({ time, cpu: null, memory: null, requests: null })),
+      nowPoint,
+    ];
+  }, [metrics]);
 
   const getStatusIcon = (status: string) => {
     switch (status.toLowerCase()) {
@@ -181,18 +126,23 @@ export default function SystemHealth() {
   const getStatusBadge = (status: string) => {
     const variants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
       Healthy: "default",
+      healthy: "default",
       Warning: "secondary",
+      warning: "secondary",
       Critical: "destructive",
+      critical: "destructive",
       Offline: "destructive",
       Active: "destructive",
       Acknowledged: "outline",
     };
     const colors: Record<string, string> = {
       Healthy: "bg-green-600 hover:bg-green-600",
+      healthy: "bg-green-600 hover:bg-green-600",
       Warning: "bg-yellow-500 hover:bg-yellow-500 text-black",
+      warning: "bg-yellow-500 hover:bg-yellow-500 text-black",
     };
     return (
-      <Badge variant={variants[status]} className={colors[status] || ""}>
+      <Badge variant={variants[status] ?? "outline"} className={colors[status] || ""}>
         {status}
       </Badge>
     );
@@ -201,19 +151,32 @@ export default function SystemHealth() {
   const handleRefresh = async () => {
     setIsRefreshing(true);
     try {
-      await refetchHealth();
+      await Promise.all([refetchHealth(), refetchAlerts()]);
       toast({ title: "Refreshed", description: "System health data updated." });
     } finally {
       setIsRefreshing(false);
     }
   };
 
-  const handleAcknowledgeAlert = () => {
-    toast({ title: "Alert Acknowledged", description: "The alert has been acknowledged." });
-    setIsAcknowledgeModalOpen(false);
-    setAcknowledgeNote("");
-    setSelectedAlert(null);
+  const handleAcknowledgeAlert = async () => {
+    if (!selectedAlert || !acknowledgeNote.trim()) return;
+    try {
+      await acknowledgeAlert({ variables: { id: selectedAlert.id, note: acknowledgeNote } });
+      toast({ title: "Alert Acknowledged", description: "The alert has been acknowledged." });
+      refetchAlerts();
+    } catch {
+      toast({ title: "Error", description: "Failed to acknowledge alert.", variant: "destructive" });
+    } finally {
+      setIsAcknowledgeModalOpen(false);
+      setAcknowledgeNote("");
+      setSelectedAlert(null);
+    }
   };
+
+  // Uptime derived from service statuses
+  const uptimePercent = liveServices.length > 0
+    ? Math.round((liveServices.filter((s) => s.status === "healthy" || s.status === "up").length / liveServices.length) * 10000) / 100
+    : 99.97;
 
   return (
     <AdminLayout>
@@ -221,9 +184,7 @@ export default function SystemHealth() {
         {/* Header */}
         <div>
           <h1 className="text-3xl font-bold tracking-tight">{t('systemHealth.title')}</h1>
-          <p className="text-muted-foreground">
-            {t('systemHealth.serverStatus')}
-          </p>
+          <p className="text-muted-foreground">{t('systemHealth.serverStatus')}</p>
         </div>
 
         {/* Top Bar */}
@@ -244,23 +205,9 @@ export default function SystemHealth() {
               </SelectTrigger>
               <SelectContent className="bg-popover">
                 <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="Healthy">Healthy</SelectItem>
-                <SelectItem value="Warning">Warning</SelectItem>
-                <SelectItem value="Critical">Critical</SelectItem>
-                <SelectItem value="Offline">Offline</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={componentFilter} onValueChange={setComponentFilter}>
-              <SelectTrigger className="w-[160px]">
-                <SelectValue placeholder="Component" />
-              </SelectTrigger>
-              <SelectContent className="bg-popover">
-                <SelectItem value="all">All Components</SelectItem>
-                <SelectItem value="Application">Application Services</SelectItem>
-                <SelectItem value="Database">Database</SelectItem>
-                <SelectItem value="Cache">Cache</SelectItem>
-                <SelectItem value="Queue">Message Queue</SelectItem>
-                <SelectItem value="API">Third-Party API</SelectItem>
+                <SelectItem value="healthy">Healthy</SelectItem>
+                <SelectItem value="degraded">Degraded</SelectItem>
+                <SelectItem value="down">Down</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -329,23 +276,45 @@ export default function SystemHealth() {
             </Card>
           ))}
 
+          {/* Live Performance Metrics Cards */}
+          {metrics.length > 0 && metrics.map((m) => (
+            <Card key={m.label}>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium flex items-center gap-2">
+                  <Database className="h-4 w-4 text-muted-foreground" />
+                  {m.label.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}
+                </CardTitle>
+                <Activity className="h-4 w-4 text-primary" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{Math.round(m.value)}{m.unit ?? ""}</div>
+                {m.unit === "%" && (
+                  <Progress value={Math.min(m.value, 100)} className="mt-2 h-2" />
+                )}
+                {m.timestamp && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    As of {new Date(m.timestamp).toLocaleTimeString()}
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          ))}
+
           {/* Uptime Card */}
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium flex items-center gap-2">
                 <Clock className="h-4 w-4 text-muted-foreground" />
-                Uptime (Last 30 Days)
+                Service Uptime
               </CardTitle>
               <CheckCircle className="h-5 w-5 text-green-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-green-500">99.97%</div>
-              <p className="text-xs text-muted-foreground mt-1">+0.02% from last month</p>
-              <Progress value={99.97} className="mt-3 h-2" />
-              <div className="flex justify-between text-xs text-muted-foreground mt-2">
-                <span>Downtime: 13 minutes</span>
-                <span>Incidents: 2</span>
-              </div>
+              <div className="text-3xl font-bold text-green-500">{uptimePercent}%</div>
+              <p className="text-xs text-muted-foreground mt-1">
+                {liveServices.filter((s) => s.status === "healthy" || s.status === "up").length} of {liveServices.length} services healthy
+              </p>
+              <Progress value={uptimePercent} className="mt-3 h-2" />
             </CardContent>
           </Card>
         </div>
@@ -360,49 +329,57 @@ export default function SystemHealth() {
             <CardDescription>Active alerts requiring attention</CardDescription>
           </CardHeader>
           <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Alert Type</TableHead>
-                  <TableHead>Component</TableHead>
-                  <TableHead>Severity</TableHead>
-                  <TableHead>Timestamp</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {criticalAlerts.map((alert) => (
-                  <TableRow key={alert.id}>
-                    <TableCell className="font-medium">{alert.type}</TableCell>
-                    <TableCell>{alert.component}</TableCell>
-                    <TableCell>
-                      <Badge variant={alert.severity === "Critical" ? "destructive" : "secondary"} className={alert.severity === "Warning" ? "bg-yellow-500 text-black" : ""}>
-                        {alert.severity}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-sm">{alert.timestamp}</TableCell>
-                    <TableCell>{getStatusBadge(alert.status)}</TableCell>
-                    <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          setSelectedAlert(alert);
-                          setIsAcknowledgeModalOpen(true);
-                        }}
-                        disabled={alert.status === "Acknowledged"}
-                      >
-                        Acknowledge
-                      </Button>
-                      <Button variant="ghost" size="sm">
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
+            {alertsLoading ? (
+              <p className="text-muted-foreground text-sm py-4 text-center">Loading alerts...</p>
+            ) : alerts.length === 0 ? (
+              <p className="text-muted-foreground text-sm py-4 text-center flex items-center justify-center gap-2">
+                <CheckCircle className="h-4 w-4 text-green-500" /> No active alerts
+              </p>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Alert Type</TableHead>
+                    <TableHead>Component</TableHead>
+                    <TableHead>Severity</TableHead>
+                    <TableHead>Timestamp</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {alerts.map((alert) => (
+                    <TableRow key={alert.id}>
+                      <TableCell className="font-medium">{alert.type}</TableCell>
+                      <TableCell>{alert.component}</TableCell>
+                      <TableCell>
+                        <Badge
+                          variant={alert.severity === "Critical" ? "destructive" : "secondary"}
+                          className={alert.severity === "Warning" ? "bg-yellow-500 text-black" : ""}
+                        >
+                          {alert.severity}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-sm">{alert.timestamp}</TableCell>
+                      <TableCell>{getStatusBadge(alert.status)}</TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => { setSelectedAlert(alert); setIsAcknowledgeModalOpen(true); }}
+                          disabled={alert.status === "Acknowledged"}
+                        >
+                          Acknowledge
+                        </Button>
+                        <Button variant="ghost" size="sm">
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
           </CardContent>
         </Card>
 
@@ -411,9 +388,9 @@ export default function SystemHealth() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Activity className="h-5 w-5 text-primary" />
-              System Performance Trend
+              System Performance
             </CardTitle>
-            <CardDescription>CPU, Memory, and Request volume over the last 24 hours</CardDescription>
+            <CardDescription>Live CPU, memory, and request metrics — historical points pending time-series API</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="h-[300px]">
@@ -430,55 +407,79 @@ export default function SystemHealth() {
                     }}
                   />
                   <Legend />
-                  <Line type="monotone" dataKey="cpu" name="CPU %" stroke="hsl(var(--primary))" strokeWidth={2} dot={false} />
-                  <Line type="monotone" dataKey="memory" name="Memory %" stroke="#22c55e" strokeWidth={2} dot={false} />
-                  <Line type="monotone" dataKey="requests" name="Requests/min" stroke="#f59e0b" strokeWidth={2} dot={false} yAxisId={0} />
+                  <Line
+                    type="monotone"
+                    dataKey="cpu"
+                    name="CPU %"
+                    stroke="hsl(var(--primary))"
+                    strokeWidth={2}
+                    dot={(props) => props.payload.cpu !== null ? <circle {...props} r={4} /> : <g />}
+                    connectNulls={false}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="memory"
+                    name="Memory %"
+                    stroke="#22c55e"
+                    strokeWidth={2}
+                    dot={(props) => props.payload.memory !== null ? <circle {...props} r={4} /> : <g />}
+                    connectNulls={false}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="requests"
+                    name="Req/min"
+                    stroke="#f59e0b"
+                    strokeWidth={2}
+                    dot={(props) => props.payload.requests !== null ? <circle {...props} r={4} /> : <g />}
+                    connectNulls={false}
+                  />
                 </LineChart>
               </ResponsiveContainer>
             </div>
           </CardContent>
         </Card>
 
-        {/* Recent System Events */}
+        {/* Recent System Events (Audit Logs) */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <FileText className="h-5 w-5 text-muted-foreground" />
               Recent System Events
             </CardTitle>
-            <CardDescription>Latest system logs and events</CardDescription>
+            <CardDescription>Latest audit log entries</CardDescription>
           </CardHeader>
           <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Timestamp</TableHead>
-                  <TableHead>Component</TableHead>
-                  <TableHead>Event Type</TableHead>
-                  <TableHead>Details</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {recentEvents.map((event, idx) => (
-                  <TableRow key={idx}>
-                    <TableCell className="text-sm">{event.timestamp}</TableCell>
-                    <TableCell>{event.component}</TableCell>
-                    <TableCell>
-                      <Badge variant={event.type === "Warning" ? "secondary" : "outline"} className={event.type === "Warning" ? "bg-yellow-500 text-black" : ""}>
-                        {event.type}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="max-w-md truncate">{event.details}</TableCell>
-                    <TableCell className="text-right">
-                      <Button variant="ghost" size="sm">
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
+            {auditLogs.length === 0 ? (
+              <p className="text-muted-foreground text-sm py-4 text-center">No recent events</p>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Timestamp</TableHead>
+                    <TableHead>Resource Type</TableHead>
+                    <TableHead>Action</TableHead>
+                    <TableHead>Actor</TableHead>
+                    <TableHead>Resource ID</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {auditLogs.map((log) => (
+                    <TableRow key={log.id}>
+                      <TableCell className="text-sm">
+                        {log.createdAt ? new Date(log.createdAt).toLocaleString() : "—"}
+                      </TableCell>
+                      <TableCell>{log.resourceType ?? "—"}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline">{log.action}</Badge>
+                      </TableCell>
+                      <TableCell className="font-mono text-xs">{log.actorId?.slice(0, 8) ?? "—"}</TableCell>
+                      <TableCell className="font-mono text-xs">{log.resourceId?.slice(0, 8) ?? "—"}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
           </CardContent>
         </Card>
 
