@@ -7,31 +7,10 @@ import { adminClient } from "./client";
 import { ADMIN_LOGIN, LOGOUT } from "./operations";
 import { exchangeRefreshTokenForSession } from "./refreshAccessToken";
 import { getAccessToken, clearSession } from "@/stores/session";
-
-type JwtPayload = {
-  role?: string;
-  roles?: string[];
-  scopeType?: string;
-  scope?: string;
-  [key: string]: unknown;
-};
-
-function decodeJwtPayload(token: string): JwtPayload | null {
-  try {
-    const parts = token.split(".");
-    if (parts.length !== 3) return null;
-
-    const payload = parts[1];
-    const normalized = payload.replace(/-/g, "+").replace(/_/g, "/");
-    const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, "=");
-    return JSON.parse(atob(padded)) as JwtPayload;
-  } catch {
-    return null;
-  }
-}
+import { decodeJwt } from "@/lib/jwt";
 
 function logTokenRoleDiagnostics(accessToken: string, admin: AdminUserInfo | null) {
-  const payload = decodeJwtPayload(accessToken);
+  const payload = decodeJwt(accessToken);
   if (!payload || !admin) return;
 
   const tokenRoles = Array.isArray(payload.roles)

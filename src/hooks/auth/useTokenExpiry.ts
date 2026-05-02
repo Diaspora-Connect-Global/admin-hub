@@ -11,6 +11,7 @@ import { getAccessToken, clearSession } from "@/stores/session";
 import { useSessionStore } from "@/stores/sessionStore";
 import { exchangeRefreshTokenForSession } from "@/services/networks/graphql/admin/refreshAccessToken";
 import { toast } from "@/hooks/use-toast";
+import { getJwtExpiry } from "@/lib/jwt";
 
 const INACTIVITY_TIMEOUT_MS = 15 * 60 * 1000; // 15 minutes of no interaction
 const WARN_BEFORE_MS = 60 * 1000;              // warn 60 s before that
@@ -20,16 +21,8 @@ const PROACTIVE_REFRESH_BEFORE_EXP_MS = 120_000;
 const ACTIVITY_EVENTS = ["mousedown", "mousemove", "keydown", "scroll", "touchstart", "click"] as const;
 
 function getTokenExpMs(token: string): number | null {
-  try {
-    const encoded = token.split(".")[1];
-    if (!encoded) return null;
-    const normalized = encoded.replace(/-/g, "+").replace(/_/g, "/");
-    const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, "=");
-    const payload = JSON.parse(atob(padded)) as { exp?: number };
-    return typeof payload.exp === "number" ? payload.exp * 1000 : null;
-  } catch {
-    return null;
-  }
+  const expiry = getJwtExpiry(token);
+  return expiry !== null ? expiry.getTime() : null;
 }
 
 export function useTokenExpiry() {

@@ -278,7 +278,7 @@ export default function Opportunities() {
   const canReviewApplications = isSystemAdmin || allowedReviewRoles.has(currentRoleName);
   const canSetPriority = isSystemAdmin || allowedPriorityRoles.has(currentRoleName);
   const isOpportunityReadAdmin = canManageOpportunityLifecycle || canReviewApplications;
-  const canUsePriorityActions = canSetPriority || window.location.hostname === "localhost";
+  const canUsePriorityActions = canSetPriority;
   const adminRoleName = adminProfile?.role?.name ?? "UNKNOWN_ROLE";
   const adminScopeType = adminProfile?.scopeType ?? "UNKNOWN_SCOPE";
 

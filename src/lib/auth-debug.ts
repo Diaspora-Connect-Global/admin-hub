@@ -4,24 +4,14 @@
  */
 
 import { getAccessToken, getAdminProfile } from "@/stores/session";
+import { decodeJwt } from "@/lib/jwt";
 
 /**
  * Decode a JWT token (without verification - for debugging only)
+ * @deprecated Use decodeJwt from @/lib/jwt directly.
  */
 export function decodeJWT(token: string): unknown {
-  try {
-    const parts = token.split('.');
-    if (parts.length !== 3) {
-      throw new Error('Invalid JWT format');
-    }
-    
-    const payload = parts[1];
-    const decoded = atob(payload.replace(/_/g, '/').replace(/-/g, '+'));
-    return JSON.parse(decoded);
-  } catch (error) {
-    console.error('Failed to decode JWT:', error);
-    return null;
-  }
+  return decodeJwt(token);
 }
 
 /**

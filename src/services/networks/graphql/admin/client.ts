@@ -46,17 +46,7 @@ const authLink = new ApolloLink((operation, forward) => {
       service: service,
       hasAuth: true,
       tokenLength: accessToken.length,
-      tokenPreview: accessToken.substring(0, 20) + '...',
       devUserId: devUserId ?? undefined,
-    });
-    
-    // Add detailed service logging
-    console.log(`🔍 ${service} Service Request:`, {
-      operation: operationType,
-      service: service,
-      hasToken: true,
-      tokenLength: accessToken.length,
-      tokenPreview: accessToken.substring(0, 20) + '...'
     });
   } else {
     if (isTokenOptionalOperation) {
@@ -76,7 +66,7 @@ const authLink = new ApolloLink((operation, forward) => {
     }
   }
   
-  if (devUserId) headers[DEV_USER_ID_HEADER_KEY] = devUserId;
+  if (import.meta.env.DEV && devUserId) headers[DEV_USER_ID_HEADER_KEY] = devUserId;
   operation.setContext({ headers });
   return forward(operation);
 });
