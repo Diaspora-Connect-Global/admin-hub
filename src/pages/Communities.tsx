@@ -199,7 +199,7 @@ export default function Communities() {
   )?.getUsers?.items ?? [];
 
   const { data: communityTypesData, loading: communityTypesLoading } = useListCommunityTypes();
-  const communityTypes: CommunityType[] = (communityTypesData as any)?.listCommunityTypes ?? [];
+  const communityTypes: CommunityType[] = communityTypesData?.listCommunityTypes ?? [];
 
   const filteredCommunities = rows
     .filter((community) => {

@@ -420,10 +420,16 @@ export {
   useGetUserGroups,
   useGetUserOpportunities,
   useGetUserTransactions,
+  useGetCommunityPostsAdmin,
+  useGetCommunityProductsAdmin,
   type UserPostListResponse,
   type UserGroupListResponse,
   type UserOpportunityListResponse,
   type UserTransactionListResponse,
+  type CommunityPost,
+  type CommunityPostListResponse,
+  type CommunityProduct,
+  type CommunityProductListResponse,
 } from "./useUserSubResources";
 
 export {

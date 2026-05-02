@@ -10,7 +10,10 @@ import {
   useGetUserGroups,
   useGetUserOpportunities,
   useGetUserTransactions,
+  useAdminBanUser,
+  useAdminUnbanUser,
 } from "@/hooks/admin";
+import { useApolloClient } from "@apollo/client/react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -27,9 +30,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
-import { 
-  Search, UserPlus, Download, ChevronDown, Eye, Pause, MoreHorizontal, 
-  Key, FileJson, Mail, Phone, Calendar, MapPin, Building2, Users
+import {
+  Search, UserPlus, Download, ChevronDown, Eye, Pause, MoreHorizontal,
+  Key, FileJson, Mail, Phone, Calendar, MapPin, Building2, Users,
+  Ban, ShieldOff, Loader2
 } from "lucide-react";
 
 /** Table row shape for the users table (API data mapped + defaults for missing fields). */
@@ -104,12 +108,59 @@ const getTrustScoreBadge = (score: number) => {
 export default function UserManagement() {
   const { toast } = useToast();
   const { t } = useTranslation();
+  const apolloClient = useApolloClient();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
   const [selectedUser, setSelectedUser] = useState<UserTableRow | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [pageOffset, setPageOffset] = useState(0);
   const pageLimit = 20;
+
+  // Ban / Unban state
+  const [banDialogOpen, setBanDialogOpen] = useState(false);
+  const [unbanDialogOpen, setUnbanDialogOpen] = useState(false);
+  const [banReason, setBanReason] = useState("");
+  const [banTargetUser, setBanTargetUser] = useState<UserTableRow | null>(null);
+
+  const [adminBanUser, { loading: banLoading }] = useAdminBanUser();
+  const [adminUnbanUser, { loading: unbanLoading }] = useAdminUnbanUser();
+
+  const openBanDialog = (user: UserTableRow) => {
+    setBanTargetUser(user);
+    setBanReason("");
+    setBanDialogOpen(true);
+  };
+
+  const openUnbanDialog = (user: UserTableRow) => {
+    setBanTargetUser(user);
+    setUnbanDialogOpen(true);
+  };
+
+  const handleBanUser = async () => {
+    if (!banTargetUser) return;
+    try {
+      await adminBanUser({ variables: { userId: banTargetUser.id, reason: banReason || "Violation of terms" } });
+      toast({ title: "User Banned", description: `${banTargetUser.name} has been banned.` });
+      setBanDialogOpen(false);
+      await apolloClient.refetchQueries({ include: ["GetUsers"] });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to ban user.";
+      toast({ title: "Error", description: msg, variant: "destructive" });
+    }
+  };
+
+  const handleUnbanUser = async () => {
+    if (!banTargetUser) return;
+    try {
+      await adminUnbanUser({ variables: { userId: banTargetUser.id } });
+      toast({ title: "User Unbanned", description: `${banTargetUser.name} has been unbanned.` });
+      setUnbanDialogOpen(false);
+      await apolloClient.refetchQueries({ include: ["GetUsers"] });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to unban user.";
+      toast({ title: "Error", description: msg, variant: "destructive" });
+    }
+  };
 
   const { data, loading, error } = useGetUsers({
     limit: pageLimit,
@@ -327,6 +378,16 @@ export default function UserManagement() {
                                   <DropdownMenuItem onClick={() => { setSelectedUser(user); setEditUserOpen(true); }}><UserPlus className="mr-2 h-4 w-4" /> Edit</DropdownMenuItem>
                                   <DropdownMenuItem onClick={() => { setSelectedUser(user); setSuspendUserOpen(true); }} className="text-destructive"><Pause className="mr-2 h-4 w-4" /> Suspend</DropdownMenuItem>
                                   <DropdownMenuSeparator />
+                                  {user.status !== "Suspended" ? (
+                                    <DropdownMenuItem onClick={() => openBanDialog(user)} className="text-destructive">
+                                      <Ban className="mr-2 h-4 w-4" /> Ban User
+                                    </DropdownMenuItem>
+                                  ) : (
+                                    <DropdownMenuItem onClick={() => openUnbanDialog(user)}>
+                                      <ShieldOff className="mr-2 h-4 w-4" /> Unban User
+                                    </DropdownMenuItem>
+                                  )}
+                                  <DropdownMenuSeparator />
                                   <DropdownMenuItem onClick={() => { setSelectedUser(user); setResetPasswordOpen(true); }}><Key className="mr-2 h-4 w-4" /> Reset Password</DropdownMenuItem>
                                   <DropdownMenuItem><FileJson className="mr-2 h-4 w-4" /> Export Data</DropdownMenuItem>
                                 </DropdownMenuContent>
@@ -384,6 +445,15 @@ export default function UserManagement() {
                   <Button size="sm" variant="outline" onClick={() => setEditUserOpen(true)}><UserPlus className="mr-2 h-4 w-4" /> Edit</Button>
                   <Button size="sm" variant="outline" onClick={() => setSuspendUserOpen(true)}><Pause className="mr-2 h-4 w-4" /> Suspend</Button>
                   <Button size="sm" variant="outline" onClick={() => setResetPasswordOpen(true)}><Key className="mr-2 h-4 w-4" /> Reset Password</Button>
+                  {selectedUser.status !== "Suspended" ? (
+                    <Button size="sm" variant="destructive" onClick={() => openBanDialog(selectedUser)} disabled={banLoading}>
+                      {banLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Ban className="mr-2 h-4 w-4" />} Ban User
+                    </Button>
+                  ) : (
+                    <Button size="sm" variant="outline" onClick={() => openUnbanDialog(selectedUser)} disabled={unbanLoading}>
+                      {unbanLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ShieldOff className="mr-2 h-4 w-4" />} Unban User
+                    </Button>
+                  )}
                 </div>
               </SheetHeader>
 
@@ -662,6 +732,50 @@ export default function UserManagement() {
           <DialogHeader><DialogTitle>Reset Password</DialogTitle><DialogDescription>Send password reset email to {selectedUser?.email}</DialogDescription></DialogHeader>
           <p className="py-4 text-sm text-muted-foreground">Are you sure you want to reset this user's password? They will receive an email to set a new password.</p>
           <DialogFooter><Button variant="outline" onClick={() => setResetPasswordOpen(false)}>Cancel</Button><Button onClick={() => { toast({ title: "Reset Email Sent" }); setResetPasswordOpen(false); }}>Confirm Reset</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Ban User Dialog */}
+      <Dialog open={banDialogOpen} onOpenChange={setBanDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Ban User</DialogTitle>
+            <DialogDescription>Ban {banTargetUser?.name} from the platform. They will lose access immediately.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Reason <span className="text-destructive">*</span></Label>
+              <Textarea
+                placeholder="Enter reason for ban..."
+                value={banReason}
+                onChange={(e) => setBanReason(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBanDialogOpen(false)} disabled={banLoading}>Cancel</Button>
+            <Button variant="destructive" onClick={handleBanUser} disabled={banLoading || !banReason.trim()}>
+              {banLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Ban User
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Unban User Dialog */}
+      <Dialog open={unbanDialogOpen} onOpenChange={setUnbanDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Unban User</DialogTitle>
+            <DialogDescription>Are you sure you want to unban {banTargetUser?.name}? They will regain access to the platform.</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setUnbanDialogOpen(false)} disabled={unbanLoading}>Cancel</Button>
+            <Button onClick={handleUnbanUser} disabled={unbanLoading}>
+              {unbanLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Confirm Unban
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </AdminLayout>

@@ -6,7 +6,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { Badge, type BadgeProps } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -33,7 +33,7 @@ interface ApplicationModalProps {
   onAccept: () => void;
 }
 
-const statusColors: Record<ApplicantStatus, string> = {
+const statusColors: Record<ApplicantStatus, BadgeProps["variant"]> = {
   PENDING: "secondary",
   REVIEWING: "default",
   ACCEPTED: "default",
@@ -59,7 +59,7 @@ export function ApplicationModal({
           <div className="flex items-start justify-between">
             <div>
               <DialogTitle className="text-xl">{applicant.name}</DialogTitle>
-              <Badge variant={statusColors[applicant.status] as any} className="mt-2 capitalize">
+              <Badge variant={statusColors[applicant.status]} className="mt-2 capitalize">
                 {applicant.status.toLowerCase()}
               </Badge>
             </div>

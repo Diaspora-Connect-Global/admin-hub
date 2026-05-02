@@ -3,6 +3,7 @@ import { useSessionStore } from "@/stores/sessionStore";
 import { logRouteAccessDenied } from "@/services/core/audit";
 import { useSessionStoreHydrated } from "@/hooks/useSessionStoreHydrated";
 import { SessionHydrationFallback } from "@/components/auth/SessionHydrationFallback";
+import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
 
 /**
  * Protects routes that require an authenticated admin session (Zustand store).
@@ -23,5 +24,9 @@ export function ProtectedRoute() {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  return <Outlet />;
+  return (
+    <ErrorBoundary>
+      <Outlet />
+    </ErrorBoundary>
+  );
 }

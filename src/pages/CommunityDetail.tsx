@@ -29,6 +29,8 @@ import {
   useUpdateCommunityJoinPolicy,
   useUpdateCommunityVisibility,
   useAssignCommunityAdmin,
+  useGetCommunityPostsAdmin,
+  useGetCommunityProductsAdmin,
 } from "@/hooks/admin";
 import { useListAdmins, useAssignAdminRole } from "@/hooks/admin/useAdminAccounts";
 import { useListCommunityTypes } from "@/hooks/admin/useEntityTypes";
@@ -51,17 +53,6 @@ import {
   FileText, Briefcase, History, Shield, Building2, Loader2, Upload,
   ChevronLeft, ChevronRight,
 } from "lucide-react";
-
-const postsData = [
-  { id: "PST-001", author: "John Doe", contentPreview: "Community Event Announcement...", media: "1 image", likes: 45, comments: 12, createdAt: "2024-01-20", status: "Pending" },
-  { id: "PST-002", author: "Jane Smith", contentPreview: "New Member Introduction...", media: "-", likes: 32, comments: 8, createdAt: "2024-01-19", status: "Approved" },
-];
-
-const vendorItems = [
-  { id: "ITM-001", title: "African Art Print", category: "Art", price: "$45", stock: 25, status: "Approved" },
-  { id: "ITM-002", title: "Kente Cloth", category: "Fashion", price: "$120", stock: 10, status: "Pending" },
-];
-
 
 const allCountries = [
   "Afghanistan", "Albania", "Algeria", "Andorra", "Angola", "Antigua and Barbuda", "Argentina", "Armenia", "Australia", "Austria",
@@ -139,7 +130,7 @@ export default function CommunityDetail() {
   } = useListCommunityAdmins(id ?? null, 20, 0);
   const { data: usersData } = useGetUsers({ limit: 500, offset: 0, skip: false });
   const { data: communityTypesData, loading: communityTypesLoading } = useListCommunityTypes();
-  const communityTypes: CommunityType[] = (communityTypesData as any)?.listCommunityTypes ?? [];
+  const communityTypes: CommunityType[] = communityTypesData?.listCommunityTypes ?? [];
   const { data: communityEventsData } = useGetEventsByOwner(
     id ? { ownerId: id, ownerType: "COMMUNITY", limit: 20, offset: 0 } : null,
   );
@@ -154,6 +145,20 @@ export default function CommunityDetail() {
     limit: 20,
     offset: 0,
   });
+
+  // Community posts (admin view) — requires backend resolver getCommunityPosts
+  const {
+    data: communityPostsData,
+    loading: communityPostsLoading,
+  } = useGetCommunityPostsAdmin(id ?? null, 20, 0);
+  const communityPosts = communityPostsData?.getCommunityPosts?.items ?? [];
+
+  // Community vendor products (admin view) — requires backend resolver getCommunityProducts
+  const {
+    data: communityProductsData,
+    loading: communityProductsLoading,
+  } = useGetCommunityProductsAdmin(id ?? null, 20, 0);
+  const communityProducts = communityProductsData?.getCommunityProducts?.items ?? [];
 
   const LINKED_ASSOCIATIONS_PAGE_SIZE = 20;
   const [linkedAssociationsOffset, setLinkedAssociationsOffset] = useState(0);
@@ -198,7 +203,7 @@ export default function CommunityDetail() {
         email: user?.email ?? userId,
         status: "Assigned",
         adminType: "Community admin",
-        roles: [],
+        roles: [] as CommunityAdminListItem['roles'],
       };
     },
   );
@@ -1099,43 +1104,55 @@ export default function CommunityDetail() {
                 <CardDescription>Posts published by the community, reactions, comments, and moderation controls.</CardDescription>
               </CardHeader>
               <CardContent className="p-0">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="border-border/50">
-                      <TableHead>Post ID</TableHead>
-                      <TableHead>Author</TableHead>
-                      <TableHead>Content Preview</TableHead>
-                      <TableHead>Media</TableHead>
-                      <TableHead>Likes</TableHead>
-                      <TableHead>Comments</TableHead>
-                      <TableHead>Created At</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {postsData.map((post) => (
-                      <TableRow key={post.id} className="border-border/50">
-                        <TableCell className="font-mono text-xs">{post.id}</TableCell>
-                        <TableCell>{post.author}</TableCell>
-                        <TableCell className="max-w-[200px] truncate">{post.contentPreview}</TableCell>
-                        <TableCell>{post.media}</TableCell>
-                        <TableCell>{post.likes}</TableCell>
-                        <TableCell>{post.comments}</TableCell>
-                        <TableCell className="text-muted-foreground">{post.createdAt}</TableCell>
-                        <TableCell>{getStatusBadge(post.status)}</TableCell>
-                        <TableCell>
-                          <div className="flex gap-1">
-                            <Button variant="ghost" size="icon" className="text-success"><Check className="h-4 w-4" /></Button>
-                            <Button variant="ghost" size="icon" className="text-destructive"><X className="h-4 w-4" /></Button>
-                            <Button variant="ghost" size="icon" className="text-destructive"><Trash2 className="h-4 w-4" /></Button>
-                            <Button variant="ghost" size="icon"><Eye className="h-4 w-4" /></Button>
-                          </div>
-                        </TableCell>
+                {communityPostsLoading ? (
+                  <div className="flex items-center justify-center py-10">
+                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                    <span className="ml-2 text-sm text-muted-foreground">Loading posts…</span>
+                  </div>
+                ) : communityPosts.length === 0 ? (
+                  <div className="text-center py-10">
+                    <FileText className="h-10 w-10 mx-auto text-muted-foreground mb-2" />
+                    <p className="text-sm text-muted-foreground">No posts found for this community.</p>
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="border-border/50">
+                        <TableHead>Post ID</TableHead>
+                        <TableHead>Author</TableHead>
+                        <TableHead>Content Preview</TableHead>
+                        <TableHead>Media</TableHead>
+                        <TableHead>Likes</TableHead>
+                        <TableHead>Comments</TableHead>
+                        <TableHead>Created At</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Actions</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {communityPosts.map((post) => (
+                        <TableRow key={post.id} className="border-border/50">
+                          <TableCell className="font-mono text-xs">{post.id}</TableCell>
+                          <TableCell>{post.authorName ?? post.authorId ?? "—"}</TableCell>
+                          <TableCell className="max-w-[200px] truncate">{post.content ?? "—"}</TableCell>
+                          <TableCell>{post.mediaCount != null ? `${post.mediaCount} file(s)` : "—"}</TableCell>
+                          <TableCell>{post.likeCount}</TableCell>
+                          <TableCell>{post.commentCount}</TableCell>
+                          <TableCell className="text-muted-foreground">{post.createdAt}</TableCell>
+                          <TableCell>{post.status ? getStatusBadge(post.status) : "—"}</TableCell>
+                          <TableCell>
+                            <div className="flex gap-1">
+                              <Button variant="ghost" size="icon" className="text-success"><Check className="h-4 w-4" /></Button>
+                              <Button variant="ghost" size="icon" className="text-destructive"><X className="h-4 w-4" /></Button>
+                              <Button variant="ghost" size="icon" className="text-destructive"><Trash2 className="h-4 w-4" /></Button>
+                              <Button variant="ghost" size="icon"><Eye className="h-4 w-4" /></Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
@@ -1235,13 +1252,24 @@ export default function CommunityDetail() {
                 <CardDescription>Manage community's vendor listings.</CardDescription>
               </CardHeader>
               <CardContent className="p-0">
-                {vendorEnabled ? (
+                {communityProductsLoading ? (
+                  <div className="flex items-center justify-center py-10">
+                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                    <span className="ml-2 text-sm text-muted-foreground">Loading products…</span>
+                  </div>
+                ) : communityProducts.length === 0 ? (
+                  <div className="text-center py-8">
+                    <Store className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
+                    <p className="text-muted-foreground">No vendor products found for this community.</p>
+                  </div>
+                ) : (
                   <Table>
                     <TableHeader>
                       <TableRow className="border-border/50">
                         <TableHead>Item ID</TableHead>
                         <TableHead>Title</TableHead>
-                        <TableHead>Category</TableHead>
+                        <TableHead>Vendor</TableHead>
+                        <TableHead>Type</TableHead>
                         <TableHead>Price</TableHead>
                         <TableHead>Stock</TableHead>
                         <TableHead>Status</TableHead>
@@ -1249,14 +1277,15 @@ export default function CommunityDetail() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {vendorItems.map((item) => (
+                      {communityProducts.map((item) => (
                         <TableRow key={item.id} className="border-border/50">
                           <TableCell className="font-mono text-xs">{item.id}</TableCell>
-                          <TableCell className="font-medium">{item.title}</TableCell>
-                          <TableCell>{item.category}</TableCell>
-                          <TableCell>{item.price}</TableCell>
-                          <TableCell>{item.stock}</TableCell>
-                          <TableCell>{getStatusBadge(item.status)}</TableCell>
+                          <TableCell className="font-medium">{item.title ?? item.name ?? "—"}</TableCell>
+                          <TableCell>{item.vendorName ?? item.vendorId ?? "—"}</TableCell>
+                          <TableCell>{item.productType ?? "—"}</TableCell>
+                          <TableCell>{item.price != null ? `${item.currency ?? ""} ${item.price}`.trim() : "—"}</TableCell>
+                          <TableCell>{item.inventoryCount ?? "—"}</TableCell>
+                          <TableCell>{item.status ? getStatusBadge(item.status) : "—"}</TableCell>
                           <TableCell>
                             <div className="flex gap-1">
                               <Button variant="ghost" size="icon" className="text-success"><Check className="h-4 w-4" /></Button>
@@ -1267,11 +1296,6 @@ export default function CommunityDetail() {
                       ))}
                     </TableBody>
                   </Table>
-                ) : (
-                  <div className="text-center py-8">
-                    <Store className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
-                    <p className="text-muted-foreground">Vendor mode is disabled for this community.</p>
-                  </div>
                 )}
               </CardContent>
             </Card>

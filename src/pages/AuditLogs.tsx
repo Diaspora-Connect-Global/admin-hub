@@ -47,6 +47,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { logger } from "@/lib/logger";
+import { useToast } from "@/hooks/use-toast";
 
 const logger_ = logger.child("AuditLogs");
 
@@ -89,6 +90,7 @@ function dateRangeToIso(dateRange: string, selectedDate?: Date): { fromDate?: st
 
 export default function AuditLogs() {
   const { t } = useTranslation();
+  const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
   const [dateRange, setDateRange] = useState<string>("all");
   const [selectedDate, setSelectedDate] = useState<Date>();
@@ -135,7 +137,35 @@ export default function AuditLogs() {
   };
 
   const exportCsv = () => {
-    logger_.info("Exporting CSV");
+    const entries = filteredLogs;
+    logger_.info("Exporting CSV", { count: entries.length });
+
+    const headers = ["timestamp", "actor", "action", "resourceType", "resourceId", "details"];
+    const escape = (val: string | null | undefined) => {
+      const s = val ?? "";
+      return s.includes(",") || s.includes('"') || s.includes("\n")
+        ? `"${s.replace(/"/g, '""')}"`
+        : s;
+    };
+    const rows = entries.map((e) =>
+      [
+        escape(format(new Date(e.createdAt), "yyyy-MM-dd HH:mm:ss")),
+        escape(e.actorId),
+        escape(e.action),
+        escape(e.resourceType),
+        escape(e.resourceId),
+        escape(e.ipAddress ?? ""),
+      ].join(",")
+    );
+    const csv = [headers.join(","), ...rows].join("\n");
+
+    const dateStr = format(new Date(), "yyyy-MM-dd");
+    const link = document.createElement("a");
+    link.href = "data:text/csv;charset=utf-8," + encodeURIComponent(csv);
+    link.download = `audit-logs-${dateStr}.csv`;
+    link.click();
+
+    toast({ title: `Exported ${entries.length} entries` });
   };
 
   return (

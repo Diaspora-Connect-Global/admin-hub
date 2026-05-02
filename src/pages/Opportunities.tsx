@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useDeferredValue } from "react";
 import { useLocation } from "react-router-dom";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import { useT } from "@/hooks/useT";
@@ -64,6 +64,7 @@ export default function Opportunities() {
   const { isSystemAdmin, adminProfile } = useAdminAuth();
 
   const [searchQuery, setSearchQuery] = useState("");
+  const deferredSearch = useDeferredValue(searchQuery);
   const [statusFilter, setStatusFilter] = useState<OpportunityStatusFilter>("ALL");
   const [typeFilter, setTypeFilter] = useState("all");
   const [viewMode, setViewMode] = useState<"list" | "card">("list");
@@ -84,29 +85,6 @@ export default function Opportunities() {
     status: statusFilter,
   };
   const { data: listData, loading: listLoading, error: listError, refetch: refetchList } = useListOpportunities(listInput);
-
-  // Debug logging
-  if (listError) {
-    console.error("❌ ListOpportunities error:", listError);
-  }
-  if (listData) {
-    const typedData = listData as ListOpportunitiesResponse | undefined;
-    console.log("✅ ListOpportunities query succeeded", {
-      query: listInput,
-      response: {
-        total: typedData?.listOpportunities?.total ?? 0,
-        count: typedData?.listOpportunities?.opportunities?.length ?? 0,
-        opportunities: typedData?.listOpportunities?.opportunities?.map((o) => ({
-          id: o.id,
-          title: o.title,
-          status: o.status,
-          type: o.type,
-          category: o.category,
-          createdAt: o.createdAt,
-        })) ?? [],
-      },
-    });
-  }
 
   const listDataTyped = listData as ListOpportunitiesResponse | undefined;
   const listTotal = listDataTyped?.listOpportunities?.total ?? 0;
@@ -470,7 +448,7 @@ export default function Opportunities() {
   };
 
   const filteredOpportunities = opportunities.filter((opp) => {
-    if (searchQuery && !opp.title.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+    if (deferredSearch && !opp.title.toLowerCase().includes(deferredSearch.toLowerCase())) return false;
     if (statusFilter !== "ALL" && opp.status !== statusFilter) return false;
     if (typeFilter !== "all" && opp.type !== typeFilter.toUpperCase()) return false;
     return true;

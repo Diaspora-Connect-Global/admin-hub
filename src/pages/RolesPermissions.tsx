@@ -132,7 +132,7 @@ export default function RolesPermissions() {
     loading: adminsLoading,
     refetch: refetchAdmins,
   } = useListAdmins(50);
-  const admins = ((adminsData as any)?.listAdmins?.admins as AdminAccount[]) ?? [];
+  const admins = adminsData?.listAdmins?.admins ?? [];
 
   const [revokeRoleMutation] = useRevokeAdminRole();
 

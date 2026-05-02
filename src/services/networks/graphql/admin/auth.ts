@@ -8,6 +8,9 @@ import { ADMIN_LOGIN, LOGOUT } from "./operations";
 import { exchangeRefreshTokenForSession } from "./refreshAccessToken";
 import { getAccessToken, clearSession } from "@/stores/session";
 import { decodeJwt } from "@/lib/jwt";
+import { logger } from "@/lib/logger";
+
+const log = logger.child("AdminAuth");
 
 function logTokenRoleDiagnostics(accessToken: string, admin: AdminUserInfo | null) {
   const payload = decodeJwt(accessToken);
@@ -30,11 +33,11 @@ function logTokenRoleDiagnostics(accessToken: string, admin: AdminUserInfo | nul
   const hasScopeMismatch = !!admin.scopeType && !!tokenScopeType && tokenScopeType !== admin.scopeType;
 
   if (hasRoleMismatch || hasScopeMismatch) {
-    console.warn("⚠️ Admin login role/token mismatch detected", {
-      adminRole: adminRoleName,
+    log.warn("Admin login role/token mismatch detected", {
+      adminRole: adminRoleName ?? "",
       adminScopeType: admin.scopeType,
-      tokenRoles,
-      tokenScopeType,
+      tokenRoles: tokenRoles.join(","),
+      tokenScopeType: tokenScopeType ?? "",
     });
   }
 }

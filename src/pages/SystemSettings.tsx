@@ -109,8 +109,8 @@ export default function SystemSettings() {
   const [deleteCommTypeMutation] = useDeleteCommunityType();
   const [deleteAssocTypeMutation] = useDeleteAssociationType();
 
-  const communityTypes = (commTypesData as any)?.listCommunityTypes ?? [];
-  const associationTypes = (assocTypesData as any)?.listAssociationTypes ?? [];
+  const communityTypes = commTypesData?.listCommunityTypes ?? [];
+  const associationTypes = assocTypesData?.listAssociationTypes ?? [];
 
   // Platform settings from GraphQL
   const {
@@ -194,22 +194,12 @@ export default function SystemSettings() {
     }
   };
 
-  // General settings state - initialize from localStorage
-  const [generalSettings, setGeneralSettings] = useState(() => {
-    const savedLanguage = localStorage.getItem('app-language') || 'en';
-    return {
-      platformName: "DiaspoPlug",
-      defaultCountry: "Nigeria",
-      timezone: "Africa/Lagos",
-      language: savedLanguage,
-    };
+  // General settings state
+  const [generalSettings, setGeneralSettings] = useState({
+    platformName: "DiaspoPlug",
+    defaultCountry: "Nigeria",
+    timezone: "Africa/Lagos",
   });
-
-  // Sync language changes with i18n and localStorage
-  useEffect(() => {
-    i18n.changeLanguage(generalSettings.language);
-    localStorage.setItem('app-language', generalSettings.language);
-  }, [generalSettings.language, i18n]);
 
   // Security settings state
   const [securitySettings, setSecuritySettings] = useState({
@@ -452,9 +442,9 @@ export default function SystemSettings() {
                       <Globe className="w-4 h-4" />
                       {t('settings.language')}
                     </Label>
-                    <Select 
-                      value={generalSettings.language}
-                      onValueChange={(value) => setGeneralSettings(prev => ({ ...prev, language: value }))}
+                    <Select
+                      value={i18n.language}
+                      onValueChange={(value) => i18n.changeLanguage(value)}
                     >
                       <SelectTrigger className="bg-secondary border-border">
                         <SelectValue placeholder="Select language" />

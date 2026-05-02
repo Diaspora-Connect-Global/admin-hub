@@ -1932,6 +1932,14 @@ export interface AdminDispute {
   resolvedBy?: string;
   createdAt: string;
   resolvedAt?: string;
+  // Extended display fields used in the UI table / detail sheet
+  type?: string;
+  title_summary?: string;
+  priority?: string;
+  raised_by?: string;
+  assigned_admin?: string;
+  related_entity?: string;
+  created_at?: string;
 }
 
 export interface AdminEscrow {
@@ -2897,6 +2905,97 @@ export const GET_VENDOR_SALES_ANALYTICS = gql`
       }
       totalRevenue
       totalOrders
+    }
+  }
+`;
+
+// ─── Community Sub-Resources (admin view) ────────────────────────────────────
+
+/**
+ * Fetch posts belonging to a specific community (admin view).
+ * TODO: Backend resolver `getCommunityPosts(communityId, limit, offset)` must be
+ * exposed on the admin-gateway before this query will resolve. The expected response
+ * shape mirrors the existing `getUserPosts` sub-resource pattern.
+ */
+export interface CommunityPost {
+  id: string;
+  authorId?: string;
+  authorName?: string;
+  content?: string;
+  postType?: string;
+  mediaCount?: number;
+  likeCount: number;
+  commentCount: number;
+  createdAt: string;
+  status?: string;
+}
+
+export interface CommunityPostListResponse {
+  items: CommunityPost[];
+  total: number;
+}
+
+export const GET_COMMUNITY_POSTS_ADMIN = gql`
+  query GetCommunityPostsAdmin($communityId: String!, $limit: Int, $offset: Int) {
+    getCommunityPosts(communityId: $communityId, limit: $limit, offset: $offset) {
+      items {
+        id
+        authorId
+        authorName
+        content
+        postType
+        mediaCount
+        likeCount
+        commentCount
+        createdAt
+        status
+      }
+      total
+    }
+  }
+`;
+
+/**
+ * Fetch vendor products listed under a specific community (admin view).
+ * TODO: Backend resolver `getCommunityProducts(communityId, limit, offset)` must be
+ * exposed on the admin-gateway. Shape matches `listVendorProducts` in the vendor service.
+ */
+export interface CommunityProduct {
+  id: string;
+  vendorId?: string;
+  vendorName?: string;
+  name?: string;
+  title?: string;
+  price?: number;
+  currency?: string;
+  inventoryCount?: number;
+  productType?: string;
+  status?: string;
+  createdAt?: string;
+}
+
+export interface CommunityProductListResponse {
+  items: CommunityProduct[];
+  total: number;
+}
+
+export const GET_COMMUNITY_PRODUCTS_ADMIN = gql`
+  query GetCommunityProductsAdmin($communityId: String!, $limit: Int, $offset: Int) {
+    getCommunityProducts(communityId: $communityId, limit: $limit, offset: $offset) {
+      items {
+        id
+        vendorId
+        vendorName
+        name
+        title
+        price
+        currency
+        inventoryCount
+        productType
+        status
+        createdAt
+      }
+      total
     }
   }
 `;

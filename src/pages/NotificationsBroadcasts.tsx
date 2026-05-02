@@ -1,4 +1,8 @@
 import { useState } from "react";
+import { logger } from "@/lib/logger";
+
+const log = logger.child("NotificationsBroadcasts");
+
 import {
   useGetBroadcastCampaigns,
   useSendBroadcast,
@@ -169,7 +173,7 @@ export default function NotificationsBroadcasts() {
       setBroadcastForm({ title: "", body: "", targetAudience: "ALL_USERS" });
       refetchBroadcasts();
     } catch (e) {
-      console.error(e);
+      log.error("Failed to send broadcast", { message: (e as Error).message });
     }
   };
 
@@ -515,16 +519,10 @@ export default function NotificationsBroadcasts() {
                           <TableRow key={broadcast.id}>
                             <TableCell className="font-medium">{broadcast.title}</TableCell>
                             <TableCell className="text-muted-foreground">
-                              {broadcast.targetAudience ??
-                                (broadcast as any).audience ??
-                                "—"}
+                              {broadcast.targetAudience ?? "—"}
                             </TableCell>
                             <TableCell>
-                              {(
-                                broadcast.recipientCount ??
-                                (broadcast as any).audienceCount ??
-                                0
-                              ).toLocaleString()}
+                              {(broadcast.recipientCount ?? 0).toLocaleString()}
                             </TableCell>
                             <TableCell>
                               {getStatusBadge((broadcast.status ?? "").toLowerCase())}
@@ -878,14 +876,10 @@ export default function NotificationsBroadcasts() {
                               {broadcast.title}
                             </TableCell>
                             <TableCell className="text-muted-foreground">
-                              {broadcast.targetAudience ?? (broadcast as any).audience}
+                              {broadcast.targetAudience}
                             </TableCell>
                             <TableCell>
-                              {(
-                                broadcast.recipientCount ??
-                                (broadcast as any).audienceCount ??
-                                0
-                              ).toLocaleString()}
+                              {(broadcast.recipientCount ?? 0).toLocaleString()}
                             </TableCell>
                             <TableCell>
                               {getStatusBadge((broadcast.status ?? "").toLowerCase())}
@@ -893,7 +887,7 @@ export default function NotificationsBroadcasts() {
                             <TableCell className="text-muted-foreground">
                               {broadcast.sentAt
                                 ? new Date(broadcast.sentAt).toLocaleDateString()
-                                : (broadcast as any).scheduledAt ?? "—"}
+                                : "—"}
                             </TableCell>
                             <TableCell>
                               <DropdownMenu>

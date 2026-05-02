@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useAdminListDisputes, useAdminResolveDispute, useGetAuditLogs } from "@/hooks/admin";
+import { useAdminListDisputes, useAdminResolveDispute, useGetAuditLogs, useListAdmins } from "@/hooks/admin";
 import { useTranslation } from "react-i18next";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import { Button } from "@/components/ui/button";
@@ -70,8 +70,6 @@ import {
 } from "lucide-react";
 
 
-const admins = ["Admin Sarah", "Admin Mike", "Admin John", "Admin Lisa", "System Admin"];
-
 export default function DisputesResolution() {
   const { toast } = useToast();
   const { t } = useTranslation();
@@ -83,6 +81,13 @@ export default function DisputesResolution() {
   const [selectedDispute, setSelectedDispute] = useState<import("@/hooks/admin").AdminDispute | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [newMessage, setNewMessage] = useState("");
+
+  // Admin list for assignment dropdowns
+  const { data: adminsData, loading: adminsLoading } = useListAdmins(100, 0);
+  const adminList = (adminsData?.listAdmins?.admins ?? []).map((admin) => ({
+    id: admin.id,
+    name: admin.email,
+  }));
 
   // Live data
   const { data: disputesData, loading: disputesLoading, refetch: refetchDisputes } = useAdminListDisputes({
@@ -530,10 +535,10 @@ export default function DisputesResolution() {
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {(disputeAuditData?.getAuditLogs?.items ?? []).length === 0 ? (
+                          {((disputeAuditData as { getAuditLogs?: { items?: { id: string; actorId?: string; action: string; createdAt: string; ipAddress?: string }[] } } | undefined)?.getAuditLogs?.items ?? []).length === 0 ? (
                             <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground py-6">No audit events found for this dispute</TableCell></TableRow>
                           ) : (
-                            (disputeAuditData?.getAuditLogs?.items ?? []).map((log: { id: string; actorId?: string; action: string; createdAt: string; ipAddress?: string }) => (
+                            ((disputeAuditData as { getAuditLogs?: { items?: { id: string; actorId?: string; action: string; createdAt: string; ipAddress?: string }[] } } | undefined)?.getAuditLogs?.items ?? []).map((log) => (
                               <TableRow key={log.id}>
                                 <TableCell className="text-sm">{new Date(log.createdAt).toLocaleString()}</TableCell>
                                 <TableCell>{log.action}</TableCell>
@@ -607,9 +612,13 @@ export default function DisputesResolution() {
                 <Select value={formData.assigned_admin} onValueChange={(v) => setFormData({ ...formData, assigned_admin: v })}>
                   <SelectTrigger><SelectValue placeholder="Select admin..." /></SelectTrigger>
                   <SelectContent className="bg-popover">
-                    {admins.map((admin) => (
-                      <SelectItem key={admin} value={admin}>{admin}</SelectItem>
-                    ))}
+                    {adminsLoading ? (
+                      <SelectItem value="loading" disabled>Loading admins...</SelectItem>
+                    ) : (
+                      adminList.map((admin) => (
+                        <SelectItem key={admin.id} value={admin.id}>{admin.name}</SelectItem>
+                      ))
+                    )}
                   </SelectContent>
                 </Select>
               </div>
@@ -634,9 +643,13 @@ export default function DisputesResolution() {
                 <Select value={assignTo} onValueChange={setAssignTo}>
                   <SelectTrigger><SelectValue placeholder="Select admin..." /></SelectTrigger>
                   <SelectContent className="bg-popover">
-                    {admins.map((admin) => (
-                      <SelectItem key={admin} value={admin}>{admin}</SelectItem>
-                    ))}
+                    {adminsLoading ? (
+                      <SelectItem value="loading" disabled>Loading admins...</SelectItem>
+                    ) : (
+                      adminList.map((admin) => (
+                        <SelectItem key={admin.id} value={admin.id}>{admin.name}</SelectItem>
+                      ))
+                    )}
                   </SelectContent>
                 </Select>
               </div>

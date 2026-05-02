@@ -7,7 +7,7 @@ import {
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
+import { Badge, type BadgeProps } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Select,
@@ -56,7 +56,7 @@ interface ApplicantsDrawerProps {
   onExport: () => void;
 }
 
-const statusColors: Record<ApplicantStatus, string> = {
+const statusColors: Record<ApplicantStatus, BadgeProps["variant"]> = {
   PENDING: "secondary",
   REVIEWING: "default",
   ACCEPTED: "default",
@@ -168,7 +168,7 @@ export function ApplicantsDrawer({
                       {applicant.appliedAt}
                     </TableCell>
                     <TableCell>
-                      <Badge variant={statusColors[applicant.status] as any} className="capitalize">
+                      <Badge variant={statusColors[applicant.status]} className="capitalize">
                         {applicant.status.toLowerCase()}
                       </Badge>
                     </TableCell>

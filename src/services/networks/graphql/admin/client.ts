@@ -59,10 +59,6 @@ const authLink = new ApolloLink((operation, forward) => {
         operation: operationType,
         service: service,
       });
-      console.warn(`❌ ${service} Service Request: NO TOKEN`, {
-        operation: operationType,
-        service: service
-      });
     }
   }
   
@@ -96,15 +92,6 @@ const errorLogLink = new ApolloLink((operation, forward) => {
                 path: e.path,
               })),
             });
-            
-            // Add detailed error logging
-            console.error(`❌ ${service} Service Error:`, {
-              operation: operationType,
-              service: service,
-              errors: response.errors.map(e => e.message),
-              path: response.errors.map(e => e.path).filter(Boolean)
-            });
-            console.warn(`🚫 ${service} permission denied for ${operationType}. Session kept active.`);
           } else if (isUnauthenticated) {
             log.warn("GraphQL authentication error", {
               operation: operationType,
@@ -116,7 +103,6 @@ const errorLogLink = new ApolloLink((operation, forward) => {
               })),
             });
 
-            console.warn(`🔄 ${service} authentication expired for ${operationType}. Session kept active (inactivity timer controls logout).`);
           } else {
             log.warn("GraphQL errors", {
               operation: operation.operationName,

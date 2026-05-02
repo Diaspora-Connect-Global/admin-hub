@@ -1,4 +1,7 @@
 import { Component, type ErrorInfo, type ReactNode } from "react";
+import { logger } from "@/lib/logger";
+
+const log = logger.child("RootErrorBoundary");
 
 type Props = { children: ReactNode };
 type State = { error: Error | null };
@@ -14,7 +17,11 @@ export class RootErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, info: ErrorInfo): void {
-    console.error("[RootErrorBoundary]", error, info.componentStack);
+    log.error("Unhandled React error", {
+      message: error.message,
+      stack: error.stack ?? "",
+      componentStack: info.componentStack ?? "",
+    });
   }
 
   render(): ReactNode {

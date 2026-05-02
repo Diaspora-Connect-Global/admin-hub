@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,7 +18,6 @@ import { login as authLogin } from "@/services/networks/graphql/admin";
 import { setAccessToken, setRefreshToken, setUserId, setUserEmail, setAdminProfile } from "@/stores/session";
 import { logLogin } from "@/services/core/audit";
 import { useSessionStore } from "@/stores/sessionStore";
-import { useEffect } from "react";
 import { useSessionStoreHydrated } from "@/hooks/useSessionStoreHydrated";
 import { SessionHydrationFallback } from "@/components/auth/SessionHydrationFallback";
 
@@ -58,6 +57,13 @@ export default function Login() {
   const [forgotPasswordOpen, setForgotPasswordOpen] = useState(false);
   const [resetEmail, setResetEmail] = useState("");
   const [isResetting, setIsResetting] = useState(false);
+  const resetTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (resetTimeoutRef.current !== null) clearTimeout(resetTimeoutRef.current);
+    };
+  }, []);
 
   const validateForm = () => {
     const newErrors: { email?: string; password?: string } = {};
@@ -141,8 +147,8 @@ export default function Login() {
     }
     
     setIsResetting(true);
-    
-    setTimeout(() => {
+
+    resetTimeoutRef.current = setTimeout(() => {
       setIsResetting(false);
       setForgotPasswordOpen(false);
       setResetEmail("");
@@ -192,11 +198,13 @@ export default function Login() {
                       onChange={(e) => setEmail(e.target.value)}
                       className={`pl-10 ${errors.email ? "border-destructive" : ""}`}
                       aria-label="Admin Email"
+                      aria-invalid={!!errors.email}
+                      aria-describedby={errors.email ? "email-error" : undefined}
                       disabled={isLoading}
                     />
                   </div>
                   {errors.email && (
-                    <p className="text-xs text-destructive">{errors.email}</p>
+                    <p id="email-error" role="alert" className="text-xs text-destructive">{errors.email}</p>
                   )}
                 </div>
 
@@ -213,6 +221,8 @@ export default function Login() {
                       onChange={(e) => setPassword(e.target.value)}
                       className={`pl-10 pr-10 ${errors.password ? "border-destructive" : ""}`}
                       aria-label="Admin Password"
+                      aria-invalid={!!errors.password}
+                      aria-describedby={errors.password ? "password-error" : undefined}
                       disabled={isLoading}
                     />
                     <button
@@ -229,7 +239,7 @@ export default function Login() {
                     </button>
                   </div>
                   {errors.password && (
-                    <p className="text-xs text-destructive">{errors.password}</p>
+                    <p id="password-error" role="alert" className="text-xs text-destructive">{errors.password}</p>
                   )}
                 </div>
 
