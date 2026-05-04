@@ -319,8 +319,12 @@ export {
 
 export {
   useGetPlatformSettings,
+  useGetPlatformSetting,
   useSetPlatformSetting,
+  useSetBatchPlatformSettings,
   type PlatformSetting,
+  type SetPlatformSettingInput,
+  type SetBatchPlatformSettingsInput,
 } from "./usePlatformSettings";
 
 export {

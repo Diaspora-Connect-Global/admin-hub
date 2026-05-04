@@ -146,18 +146,58 @@ export default function SystemSettings() {
   // Seed local state once platform settings are fetched
   useEffect(() => {
     if (platformSettings.length === 0) return;
+
+    // Security platform settings (numeric inputs card)
     setSecurityPlatformSettings({
       max_login_attempts: getSetting("max_login_attempts") || "5",
       session_timeout_hours: getSetting("session_timeout_hours") || "24",
     });
+
+    // Payment platform settings (numeric/kyc card)
     setPaymentPlatformSettings({
       default_commission_rate: getSetting("default_commission_rate") || "10",
       min_payout_amount: getSetting("min_payout_amount") || "10",
       kyc_required_for_payout: getSetting("kyc_required_for_payout") || "false",
     });
+
+    // System platform settings (maintenance + upload size)
     setSystemPlatformSettings({
       maintenance_mode: getSetting("maintenance_mode") || "false",
       max_upload_size_mb: getSetting("max_upload_size_mb") || "50",
+    });
+
+    // General — Platform Info card
+    setGeneralSettings({
+      platformName: getSetting("platform_name") || "DiaspoPlug",
+      defaultCountry: getSetting("default_country") || "Nigeria",
+      timezone: getSetting("timezone") || "Africa/Lagos",
+      language: getSetting("default_language") || "en",
+      theme: getSetting("theme_mode") || "system",
+    });
+
+    // Security — Authentication + Session Controls cards
+    setSecuritySettings({
+      twoFactorEnabled: getSetting("two_factor_enabled") === "true",
+      passwordRules: getSetting("password_policy") || "medium",
+      sessionTimeout: getSetting("session_timeout_hours") || "30",
+      multipleDeviceLogins: getSetting("multiple_device_logins") !== "false",
+    });
+
+    // Payments — Escrow + Payment Gateways cards
+    setPaymentSettings({
+      escrowReleaseRules: getSetting("escrow_release_rules") || "hybrid",
+      disputeTimeWindow: getSetting("dispute_time_window") || "72",
+      usdtEnabled: getSetting("usdt_enabled") !== "false",
+      cardEnabled: getSetting("card_enabled") === "true",
+      mobileMoneyEnabled: getSetting("mobile_money_enabled") !== "false",
+    });
+
+    // Content & Moderation
+    setContentSettings({
+      imageUploadsEnabled: getSetting("image_uploads_enabled") !== "false",
+      maxImageSize: getSetting("max_image_size") || "5",
+      videoUploadsEnabled: getSetting("video_uploads_enabled") === "true",
+      autoHideFlagged: getSetting("auto_hide_flagged") !== "false",
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [platformSettingsData]);
@@ -194,14 +234,16 @@ export default function SystemSettings() {
     }
   };
 
-  // General settings state
+  // General settings state (Platform Info card)
   const [generalSettings, setGeneralSettings] = useState({
     platformName: "DiaspoPlug",
     defaultCountry: "Nigeria",
     timezone: "Africa/Lagos",
+    language: "en",
+    theme: "system",
   });
 
-  // Security settings state
+  // Security settings state (Authentication + Session Controls cards)
   const [securitySettings, setSecuritySettings] = useState({
     twoFactorEnabled: false,
     passwordRules: "medium",
@@ -209,7 +251,7 @@ export default function SystemSettings() {
     multipleDeviceLogins: true,
   });
 
-  // Payment settings state
+  // Payment settings state (Escrow + Payment Gateways cards)
   const [paymentSettings, setPaymentSettings] = useState({
     escrowReleaseRules: "hybrid",
     disputeTimeWindow: "72",
@@ -218,20 +260,20 @@ export default function SystemSettings() {
     mobileMoneyEnabled: true,
   });
 
-  // Notification settings state
-  const [notificationSettings, setNotificationSettings] = useState({
-    fcmServerKey: "",
-    pushEnabled: true,
-    supportEmail: "support@diaspoplug.com",
-    smsSenderId: "DCGlobal",
-  });
-
-  // Content settings state
+  // Content & Moderation settings state
   const [contentSettings, setContentSettings] = useState({
     imageUploadsEnabled: true,
     maxImageSize: "5",
     videoUploadsEnabled: false,
     autoHideFlagged: true,
+  });
+
+  // Notification settings state (Notifications tab — intentionally not wired to backend)
+  const [notificationSettings, setNotificationSettings] = useState({
+    fcmServerKey: "",
+    pushEnabled: true,
+    supportEmail: "support@diaspoplug.com",
+    smsSenderId: "DCGlobal",
   });
 
   const handleSave = (section: string) => {
@@ -385,27 +427,32 @@ export default function SystemSettings() {
 
             <Card className="bg-card border-border">
               <CardHeader>
-                <CardTitle className="text-lg">Platform Info</CardTitle>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  Platform Info
+                  {platformSettingsLoading && <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />}
+                </CardTitle>
                 <CardDescription>General configuration for the DiaspoPlug platform.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   <div className="space-y-2">
                     <Label>Platform Name</Label>
-                    <Input 
+                    <Input
                       placeholder="DiaspoPlug"
                       value={generalSettings.platformName}
                       onChange={(e) => setGeneralSettings(prev => ({ ...prev, platformName: e.target.value }))}
                       className="bg-secondary border-border"
+                      disabled={platformSettingsLoading}
                     />
                     <p className="text-xs text-muted-foreground">Updates platform name displayed on login & home screens.</p>
                   </div>
                   
                   <div className="space-y-2">
                     <Label>Default Country</Label>
-                    <Select 
+                    <Select
                       value={generalSettings.defaultCountry}
                       onValueChange={(value) => setGeneralSettings(prev => ({ ...prev, defaultCountry: value }))}
+                      disabled={platformSettingsLoading}
                     >
                       <SelectTrigger className="bg-secondary border-border">
                         <SelectValue placeholder="Select country" />
@@ -418,12 +465,13 @@ export default function SystemSettings() {
                     </Select>
                     <p className="text-xs text-muted-foreground">Sets the default country for onboarding.</p>
                   </div>
-                  
+
                   <div className="space-y-2">
                     <Label>Timezone</Label>
-                    <Select 
+                    <Select
                       value={generalSettings.timezone}
                       onValueChange={(value) => setGeneralSettings(prev => ({ ...prev, timezone: value }))}
+                      disabled={platformSettingsLoading}
                     >
                       <SelectTrigger className="bg-secondary border-border">
                         <SelectValue placeholder="Select timezone" />
@@ -436,15 +484,19 @@ export default function SystemSettings() {
                     </Select>
                     <p className="text-xs text-muted-foreground">Affects timestamps across the system.</p>
                   </div>
-                  
+
                   <div className="space-y-2">
                     <Label className="flex items-center gap-2">
                       <Globe className="w-4 h-4" />
                       {t('settings.language')}
                     </Label>
                     <Select
-                      value={i18n.language}
-                      onValueChange={(value) => i18n.changeLanguage(value)}
+                      value={generalSettings.language}
+                      onValueChange={(value) => {
+                        setGeneralSettings(prev => ({ ...prev, language: value }));
+                        i18n.changeLanguage(value);
+                      }}
+                      disabled={platformSettingsLoading}
                     >
                       <SelectTrigger className="bg-secondary border-border">
                         <SelectValue placeholder="Select language" />
@@ -457,15 +509,19 @@ export default function SystemSettings() {
                     </Select>
                     <p className="text-xs text-muted-foreground">Sets the platform display language.</p>
                   </div>
-                  
+
                   <div className="space-y-2">
                     <Label className="flex items-center gap-2">
-                      {theme === "dark" ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
+                      {generalSettings.theme === "dark" ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
                       {t('settings.themeMode')}
                     </Label>
-                    <Select 
-                      value={theme}
-                      onValueChange={(value) => setTheme(value)}
+                    <Select
+                      value={generalSettings.theme}
+                      onValueChange={(value) => {
+                        setGeneralSettings(prev => ({ ...prev, theme: value }));
+                        setTheme(value);
+                      }}
+                      disabled={platformSettingsLoading}
                     >
                       <SelectTrigger className="bg-secondary border-border">
                         <SelectValue placeholder="Select theme" />
@@ -481,8 +537,28 @@ export default function SystemSettings() {
                 </div>
                 
                 <div className="flex justify-end pt-4 border-t border-border">
-                  <Button onClick={() => handleSave("General")} className="gap-2">
-                    <Save className="w-4 h-4" />
+                  <Button
+                    onClick={() =>
+                      handleSavePlatformSettings(
+                        ["platform_name", "default_country", "timezone", "default_language", "theme_mode"],
+                        {
+                          platform_name: generalSettings.platformName,
+                          default_country: generalSettings.defaultCountry,
+                          timezone: generalSettings.timezone,
+                          default_language: generalSettings.language,
+                          theme_mode: generalSettings.theme,
+                        },
+                        "General",
+                      )
+                    }
+                    disabled={platformSettingsLoading || savingPlatformSetting}
+                    className="gap-2"
+                  >
+                    {savingPlatformSetting ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Save className="w-4 h-4" />
+                    )}
                     Save Changes
                   </Button>
                 </div>
@@ -576,6 +652,7 @@ export default function SystemSettings() {
                     <Switch
                       checked={securitySettings.twoFactorEnabled}
                       onCheckedChange={(checked) => setSecuritySettings(prev => ({ ...prev, twoFactorEnabled: checked }))}
+                      disabled={platformSettingsLoading}
                     />
                   </div>
 
@@ -584,6 +661,7 @@ export default function SystemSettings() {
                     <Select
                       value={securitySettings.passwordRules}
                       onValueChange={(value) => setSecuritySettings(prev => ({ ...prev, passwordRules: value }))}
+                      disabled={platformSettingsLoading}
                     >
                       <SelectTrigger className="bg-secondary border-border">
                         <SelectValue />
@@ -609,6 +687,7 @@ export default function SystemSettings() {
                     <Select
                       value={securitySettings.sessionTimeout}
                       onValueChange={(value) => setSecuritySettings(prev => ({ ...prev, sessionTimeout: value }))}
+                      disabled={platformSettingsLoading}
                     >
                       <SelectTrigger className="bg-secondary border-border">
                         <SelectValue />
@@ -631,6 +710,7 @@ export default function SystemSettings() {
                     <Switch
                       checked={securitySettings.multipleDeviceLogins}
                       onCheckedChange={(checked) => setSecuritySettings(prev => ({ ...prev, multipleDeviceLogins: checked }))}
+                      disabled={platformSettingsLoading}
                     />
                   </div>
                 </CardContent>
@@ -638,8 +718,26 @@ export default function SystemSettings() {
             </div>
 
             <div className="flex justify-end">
-              <Button onClick={() => handleSave("Security")} className="gap-2">
-                <Save className="w-4 h-4" />
+              <Button
+                onClick={() =>
+                  handleSavePlatformSettings(
+                    ["two_factor_enabled", "password_policy", "multiple_device_logins"],
+                    {
+                      two_factor_enabled: String(securitySettings.twoFactorEnabled),
+                      password_policy: securitySettings.passwordRules,
+                      multiple_device_logins: String(securitySettings.multipleDeviceLogins),
+                    },
+                    "Security",
+                  )
+                }
+                disabled={platformSettingsLoading || savingPlatformSetting}
+                className="gap-2"
+              >
+                {savingPlatformSetting ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Save className="w-4 h-4" />
+                )}
                 Save Security Settings
               </Button>
             </div>
@@ -746,9 +844,10 @@ export default function SystemSettings() {
                 <CardContent className="space-y-6">
                   <div className="space-y-2">
                     <Label>Escrow Release Rules</Label>
-                    <Select 
+                    <Select
                       value={paymentSettings.escrowReleaseRules}
                       onValueChange={(value) => setPaymentSettings(prev => ({ ...prev, escrowReleaseRules: value }))}
+                      disabled={platformSettingsLoading}
                     >
                       <SelectTrigger className="bg-secondary border-border">
                         <SelectValue />
@@ -760,12 +859,13 @@ export default function SystemSettings() {
                       </SelectContent>
                     </Select>
                   </div>
-                  
+
                   <div className="space-y-2">
                     <Label>Dispute Time Window</Label>
-                    <Select 
+                    <Select
                       value={paymentSettings.disputeTimeWindow}
                       onValueChange={(value) => setPaymentSettings(prev => ({ ...prev, disputeTimeWindow: value }))}
+                      disabled={platformSettingsLoading}
                     >
                       <SelectTrigger className="bg-secondary border-border">
                         <SelectValue />
@@ -792,31 +892,34 @@ export default function SystemSettings() {
                       <Label>Enable USDT Payments</Label>
                       <p className="text-xs text-muted-foreground mt-1">Allow cryptocurrency payments via USDT.</p>
                     </div>
-                    <Switch 
+                    <Switch
                       checked={paymentSettings.usdtEnabled}
                       onCheckedChange={(checked) => setPaymentSettings(prev => ({ ...prev, usdtEnabled: checked }))}
+                      disabled={platformSettingsLoading}
                     />
                   </div>
-                  
+
                   <div className="flex items-center justify-between">
                     <div>
                       <Label>Enable Card Payments</Label>
                       <p className="text-xs text-muted-foreground mt-1">Accept credit/debit card payments.</p>
                     </div>
-                    <Switch 
+                    <Switch
                       checked={paymentSettings.cardEnabled}
                       onCheckedChange={(checked) => setPaymentSettings(prev => ({ ...prev, cardEnabled: checked }))}
+                      disabled={platformSettingsLoading}
                     />
                   </div>
-                  
+
                   <div className="flex items-center justify-between">
                     <div>
                       <Label>Enable Mobile Money</Label>
                       <p className="text-xs text-muted-foreground mt-1">Accept mobile money payments.</p>
                     </div>
-                    <Switch 
+                    <Switch
                       checked={paymentSettings.mobileMoneyEnabled}
                       onCheckedChange={(checked) => setPaymentSettings(prev => ({ ...prev, mobileMoneyEnabled: checked }))}
+                      disabled={platformSettingsLoading}
                     />
                   </div>
                 </CardContent>
@@ -824,8 +927,28 @@ export default function SystemSettings() {
             </div>
             
             <div className="flex justify-end">
-              <Button onClick={() => handleSave("Payment")} className="gap-2">
-                <Save className="w-4 h-4" />
+              <Button
+                onClick={() =>
+                  handleSavePlatformSettings(
+                    ["escrow_release_rules", "dispute_time_window", "usdt_enabled", "card_enabled", "mobile_money_enabled"],
+                    {
+                      escrow_release_rules: paymentSettings.escrowReleaseRules,
+                      dispute_time_window: paymentSettings.disputeTimeWindow,
+                      usdt_enabled: String(paymentSettings.usdtEnabled),
+                      card_enabled: String(paymentSettings.cardEnabled),
+                      mobile_money_enabled: String(paymentSettings.mobileMoneyEnabled),
+                    },
+                    "Payment",
+                  )
+                }
+                disabled={platformSettingsLoading || savingPlatformSetting}
+                className="gap-2"
+              >
+                {savingPlatformSetting ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Save className="w-4 h-4" />
+                )}
                 Save Payment Settings
               </Button>
             </div>
@@ -912,7 +1035,10 @@ export default function SystemSettings() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <Card className="bg-card border-border">
                 <CardHeader>
-                  <CardTitle className="text-lg">Post Policies</CardTitle>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    Post Policies
+                    {platformSettingsLoading && <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />}
+                  </CardTitle>
                   <CardDescription>Configure content upload rules and limits.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
@@ -921,17 +1047,19 @@ export default function SystemSettings() {
                       <Label>Allow Image Uploads</Label>
                       <p className="text-xs text-muted-foreground mt-1">Users can upload images to posts.</p>
                     </div>
-                    <Switch 
+                    <Switch
                       checked={contentSettings.imageUploadsEnabled}
                       onCheckedChange={(checked) => setContentSettings(prev => ({ ...prev, imageUploadsEnabled: checked }))}
+                      disabled={platformSettingsLoading}
                     />
                   </div>
-                  
+
                   <div className="space-y-2">
                     <Label>Max Image Size</Label>
-                    <Select 
+                    <Select
                       value={contentSettings.maxImageSize}
                       onValueChange={(value) => setContentSettings(prev => ({ ...prev, maxImageSize: value }))}
+                      disabled={platformSettingsLoading}
                     >
                       <SelectTrigger className="bg-secondary border-border">
                         <SelectValue />
@@ -943,15 +1071,16 @@ export default function SystemSettings() {
                       </SelectContent>
                     </Select>
                   </div>
-                  
+
                   <div className="flex items-center justify-between">
                     <div>
                       <Label>Allow Video Uploads</Label>
                       <p className="text-xs text-muted-foreground mt-1">Users can upload videos to posts.</p>
                     </div>
-                    <Switch 
+                    <Switch
                       checked={contentSettings.videoUploadsEnabled}
                       onCheckedChange={(checked) => setContentSettings(prev => ({ ...prev, videoUploadsEnabled: checked }))}
+                      disabled={platformSettingsLoading}
                     />
                   </div>
                 </CardContent>
@@ -968,9 +1097,10 @@ export default function SystemSettings() {
                       <Label>Auto-hide Flagged Content</Label>
                       <p className="text-xs text-muted-foreground mt-1">Automatically hide content that has been flagged by users until reviewed.</p>
                     </div>
-                    <Switch 
+                    <Switch
                       checked={contentSettings.autoHideFlagged}
                       onCheckedChange={(checked) => setContentSettings(prev => ({ ...prev, autoHideFlagged: checked }))}
+                      disabled={platformSettingsLoading}
                     />
                   </div>
                 </CardContent>
@@ -978,8 +1108,27 @@ export default function SystemSettings() {
             </div>
             
             <div className="flex justify-end">
-              <Button onClick={() => handleSave("Content")} className="gap-2">
-                <Save className="w-4 h-4" />
+              <Button
+                onClick={() =>
+                  handleSavePlatformSettings(
+                    ["image_uploads_enabled", "max_image_size", "video_uploads_enabled", "auto_hide_flagged"],
+                    {
+                      image_uploads_enabled: String(contentSettings.imageUploadsEnabled),
+                      max_image_size: contentSettings.maxImageSize,
+                      video_uploads_enabled: String(contentSettings.videoUploadsEnabled),
+                      auto_hide_flagged: String(contentSettings.autoHideFlagged),
+                    },
+                    "Content",
+                  )
+                }
+                disabled={platformSettingsLoading || savingPlatformSetting}
+                className="gap-2"
+              >
+                {savingPlatformSetting ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Save className="w-4 h-4" />
+                )}
                 Save Content Rules
               </Button>
             </div>

@@ -2336,6 +2336,35 @@ export const SET_PLATFORM_SETTING = gql`
   }
 `;
 
+export const GET_PLATFORM_SETTING = gql`
+  query GetPlatformSetting($key: String!) {
+    getPlatformSetting(key: $key) {
+      key
+      value
+      category
+      description
+      updatedBy
+      updatedAt
+    }
+  }
+`;
+
+export interface SetBatchPlatformSettingsInput {
+  settings: SetPlatformSettingInput[];
+}
+
+export const SET_BATCH_PLATFORM_SETTINGS = gql`
+  mutation SetBatchPlatformSettings($input: SetBatchPlatformSettingsInput!) {
+    setBatchPlatformSettings(input: $input) {
+      key
+      value
+      category
+      updatedBy
+      updatedAt
+    }
+  }
+`;
+
 // ─── Broadcast / Campaign Notifications ──────────────────────────────────────
 
 export interface BroadcastCampaign {
