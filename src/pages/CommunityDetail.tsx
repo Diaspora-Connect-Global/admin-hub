@@ -314,7 +314,7 @@ export default function CommunityDetail() {
     setEditForm({
       name: community.name ?? "",
       description: community.description ?? "",
-      communityType: community.communityTypeId ?? community.communityType?.name ?? "",
+      communityType: community.communityTypeId ?? community.communityType?.id ?? "",
       visibility: community.visibility === "PRIVATE" ? "PRIVATE" : "PUBLIC",
       joinPolicy: joinPolicyFromCommunity(community.joinPolicy),
       paymentType:
@@ -323,7 +323,7 @@ export default function CommunityDetail() {
           : "NONE",
       priceAmount: community.priceAmount != null ? String(community.priceAmount) : "",
       priceCurrency: community.priceCurrency ?? "EUR",
-      countriesServed: [...(community.countriesServed ?? [])],
+      countriesServed: (community.countriesServed ?? []).map(iso2OrLabelToDisplayName).filter(Boolean),
       logoBanner: null,
       rules: community.communityRules ?? "",
       whoCanPost: community.whoCanPost === "ALL_MEMBERS" ? "ALL_MEMBERS" : "ADMIN_ONLY",
@@ -333,8 +333,8 @@ export default function CommunityDetail() {
       contactEmail: community.contactEmail ?? "",
       contactPhone: community.contactPhone ?? "",
       website: community.website ?? "",
-      embassyCountry: community.embassyCountry ?? "",
-      locationCountry: community.locationCountry ?? "",
+      embassyCountry: iso2OrLabelToDisplayName(community.embassyCountry) || "",
+      locationCountry: iso2OrLabelToDisplayName(community.locationCountry) || "",
     });
   }, [community]);
 
