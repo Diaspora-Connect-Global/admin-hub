@@ -87,6 +87,15 @@ function joinPolicyFromCommunity(joinPolicy: string | undefined): "FREE" | "PAID
   return joinPolicy === "PAID" ? "PAID" : "FREE";
 }
 
+function groupCreationApiToUi(api: string | undefined): string {
+  const map: Record<string, string> = {
+    ADMIN_ONLY: "Admins Only",
+    ALL_MEMBERS: "All Members",
+    MODERATORS: "Moderators",
+  };
+  return map[api ?? ""] ?? api ?? "Admins Only";
+}
+
 /** Matches GET_AUDIT_LOGS `items` selection in admin operations. */
 interface AuditLogItem {
   resourceType?: string | null;
@@ -327,7 +336,7 @@ export default function CommunityDetail() {
       logoBanner: null,
       rules: community.communityRules ?? "",
       whoCanPost: community.whoCanPost === "ALL_MEMBERS" ? "ALL_MEMBERS" : "ADMIN_ONLY",
-      groupCreationPermission: community.groupCreationPermission ?? "Admins Only",
+      groupCreationPermission: groupCreationApiToUi(community.groupCreationPermission),
       postModeration: true,
       address: community.address ?? "",
       contactEmail: community.contactEmail ?? "",
@@ -678,6 +687,7 @@ export default function CommunityDetail() {
         joinPolicy: string;
         priceAmount?: number;
         priceCurrency?: string;
+        paymentType?: string;
       } = {
         communityId: community.id,
         joinPolicy: desiredJoinApi,
@@ -685,6 +695,7 @@ export default function CommunityDetail() {
       if (desiredJoinApi === "PAID" && priceAmountNum != null) {
         joinPolicyInput.priceAmount = priceAmountNum;
         joinPolicyInput.priceCurrency = editForm.priceCurrency.trim() || "EUR";
+        joinPolicyInput.paymentType = editForm.paymentType || "ONE_TIME";
       }
       await updateJoinPolicyMutation({
         variables: { input: joinPolicyInput },
