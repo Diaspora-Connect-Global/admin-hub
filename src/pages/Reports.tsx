@@ -43,6 +43,7 @@ import {
   FileSpreadsheet,
   File,
   MessageSquare,
+  Bell,
 } from "lucide-react";
 import {
   LineChart,
@@ -70,6 +71,7 @@ import {
   useGetCommunityEngagementStats,
   useGetTopAssociations,
   useGetChatVolumeAnalytics,
+  useGetNotificationAnalytics,
 } from "@/hooks/admin";
 
 
@@ -152,6 +154,13 @@ export default function Reports() {
     refetch: refetchChatAnalytics,
   } = useGetChatVolumeAnalytics(chatPeriod);
 
+  const [notifPeriod] = useState("last_30_days");
+  const {
+    data: notifAnalyticsData,
+    loading: notifLoading,
+    refetch: refetchNotifAnalytics,
+  } = useGetNotificationAnalytics(notifPeriod);
+
   // ── Derived chart data ────────────────────────────────────────────────────
   const userGrowthData = useMemo(() => {
     return (analyticsData?.getPlatformAnalytics?.registrationsByDay ?? []).map((pt) => ({
@@ -220,6 +229,153 @@ export default function Reports() {
     return chatAnalyticsData?.getChatVolumeAnalytics?.topActiveChats ?? [];
   }, [chatAnalyticsData]);
 
+  // ── Notification analytics derived data ──────────────────────────────────
+  const notifVolumeByDay = notifAnalyticsData?.getNotificationAnalytics?.volumeByDay ?? [];
+  const notifTypeDistribution = notifAnalyticsData?.getNotificationAnalytics?.typeDistribution ?? [];
+  const notifDeliveryByHour = notifAnalyticsData?.getNotificationAnalytics?.deliveryRateByHour ?? [];
+
+  const notifTypePieData = notifTypeDistribution.map((entry, index) => {
+    const NOTIF_COLORS = [
+      "hsl(var(--primary))",
+      "hsl(142, 72%, 42%)",
+      "hsl(38, 92%, 50%)",
+      "hsl(262, 83%, 58%)",
+      "hsl(200, 60%, 50%)",
+    ];
+    return {
+      name: entry.type,
+      value: entry.count,
+      color: NOTIF_COLORS[index % NOTIF_COLORS.length],
+    };
+  });
+
+  const notifTopHours = [...notifDeliveryByHour]
+    .sort((a, b) => (b.deliveredPct + b.failedPct) - (a.deliveredPct + a.failedPct))
+    .slice(0, 10);
+
+  function downloadCSV(filename: string, rows: Record<string, unknown>[]) {
+    if (!rows.length) return;
+    const headers = Object.keys(rows[0]);
+    const csv = [
+      headers.join(","),
+      ...rows.map((row) =>
+        headers.map((h) => JSON.stringify(row[h] ?? "")).join(",")
+      ),
+    ].join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function handleExportCSV() {
+    switch (activeTab) {
+      case "users":
+        downloadCSV(
+          "users.csv",
+          users.map((u: { id: string; displayName?: string; email: string; createdAt: string }) => ({
+            id: u.id,
+            displayName: u.displayName ?? "",
+            email: u.email,
+            createdAt: u.createdAt,
+          }))
+        );
+        break;
+      case "communities":
+        downloadCSV(
+          "top-associations.csv",
+          (topAssociationsData?.getTopAssociations?.items ?? []).map((a) => ({
+            associationId: a.associationId,
+            associationName: a.associationName,
+            communityName: a.communityName,
+            posts: a.posts,
+            opportunities: a.opportunities,
+            vendors: a.vendors,
+            reactions: a.reactions,
+          }))
+        );
+        break;
+      case "vendors":
+        downloadCSV(
+          "top-vendors.csv",
+          topVendors.map((v) => ({
+            vendorId: v.vendorId,
+            vendorName: v.vendorName,
+            productsSold: v.productsSold,
+            revenue: v.revenue,
+            currency: v.currency,
+            rating: v.rating ?? "",
+          }))
+        );
+        break;
+      case "escrow":
+        downloadCSV(
+          "escrows.csv",
+          escrows.map((e) => ({
+            id: e.id,
+            paymentIntentId: e.paymentIntentId ?? "",
+            totalAmount: e.totalAmount,
+            currency: e.currency,
+            status: e.status,
+            createdAt: e.createdAt,
+          }))
+        );
+        break;
+      case "disputes":
+        downloadCSV(
+          "disputes.csv",
+          disputes.map((d) => ({
+            id: d.id,
+            escrowId: d.escrowId ?? "",
+            status: d.status,
+            reason: d.reason ?? "",
+            raisedBy: d.raisedBy ?? "",
+            createdAt: d.createdAt,
+          }))
+        );
+        break;
+      case "system":
+        downloadCSV(
+          "services.csv",
+          services.map((s) => ({
+            service: s.service,
+            status: s.status,
+            latencyMs: s.latencyMs ?? "",
+          }))
+        );
+        break;
+      case "chats":
+        downloadCSV(
+          "active-chats.csv",
+          topActiveChats.map((c) => ({
+            chatId: c.chatId,
+            chatName: c.chatName,
+            chatType: c.chatType,
+            memberCount: c.memberCount,
+            messageCount: c.messageCount,
+            lastActiveAt: c.lastActiveAt,
+          }))
+        );
+        break;
+      case "notifications":
+        downloadCSV(
+          "notification-volume.csv",
+          notifVolumeByDay.map((n) => ({
+            date: n.date,
+            pushCount: n.pushCount,
+            inAppCount: n.inAppCount,
+            emailCount: n.emailCount,
+          }))
+        );
+        break;
+      default:
+        break;
+    }
+  }
+
   function handleRefresh() {
     refetchAnalytics();
     refetchUsers();
@@ -231,6 +387,7 @@ export default function Reports() {
     refetchCommunityEngagement();
     refetchTopAssociations();
     refetchChatAnalytics();
+    refetchNotifAnalytics();
   }
 
   const escrows = escrowData?.adminListEscrows?.escrows ?? [];
@@ -270,7 +427,7 @@ export default function Reports() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="bg-card border-border">
-                <DropdownMenuItem className="gap-2 cursor-pointer">
+                <DropdownMenuItem className="gap-2 cursor-pointer" onClick={handleExportCSV}>
                   <FileText className="h-4 w-4" />
                   Export as CSV
                 </DropdownMenuItem>
@@ -352,6 +509,10 @@ export default function Reports() {
             <TabsTrigger value="chats" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <MessageSquare className="h-4 w-4" />
               Chat Analytics
+            </TabsTrigger>
+            <TabsTrigger value="notifications" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              <Bell className="h-4 w-4" />
+              Notifications
             </TabsTrigger>
           </TabsList>
 
@@ -1205,6 +1366,152 @@ export default function Reports() {
                           <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
                             <Eye className="h-4 w-4" />
                           </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </TabsContent>
+
+          {/* Notifications Analytics Tab */}
+          <TabsContent value="notifications" className="space-y-6">
+            <div className="grid gap-6 lg:grid-cols-2">
+              {/* Chart 1: BarChart - Notification Volume by Day */}
+              <div className="glass rounded-xl p-5">
+                <div className="mb-4">
+                  <h3 className="font-semibold text-foreground">Notification Volume Over Time</h3>
+                  <p className="text-sm text-muted-foreground">Daily push, in-app, and email notification counts (last 30 days)</p>
+                </div>
+                <div className="h-[300px]">
+                  {notifLoading ? (
+                    <div className="flex items-center justify-center h-full text-muted-foreground text-sm">Loading…</div>
+                  ) : notifVolumeByDay.length === 0 ? (
+                    <div className="flex items-center justify-center h-full text-muted-foreground text-sm">No data for selected period</div>
+                  ) : (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={notifVolumeByDay}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
+                        <XAxis dataKey="date" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }} />
+                        <YAxis tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }} />
+                        <Tooltip
+                          contentStyle={{
+                            backgroundColor: "hsl(var(--card))",
+                            border: "1px solid hsl(var(--border))",
+                            borderRadius: "8px",
+                          }}
+                        />
+                        <Legend />
+                        <Bar dataKey="pushCount" name="Push" fill="hsl(var(--primary))" radius={[3, 3, 0, 0]} />
+                        <Bar dataKey="inAppCount" name="In-App" fill="hsl(142, 72%, 42%)" radius={[3, 3, 0, 0]} />
+                        <Bar dataKey="emailCount" name="Email" fill="hsl(38, 92%, 50%)" radius={[3, 3, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  )}
+                </div>
+              </div>
+
+              {/* Chart 2: PieChart - Type Distribution */}
+              <div className="glass rounded-xl p-5">
+                <div className="mb-4">
+                  <h3 className="font-semibold text-foreground">Notification Type Distribution</h3>
+                  <p className="text-sm text-muted-foreground">Breakdown of notifications by type</p>
+                </div>
+                <div className="h-[300px]">
+                  {notifLoading ? (
+                    <div className="flex items-center justify-center h-full text-muted-foreground text-sm">Loading…</div>
+                  ) : notifTypePieData.length === 0 ? (
+                    <div className="flex items-center justify-center h-full text-muted-foreground text-sm">No data available</div>
+                  ) : (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={notifTypePieData}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={60}
+                          outerRadius={90}
+                          paddingAngle={3}
+                          dataKey="value"
+                        >
+                          {notifTypePieData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.color} />
+                          ))}
+                        </Pie>
+                        <Tooltip
+                          contentStyle={{
+                            backgroundColor: "hsl(var(--card))",
+                            border: "1px solid hsl(var(--border))",
+                            borderRadius: "8px",
+                          }}
+                          formatter={(value: number, name: string) => [value.toLocaleString(), name]}
+                        />
+                        <Legend
+                          verticalAlign="bottom"
+                          formatter={(value) => <span className="text-muted-foreground text-sm">{value}</span>}
+                        />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Delivery Rate by Hour Table */}
+            <div className="glass rounded-xl p-5">
+              <div className="mb-4">
+                <h3 className="font-semibold text-foreground">Delivery Rate by Hour</h3>
+                <p className="text-sm text-muted-foreground">Top 10 peak hours by notification activity — delivered vs failed rates</p>
+              </div>
+              <Table>
+                <TableHeader>
+                  <TableRow className="border-border/50 hover:bg-transparent">
+                    <TableHead>Hour (UTC)</TableHead>
+                    <TableHead>Delivered %</TableHead>
+                    <TableHead>Failed %</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {notifLoading ? (
+                    <TableRow>
+                      <TableCell colSpan={3} className="text-center text-muted-foreground py-6">Loading…</TableCell>
+                    </TableRow>
+                  ) : notifTopHours.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={3} className="text-center text-muted-foreground py-6">No delivery data available</TableCell>
+                    </TableRow>
+                  ) : (
+                    notifTopHours.map((entry) => (
+                      <TableRow key={entry.hour} className="border-border/50">
+                        <TableCell className="font-mono text-sm">
+                          {String(entry.hour).padStart(2, "0")}:00
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-3">
+                            <div className="flex-1 h-2 rounded-full bg-muted overflow-hidden">
+                              <div
+                                className="h-full rounded-full bg-green-500"
+                                style={{ width: `${Math.min(entry.deliveredPct, 100)}%` }}
+                              />
+                            </div>
+                            <span className="text-sm font-medium w-12 text-right">
+                              {entry.deliveredPct.toFixed(1)}%
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-3">
+                            <div className="flex-1 h-2 rounded-full bg-muted overflow-hidden">
+                              <div
+                                className="h-full rounded-full bg-destructive"
+                                style={{ width: `${Math.min(entry.failedPct, 100)}%` }}
+                              />
+                            </div>
+                            <span className="text-sm font-medium w-12 text-right">
+                              {entry.failedPct.toFixed(1)}%
+                            </span>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))
