@@ -8,7 +8,12 @@ import {
   useListDMConversations,
   useListGroupConversations,
   useGetChatVolumeAnalytics,
+  useGetConversationMembers,
+  useDeleteMessage,
+  useBanUserFromConversation,
+  type ConversationMemberItem,
 } from "@/hooks/admin";
+import { useToast } from "@/hooks/use-toast";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -33,11 +38,23 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Textarea } from "@/components/ui/textarea";
 import {
   MessageSquare,
   Activity,
@@ -54,6 +71,9 @@ import {
   Mail,
   Lock,
   BarChart2,
+  Loader2,
+  Trash2,
+  UserX,
 } from "lucide-react";
 
 // Settings key constants
@@ -67,12 +87,37 @@ const SETTING_KEYS = {
 type DmMetadata = { dmId: string; userA: string; userB: string; messageCount: number; lastActive: string; flagCount: number };
 type GroupDetail = { groupId: string; name: string; creator: string; memberCount: number; messageCount: number; lastActive: string; flagCount: number; visibility: string };
 
+// State for members modal
+type MembersModalState = { conversationId: string; title: string } | null;
+
+// State for ban dialog
+type BanDialogState = {
+  conversationId: string;
+  userId: string;
+  displayName: string;
+} | null;
+
+// State for delete message dialog
+type DeleteMessageDialogState = {
+  messageId: string;
+  conversationId: string;
+} | null;
+
 export default function ChatManagement() {
   const { t } = useTranslation();
+  const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("dashboard");
   const [dmMetadataModal, setDmMetadataModal] = useState<DmMetadata | null>(null);
   const [groupDetailModal, setGroupDetailModal] = useState<GroupDetail | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+
+  // Members modal state
+  const [membersModal, setMembersModal] = useState<MembersModalState>(null);
+  // Ban dialog state
+  const [banDialog, setBanDialog] = useState<BanDialogState>(null);
+  const [banReason, setBanReason] = useState("");
+  // Delete message dialog state
+  const [deleteMessageDialog, setDeleteMessageDialog] = useState<DeleteMessageDialogState>(null);
 
   // --- Flagged Chats live data ---
   const {
@@ -110,6 +155,56 @@ export default function ChatManagement() {
   const handleReviewAction = async (id: string, newStatus: string) => {
     await reviewConversation({ variables: { id, newStatus } });
     refetchFlagged();
+  };
+
+  // --- Conversation Members ---
+  const {
+    data: membersData,
+    loading: membersLoading,
+    refetch: refetchMembers,
+  } = useGetConversationMembers(membersModal?.conversationId ?? null);
+  const conversationMembers: ConversationMemberItem[] =
+    membersData?.getConversationMembers ?? [];
+
+  // --- Delete Message ---
+  const [deleteMessage, { loading: deleteMessageLoading }] = useDeleteMessage();
+
+  const handleDeleteMessage = async () => {
+    if (!deleteMessageDialog) return;
+    try {
+      await deleteMessage({
+        variables: {
+          messageId: deleteMessageDialog.messageId,
+          conversationId: deleteMessageDialog.conversationId,
+        },
+      });
+      toast({ title: "Message deleted", description: "The message has been removed." });
+      setDeleteMessageDialog(null);
+    } catch {
+      toast({ title: "Error", description: "Failed to delete message.", variant: "destructive" });
+    }
+  };
+
+  // --- Ban User From Conversation ---
+  const [banUserFromConversation, { loading: banLoading }] = useBanUserFromConversation();
+
+  const handleBanUser = async () => {
+    if (!banDialog) return;
+    try {
+      await banUserFromConversation({
+        variables: {
+          conversationId: banDialog.conversationId,
+          userId: banDialog.userId,
+          reason: banReason.trim() || undefined,
+        },
+      });
+      toast({ title: "User banned", description: `${banDialog.displayName} has been banned from this conversation.` });
+      setBanDialog(null);
+      setBanReason("");
+      refetchMembers();
+    } catch {
+      toast({ title: "Error", description: "Failed to ban user.", variant: "destructive" });
+    }
   };
 
   // --- Chat Volume Analytics ---
@@ -453,8 +548,26 @@ export default function ChatManagement() {
                                   >
                                     <Info className="mr-2 h-4 w-4" /> View Metadata
                                   </DropdownMenuItem>
-                                  <DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={() =>
+                                      setMembersModal({
+                                        conversationId: dm.id,
+                                        title: `Participants – ${dm.participant1Name ?? dm.participant1Id} & ${dm.participant2Name ?? dm.participant2Id}`,
+                                      })
+                                    }
+                                  >
                                     <UserSearch className="mr-2 h-4 w-4" /> View Participants
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    className="text-destructive"
+                                    onClick={() => {
+                                      const msgId = window.prompt("Enter the Message ID to delete:");
+                                      if (msgId?.trim()) {
+                                        setDeleteMessageDialog({ messageId: msgId.trim(), conversationId: dm.id });
+                                      }
+                                    }}
+                                  >
+                                    <Trash2 className="mr-2 h-4 w-4" /> Delete Message
                                   </DropdownMenuItem>
                                   <DropdownMenuItem className="text-destructive">
                                     <Archive className="mr-2 h-4 w-4" /> Archive Conversation
@@ -599,8 +712,26 @@ export default function ChatManagement() {
                                 >
                                   <Info className="mr-2 h-4 w-4" /> View Details
                                 </DropdownMenuItem>
-                                <DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() =>
+                                    setMembersModal({
+                                      conversationId: grp.id,
+                                      title: `Members – ${grp.name}`,
+                                    })
+                                  }
+                                >
                                   <UserSearch className="mr-2 h-4 w-4" /> View Members
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  className="text-destructive"
+                                  onClick={() => {
+                                    const msgId = window.prompt("Enter the Message ID to delete:");
+                                    if (msgId?.trim()) {
+                                      setDeleteMessageDialog({ messageId: msgId.trim(), conversationId: grp.id });
+                                    }
+                                  }}
+                                >
+                                  <Trash2 className="mr-2 h-4 w-4" /> Delete Message
                                 </DropdownMenuItem>
                                 <DropdownMenuItem className="text-destructive">
                                   <Archive className="mr-2 h-4 w-4" /> Archive Group
@@ -896,7 +1027,18 @@ export default function ChatManagement() {
                 {/* Members */}
                 <div className="border-t pt-4">
                   <h4 className="font-medium mb-3">Members ({groupDetailModal.memberCount})</h4>
-                  <p className="text-sm text-muted-foreground">Member details not yet available via API</p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() =>
+                      setMembersModal({
+                        conversationId: groupDetailModal.groupId,
+                        title: `Members – ${groupDetailModal.name}`,
+                      })
+                    }
+                  >
+                    <Users className="mr-2 h-4 w-4" /> View &amp; Manage Members
+                  </Button>
                 </div>
 
                 {/* Flags */}
@@ -916,6 +1058,176 @@ export default function ChatManagement() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+        {/* Members / Participants Modal */}
+        <Dialog
+          open={!!membersModal}
+          onOpenChange={(open) => {
+            if (!open) setMembersModal(null);
+          }}
+        >
+          <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>{membersModal?.title ?? "Members"}</DialogTitle>
+            </DialogHeader>
+            {membersLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : conversationMembers.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-6">No members found.</p>
+            ) : (
+              <div className="space-y-2">
+                {conversationMembers.map((member) => (
+                  <div
+                    key={member.userId}
+                    className="flex items-center justify-between gap-3 rounded-lg border px-3 py-2"
+                  >
+                    <div className="flex items-center gap-3">
+                      <Avatar className="h-8 w-8">
+                        <AvatarImage src={member.avatarUrl} />
+                        <AvatarFallback>
+                          {(member.displayName ?? member.userId).slice(0, 2).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex flex-col">
+                        <span className="text-sm font-medium">
+                          {member.displayName ?? member.userId}
+                        </span>
+                        <span className="text-xs text-muted-foreground font-mono">
+                          {member.userId}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className="text-xs">
+                        {member.role}
+                      </Badge>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-destructive hover:text-destructive"
+                        disabled={banLoading}
+                        onClick={() =>
+                          setBanDialog({
+                            conversationId: membersModal!.conversationId,
+                            userId: member.userId,
+                            displayName: member.displayName ?? member.userId,
+                          })
+                        }
+                      >
+                        <UserX className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            <DialogFooter>
+              <Button variant="secondary" size="sm" onClick={() => setMembersModal(null)}>
+                Close
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Ban User Dialog */}
+        <Dialog
+          open={!!banDialog}
+          onOpenChange={(open) => {
+            if (!open) {
+              setBanDialog(null);
+              setBanReason("");
+            }
+          }}
+        >
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Ban User from Conversation</DialogTitle>
+            </DialogHeader>
+            {banDialog && (
+              <div className="space-y-4">
+                <p className="text-sm text-muted-foreground">
+                  You are about to ban{" "}
+                  <span className="font-medium text-foreground">{banDialog.displayName}</span> from
+                  this conversation. They will no longer be able to participate.
+                </p>
+                <div className="space-y-2">
+                  <Label htmlFor="ban-reason">Reason (optional)</Label>
+                  <Textarea
+                    id="ban-reason"
+                    placeholder="Enter a reason for the ban..."
+                    value={banReason}
+                    onChange={(e) => setBanReason(e.target.value)}
+                    rows={3}
+                  />
+                </div>
+              </div>
+            )}
+            <DialogFooter className="gap-2">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => {
+                  setBanDialog(null);
+                  setBanReason("");
+                }}
+                disabled={banLoading}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                size="sm"
+                disabled={banLoading}
+                onClick={handleBanUser}
+              >
+                {banLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Banning…
+                  </>
+                ) : (
+                  <>
+                    <UserX className="mr-2 h-4 w-4" /> Confirm Ban
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Delete Message AlertDialog */}
+        <AlertDialog
+          open={!!deleteMessageDialog}
+          onOpenChange={(open) => {
+            if (!open) setDeleteMessageDialog(null);
+          }}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete Message</AlertDialogTitle>
+              <AlertDialogDescription>
+                This will permanently remove the message from the conversation. This action cannot
+                be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={deleteMessageLoading}>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                disabled={deleteMessageLoading}
+                onClick={handleDeleteMessage}
+              >
+                {deleteMessageLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Deleting…
+                  </>
+                ) : (
+                  "Delete Message"
+                )}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </AdminLayout>
   );

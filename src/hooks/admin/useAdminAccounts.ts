@@ -16,12 +16,15 @@ import {
   BULK_REMOVE_CONTENT,
   GET_ROLE_DEFINITIONS,
   CREATE_ROLE_DEFINITION,
+  UPDATE_ROLE_DEFINITION,
+  DELETE_ROLE_DEFINITION,
   type AdminAccount,
   type CreateAdminInput,
   type UpdateAdminStatusInput,
   type AssignAdminRoleInput,
   type RoleDefinition,
   type CreateRoleDefinitionInput,
+  type UpdateRoleDefinitionInput,
 } from "@/services/networks/graphql/admin";
 
 export function useCreateAdmin() {
@@ -166,4 +169,18 @@ export function useCreateRoleDefinition() {
     { createRoleDefinition: { success: boolean; message: string } },
     { input: CreateRoleDefinitionInput }
   >(CREATE_ROLE_DEFINITION);
+}
+
+export function useUpdateRoleDefinition() {
+  return useMutation<
+    { updateRoleDefinition: boolean },
+    { input: UpdateRoleDefinitionInput }
+  >(UPDATE_ROLE_DEFINITION);
+}
+
+export function useDeleteRoleDefinition() {
+  return useMutation<
+    { deleteRoleDefinition: boolean },
+    { roleId: string }
+  >(DELETE_ROLE_DEFINITION);
 }

@@ -339,6 +339,9 @@ export {
   useCreateSupportTicket,
   useUpdateSupportTicket,
   useReplyToSupportTicket,
+  useDeleteSupportTicket,
+  useBulkUpdateTicketStatus,
+  useBulkAssignTickets,
   type SupportTicket,
   type TicketMessage,
 } from "./useSupportTickets";
@@ -351,10 +354,14 @@ export {
   useUpdateChatSetting,
   useListDMConversations,
   useListGroupConversations,
+  useGetConversationMembers,
+  useDeleteMessage,
+  useBanUserFromConversation,
   type FlaggedConversation,
   type ChatSetting,
   type AdminDMConversationItem,
   type AdminGroupConversationItem,
+  type ConversationMemberItem,
 } from "./useChatManagement";
 
 export {
@@ -372,6 +379,8 @@ export {
   useBulkRemoveContent,
   useGetRoleDefinitions,
   useCreateRoleDefinition,
+  useUpdateRoleDefinition,
+  useDeleteRoleDefinition,
 } from "./useAdminAccounts";
 
 export {
@@ -440,6 +449,23 @@ export {
   useGetVendorSalesAnalytics,
   type VendorSalesAnalyticsResponse,
 } from "./useVendorAnalytics";
+
+export {
+  useListVendors,
+  useGetVendor,
+  useGetMyVendor,
+  useGetVendorDashboard,
+  useGetVendorEligibility,
+  useListVendorProducts,
+  useListVendorOrders,
+  useSuspendVendor,
+  useReinstateVendor,
+  useGetVendorSuspensionHistory,
+  useApproveVendorKyc,
+  useRejectVendorKyc,
+  useVerifyVendor,
+  type ListVendorsInput,
+} from "./useVendor";
 
 export {
   useGetChatVolumeAnalytics,

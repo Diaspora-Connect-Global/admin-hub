@@ -63,8 +63,12 @@ import {
 import {
   useGetSupportTickets,
   useGetSupportTicket,
+  useCreateSupportTicket,
   useUpdateSupportTicket,
   useReplyToSupportTicket,
+  useDeleteSupportTicket,
+  useBulkUpdateTicketStatus,
+  useBulkAssignTickets,
   type SupportTicket,
 } from "@/hooks/admin";
 
@@ -95,6 +99,15 @@ const PRIORITY_LABEL: Record<string, string> = {
 };
 
 const admins = ["Admin Sarah", "Admin Mike", "Admin John", "Admin Lisa"];
+
+/** Map form category display label → API enum value */
+const CATEGORY_API: Record<string, string> = {
+  Technical: "OTHER",
+  Billing: "PAYMENT",
+  Escrow: "PAYMENT",
+  Community: "CONTENT",
+  Vendor: "VENDOR",
+};
 
 // ─── component ────────────────────────────────────────────────────────────────
 
@@ -145,8 +158,12 @@ export default function SupportTicketing() {
   const { data: ticketDetailData, loading: ticketDetailLoading } =
     useGetSupportTicket(selectedTicketId);
 
+  const [createTicket, { loading: createLoading }] = useCreateSupportTicket();
   const [updateTicket, { loading: updateLoading }] = useUpdateSupportTicket();
   const [replyToTicket, { loading: replyLoading }] = useReplyToSupportTicket();
+  const [deleteTicket, { loading: deleteLoading }] = useDeleteSupportTicket();
+  const [bulkUpdateStatus, { loading: bulkStatusLoading }] = useBulkUpdateTicketStatus();
+  const [bulkAssign, { loading: bulkAssignLoading }] = useBulkAssignTickets();
 
   // Live tickets (fallback to empty array)
   const liveTickets: SupportTicket[] = ticketsData?.getSupportTickets?.tickets ?? [];
@@ -242,14 +259,65 @@ export default function SupportTicketing() {
   };
 
   // ── action handlers ────────────────────────────────────────────────────────
-  const handleCreateTicket = () => {
-    // No createSupportTicket mutation wired in spec; keep UI toast behaviour
-    toast({ title: "Success", description: "Ticket created successfully." });
-    setIsCreateModalOpen(false);
-    setFormData({ title: "", category: "Technical", priority: "Medium", description: "", assigned_to: "" });
+  const handleCreateTicket = async () => {
+    try {
+      await createTicket({
+        variables: {
+          input: {
+            subject: formData.title,
+            description: formData.description,
+            category: CATEGORY_API[formData.category] ?? formData.category,
+            priority: formData.priority.toUpperCase(),
+          },
+        },
+      });
+      toast({ title: "Success", description: "Ticket created successfully." });
+      refetchTickets();
+      setIsCreateModalOpen(false);
+      setFormData({ title: "", category: "Technical", priority: "Medium", description: "", assigned_to: "" });
+    } catch {
+      toast({ title: "Error", description: "Failed to create ticket.", variant: "destructive" });
+    }
+  };
+
+  const handleBulkUpdateStatus = async (status: string) => {
+    if (selectedTickets.length === 0) return;
+    try {
+      await bulkUpdateStatus({ variables: { ticketIds: selectedTickets, status } });
+      toast({
+        title: "Success",
+        description: `${selectedTickets.length} ticket(s) updated to ${STATUS_LABEL[status] ?? status}.`,
+      });
+      setSelectedTickets([]);
+      refetchTickets();
+    } catch {
+      toast({ title: "Error", description: "Failed to update ticket statuses.", variant: "destructive" });
+    }
+  };
+
+  const handleBulkAssign = async () => {
+    if (selectedTickets.length === 0 || !assignTo) return;
+    try {
+      await bulkAssign({ variables: { ticketIds: selectedTickets, assigneeId: assignTo } });
+      toast({
+        title: "Success",
+        description: `${selectedTickets.length} ticket(s) assigned to ${assignTo}.`,
+      });
+      setSelectedTickets([]);
+      setAssignTo("");
+      setIsAssignModalOpen(false);
+      refetchTickets();
+    } catch {
+      toast({ title: "Error", description: "Failed to assign tickets.", variant: "destructive" });
+    }
   };
 
   const handleAssignTicket = async () => {
+    // Bulk path: no single ticket selected but multiple tickets checked
+    if (!selectedTicket && selectedTickets.length > 0) {
+      await handleBulkAssign();
+      return;
+    }
     if (!selectedTicket) return;
     try {
       await updateTicket({
@@ -271,6 +339,13 @@ export default function SupportTicketing() {
   };
 
   const handleUpdateStatus = async () => {
+    // Bulk path: no single ticket selected but multiple tickets checked
+    if (!selectedTicket && selectedTickets.length > 0) {
+      await handleBulkUpdateStatus(STATUS_API[newStatus] ?? newStatus);
+      setIsStatusModalOpen(false);
+      setStatusNotes("");
+      return;
+    }
     if (!selectedTicket) return;
     try {
       await updateTicket({
@@ -309,10 +384,17 @@ export default function SupportTicketing() {
     setIsCloseModalOpen(false);
   };
 
-  const handleDeleteTicket = () => {
-    // No deleteTicket mutation defined; keep toast behaviour
-    toast({ title: "Success", description: "Ticket deleted successfully." });
-    setIsDeleteModalOpen(false);
+  const handleDeleteTicket = async () => {
+    if (!selectedTicket) return;
+    try {
+      await deleteTicket({ variables: { ticketId: selectedTicket.id } });
+      toast({ title: "Success", description: "Ticket deleted successfully." });
+      refetchTickets();
+      setIsDeleteModalOpen(false);
+      setSelectedTicket(null);
+    } catch {
+      toast({ title: "Error", description: "Failed to delete ticket.", variant: "destructive" });
+    }
   };
 
   const handleSendMessage = async () => {
@@ -331,6 +413,33 @@ export default function SupportTicketing() {
     } catch {
       toast({ title: "Error", description: "Failed to send message.", variant: "destructive" });
     }
+  };
+
+  const handleBulkExport = () => {
+    const ticketsToExport = filteredTickets.filter((t) => selectedTickets.includes(t.id));
+    const headers = ["ID", "Subject", "Category", "Priority", "Status", "Created By", "Assigned To", "Created At", "Resolved At"];
+    const rows = ticketsToExport.map((t) => [
+      t.id,
+      `"${(t.subject ?? "").replace(/"/g, '""')}"`,
+      t.category,
+      PRIORITY_LABEL[t.priority] ?? t.priority,
+      STATUS_LABEL[t.status] ?? t.status,
+      t.submittedBy ?? "",
+      t.assignedTo ?? "",
+      t.createdAt,
+      t.resolvedAt ?? "",
+    ]);
+    const csv = [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `tickets-export-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    toast({ title: "Export complete", description: `${ticketsToExport.length} ticket(s) exported.` });
   };
 
   // ── render ─────────────────────────────────────────────────────────────────
@@ -366,10 +475,37 @@ export default function SupportTicketing() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent className="bg-popover">
-                <DropdownMenuItem>Bulk Assign Tickets</DropdownMenuItem>
-                <DropdownMenuItem>Bulk Update Status</DropdownMenuItem>
-                <DropdownMenuItem>Bulk Close Tickets</DropdownMenuItem>
-                <DropdownMenuItem>Bulk Export Tickets</DropdownMenuItem>
+                <DropdownMenuItem
+                  disabled={bulkAssignLoading}
+                  onClick={() => {
+                    setSelectedTicket(null);
+                    setAssignTo("");
+                    setAssignNotes("");
+                    setIsAssignModalOpen(true);
+                  }}
+                >
+                  Bulk Assign Tickets
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  disabled={bulkStatusLoading}
+                  onClick={() => {
+                    setSelectedTicket(null);
+                    setNewStatus("Open");
+                    setStatusNotes("");
+                    setIsStatusModalOpen(true);
+                  }}
+                >
+                  Bulk Update Status
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  disabled={bulkStatusLoading}
+                  onClick={() => handleBulkUpdateStatus("CLOSED")}
+                >
+                  Bulk Close Tickets
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleBulkExport}>
+                  Bulk Export Tickets
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
             <Button onClick={() => setIsCreateModalOpen(true)}>
@@ -893,9 +1029,9 @@ export default function SupportTicketing() {
               </Button>
               <Button
                 onClick={handleCreateTicket}
-                disabled={!formData.title || !formData.description}
+                disabled={!formData.title || !formData.description || createLoading}
               >
-                Create Ticket
+                {createLoading ? "Creating..." : "Create Ticket"}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -1020,8 +1156,8 @@ export default function SupportTicketing() {
               <Button variant="outline" onClick={() => setIsDeleteModalOpen(false)}>
                 Cancel
               </Button>
-              <Button variant="destructive" onClick={handleDeleteTicket}>
-                Delete Ticket
+              <Button variant="destructive" onClick={handleDeleteTicket} disabled={deleteLoading}>
+                {deleteLoading ? "Deleting..." : "Delete Ticket"}
               </Button>
             </DialogFooter>
           </DialogContent>

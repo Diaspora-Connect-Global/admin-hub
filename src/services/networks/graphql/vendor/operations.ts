@@ -144,12 +144,42 @@ export interface VendorOrderListPaginatedDTO {
   [key: string]: unknown;
 }
 
+export interface VendorSuspensionHistoryDTO {
+  id: string;
+  reason: string;
+  suspendedBy: string;
+  suspendedAt: string;
+  reinstatedBy?: string | null;
+  reinstatedAt?: string | null;
+  isActive: boolean;
+}
+
 export interface ListVendorsQueryResult {
   listVendors: {
-    items: VendorDTO[];
+    vendors: VendorDTO[];
     total: number;
     limit?: number;
     offset?: number;
+  };
+}
+
+export interface GetVendorSuspensionHistoryQueryResult {
+  getVendorSuspensionHistory: VendorSuspensionHistoryDTO[];
+}
+
+export interface ApproveVendorKycMutationResult {
+  approveVendorKyc: boolean;
+}
+
+export interface RejectVendorKycMutationResult {
+  rejectVendorKyc: boolean;
+}
+
+export interface VerifyVendorMutationResult {
+  verifyVendor: {
+    id: string;
+    status: VendorStatus;
+    updatedAt?: string | null;
   };
 }
 
@@ -240,9 +270,9 @@ export const GET_MY_VENDOR = gql`
 `;
 
 export const LIST_VENDORS = gql`
-  query ListVendors($limit: Int, $offset: Int, $status: String) {
-    listVendors(limit: $limit, offset: $offset, status: $status) {
-      items {
+  query ListVendors($input: ListVendorsInput) {
+    listVendors(input: $input) {
+      vendors {
         id
         userId
         displayName
@@ -259,6 +289,42 @@ export const LIST_VENDORS = gql`
       total
       limit
       offset
+    }
+  }
+`;
+
+export const GET_VENDOR_SUSPENSION_HISTORY = gql`
+  query GetVendorSuspensionHistory($vendorId: String!) {
+    getVendorSuspensionHistory(vendorId: $vendorId) {
+      id
+      reason
+      suspendedBy
+      suspendedAt
+      reinstatedBy
+      reinstatedAt
+      isActive
+    }
+  }
+`;
+
+export const APPROVE_VENDOR_KYC = gql`
+  mutation ApproveVendorKyc($vendorId: String!) {
+    approveVendorKyc(vendorId: $vendorId)
+  }
+`;
+
+export const REJECT_VENDOR_KYC = gql`
+  mutation RejectVendorKyc($vendorId: String!, $reason: String!) {
+    rejectVendorKyc(vendorId: $vendorId, reason: $reason)
+  }
+`;
+
+export const VERIFY_VENDOR = gql`
+  mutation VerifyVendor($vendorId: String!) {
+    verifyVendor(vendorId: $vendorId) {
+      id
+      status
+      updatedAt
     }
   }
 `;

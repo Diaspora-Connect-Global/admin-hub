@@ -1,10 +1,11 @@
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
   TableBody,
@@ -47,10 +48,15 @@ import { useToast } from "@/hooks/use-toast";
 import {
   useListVendors,
   useGetVendorDashboard,
+  useGetVendorEligibility,
   useListVendorProducts,
   useListVendorOrders,
   useSuspendVendor,
   useReinstateVendor,
+  useGetVendorSuspensionHistory,
+  useApproveVendorKyc,
+  useRejectVendorKyc,
+  useVerifyVendor,
 } from "@/hooks/admin/useVendor";
 import {
   Search,
@@ -64,8 +70,15 @@ import {
   Package,
   AlertCircle,
   Loader2,
+  ChevronLeft,
+  ChevronRight,
+  ShieldCheck,
+  ShieldX,
+  ShieldAlert,
 } from "lucide-react";
 import type { Vendor, VendorStatus } from "@/types/vendor";
+
+const PAGE_SIZE = 20;
 
 const VENDOR_STATUSES: VendorStatus[] = [
   "DRAFT",
@@ -74,11 +87,14 @@ const VENDOR_STATUSES: VendorStatus[] = [
   "SUSPENDED",
 ];
 
+const KYC_ACTION_STATUSES = ["REGISTERED", "AWAITING_KYC", "KYC_UNDER_REVIEW"] as const;
+
 export default function VendorManagement() {
   const { toast } = useToast();
   const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | VendorStatus>("all");
+  const [page, setPage] = useState(0);
   const [selectedVendors, setSelectedVendors] = useState<string[]>([]);
   const [selectedVendor, setSelectedVendor] = useState<Vendor | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
@@ -86,18 +102,33 @@ export default function VendorManagement() {
   // Modal states
   const [isSuspendModalOpen, setIsSuspendModalOpen] = useState(false);
   const [isReinstateModalOpen, setIsReinstateModalOpen] = useState(false);
+  const [isRejectKycModalOpen, setIsRejectKycModalOpen] = useState(false);
 
   // Form states
   const [suspendReason, setSuspendReason] = useState("");
+  const [rejectKycReason, setRejectKycReason] = useState("");
 
   // GraphQL queries
   const {
     data: vendorsData,
+    vendors,
+    total,
     loading: vendorsLoading,
     error: vendorsError,
-  } = useListVendors(20, 0, statusFilter === "all" ? undefined : statusFilter);
+  } = useListVendors({
+    status: statusFilter === "all" ? undefined : statusFilter,
+    search: searchQuery || undefined,
+    limit: PAGE_SIZE,
+    offset: page * PAGE_SIZE,
+  });
+
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   const { data: dashboardData } = useGetVendorDashboard(
+    selectedVendor?.id || null,
+    !selectedVendor
+  );
+  const { data: eligibilityData } = useGetVendorEligibility(
     selectedVendor?.id || null,
     !selectedVendor
   );
@@ -116,21 +147,18 @@ export default function VendorManagement() {
     !selectedVendor
   );
 
+  // Suspension history for selected vendor
+  const { suspensions, loading: suspensionsLoading } = useGetVendorSuspensionHistory(
+    selectedVendor?.id,
+    !selectedVendor
+  );
+
   // Mutations
   const [suspendVendor] = useSuspendVendor();
   const [reinstateVendor] = useReinstateVendor();
-
-  const filteredVendors = useMemo(() => {
-    const vendors = vendorsData?.listVendors?.items ?? [];
-
-    if (!searchQuery) return vendors;
-    const query = searchQuery.toLowerCase();
-    return vendors.filter(
-      (v) =>
-        v.displayName?.toLowerCase().includes(query) ||
-        v.id?.toLowerCase().includes(query)
-    );
-  }, [vendorsData?.listVendors?.items, searchQuery]);
+  const [approveKyc, { loading: approvingKyc }] = useApproveVendorKyc();
+  const [rejectKyc, { loading: rejectingKyc }] = useRejectVendorKyc();
+  const [verifyVendor, { loading: verifyingVendor }] = useVerifyVendor();
 
   const getStatusBadge = (status: VendorStatus | string | undefined) => {
     const variants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
@@ -144,7 +172,7 @@ export default function VendorManagement() {
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
-      setSelectedVendors(filteredVendors.map((v) => v.id));
+      setSelectedVendors(vendors.map((v) => v.id));
     } else {
       setSelectedVendors([]);
     }
@@ -180,7 +208,7 @@ export default function VendorManagement() {
       setSuspendReason("");
       setIsDetailOpen(false);
       setSelectedVendor(null);
-    } catch (error) {
+    } catch {
       toast({
         title: "Error",
         description: "Failed to suspend vendor.",
@@ -204,12 +232,46 @@ export default function VendorManagement() {
       setIsReinstateModalOpen(false);
       setIsDetailOpen(false);
       setSelectedVendor(null);
-    } catch (error) {
+    } catch {
       toast({
         title: "Error",
         description: "Failed to reinstate vendor.",
         variant: "destructive",
       });
+    }
+  };
+
+  const handleApproveKyc = async () => {
+    if (!selectedVendor) return;
+    try {
+      await approveKyc({ variables: { vendorId: selectedVendor.id } });
+      toast({ title: "Success", description: "KYC approved successfully." });
+    } catch {
+      toast({ title: "Error", description: "Failed to approve KYC.", variant: "destructive" });
+    }
+  };
+
+  const handleRejectKyc = async () => {
+    if (!selectedVendor || !rejectKycReason) return;
+    try {
+      await rejectKyc({
+        variables: { vendorId: selectedVendor.id, reason: rejectKycReason },
+      });
+      toast({ title: "Success", description: "KYC rejected." });
+      setIsRejectKycModalOpen(false);
+      setRejectKycReason("");
+    } catch {
+      toast({ title: "Error", description: "Failed to reject KYC.", variant: "destructive" });
+    }
+  };
+
+  const handleVerifyVendor = async () => {
+    if (!selectedVendor) return;
+    try {
+      await verifyVendor({ variables: { vendorId: selectedVendor.id } });
+      toast({ title: "Success", description: "Vendor verified successfully." });
+    } catch {
+      toast({ title: "Error", description: "Failed to verify vendor.", variant: "destructive" });
     }
   };
 
@@ -231,6 +293,12 @@ export default function VendorManagement() {
       </div>
     );
   };
+
+  const showKycActions =
+    selectedVendor &&
+    (KYC_ACTION_STATUSES as readonly string[]).includes(selectedVendor.status as string);
+
+  const kycVerified = eligibilityData?.getVendorEligibility?.isKycVerified;
 
   if (vendorsError) {
     return (
@@ -265,7 +333,10 @@ export default function VendorManagement() {
               <Input
                 placeholder="Vendor name or ID"
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setPage(0);
+                }}
                 className="pl-10"
               />
             </div>
@@ -291,7 +362,10 @@ export default function VendorManagement() {
             <Label className="text-xs">Status</Label>
             <Select
               value={statusFilter}
-              onValueChange={(v) => setStatusFilter(v as "all" | VendorStatus)}
+              onValueChange={(v) => {
+                setStatusFilter(v as "all" | VendorStatus);
+                setPage(0);
+              }}
             >
               <SelectTrigger className="w-[150px]">
                 <SelectValue placeholder="All" />
@@ -311,17 +385,33 @@ export default function VendorManagement() {
             onClick={() => {
               setStatusFilter("all");
               setSearchQuery("");
+              setPage(0);
             }}
           >
             Clear Filters
           </Button>
+          {total > 0 && (
+            <span className="ml-auto text-sm text-muted-foreground">
+              {total} vendor{total !== 1 ? "s" : ""} total
+            </span>
+          )}
         </div>
 
         {/* Table */}
         <div className="rounded-lg border bg-card">
           {vendorsLoading ? (
-            <div className="flex items-center justify-center p-8">
-              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            <div className="p-4 space-y-3">
+              {[...Array(5)].map((_, i) => (
+                <div key={i} className="flex items-center gap-4">
+                  <Skeleton className="h-4 w-4" />
+                  <Skeleton className="h-4 flex-1" />
+                  <Skeleton className="h-4 w-24" />
+                  <Skeleton className="h-4 w-16" />
+                  <Skeleton className="h-4 w-20" />
+                  <Skeleton className="h-4 w-16" />
+                  <Skeleton className="h-4 w-24" />
+                </div>
+              ))}
             </div>
           ) : (
             <Table>
@@ -330,8 +420,8 @@ export default function VendorManagement() {
                   <TableHead className="w-12">
                     <Checkbox
                       checked={
-                        filteredVendors.length > 0 &&
-                        selectedVendors.length === filteredVendors.length
+                        vendors.length > 0 &&
+                        selectedVendors.length === vendors.length
                       }
                       onCheckedChange={handleSelectAll}
                     />
@@ -346,8 +436,8 @@ export default function VendorManagement() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredVendors.length > 0 ? (
-                  filteredVendors.map((vendor) => (
+                {vendors.length > 0 ? (
+                  vendors.map((vendor) => (
                     <TableRow key={vendor.id}>
                       <TableCell>
                         <Checkbox
@@ -364,9 +454,9 @@ export default function VendorManagement() {
                         {vendor.id}
                       </TableCell>
                       <TableCell>
-                        <Badge variant="outline">{vendor.type}</Badge>
+                        <Badge variant="outline">{vendor.type || vendor.vendorType}</Badge>
                       </TableCell>
-                      <TableCell>{renderStars(vendor.rating)}</TableCell>
+                      <TableCell>{renderStars(vendor.rating ?? undefined)}</TableCell>
                       <TableCell>{getStatusBadge(vendor.status)}</TableCell>
                       <TableCell className="text-sm">
                         {vendor.createdAt
@@ -378,7 +468,7 @@ export default function VendorManagement() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => openVendorDetail(vendor)}
+                            onClick={() => openVendorDetail(vendor as unknown as Vendor)}
                           >
                             <Eye className="h-4 w-4" />
                           </Button>
@@ -387,7 +477,7 @@ export default function VendorManagement() {
                               variant="ghost"
                               size="icon"
                               onClick={() => {
-                                setSelectedVendor(vendor);
+                                setSelectedVendor(vendor as unknown as Vendor);
                                 setIsSuspendModalOpen(true);
                               }}
                             >
@@ -399,7 +489,7 @@ export default function VendorManagement() {
                               variant="ghost"
                               size="icon"
                               onClick={() => {
-                                setSelectedVendor(vendor);
+                                setSelectedVendor(vendor as unknown as Vendor);
                                 setIsReinstateModalOpen(true);
                               }}
                             >
@@ -424,8 +514,16 @@ export default function VendorManagement() {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
-                      No vendors found
+                    <TableCell colSpan={8} className="py-16 text-center">
+                      <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                        <Package className="h-8 w-8 opacity-40" />
+                        <p className="font-medium">No vendors found</p>
+                        <p className="text-sm">
+                          {searchQuery || statusFilter !== "all"
+                            ? "Try adjusting your filters."
+                            : "No vendors have been registered yet."}
+                        </p>
+                      </div>
                     </TableCell>
                   </TableRow>
                 )}
@@ -434,15 +532,55 @@ export default function VendorManagement() {
           )}
         </div>
 
+        {/* Pagination */}
+        {!vendorsLoading && total > PAGE_SIZE && (
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-muted-foreground">
+              Page {page + 1} of {totalPages}
+            </p>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPage((p) => Math.max(0, p - 1))}
+                disabled={page === 0}
+              >
+                <ChevronLeft className="h-4 w-4" />
+                Previous
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+                disabled={page >= totalPages - 1}
+              >
+                Next
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        )}
+
         {/* Vendor Detail Sheet */}
         <Sheet open={isDetailOpen} onOpenChange={setIsDetailOpen}>
           <SheetContent className="w-full sm:max-w-3xl overflow-y-auto">
             {selectedVendor && (
               <>
                 <SheetHeader>
-                  <SheetTitle className="flex items-center gap-3">
+                  <SheetTitle className="flex items-center gap-3 flex-wrap">
                     {selectedVendor.displayName}
                     {getStatusBadge(selectedVendor.status)}
+                    {/* KYC Badge */}
+                    {kycVerified === true && (
+                      <Badge className="bg-green-600 text-white hover:bg-green-700">
+                        <ShieldCheck className="mr-1 h-3 w-3" /> KYC Verified
+                      </Badge>
+                    )}
+                    {kycVerified === false && (
+                      <Badge variant="outline" className="border-yellow-500 text-yellow-600">
+                        <ShieldAlert className="mr-1 h-3 w-3" /> KYC Pending
+                      </Badge>
+                    )}
                   </SheetTitle>
                   <div className="text-sm text-muted-foreground space-y-1 mt-4">
                     <p>ID: {selectedVendor.id}</p>
@@ -456,7 +594,7 @@ export default function VendorManagement() {
                   </div>
                 </SheetHeader>
 
-                <div className="flex gap-2 mt-4">
+                <div className="flex flex-wrap gap-2 mt-4">
                   {selectedVendor.status !== "SUSPENDED" && (
                     <Button
                       variant="destructive"
@@ -480,13 +618,55 @@ export default function VendorManagement() {
                       <Check className="mr-2 h-4 w-4" /> Reinstate
                     </Button>
                   )}
+                  {/* KYC / Verify actions for eligible statuses */}
+                  {showKycActions && (
+                    <>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="border-green-500 text-green-600 hover:bg-green-50"
+                        onClick={handleVerifyVendor}
+                        disabled={verifyingVendor}
+                      >
+                        {verifyingVendor ? (
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        ) : (
+                          <ShieldCheck className="mr-2 h-4 w-4" />
+                        )}
+                        Verify Vendor
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="border-blue-500 text-blue-600 hover:bg-blue-50"
+                        onClick={handleApproveKyc}
+                        disabled={approvingKyc}
+                      >
+                        {approvingKyc ? (
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        ) : (
+                          <Check className="mr-2 h-4 w-4" />
+                        )}
+                        Approve KYC
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="border-red-400 text-red-600 hover:bg-red-50"
+                        onClick={() => setIsRejectKycModalOpen(true)}
+                      >
+                        <ShieldX className="mr-2 h-4 w-4" /> Reject KYC
+                      </Button>
+                    </>
+                  )}
                 </div>
 
                 <Tabs defaultValue="overview" className="mt-6">
-                  <TabsList className="grid w-full grid-cols-3">
+                  <TabsList className="grid w-full grid-cols-4">
                     <TabsTrigger value="overview">Overview</TabsTrigger>
                     <TabsTrigger value="products">Products</TabsTrigger>
                     <TabsTrigger value="orders">Orders</TabsTrigger>
+                    <TabsTrigger value="history">History</TabsTrigger>
                   </TabsList>
 
                   <TabsContent value="overview" className="space-y-4 mt-4">
@@ -573,7 +753,7 @@ export default function VendorManagement() {
                                   {product.title || product.name}
                                 </TableCell>
                                 <TableCell>
-                                  {getStatusBadge(product.status)}
+                                  {getStatusBadge(product.status ?? undefined)}
                                 </TableCell>
                                 <TableCell className="text-sm">
                                   {product.createdAt
@@ -614,7 +794,7 @@ export default function VendorManagement() {
                                   {order.id}
                                 </TableCell>
                                 <TableCell>
-                                  {getStatusBadge(order.status)}
+                                  {getStatusBadge(order.status ?? undefined)}
                                 </TableCell>
                                 <TableCell>
                                   {order.currency}{" "}
@@ -633,6 +813,61 @@ export default function VendorManagement() {
                     ) : (
                       <div className="text-center py-8 text-muted-foreground">
                         No orders found
+                      </div>
+                    )}
+                  </TabsContent>
+
+                  <TabsContent value="history" className="mt-4">
+                    {suspensionsLoading ? (
+                      <div className="flex items-center justify-center py-8">
+                        <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                      </div>
+                    ) : suspensions.length > 0 ? (
+                      <div className="rounded-lg border">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Reason</TableHead>
+                              <TableHead>Suspended By</TableHead>
+                              <TableHead>Date</TableHead>
+                              <TableHead>Reinstated</TableHead>
+                              <TableHead>Active</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {suspensions.map((s) => (
+                              <TableRow key={s.id}>
+                                <TableCell className="max-w-[180px] truncate" title={s.reason}>
+                                  {s.reason}
+                                </TableCell>
+                                <TableCell className="text-sm text-muted-foreground">
+                                  {s.suspendedBy}
+                                </TableCell>
+                                <TableCell className="text-sm">
+                                  {new Date(s.suspendedAt).toLocaleDateString()}
+                                </TableCell>
+                                <TableCell className="text-sm">
+                                  {s.reinstatedAt
+                                    ? new Date(s.reinstatedAt).toLocaleDateString()
+                                    : s.reinstatedBy
+                                    ? s.reinstatedBy
+                                    : "-"}
+                                </TableCell>
+                                <TableCell>
+                                  {s.isActive ? (
+                                    <Badge variant="destructive">Active</Badge>
+                                  ) : (
+                                    <Badge variant="secondary">Resolved</Badge>
+                                  )}
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    ) : (
+                      <div className="text-center py-8 text-muted-foreground">
+                        No suspension history
                       </div>
                     )}
                   </TabsContent>
@@ -702,6 +937,50 @@ export default function VendorManagement() {
                 Cancel
               </Button>
               <Button onClick={handleReinstateVendor}>Reinstate Vendor</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Reject KYC Modal */}
+        <Dialog open={isRejectKycModalOpen} onOpenChange={setIsRejectKycModalOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Reject KYC</DialogTitle>
+              <DialogDescription>
+                Provide a reason for rejecting this vendor's KYC submission.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>Reason for Rejection *</Label>
+                <Textarea
+                  value={rejectKycReason}
+                  onChange={(e) => setRejectKycReason(e.target.value)}
+                  placeholder="Enter reason..."
+                  className="min-h-[100px]"
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setIsRejectKycModalOpen(false);
+                  setRejectKycReason("");
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleRejectKyc}
+                disabled={!rejectKycReason || rejectingKyc}
+              >
+                {rejectingKyc ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : null}
+                Reject KYC
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>

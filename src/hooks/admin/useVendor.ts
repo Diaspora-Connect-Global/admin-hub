@@ -7,6 +7,10 @@ import {
   LIST_VENDOR_PRODUCTS,
   LIST_VENDOR_ORDERS,
   LIST_VENDORS,
+  GET_VENDOR_SUSPENSION_HISTORY,
+  APPROVE_VENDOR_KYC,
+  REJECT_VENDOR_KYC,
+  VERIFY_VENDOR,
   SUSPEND_VENDOR,
   REINSTATE_VENDOR,
   type GetVendorQueryResult,
@@ -17,35 +21,54 @@ import {
   type ListVendorOrdersQueryResult,
   type SuspendVendorMutationResult,
   type ReinstateVendorMutationResult,
+  type GetVendorSuspensionHistoryQueryResult,
+  type ApproveVendorKycMutationResult,
+  type RejectVendorKycMutationResult,
+  type VerifyVendorMutationResult,
 } from "@/services/networks/graphql/vendor";
 import type {
   Vendor,
   VendorStatus,
 } from "@/types/vendor";
 
+export interface ListVendorsInput {
+  status?: VendorStatus | string;
+  type?: string;
+  search?: string;
+  limit?: number;
+  offset?: number;
+}
+
 /**
  * Hook to fetch list of vendors (admin view)
  * Auth: Yes — System admin only
  */
-export function useListVendors(
-  limit = 20,
-  offset = 0,
-  status: VendorStatus | "all" | undefined = undefined,
-  skip = false
-) {
-  return useQuery<
+export function useListVendors(input: ListVendorsInput = {}, skip = false) {
+  const { status, type, search, limit = 20, offset = 0 } = input;
+  const result = useQuery<
     ListVendorsQueryResult,
-    { limit?: number; offset?: number; status?: string }
+    { input: ListVendorsInput }
   >(LIST_VENDORS, {
     variables: {
-      limit,
-      offset,
-      ...(status && status !== "all" && { status }),
+      input: {
+        limit,
+        offset,
+        ...(status && status !== "all" && { status }),
+        ...(type && { type }),
+        ...(search && { search }),
+      },
     },
     skip,
     fetchPolicy: "network-only",
     notifyOnNetworkStatusChange: true,
   });
+
+  const vendors = result.data?.listVendors?.vendors ?? [];
+  const total = result.data?.listVendors?.total ?? 0;
+  const resultLimit = result.data?.listVendors?.limit ?? limit;
+  const resultOffset = result.data?.listVendors?.offset ?? offset;
+
+  return { ...result, vendors, total, limit: resultLimit, offset: resultOffset };
 }
 
 /**
@@ -185,4 +208,56 @@ export function useReinstateVendor() {
     ReinstateVendorMutationResult,
     { vendorId: string }
   >(REINSTATE_VENDOR);
+}
+
+/**
+ * Hook to fetch suspension history for a vendor (admin-only)
+ * Auth: Yes — System admin only
+ */
+export function useGetVendorSuspensionHistory(vendorId: string | undefined, skip = false) {
+  const result = useQuery<
+    GetVendorSuspensionHistoryQueryResult,
+    { vendorId: string }
+  >(GET_VENDOR_SUSPENSION_HISTORY, {
+    variables: { vendorId: vendorId || "" },
+    skip: !vendorId || skip,
+    fetchPolicy: "network-only",
+    notifyOnNetworkStatusChange: true,
+  });
+
+  const suspensions = result.data?.getVendorSuspensionHistory ?? [];
+  return { suspensions, loading: result.loading, error: result.error };
+}
+
+/**
+ * Hook to approve vendor KYC (admin-only)
+ * Auth: Yes — System admin only
+ */
+export function useApproveVendorKyc() {
+  return useMutation<
+    ApproveVendorKycMutationResult,
+    { vendorId: string }
+  >(APPROVE_VENDOR_KYC);
+}
+
+/**
+ * Hook to reject vendor KYC with reason (admin-only)
+ * Auth: Yes — System admin only
+ */
+export function useRejectVendorKyc() {
+  return useMutation<
+    RejectVendorKycMutationResult,
+    { vendorId: string; reason: string }
+  >(REJECT_VENDOR_KYC);
+}
+
+/**
+ * Hook to verify a vendor (admin-only)
+ * Auth: Yes — System admin only
+ */
+export function useVerifyVendor() {
+  return useMutation<
+    VerifyVendorMutationResult,
+    { vendorId: string }
+  >(VERIFY_VENDOR);
 }

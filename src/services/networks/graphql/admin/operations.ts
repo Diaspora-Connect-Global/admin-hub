@@ -1529,6 +1529,25 @@ export const CREATE_ROLE_DEFINITION = gql`
   }
 `;
 
+export interface UpdateRoleDefinitionInput {
+  roleId: string;
+  name: string;
+  description?: string;
+  permissions: string[];
+}
+
+export const UPDATE_ROLE_DEFINITION = gql`
+  mutation UpdateRoleDefinition($input: UpdateRoleDefinitionInput!) {
+    updateRoleDefinition(input: $input)
+  }
+`;
+
+export const DELETE_ROLE_DEFINITION = gql`
+  mutation DeleteRoleDefinition($roleId: String!) {
+    deleteRoleDefinition(roleId: $roleId)
+  }
+`;
+
 // ─── Extended Community Operations ───────────────────────────────────────────
 
 export interface UpdateCommunityInput {
@@ -2533,6 +2552,34 @@ export const REPLY_TO_SUPPORT_TICKET = gql`
   }
 `;
 
+export const DELETE_SUPPORT_TICKET = gql`
+  mutation DeleteSupportTicket($ticketId: String!) {
+    deleteSupportTicket(ticketId: $ticketId)
+  }
+`;
+
+export const BULK_UPDATE_TICKET_STATUS = gql`
+  mutation BulkUpdateTicketStatus($ticketIds: [String!]!, $status: String!) {
+    bulkUpdateTicketStatus(ticketIds: $ticketIds, status: $status)
+  }
+`;
+
+export const BULK_ASSIGN_TICKETS = gql`
+  mutation BulkAssignTickets($ticketIds: [String!]!, $assigneeId: String!) {
+    bulkAssignTickets(ticketIds: $ticketIds, assigneeId: $assigneeId)
+  }
+`;
+
+export interface BulkUpdateTicketStatusInput {
+  ticketIds: string[];
+  status: string;
+}
+
+export interface BulkAssignTicketsInput {
+  ticketIds: string[];
+  assigneeId: string;
+}
+
 // ─── Chat Management ──────────────────────────────────────────────────────────
 
 export interface FlaggedConversation {
@@ -2651,6 +2698,7 @@ export interface AdminGroupConversationsData {
 export interface ConversationMemberItem {
   userId: string;
   displayName: string;
+  avatarUrl?: string;
   joinedAt?: string;
   role: string;
 }
@@ -2699,9 +2747,22 @@ export const GET_CONVERSATION_MEMBERS = gql`
     getConversationMembers(conversationId: $conversationId) {
       userId
       displayName
+      avatarUrl
       joinedAt
       role
     }
+  }
+`;
+
+export const DELETE_MESSAGE = gql`
+  mutation DeleteMessage($messageId: String!, $conversationId: String!) {
+    deleteMessage(messageId: $messageId, conversationId: $conversationId)
+  }
+`;
+
+export const BAN_USER_FROM_CONVERSATION = gql`
+  mutation BanUserFromConversation($conversationId: String!, $userId: String!, $reason: String) {
+    banUserFromConversation(conversationId: $conversationId, userId: $userId, reason: $reason)
   }
 `;
 

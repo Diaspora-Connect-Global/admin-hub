@@ -49,8 +49,9 @@ import { useToast } from "@/hooks/use-toast";
 import {
   useListAdmins,
   useRevokeAdminRole,
-  useUpdateAdminStatus,
   useGetRoleDefinitions,
+  useUpdateRoleDefinition,
+  useDeleteRoleDefinition,
 } from "@/hooks/admin/useAdminAccounts";
 import { CreateAdminModal } from "@/components/admin/CreateAdminModal";
 import { UpdateAdminStatusModal } from "@/components/admin/UpdateAdminStatusModal";
@@ -118,9 +119,12 @@ export default function RolesPermissions() {
   const [selectedRoleId, setSelectedRoleId] = useState<string | null>(null);
   const [searchFilter, setSearchFilter] = useState("");
   const [adminSearchFilter, setAdminSearchFilter] = useState("");
+  // Controlled inputs for the Edit Role dialog
+  const [editRoleName, setEditRoleName] = useState("");
+  const [editRoleDescription, setEditRoleDescription] = useState("");
 
   // Role definitions from backend
-  const { data: roleDefsData, loading: roleDefsLoading } = useGetRoleDefinitions();
+  const { data: roleDefsData, loading: roleDefsLoading, refetch: refetchRoles } = useGetRoleDefinitions();
   const rolesData: RoleDefinition[] = roleDefsData?.getRoleDefinitions?.roles ?? [];
   const filteredRoles = rolesData.filter(r =>
     !searchFilter || r.name.toLowerCase().includes(searchFilter.toLowerCase())
@@ -135,6 +139,8 @@ export default function RolesPermissions() {
   const admins = adminsData?.listAdmins?.admins ?? [];
 
   const [revokeRoleMutation] = useRevokeAdminRole();
+  const [updateRoleDefinition, { loading: updatingRole }] = useUpdateRoleDefinition();
+  const [deleteRoleDefinition, { loading: deletingRole }] = useDeleteRoleDefinition();
 
   const selectRole = (role: RoleDefinition) => {
     setSelectedRole(role);
@@ -203,11 +209,48 @@ export default function RolesPermissions() {
     });
   };
 
-  const handleSave = () => {
-    toast({
-      title: "Permissions saved",
-      description: `Updated permissions for ${selectedRole?.name}`,
+  const handleSave = async () => {
+    if (!selectedRole) return;
+    // Flatten the permission matrix back into "resource:action" strings
+    const permissionStrings: string[] = [];
+    resources.forEach((r) => {
+      actions.forEach((a) => {
+        if (permissions[r.id]?.[a]) {
+          permissionStrings.push(`${r.id}:${a}`);
+        }
+      });
     });
+    try {
+      const result = await updateRoleDefinition({
+        variables: {
+          input: {
+            roleId: selectedRole.id,
+            name: selectedRole.name,
+            description: selectedRole.description,
+            permissions: permissionStrings,
+          },
+        },
+      });
+      if (result.data?.updateRoleDefinition) {
+        toast({
+          title: "Permissions saved",
+          description: `Updated permissions for ${selectedRole.name}`,
+        });
+        await refetchRoles();
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to save permissions",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: (error as Error).message,
+        variant: "destructive",
+      });
+    }
   };
 
   const filteredResources = resources.filter((r) =>
@@ -360,6 +403,8 @@ export default function RolesPermissions() {
                               className="gap-2"
                               onClick={() => {
                                 setSelectedRole(role);
+                                setEditRoleName(role.name);
+                                setEditRoleDescription(role.description ?? "");
                                 setEditDialogOpen(true);
                               }}
                             >
@@ -573,8 +618,13 @@ export default function RolesPermissions() {
                     <Button
                       className="gap-2 bg-primary text-primary-foreground hover:bg-primary/90"
                       onClick={handleSave}
+                      disabled={updatingRole || !!selectedRole?.isSystem}
                     >
-                      <Save className="w-4 h-4" />
+                      {updatingRole ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Save className="w-4 h-4" />
+                      )}
                       Save Changes
                     </Button>
                   </div>
@@ -708,15 +758,19 @@ export default function RolesPermissions() {
               <div className="space-y-2">
                 <Label>Role Name</Label>
                 <Input
-                  defaultValue={selectedRole?.name}
+                  value={editRoleName}
+                  onChange={(e) => setEditRoleName(e.target.value)}
                   className="bg-secondary border-border"
+                  disabled={updatingRole}
                 />
               </div>
               <div className="space-y-2">
                 <Label>Description</Label>
                 <Input
-                  defaultValue={selectedRole?.description}
+                  value={editRoleDescription}
+                  onChange={(e) => setEditRoleDescription(e.target.value)}
                   className="bg-secondary border-border"
+                  disabled={updatingRole}
                 />
               </div>
             </div>
@@ -724,15 +778,38 @@ export default function RolesPermissions() {
               <Button
                 variant="outline"
                 onClick={() => setEditDialogOpen(false)}
+                disabled={updatingRole}
               >
                 Cancel
               </Button>
               <Button
-                onClick={() => {
-                  setEditDialogOpen(false);
-                  toast({ title: "Role updated" });
+                disabled={updatingRole || !editRoleName.trim()}
+                onClick={async () => {
+                  if (!selectedRole) return;
+                  try {
+                    const result = await updateRoleDefinition({
+                      variables: {
+                        input: {
+                          roleId: selectedRole.id,
+                          name: editRoleName.trim(),
+                          description: editRoleDescription.trim() || undefined,
+                          permissions: selectedRole.permissions,
+                        },
+                      },
+                    });
+                    if (result.data?.updateRoleDefinition) {
+                      toast({ title: "Role updated", description: `"${editRoleName.trim()}" has been updated.` });
+                      await refetchRoles();
+                      setEditDialogOpen(false);
+                    } else {
+                      toast({ title: "Error", description: "Failed to update role", variant: "destructive" });
+                    }
+                  } catch (error) {
+                    toast({ title: "Error", description: (error as Error).message, variant: "destructive" });
+                  }
                 }}
               >
+                {updatingRole && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Save Changes
               </Button>
             </DialogFooter>
@@ -758,19 +835,33 @@ export default function RolesPermissions() {
               <Button
                 variant="outline"
                 onClick={() => setDeleteDialogOpen(false)}
+                disabled={deletingRole}
               >
                 Cancel
               </Button>
               <Button
                 variant="destructive"
-                onClick={() => {
-                  setDeleteDialogOpen(false);
-                  toast({
-                    title: "Role deleted",
-                    variant: "destructive",
-                  });
+                disabled={deletingRole}
+                onClick={async () => {
+                  if (!selectedRole) return;
+                  try {
+                    const result = await deleteRoleDefinition({
+                      variables: { roleId: selectedRole.id },
+                    });
+                    if (result.data?.deleteRoleDefinition) {
+                      toast({ title: "Role deleted", description: `"${selectedRole.name}" has been deleted.`, variant: "destructive" });
+                      await refetchRoles();
+                      setDeleteDialogOpen(false);
+                      setSelectedRole(null);
+                    } else {
+                      toast({ title: "Error", description: "Failed to delete role", variant: "destructive" });
+                    }
+                  } catch (error) {
+                    toast({ title: "Error", description: (error as Error).message, variant: "destructive" });
+                  }
                 }}
               >
+                {deletingRole && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Delete Role
               </Button>
             </DialogFooter>

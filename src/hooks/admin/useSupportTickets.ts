@@ -5,13 +5,18 @@ import {
   CREATE_SUPPORT_TICKET,
   UPDATE_SUPPORT_TICKET,
   REPLY_TO_SUPPORT_TICKET,
+  DELETE_SUPPORT_TICKET,
+  BULK_UPDATE_TICKET_STATUS,
+  BULK_ASSIGN_TICKETS,
   type SupportTicket,
   type TicketMessage,
   type CreateSupportTicketInput,
   type UpdateSupportTicketInput,
+  type BulkUpdateTicketStatusInput,
+  type BulkAssignTicketsInput,
 } from "@/services/networks/graphql/admin";
 
-export type { SupportTicket, TicketMessage, CreateSupportTicketInput, UpdateSupportTicketInput };
+export type { SupportTicket, TicketMessage, CreateSupportTicketInput, UpdateSupportTicketInput, BulkUpdateTicketStatusInput, BulkAssignTicketsInput };
 
 export function useGetSupportTickets(options: {
   status?: string;
@@ -58,4 +63,25 @@ export function useReplyToSupportTicket() {
     { replyToSupportTicket: TicketMessage },
     { ticketId: string; message: string }
   >(REPLY_TO_SUPPORT_TICKET);
+}
+
+export function useDeleteSupportTicket() {
+  return useMutation<
+    { deleteSupportTicket: boolean },
+    { ticketId: string }
+  >(DELETE_SUPPORT_TICKET);
+}
+
+export function useBulkUpdateTicketStatus() {
+  return useMutation<
+    { bulkUpdateTicketStatus: boolean },
+    BulkUpdateTicketStatusInput
+  >(BULK_UPDATE_TICKET_STATUS);
+}
+
+export function useBulkAssignTickets() {
+  return useMutation<
+    { bulkAssignTickets: boolean },
+    BulkAssignTicketsInput
+  >(BULK_ASSIGN_TICKETS);
 }

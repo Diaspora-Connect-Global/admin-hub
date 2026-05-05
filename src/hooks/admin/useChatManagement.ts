@@ -8,6 +8,8 @@ import {
   LIST_DM_CONVERSATIONS,
   LIST_GROUP_CONVERSATIONS,
   GET_CONVERSATION_MEMBERS,
+  DELETE_MESSAGE,
+  BAN_USER_FROM_CONVERSATION,
   type FlaggedConversation,
   type ChatSetting,
   type AdminDMConversationItem,
@@ -107,4 +109,28 @@ export function useListGroupConversations(options: {
       },
     }
   );
+}
+
+export function useGetConversationMembers(conversationId: string | null) {
+  return useQuery<{ getConversationMembers: ConversationMemberItem[] }>(
+    GET_CONVERSATION_MEMBERS,
+    {
+      variables: { conversationId: conversationId ?? "" },
+      skip: !conversationId,
+    }
+  );
+}
+
+export function useDeleteMessage() {
+  return useMutation<
+    { deleteMessage: boolean },
+    { messageId: string; conversationId: string }
+  >(DELETE_MESSAGE);
+}
+
+export function useBanUserFromConversation() {
+  return useMutation<
+    { banUserFromConversation: boolean },
+    { conversationId: string; userId: string; reason?: string }
+  >(BAN_USER_FROM_CONVERSATION);
 }
