@@ -70,7 +70,6 @@ import {
   Users,
   Mail,
   Lock,
-  BarChart2,
   Loader2,
   Trash2,
   UserX,
@@ -265,10 +264,8 @@ export default function ChatManagement() {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-5 lg:w-auto lg:inline-grid">
+          <TabsList className="grid w-full grid-cols-3 lg:w-auto lg:inline-grid">
             <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
-            <TabsTrigger value="dm">Direct Messages</TabsTrigger>
-            <TabsTrigger value="groups">Group Chats</TabsTrigger>
             <TabsTrigger value="flagged">Flagged Chats</TabsTrigger>
             <TabsTrigger value="settings">Settings</TabsTrigger>
           </TabsList>
@@ -339,34 +336,271 @@ export default function ChatManagement() {
               </Card>
             </div>
 
-            {/* Charts — no analytics API available */}
-            <div className="grid gap-6 lg:grid-cols-2">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Message Volume (7 Days)</CardTitle>
-                  <CardDescription>Encrypted message throughput - metadata counts only</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="h-[300px] flex flex-col items-center justify-center gap-3 text-muted-foreground border border-dashed rounded-lg">
-                    <BarChart2 className="h-8 w-8 opacity-40" />
-                    <p className="text-sm">Historical analytics not yet available</p>
+            {/* Direct Messages */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Direct Messages</CardTitle>
+                <CardDescription>DM metadata overview. Content is E2E encrypted.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex flex-wrap gap-3">
+                  <div className="relative flex-1 min-w-[200px]">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search by User ID..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="pl-9"
+                    />
                   </div>
-                </CardContent>
-              </Card>
+                  <div className="flex items-center gap-2">
+                    <Switch id="dm-active" />
+                    <Label htmlFor="dm-active" className="text-sm">Active</Label>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Switch id="dm-flagged" />
+                    <Label htmlFor="dm-flagged" className="text-sm">Flagged</Label>
+                  </div>
+                </div>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>DM ID</TableHead>
+                      <TableHead>User A</TableHead>
+                      <TableHead>User B</TableHead>
+                      <TableHead>Messages</TableHead>
+                      <TableHead>Last Active</TableHead>
+                      <TableHead>Flagged</TableHead>
+                      <TableHead className="w-[50px]">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {dmLoading ? (
+                      <TableRow>
+                        <TableCell colSpan={7} className="text-center text-muted-foreground py-8">Loading…</TableCell>
+                      </TableRow>
+                    ) : dmConversations.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={7} className="text-center text-muted-foreground py-8">No direct message conversations found</TableCell>
+                      </TableRow>
+                    ) : (
+                      dmConversations
+                        .filter((dm) =>
+                          !searchQuery ||
+                          dm.participant1Id.includes(searchQuery) ||
+                          dm.participant2Id.includes(searchQuery) ||
+                          (dm.participant1Name ?? "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          (dm.participant2Name ?? "").toLowerCase().includes(searchQuery.toLowerCase())
+                        )
+                        .map((dm) => (
+                          <TableRow key={dm.id}>
+                            <TableCell className="font-mono text-sm">{dm.id}</TableCell>
+                            <TableCell>
+                              <div className="flex flex-col">
+                                <span className="text-sm">{dm.participant1Name ?? "—"}</span>
+                                <span className="text-xs text-muted-foreground font-mono">{dm.participant1Id}</span>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex flex-col">
+                                <span className="text-sm">{dm.participant2Name ?? "—"}</span>
+                                <span className="text-xs text-muted-foreground font-mono">{dm.participant2Id}</span>
+                              </div>
+                            </TableCell>
+                            <TableCell>{dm.messageCount}</TableCell>
+                            <TableCell className="text-muted-foreground text-sm">
+                              {dm.lastMessageAt ? new Date(dm.lastMessageAt).toLocaleString() : "—"}
+                            </TableCell>
+                            <TableCell>
+                              {dm.flagged ? <Badge variant="destructive">Flagged</Badge> : <Badge variant="outline">Clean</Badge>}
+                            </TableCell>
+                            <TableCell>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="icon">
+                                    <MoreHorizontal className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem
+                                    onClick={() =>
+                                      setDmMetadataModal({
+                                        dmId: dm.id,
+                                        userA: dm.participant1Name ?? dm.participant1Id,
+                                        userB: dm.participant2Name ?? dm.participant2Id,
+                                        messageCount: dm.messageCount,
+                                        lastActive: dm.lastMessageAt ? new Date(dm.lastMessageAt).toLocaleString() : "—",
+                                        flagCount: dm.flagged ? 1 : 0,
+                                      })
+                                    }
+                                  >
+                                    <Info className="mr-2 h-4 w-4" /> View Metadata
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={() =>
+                                      setMembersModal({
+                                        conversationId: dm.id,
+                                        title: `Participants – ${dm.participant1Name ?? dm.participant1Id} & ${dm.participant2Name ?? dm.participant2Id}`,
+                                      })
+                                    }
+                                  >
+                                    <UserSearch className="mr-2 h-4 w-4" /> View Participants
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    className="text-destructive"
+                                    onClick={() => {
+                                      const msgId = window.prompt("Enter the Message ID to delete:");
+                                      if (msgId?.trim()) setDeleteMessageDialog({ messageId: msgId.trim(), conversationId: dm.id });
+                                    }}
+                                  >
+                                    <Trash2 className="mr-2 h-4 w-4" /> Delete Message
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem className="text-destructive">
+                                    <Archive className="mr-2 h-4 w-4" /> Archive Conversation
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                    )}
+                  </TableBody>
+                </Table>
+                {!dmLoading && dmTotal > dmConversations.length && (
+                  <p className="text-xs text-muted-foreground text-center pt-2">
+                    Showing {dmConversations.length} of {dmTotal} conversations
+                  </p>
+                )}
+              </CardContent>
+            </Card>
 
-              <Card>
-                <CardHeader>
-                  <CardTitle>Peak Chat Hours</CardTitle>
-                  <CardDescription>Aggregated activity by hour (UTC)</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="h-[300px] flex flex-col items-center justify-center gap-3 text-muted-foreground border border-dashed rounded-lg">
-                    <BarChart2 className="h-8 w-8 opacity-40" />
-                    <p className="text-sm">Historical analytics not yet available</p>
+            {/* Group Chats */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Group Chats</CardTitle>
+                <CardDescription>Group chat membership and metadata. Content is E2E encrypted.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex flex-wrap gap-3">
+                  <div className="relative flex-1 min-w-[200px]">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input placeholder="Search group name..." className="pl-9" />
                   </div>
-                </CardContent>
-              </Card>
-            </div>
+                  <div className="flex items-center gap-2">
+                    <Switch id="grp-public" />
+                    <Label htmlFor="grp-public" className="text-sm">Public</Label>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Switch id="grp-private" />
+                    <Label htmlFor="grp-private" className="text-sm">Private</Label>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Switch id="grp-flagged" />
+                    <Label htmlFor="grp-flagged" className="text-sm">Flagged</Label>
+                  </div>
+                </div>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Group ID</TableHead>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Creator</TableHead>
+                      <TableHead>Members</TableHead>
+                      <TableHead>Messages</TableHead>
+                      <TableHead>Last Active</TableHead>
+                      <TableHead>Flagged</TableHead>
+                      <TableHead className="w-[50px]">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {groupLoading ? (
+                      <TableRow>
+                        <TableCell colSpan={8} className="text-center text-muted-foreground py-8">Loading…</TableCell>
+                      </TableRow>
+                    ) : groupConversations.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={8} className="text-center text-muted-foreground py-8">No group conversations found</TableCell>
+                      </TableRow>
+                    ) : (
+                      groupConversations.map((grp) => (
+                        <TableRow key={grp.id}>
+                          <TableCell className="font-mono text-sm">{grp.id}</TableCell>
+                          <TableCell className="font-medium">{grp.name}</TableCell>
+                          <TableCell className="text-muted-foreground font-mono text-sm">{grp.createdBy ?? "—"}</TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-1">
+                              <Users className="h-3 w-3 text-muted-foreground" />
+                              {grp.memberCount}
+                            </div>
+                          </TableCell>
+                          <TableCell>{grp.messageCount}</TableCell>
+                          <TableCell className="text-muted-foreground text-sm">
+                            {grp.lastMessageAt ? new Date(grp.lastMessageAt).toLocaleString() : "—"}
+                          </TableCell>
+                          <TableCell>
+                            {grp.flagged ? <Badge variant="destructive">Flagged</Badge> : <Badge variant="outline">Clean</Badge>}
+                          </TableCell>
+                          <TableCell>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon">
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem
+                                  onClick={() =>
+                                    setGroupDetailModal({
+                                      groupId: grp.id,
+                                      name: grp.name,
+                                      creator: grp.createdBy ?? "—",
+                                      memberCount: grp.memberCount,
+                                      messageCount: grp.messageCount,
+                                      lastActive: grp.lastMessageAt ? new Date(grp.lastMessageAt).toLocaleString() : "—",
+                                      flagCount: grp.flagged ? 1 : 0,
+                                      visibility: grp.communityId ? "Community" : "Standalone",
+                                    })
+                                  }
+                                >
+                                  <Info className="mr-2 h-4 w-4" /> View Details
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() =>
+                                    setMembersModal({
+                                      conversationId: grp.id,
+                                      title: `Members – ${grp.name}`,
+                                    })
+                                  }
+                                >
+                                  <UserSearch className="mr-2 h-4 w-4" /> View Members
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  className="text-destructive"
+                                  onClick={() => {
+                                    const msgId = window.prompt("Enter the Message ID to delete:");
+                                    if (msgId?.trim()) setDeleteMessageDialog({ messageId: msgId.trim(), conversationId: grp.id });
+                                  }}
+                                >
+                                  <Trash2 className="mr-2 h-4 w-4" /> Delete Message
+                                </DropdownMenuItem>
+                                <DropdownMenuItem className="text-destructive">
+                                  <Archive className="mr-2 h-4 w-4" /> Archive Group
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+                {!groupLoading && groupTotal > groupConversations.length && (
+                  <p className="text-xs text-muted-foreground text-center pt-2">
+                    Showing {groupConversations.length} of {groupTotal} conversations
+                  </p>
+                )}
+              </CardContent>
+            </Card>
 
             {/* Recent Flags — wired from live flaggedConversations */}
             <Card>
@@ -414,340 +648,6 @@ export default function ChatManagement() {
                       ))}
                     </TableBody>
                   </Table>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* Direct Messages Tab */}
-          <TabsContent value="dm" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Direct Messaging Overview</CardTitle>
-                <CardDescription>View and manage DM metadata. Content is E2E encrypted.</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {/* Filters */}
-                <div className="flex flex-wrap gap-3">
-                  <div className="relative flex-1 min-w-[200px]">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      placeholder="Search by User ID..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="pl-9"
-                    />
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Switch id="dm-active" />
-                    <Label htmlFor="dm-active" className="text-sm">Active</Label>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Switch id="dm-flagged" />
-                    <Label htmlFor="dm-flagged" className="text-sm">Flagged</Label>
-                  </div>
-                </div>
-
-                {/* Table */}
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>DM ID</TableHead>
-                      <TableHead>User A</TableHead>
-                      <TableHead>User B</TableHead>
-                      <TableHead>Messages</TableHead>
-                      <TableHead>Last Active</TableHead>
-                      <TableHead>Flagged</TableHead>
-                      <TableHead className="w-[50px]">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {dmLoading ? (
-                      <TableRow>
-                        <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
-                          Loading…
-                        </TableCell>
-                      </TableRow>
-                    ) : dmConversations.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
-                          No direct message conversations found
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      dmConversations
-                        .filter((dm) =>
-                          !searchQuery ||
-                          dm.participant1Id.includes(searchQuery) ||
-                          dm.participant2Id.includes(searchQuery) ||
-                          (dm.participant1Name ?? "").toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          (dm.participant2Name ?? "").toLowerCase().includes(searchQuery.toLowerCase())
-                        )
-                        .map((dm) => (
-                          <TableRow key={dm.id}>
-                            <TableCell className="font-mono text-sm">{dm.id}</TableCell>
-                            <TableCell>
-                              <div className="flex flex-col">
-                                <span className="text-sm">{dm.participant1Name ?? "—"}</span>
-                                <span className="text-xs text-muted-foreground font-mono">{dm.participant1Id}</span>
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex flex-col">
-                                <span className="text-sm">{dm.participant2Name ?? "—"}</span>
-                                <span className="text-xs text-muted-foreground font-mono">{dm.participant2Id}</span>
-                              </div>
-                            </TableCell>
-                            <TableCell>{dm.messageCount}</TableCell>
-                            <TableCell className="text-muted-foreground text-sm">
-                              {dm.lastMessageAt ? new Date(dm.lastMessageAt).toLocaleString() : "—"}
-                            </TableCell>
-                            <TableCell>
-                              {dm.flagged ? (
-                                <Badge variant="destructive">Flagged</Badge>
-                              ) : (
-                                <Badge variant="outline">Clean</Badge>
-                              )}
-                            </TableCell>
-                            <TableCell>
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    onClick={() =>
-                                      setDmMetadataModal({
-                                        dmId: dm.id,
-                                        userA: dm.participant1Name ?? dm.participant1Id,
-                                        userB: dm.participant2Name ?? dm.participant2Id,
-                                        messageCount: dm.messageCount,
-                                        lastActive: dm.lastMessageAt
-                                          ? new Date(dm.lastMessageAt).toLocaleString()
-                                          : "—",
-                                        flagCount: dm.flagged ? 1 : 0,
-                                      })
-                                    }
-                                  >
-                                    <MoreHorizontal className="h-4 w-4" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                  <DropdownMenuItem
-                                    onClick={() =>
-                                      setDmMetadataModal({
-                                        dmId: dm.id,
-                                        userA: dm.participant1Name ?? dm.participant1Id,
-                                        userB: dm.participant2Name ?? dm.participant2Id,
-                                        messageCount: dm.messageCount,
-                                        lastActive: dm.lastMessageAt
-                                          ? new Date(dm.lastMessageAt).toLocaleString()
-                                          : "—",
-                                        flagCount: dm.flagged ? 1 : 0,
-                                      })
-                                    }
-                                  >
-                                    <Info className="mr-2 h-4 w-4" /> View Metadata
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem
-                                    onClick={() =>
-                                      setMembersModal({
-                                        conversationId: dm.id,
-                                        title: `Participants – ${dm.participant1Name ?? dm.participant1Id} & ${dm.participant2Name ?? dm.participant2Id}`,
-                                      })
-                                    }
-                                  >
-                                    <UserSearch className="mr-2 h-4 w-4" /> View Participants
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem
-                                    className="text-destructive"
-                                    onClick={() => {
-                                      const msgId = window.prompt("Enter the Message ID to delete:");
-                                      if (msgId?.trim()) {
-                                        setDeleteMessageDialog({ messageId: msgId.trim(), conversationId: dm.id });
-                                      }
-                                    }}
-                                  >
-                                    <Trash2 className="mr-2 h-4 w-4" /> Delete Message
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem className="text-destructive">
-                                    <Archive className="mr-2 h-4 w-4" /> Archive Conversation
-                                  </DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                            </TableCell>
-                          </TableRow>
-                        ))
-                    )}
-                  </TableBody>
-                </Table>
-                {!dmLoading && dmTotal > dmConversations.length && (
-                  <p className="text-xs text-muted-foreground text-center pt-2">
-                    Showing {dmConversations.length} of {dmTotal} conversations
-                  </p>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* Group Chats Tab */}
-          <TabsContent value="groups" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Group Chats</CardTitle>
-                <CardDescription>Manage group chat membership and metadata. Content is E2E encrypted.</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {/* Filters */}
-                <div className="flex flex-wrap gap-3">
-                  <div className="relative flex-1 min-w-[200px]">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input placeholder="Search group name..." className="pl-9" />
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Switch id="grp-public" />
-                    <Label htmlFor="grp-public" className="text-sm">Public</Label>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Switch id="grp-private" />
-                    <Label htmlFor="grp-private" className="text-sm">Private</Label>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Switch id="grp-flagged" />
-                    <Label htmlFor="grp-flagged" className="text-sm">Flagged</Label>
-                  </div>
-                </div>
-
-                {/* Table */}
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Group ID</TableHead>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Creator</TableHead>
-                      <TableHead>Members</TableHead>
-                      <TableHead>Messages</TableHead>
-                      <TableHead>Last Active</TableHead>
-                      <TableHead>Flagged</TableHead>
-                      <TableHead className="w-[50px]">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {groupLoading ? (
-                      <TableRow>
-                        <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
-                          Loading…
-                        </TableCell>
-                      </TableRow>
-                    ) : groupConversations.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
-                          No group conversations found
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      groupConversations.map((grp) => (
-                        <TableRow key={grp.id}>
-                          <TableCell className="font-mono text-sm">{grp.id}</TableCell>
-                          <TableCell className="font-medium">{grp.name}</TableCell>
-                          <TableCell className="text-muted-foreground font-mono text-sm">
-                            {grp.createdBy ?? "—"}
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-1">
-                              <Users className="h-3 w-3 text-muted-foreground" />
-                              {grp.memberCount}
-                            </div>
-                          </TableCell>
-                          <TableCell>{grp.messageCount}</TableCell>
-                          <TableCell className="text-muted-foreground text-sm">
-                            {grp.lastMessageAt ? new Date(grp.lastMessageAt).toLocaleString() : "—"}
-                          </TableCell>
-                          <TableCell>
-                            {grp.flagged ? (
-                              <Badge variant="destructive">Flagged</Badge>
-                            ) : (
-                              <Badge variant="outline">Clean</Badge>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() =>
-                                    setGroupDetailModal({
-                                      groupId: grp.id,
-                                      name: grp.name,
-                                      creator: grp.createdBy ?? "—",
-                                      memberCount: grp.memberCount,
-                                      messageCount: grp.messageCount,
-                                      lastActive: grp.lastMessageAt
-                                        ? new Date(grp.lastMessageAt).toLocaleString()
-                                        : "—",
-                                      flagCount: grp.flagged ? 1 : 0,
-                                      visibility: grp.communityId ? "Community" : "Standalone",
-                                    })
-                                  }
-                                >
-                                  <MoreHorizontal className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem
-                                  onClick={() =>
-                                    setGroupDetailModal({
-                                      groupId: grp.id,
-                                      name: grp.name,
-                                      creator: grp.createdBy ?? "—",
-                                      memberCount: grp.memberCount,
-                                      messageCount: grp.messageCount,
-                                      lastActive: grp.lastMessageAt
-                                        ? new Date(grp.lastMessageAt).toLocaleString()
-                                        : "—",
-                                      flagCount: grp.flagged ? 1 : 0,
-                                      visibility: grp.communityId ? "Community" : "Standalone",
-                                    })
-                                  }
-                                >
-                                  <Info className="mr-2 h-4 w-4" /> View Details
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={() =>
-                                    setMembersModal({
-                                      conversationId: grp.id,
-                                      title: `Members – ${grp.name}`,
-                                    })
-                                  }
-                                >
-                                  <UserSearch className="mr-2 h-4 w-4" /> View Members
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  className="text-destructive"
-                                  onClick={() => {
-                                    const msgId = window.prompt("Enter the Message ID to delete:");
-                                    if (msgId?.trim()) {
-                                      setDeleteMessageDialog({ messageId: msgId.trim(), conversationId: grp.id });
-                                    }
-                                  }}
-                                >
-                                  <Trash2 className="mr-2 h-4 w-4" /> Delete Message
-                                </DropdownMenuItem>
-                                <DropdownMenuItem className="text-destructive">
-                                  <Archive className="mr-2 h-4 w-4" /> Archive Group
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-                {!groupLoading && groupTotal > groupConversations.length && (
-                  <p className="text-xs text-muted-foreground text-center pt-2">
-                    Showing {groupConversations.length} of {groupTotal} conversations
-                  </p>
                 )}
               </CardContent>
             </Card>
