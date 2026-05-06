@@ -692,10 +692,12 @@ export default function CommunityDetail() {
         communityId: community.id,
         joinPolicy: desiredJoinApi,
       };
-      if (desiredJoinApi === "PAID" && priceAmountNum != null) {
-        joinPolicyInput.priceAmount = priceAmountNum;
-        joinPolicyInput.priceCurrency = editForm.priceCurrency.trim() || "EUR";
+      if (desiredJoinApi === "PAID") {
         joinPolicyInput.paymentType = (editForm.paymentType === "ONE_TIME" || editForm.paymentType === "SUBSCRIPTION") ? editForm.paymentType : "ONE_TIME";
+        if (priceAmountNum != null) {
+          joinPolicyInput.priceAmount = priceAmountNum;
+          joinPolicyInput.priceCurrency = editForm.priceCurrency.trim() || "EUR";
+        }
       }
       await updateJoinPolicyMutation({
         variables: { input: joinPolicyInput },
