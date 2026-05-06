@@ -594,22 +594,26 @@ export default function Reports() {
                 <p className="text-sm text-muted-foreground">New user registrations per day (last 30 days)</p>
               </div>
               <div className="h-[300px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={userGrowthData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
-                    <XAxis dataKey="date" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} />
-                    <YAxis tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: "hsl(var(--card))",
-                        border: "1px solid hsl(var(--border))",
-                        borderRadius: "8px",
-                      }}
-                    />
-                    <Legend />
-                    <Line type="monotone" dataKey="newUsers" stroke="hsl(var(--primary))" strokeWidth={2} name="New Users" dot={false} />
-                  </LineChart>
-                </ResponsiveContainer>
+                {userGrowthData.length === 0 ? (
+                  <div className="flex items-center justify-center h-full text-muted-foreground text-sm">No registrations in this period</div>
+                ) : (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={userGrowthData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
+                      <XAxis dataKey="date" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} />
+                      <YAxis tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: "hsl(var(--card))",
+                          border: "1px solid hsl(var(--border))",
+                          borderRadius: "8px",
+                        }}
+                      />
+                      <Legend />
+                      <Line type="monotone" dataKey="newUsers" stroke="hsl(var(--primary))" strokeWidth={2} name="New Users" dot={false} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                )}
               </div>
             </div>
 
@@ -671,11 +675,12 @@ export default function Reports() {
                   <div className="h-full flex items-center justify-center">
                     <p className="text-muted-foreground text-sm">Loading...</p>
                   </div>
-                ) : (
-                  communityEngagementData?.getCommunityEngagementStatsFull?.byDay ?? []
-                ).length === 0 ? (
+                ) : (communityEngagementData?.getCommunityEngagementStatsFull?.byDay ?? []).reduce(
+                    (sum, d) => sum + (d.posts ?? 0),
+                    0
+                  ) === 0 ? (
                   <div className="h-full flex items-center justify-center">
-                    <p className="text-muted-foreground text-sm">No engagement data available</p>
+                    <p className="text-muted-foreground text-sm">No posts in this period</p>
                   </div>
                 ) : (
                   <ResponsiveContainer width="100%" height="100%">
@@ -1017,35 +1022,41 @@ export default function Reports() {
                   <p className="text-sm text-muted-foreground">Distribution of transaction statuses</p>
                 </div>
                 <div className="h-[250px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={escrowStatusData}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={50}
-                        outerRadius={80}
-                        paddingAngle={2}
-                        dataKey="value"
-                      >
-                        {escrowStatusData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
-                      </Pie>
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: "hsl(var(--card))",
-                          border: "1px solid hsl(var(--border))",
-                          borderRadius: "8px",
-                        }}
-                        formatter={(value) => [`${value}%`, ""]}
-                      />
-                      <Legend
-                        verticalAlign="bottom"
-                        formatter={(value) => <span className="text-muted-foreground text-sm">{statusConfig[value]?.label ?? value}</span>}
-                      />
-                    </PieChart>
-                  </ResponsiveContainer>
+                  {escrowStatusData.length === 0 ? (
+                    <div className="h-full flex items-center justify-center">
+                      <p className="text-muted-foreground text-sm">No escrow data available</p>
+                    </div>
+                  ) : (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={escrowStatusData}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={50}
+                          outerRadius={80}
+                          paddingAngle={2}
+                          dataKey="value"
+                        >
+                          {escrowStatusData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.color} />
+                          ))}
+                        </Pie>
+                        <Tooltip
+                          contentStyle={{
+                            backgroundColor: "hsl(var(--card))",
+                            border: "1px solid hsl(var(--border))",
+                            borderRadius: "8px",
+                          }}
+                          formatter={(value) => [`${value}%`, ""]}
+                        />
+                        <Legend
+                          verticalAlign="bottom"
+                          formatter={(value) => <span className="text-muted-foreground text-sm">{statusConfig[value]?.label ?? value}</span>}
+                        />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  )}
                 </div>
               </div>
 
@@ -1174,35 +1185,41 @@ export default function Reports() {
                   <p className="text-sm text-muted-foreground">Distribution of dispute statuses</p>
                 </div>
                 <div className="h-[250px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={disputeStatusData}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={50}
-                        outerRadius={80}
-                        paddingAngle={2}
-                        dataKey="value"
-                      >
-                        {disputeStatusData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
-                      </Pie>
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: "hsl(var(--card))",
-                          border: "1px solid hsl(var(--border))",
-                          borderRadius: "8px",
-                        }}
-                        formatter={(value) => [`${value}%`, ""]}
-                      />
-                      <Legend
-                        verticalAlign="bottom"
-                        formatter={(value) => <span className="text-muted-foreground text-sm">{statusConfig[value]?.label ?? value}</span>}
-                      />
-                    </PieChart>
-                  </ResponsiveContainer>
+                  {disputeStatusData.length === 0 ? (
+                    <div className="h-full flex items-center justify-center">
+                      <p className="text-muted-foreground text-sm">No dispute data available</p>
+                    </div>
+                  ) : (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={disputeStatusData}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={50}
+                          outerRadius={80}
+                          paddingAngle={2}
+                          dataKey="value"
+                        >
+                          {disputeStatusData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.color} />
+                          ))}
+                        </Pie>
+                        <Tooltip
+                          contentStyle={{
+                            backgroundColor: "hsl(var(--card))",
+                            border: "1px solid hsl(var(--border))",
+                            borderRadius: "8px",
+                          }}
+                          formatter={(value) => [`${value}%`, ""]}
+                        />
+                        <Legend
+                          verticalAlign="bottom"
+                          formatter={(value) => <span className="text-muted-foreground text-sm">{statusConfig[value]?.label ?? value}</span>}
+                        />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  )}
                 </div>
               </div>
 
