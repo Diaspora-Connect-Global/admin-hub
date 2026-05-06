@@ -259,7 +259,7 @@ export default function Dashboard() {
           />
           <MetricCard
             title={t('nav.associations')}
-            value="—"
+            value={stats?.totalAssociations?.toLocaleString() ?? "—"}
             icon={<Briefcase className="w-5 h-5" />}
             onClick={() => navigate("/associations")}
           />

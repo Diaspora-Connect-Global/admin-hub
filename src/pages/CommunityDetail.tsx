@@ -695,7 +695,7 @@ export default function CommunityDetail() {
       if (desiredJoinApi === "PAID" && priceAmountNum != null) {
         joinPolicyInput.priceAmount = priceAmountNum;
         joinPolicyInput.priceCurrency = editForm.priceCurrency.trim() || "EUR";
-        joinPolicyInput.paymentType = editForm.paymentType || "ONE_TIME";
+        joinPolicyInput.paymentType = (editForm.paymentType === "ONE_TIME" || editForm.paymentType === "SUBSCRIPTION") ? editForm.paymentType : "ONE_TIME";
       }
       await updateJoinPolicyMutation({
         variables: { input: joinPolicyInput },

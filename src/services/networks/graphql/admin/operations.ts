@@ -1624,6 +1624,7 @@ export interface UpdateCommunityJoinPolicyInput {
   joinPolicy: string;
   priceAmount?: number | null;
   priceCurrency?: string | null;
+  paymentType?: string | null;
 }
 
 export const UPDATE_COMMUNITY_VISIBILITY = gql`
@@ -2229,6 +2230,7 @@ export interface DashboardStats {
   openDisputes: number;
   pendingEscrows: number;
   totalCommunities: number;
+  totalAssociations: number;
   activeModerationCases: number;
   pendingBanAppeals: number;
   generatedAt: string;
@@ -2273,6 +2275,7 @@ export const GET_DASHBOARD_STATS = gql`
       openDisputes
       pendingEscrows
       totalCommunities
+      totalAssociations
       activeModerationCases
       pendingBanAppeals
       generatedAt
