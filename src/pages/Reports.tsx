@@ -72,6 +72,8 @@ import {
   useGetTopAssociations,
   useGetChatVolumeAnalytics,
   useGetNotificationAnalytics,
+  useListCommunities,
+  useDiscoverAssociations,
 } from "@/hooks/admin";
 
 
@@ -147,7 +149,7 @@ export default function Reports() {
     refetch: refetchTopAssociations,
   } = useGetTopAssociations(10);
 
-  const [chatPeriod] = useState("last_7_days");
+  const [chatPeriod, setChatPeriod] = useState("last_7_days");
   const {
     data: chatAnalyticsData,
     loading: chatAnalyticsLoading,
@@ -160,6 +162,11 @@ export default function Reports() {
     loading: notifLoading,
     refetch: refetchNotifAnalytics,
   } = useGetNotificationAnalytics(notifPeriod);
+
+  const { data: communitiesData, loading: communitiesLoading, refetch: refetchCommunities } =
+    useListCommunities({ limit: 50 });
+  const { data: associationsDiscoverData, loading: associationsLoading, refetch: refetchAssociations } =
+    useDiscoverAssociations({ limit: 50 });
 
   // ── Derived chart data ────────────────────────────────────────────────────
   const userGrowthData = useMemo(() => {
@@ -182,6 +189,15 @@ export default function Reports() {
     }));
   }, [escrowData]);
 
+  const escrowSummary = useMemo(() => {
+    const escrows = escrowData?.adminListEscrows?.escrows ?? [];
+    const totalValue = escrows.reduce((sum, e) => sum + (e.amount ?? 0), 0);
+    const pendingCount = escrows.filter((e) => e.status === "PENDING" || e.status === "HELD").length;
+    const releasedCount = escrows.filter((e) => e.status === "RELEASED").length;
+    const currency = escrows[0]?.currency ?? "USD";
+    return { totalValue, pendingCount, releasedCount, currency };
+  }, [escrowData]);
+
   const disputeStatusData = useMemo(() => {
     const disputes = disputeData?.adminListDisputes?.disputes ?? [];
     if (!disputes.length) return [];
@@ -193,6 +209,26 @@ export default function Reports() {
       value: Math.round((count / total) * 100),
       color: DISPUTE_STATUS_COLORS[name] ?? "hsl(var(--primary))",
     }));
+  }, [disputeData]);
+
+  const disputeSummary = useMemo(() => {
+    const disputes = disputeData?.adminListDisputes?.disputes ?? [];
+    const total = disputes.length;
+    const open = disputes.filter((d) => d.status === "OPEN" || d.status === "UNDER_REVIEW" || d.status === "ESCALATED").length;
+    const resolved = disputes.filter((d) => d.status === "RESOLVED").length;
+    const dismissed = disputes.filter((d) => d.status === "CLOSED").length;
+    const resolutionRate = total > 0 ? Math.round(((resolved + dismissed) / total) * 100) : 0;
+    const resolvedWithTime = disputes.filter(
+      (d) => (d.status === "RESOLVED" || d.status === "CLOSED") && d.resolvedAt && d.createdAt
+    );
+    let avgResolutionDays: number | null = null;
+    if (resolvedWithTime.length > 0) {
+      const totalMs = resolvedWithTime.reduce((sum, d) => {
+        return sum + (new Date(d.resolvedAt!).getTime() - new Date(d.createdAt).getTime());
+      }, 0);
+      avgResolutionDays = Math.round(totalMs / resolvedWithTime.length / (1000 * 60 * 60 * 24));
+    }
+    return { total, open, resolved, resolutionRate, avgResolutionDays };
   }, [disputeData]);
 
   const systemHealthPieData = useMemo(() => {
@@ -316,11 +352,13 @@ export default function Reports() {
           "escrows.csv",
           escrows.map((e) => ({
             id: e.id,
-            paymentIntentId: e.paymentIntentId ?? "",
-            totalAmount: e.totalAmount,
+            buyerId: e.buyerId ?? "",
+            sellerId: e.sellerId ?? "",
+            amount: e.amount ?? 0,
             currency: e.currency,
             status: e.status,
             createdAt: e.createdAt,
+            releasedAt: e.releasedAt ?? "",
           }))
         );
         break;
@@ -330,10 +368,11 @@ export default function Reports() {
           disputes.map((d) => ({
             id: d.id,
             escrowId: d.escrowId ?? "",
+            paymentIntentId: d.paymentIntentId ?? "",
             status: d.status,
             reason: d.reason ?? "",
-            raisedBy: d.raisedBy ?? "",
             createdAt: d.createdAt,
+            resolvedAt: d.resolvedAt ?? "",
           }))
         );
         break;
@@ -388,13 +427,44 @@ export default function Reports() {
     refetchTopAssociations();
     refetchChatAnalytics();
     refetchNotifAnalytics();
+    refetchCommunities();
+    refetchAssociations();
   }
 
-  const escrows = escrowData?.adminListEscrows?.escrows ?? [];
-  const disputes = disputeData?.adminListDisputes?.disputes ?? [];
+  const escrows = [...(escrowData?.adminListEscrows?.escrows ?? [])].sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  );
+  const disputes = [...(disputeData?.adminListDisputes?.disputes ?? [])].sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  );
   const users = usersData?.getUsers?.items ?? [];
   const auditItems = auditData?.getAuditLogs?.items ?? [];
   const services = healthData?.getSystemHealth?.services ?? [];
+
+  // ── Sorted users (newest first, capped at 10) ─────────────────────────────
+  const sortedUsers = [...users]
+    .sort(
+      (a: { createdAt: string }, b: { createdAt: string }) =>
+        new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+    )
+    .slice(0, 10);
+
+  // ── Communities & Associations lists (newest first) ───────────────────────
+  const communities = [...(communitiesData?.listCommunities?.communities ?? [])].sort(
+    (a, b) =>
+      new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+  );
+
+  const associations: Array<{ id: string; name: string; description?: string }> =
+    (
+      associationsDiscoverData as
+        | {
+            discoverAssociations?: {
+              associations?: Array<{ id: string; name: string; description?: string }>;
+            };
+          }
+        | undefined
+    )?.discoverAssociations?.associations ?? [];
 
   // ── Vendor analytics ──────────────────────────────────────────────────────
   const vendorSalesByDay = vendorAnalyticsData?.getVendorSalesAnalytics?.byDay ?? [];
@@ -559,14 +629,14 @@ export default function Reports() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {users.length === 0 ? (
+                  {sortedUsers.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={5} className="text-center text-muted-foreground py-6">
                         No users found
                       </TableCell>
                     </TableRow>
                   ) : (
-                    users.map((user: { id: string; email: string; displayName?: string; createdAt: string }) => (
+                    sortedUsers.map((user: { id: string; email: string; displayName?: string; createdAt: string }) => (
                       <TableRow key={user.id} className="border-border/50">
                         <TableCell className="font-mono text-sm">{truncateId(user.id)}</TableCell>
                         <TableCell className="font-medium">{user.displayName ?? "—"}</TableCell>
@@ -648,50 +718,104 @@ export default function Reports() {
               </div>
             </div>
 
+            {/* Communities table */}
             <div className="glass rounded-xl p-5">
               <div className="mb-4">
-                <h3 className="font-semibold text-foreground">Top Performing Associations</h3>
+                <h3 className="font-semibold text-foreground">Communities</h3>
                 <p className="text-sm text-muted-foreground">
-                  Associations with highest activity across posts, opportunities, vendors, and
-                  reactions
+                  All communities on the platform, sorted by most recently created
                 </p>
               </div>
               <Table>
                 <TableHeader>
                   <TableRow className="border-border/50 hover:bg-transparent">
-                    <TableHead>Association Name</TableHead>
-                    <TableHead>Community</TableHead>
-                    <TableHead>Posts</TableHead>
-                    <TableHead>Opportunities</TableHead>
-                    <TableHead>Vendors</TableHead>
-                    <TableHead>Reactions</TableHead>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead>Members</TableHead>
+                    <TableHead>Join Policy</TableHead>
+                    <TableHead>Created At</TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {topAssociationsLoading ? (
+                  {communitiesLoading ? (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center text-muted-foreground py-6">
+                      <TableCell colSpan={6} className="text-center text-muted-foreground py-6">
                         Loading...
                       </TableCell>
                     </TableRow>
-                  ) : (topAssociationsData?.getTopAssociations?.items ?? []).length === 0 ? (
+                  ) : communities.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center text-muted-foreground py-6">
-                        No association data available
+                      <TableCell colSpan={6} className="text-center text-muted-foreground py-6">
+                        No communities found
                       </TableCell>
                     </TableRow>
                   ) : (
-                    topAssociationsData!.getTopAssociations.items.map((assoc) => (
-                      <TableRow key={assoc.associationId} className="border-border/50">
-                        <TableCell className="font-medium">{assoc.associationName}</TableCell>
+                    communities.map((community) => (
+                      <TableRow key={community.id} className="border-border/50">
+                        <TableCell className="font-medium">{community.name}</TableCell>
                         <TableCell className="text-muted-foreground">
-                          {assoc.communityName}
+                          {community.communityType?.name ?? "—"}
                         </TableCell>
-                        <TableCell>{assoc.posts.toLocaleString()}</TableCell>
-                        <TableCell>{assoc.opportunities.toLocaleString()}</TableCell>
-                        <TableCell>{assoc.vendors.toLocaleString()}</TableCell>
-                        <TableCell>{assoc.reactions.toLocaleString()}</TableCell>
+                        <TableCell>{community.memberCount?.toLocaleString() ?? "—"}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="text-xs capitalize">
+                            {community.joinPolicy.toLowerCase().replace(/_/g, " ")}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {new Date(community.createdAt).toLocaleDateString()}
+                        </TableCell>
+                        <TableCell>
+                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+
+            {/* Associations table */}
+            <div className="glass rounded-xl p-5">
+              <div className="mb-4">
+                <h3 className="font-semibold text-foreground">Associations</h3>
+                <p className="text-sm text-muted-foreground">
+                  All associations registered on the platform
+                </p>
+              </div>
+              <Table>
+                <TableHeader>
+                  <TableRow className="border-border/50 hover:bg-transparent">
+                    <TableHead>Name</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead>Members</TableHead>
+                    <TableHead>Created At</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {associationsLoading ? (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center text-muted-foreground py-6">
+                        Loading...
+                      </TableCell>
+                    </TableRow>
+                  ) : associations.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center text-muted-foreground py-6">
+                        No associations found
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    associations.map((assoc) => (
+                      <TableRow key={assoc.id} className="border-border/50">
+                        <TableCell className="font-medium">{assoc.name}</TableCell>
+                        <TableCell className="text-muted-foreground">—</TableCell>
+                        <TableCell className="text-muted-foreground">—</TableCell>
+                        <TableCell className="text-muted-foreground">—</TableCell>
                         <TableCell>
                           <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
                             <Eye className="h-4 w-4" />
@@ -864,6 +988,28 @@ export default function Reports() {
 
           {/* Escrow Analytics Tab */}
           <TabsContent value="escrow" className="space-y-6">
+            {/* Summary metrics row */}
+            <div className="grid gap-4 sm:grid-cols-3">
+              <div className="glass rounded-xl p-5">
+                <p className="text-sm text-muted-foreground">Total Escrow Value</p>
+                <p className="mt-1 text-2xl font-bold text-foreground">
+                  {formatAmount(escrowSummary.totalValue, escrowSummary.currency)}
+                </p>
+              </div>
+              <div className="glass rounded-xl p-5">
+                <p className="text-sm text-muted-foreground">Pending / Held</p>
+                <p className="mt-1 text-2xl font-bold text-foreground">
+                  {escrowSummary.pendingCount.toLocaleString()}
+                </p>
+              </div>
+              <div className="glass rounded-xl p-5">
+                <p className="text-sm text-muted-foreground">Released</p>
+                <p className="mt-1 text-2xl font-bold text-foreground">
+                  {escrowSummary.releasedCount.toLocaleString()}
+                </p>
+              </div>
+            </div>
+
             <div className="grid gap-6 md:grid-cols-2">
               <div className="glass rounded-xl p-5">
                 <div className="mb-4">
@@ -935,8 +1081,9 @@ export default function Reports() {
                 <TableHeader>
                   <TableRow className="border-border/50 hover:bg-transparent">
                     <TableHead>Transaction ID</TableHead>
-                    <TableHead>Payment Intent</TableHead>
-                    <TableHead>Amount</TableHead>
+                    <TableHead>Buyer ID</TableHead>
+                    <TableHead>Seller ID</TableHead>
+                    <TableHead>Total</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Created At</TableHead>
                     <TableHead>Actions</TableHead>
@@ -945,7 +1092,7 @@ export default function Reports() {
                 <TableBody>
                   {escrows.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center text-muted-foreground py-6">
+                      <TableCell colSpan={7} className="text-center text-muted-foreground py-6">
                         No escrow transactions found
                       </TableCell>
                     </TableRow>
@@ -954,9 +1101,12 @@ export default function Reports() {
                       <TableRow key={e.id} className="border-border/50">
                         <TableCell className="font-mono text-sm">{truncateId(e.id)}</TableCell>
                         <TableCell className="font-mono text-sm text-muted-foreground">
-                          {e.paymentIntentId ? truncateId(e.paymentIntentId) : "—"}
+                          {e.buyerId ? truncateId(e.buyerId) : "—"}
                         </TableCell>
-                        <TableCell className="font-semibold">{formatAmount(e.totalAmount, e.currency)}</TableCell>
+                        <TableCell className="font-mono text-sm text-muted-foreground">
+                          {e.sellerId ? truncateId(e.sellerId) : "—"}
+                        </TableCell>
+                        <TableCell className="font-semibold">{formatAmount(e.amount ?? 0, e.currency)}</TableCell>
                         <TableCell>
                           <Badge variant="outline" className={statusConfig[e.status]?.className}>
                             {statusConfig[e.status]?.label ?? e.status}
@@ -980,6 +1130,43 @@ export default function Reports() {
 
           {/* Disputes Analytics Tab */}
           <TabsContent value="disputes" className="space-y-6">
+            {/* Summary metrics row */}
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="glass rounded-xl p-5">
+                <p className="text-sm text-muted-foreground">Total Disputes</p>
+                <p className="mt-1 text-2xl font-bold text-foreground">
+                  {disputeSummary.total.toLocaleString()}
+                </p>
+              </div>
+              <div className="glass rounded-xl p-5">
+                <p className="text-sm text-muted-foreground">Open</p>
+                <p className="mt-1 text-2xl font-bold text-foreground">
+                  {disputeSummary.open.toLocaleString()}
+                </p>
+              </div>
+              <div className="glass rounded-xl p-5">
+                <p className="text-sm text-muted-foreground">Resolved</p>
+                <p className="mt-1 text-2xl font-bold text-foreground">
+                  {disputeSummary.resolved.toLocaleString()}
+                </p>
+              </div>
+              <div className="glass rounded-xl p-5">
+                <p className="text-sm text-muted-foreground">
+                  {disputeSummary.avgResolutionDays !== null ? "Avg Resolution Time" : "Resolution Rate"}
+                </p>
+                <p className="mt-1 text-2xl font-bold text-foreground">
+                  {disputeSummary.avgResolutionDays !== null
+                    ? `${disputeSummary.avgResolutionDays}d`
+                    : `${disputeSummary.resolutionRate}%`}
+                </p>
+                {disputeSummary.avgResolutionDays !== null && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Resolution rate: {disputeSummary.resolutionRate}%
+                  </p>
+                )}
+              </div>
+            </div>
+
             <div className="grid gap-6 md:grid-cols-2">
               <div className="glass rounded-xl p-5">
                 <div className="mb-4">
@@ -1052,17 +1239,18 @@ export default function Reports() {
                   <TableRow className="border-border/50 hover:bg-transparent">
                     <TableHead>Dispute ID</TableHead>
                     <TableHead>Escrow ID</TableHead>
+                    <TableHead>Payment Intent</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Reason</TableHead>
-                    <TableHead>Raised By</TableHead>
                     <TableHead>Created At</TableHead>
+                    <TableHead>Resolved At</TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {disputes.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center text-muted-foreground py-6">
+                      <TableCell colSpan={8} className="text-center text-muted-foreground py-6">
                         No disputes found
                       </TableCell>
                     </TableRow>
@@ -1073,6 +1261,9 @@ export default function Reports() {
                         <TableCell className="font-mono text-sm text-muted-foreground">
                           {d.escrowId ? truncateId(d.escrowId) : "—"}
                         </TableCell>
+                        <TableCell className="font-mono text-sm text-muted-foreground">
+                          {d.paymentIntentId ? truncateId(d.paymentIntentId) : "—"}
+                        </TableCell>
                         <TableCell>
                           <Badge variant="outline" className={statusConfig[d.status]?.className}>
                             {statusConfig[d.status]?.label ?? d.status}
@@ -1081,11 +1272,11 @@ export default function Reports() {
                         <TableCell className="max-w-[160px] truncate text-muted-foreground">
                           {d.reason ?? "—"}
                         </TableCell>
-                        <TableCell className="font-mono text-sm">
-                          {d.raisedBy ? truncateId(d.raisedBy) : "—"}
-                        </TableCell>
                         <TableCell className="text-muted-foreground">
                           {new Date(d.createdAt).toLocaleDateString()}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {d.resolvedAt ? new Date(d.resolvedAt).toLocaleDateString() : "—"}
                         </TableCell>
                         <TableCell>
                           <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
@@ -1224,6 +1415,69 @@ export default function Reports() {
 
           {/* Chat Analytics Tab */}
           <TabsContent value="chats" className="space-y-6">
+            {/* Period selector */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Select value={chatPeriod} onValueChange={setChatPeriod}>
+                  <SelectTrigger className="w-[180px] bg-background/50 border-border/50">
+                    <SelectValue placeholder="Period" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-card border-border">
+                    <SelectItem value="last_7_days">Last 7 days</SelectItem>
+                    <SelectItem value="last_30_days">Last 30 days</SelectItem>
+                    <SelectItem value="last_90_days">Last 90 days</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Key metrics cards */}
+            <div className="grid gap-4 sm:grid-cols-3">
+              <div className="glass rounded-xl p-5 flex flex-col gap-1">
+                <div className="flex items-center gap-2 text-muted-foreground text-sm">
+                  <MessageSquare className="h-4 w-4" />
+                  Total Messages
+                </div>
+                <p className="text-2xl font-bold text-foreground">
+                  {chatAnalyticsLoading
+                    ? "—"
+                    : (chatAnalyticsData?.getChatVolumeAnalytics?.totalMessages ?? 0).toLocaleString()}
+                </p>
+                <p className="text-xs text-muted-foreground">across DMs and group chats</p>
+              </div>
+              <div className="glass rounded-xl p-5 flex flex-col gap-1">
+                <div className="flex items-center gap-2 text-muted-foreground text-sm">
+                  <Activity className="h-4 w-4" />
+                  Active Conversations
+                </div>
+                <p className="text-2xl font-bold text-foreground">
+                  {chatAnalyticsLoading
+                    ? "—"
+                    : ((chatAnalyticsData?.getChatVolumeAnalytics?.dmCount ?? 0) +
+                        (chatAnalyticsData?.getChatVolumeAnalytics?.groupCount ?? 0)).toLocaleString()}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {chatAnalyticsLoading
+                    ? ""
+                    : `${(chatAnalyticsData?.getChatVolumeAnalytics?.dmCount ?? 0).toLocaleString()} DM · ${(chatAnalyticsData?.getChatVolumeAnalytics?.groupCount ?? 0).toLocaleString()} group`}
+                </p>
+              </div>
+              <div className="glass rounded-xl p-5 flex flex-col gap-1">
+                <div className="flex items-center gap-2 text-muted-foreground text-sm">
+                  <Users className="h-4 w-4" />
+                  Active Users
+                </div>
+                <p className="text-2xl font-bold text-foreground">
+                  {chatAnalyticsLoading
+                    ? "—"
+                    : topActiveChats.length > 0
+                    ? topActiveChats.reduce((sum, c) => sum + c.memberCount, 0).toLocaleString()
+                    : "—"}
+                </p>
+                <p className="text-xs text-muted-foreground">total members across top chats</p>
+              </div>
+            </div>
+
             <div className="grid gap-6 lg:grid-cols-2">
               {/* Chart 1: BarChart - Message Volume by Day */}
               <div className="glass rounded-xl p-5">
