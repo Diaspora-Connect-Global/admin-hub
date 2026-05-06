@@ -347,7 +347,7 @@ export default function ChatManagement() {
                   <div className="relative flex-1 min-w-[200px]">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
-                      placeholder="Search by User ID..."
+                      placeholder="Search by name..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       className="pl-9"
@@ -365,9 +365,8 @@ export default function ChatManagement() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>DM ID</TableHead>
-                      <TableHead>User A</TableHead>
-                      <TableHead>User B</TableHead>
+                      <TableHead>Participant A</TableHead>
+                      <TableHead>Participant B</TableHead>
                       <TableHead>Messages</TableHead>
                       <TableHead>Last Active</TableHead>
                       <TableHead>Flagged</TableHead>
@@ -377,11 +376,11 @@ export default function ChatManagement() {
                   <TableBody>
                     {dmLoading ? (
                       <TableRow>
-                        <TableCell colSpan={7} className="text-center text-muted-foreground py-8">Loading…</TableCell>
+                        <TableCell colSpan={6} className="text-center text-muted-foreground py-8">Loading…</TableCell>
                       </TableRow>
                     ) : dmConversations.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={7} className="text-center text-muted-foreground py-8">No direct message conversations found</TableCell>
+                        <TableCell colSpan={6} className="text-center text-muted-foreground py-8">No direct message conversations found</TableCell>
                       </TableRow>
                     ) : (
                       dmConversations
@@ -394,19 +393,8 @@ export default function ChatManagement() {
                         )
                         .map((dm) => (
                           <TableRow key={dm.id}>
-                            <TableCell className="font-mono text-sm">{dm.id}</TableCell>
-                            <TableCell>
-                              <div className="flex flex-col">
-                                <span className="text-sm">{dm.participant1Name ?? "—"}</span>
-                                <span className="text-xs text-muted-foreground font-mono">{dm.participant1Id}</span>
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex flex-col">
-                                <span className="text-sm">{dm.participant2Name ?? "—"}</span>
-                                <span className="text-xs text-muted-foreground font-mono">{dm.participant2Id}</span>
-                              </div>
-                            </TableCell>
+                            <TableCell className="font-medium">{dm.participant1Name || dm.participant1Id}</TableCell>
+                            <TableCell className="font-medium">{dm.participant2Name || dm.participant2Id}</TableCell>
                             <TableCell>{dm.messageCount}</TableCell>
                             <TableCell className="text-muted-foreground text-sm">
                               {dm.lastMessageAt ? new Date(dm.lastMessageAt).toLocaleString() : "—"}
@@ -502,7 +490,6 @@ export default function ChatManagement() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Group ID</TableHead>
                       <TableHead>Name</TableHead>
                       <TableHead>Creator</TableHead>
                       <TableHead>Members</TableHead>
@@ -515,16 +502,15 @@ export default function ChatManagement() {
                   <TableBody>
                     {groupLoading ? (
                       <TableRow>
-                        <TableCell colSpan={8} className="text-center text-muted-foreground py-8">Loading…</TableCell>
+                        <TableCell colSpan={7} className="text-center text-muted-foreground py-8">Loading…</TableCell>
                       </TableRow>
                     ) : groupConversations.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={8} className="text-center text-muted-foreground py-8">No group conversations found</TableCell>
+                        <TableCell colSpan={7} className="text-center text-muted-foreground py-8">No group conversations found</TableCell>
                       </TableRow>
                     ) : (
                       groupConversations.map((grp) => (
                         <TableRow key={grp.id}>
-                          <TableCell className="font-mono text-sm">{grp.id}</TableCell>
                           <TableCell className="font-medium">{grp.name}</TableCell>
                           <TableCell className="text-muted-foreground font-mono text-sm">{grp.createdBy ?? "—"}</TableCell>
                           <TableCell>
@@ -606,7 +592,7 @@ export default function ChatManagement() {
             <Card>
               <CardHeader>
                 <CardTitle>Recent Flags (Metadata Only)</CardTitle>
-                <CardDescription>Content not visible - E2E encrypted</CardDescription>
+                <CardDescription>Content not visible — E2E encrypted</CardDescription>
               </CardHeader>
               <CardContent>
                 {flaggedLoading ? (
@@ -617,8 +603,8 @@ export default function ChatManagement() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Conversation ID</TableHead>
                         <TableHead>Flag Reason</TableHead>
+                        <TableHead>Flagged By</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead>Created At</TableHead>
                       </TableRow>
@@ -626,8 +612,8 @@ export default function ChatManagement() {
                     <TableBody>
                       {flaggedConversations.slice(0, 5).map((flag) => (
                         <TableRow key={flag.id}>
-                          <TableCell className="font-mono text-sm">{flag.conversationId}</TableCell>
-                          <TableCell>{flag.flagReason}</TableCell>
+                          <TableCell>{flag.flagReason || "—"}</TableCell>
+                          <TableCell className="text-muted-foreground text-sm">{flag.flaggedBy || "System"}</TableCell>
                           <TableCell>
                             <Badge
                               variant={
@@ -641,7 +627,7 @@ export default function ChatManagement() {
                               {flag.status}
                             </Badge>
                           </TableCell>
-                          <TableCell className="text-muted-foreground">
+                          <TableCell className="text-muted-foreground text-sm">
                             {flag.createdAt ? new Date(flag.createdAt).toLocaleString() : "—"}
                           </TableCell>
                         </TableRow>
