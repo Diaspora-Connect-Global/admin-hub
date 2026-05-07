@@ -5,7 +5,6 @@
 
 import { useSessionStore } from "@/stores/sessionStore";
 import { clearSession } from "@/stores/session";
-import { logLogout } from "@/services/core/audit";
 
 /** Roles that can use this admin portal (system-wide or scoped to a community / association). */
 const SCOPED_PORTAL_ROLES = new Set(["COMMUNITY_ADMIN", "ASSOCIATION_ADMIN", "MODERATOR"]);
@@ -24,8 +23,6 @@ export function useAdminAuth() {
   const isScopedPortalAdmin = !!roleName && SCOPED_PORTAL_ROLES.has(roleName);
 
   const logout = () => {
-    const email = useSessionStore.getState().userEmail ?? "unknown";
-    logLogout({ actorId: email, actorLabel: email });
     clearSession();
   };
 

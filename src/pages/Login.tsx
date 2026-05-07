@@ -16,7 +16,6 @@ import { Mail, Lock, Eye, EyeOff, Loader2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { login as authLogin } from "@/services/networks/graphql/admin";
 import { setAccessToken, setRefreshToken, setUserId, setUserEmail, setAdminProfile } from "@/stores/session";
-import { logLogin } from "@/services/core/audit";
 import { useSessionStore } from "@/stores/sessionStore";
 import { useSessionStoreHydrated } from "@/hooks/useSessionStoreHydrated";
 import { SessionHydrationFallback } from "@/components/auth/SessionHydrationFallback";
@@ -100,12 +99,6 @@ export default function Login() {
       setUserEmail(result.data.email ?? email);
       setAdminProfile(result.data.admin ?? null);
 
-      logLogin({
-        actorId: result.data.email ?? email,
-        actorLabel: result.data.email ?? email,
-        success: true,
-        metadata: { rememberMe },
-      });
       setIsLoading(false);
       toast({
         title: "Login Successful",
@@ -115,12 +108,6 @@ export default function Login() {
       navigate(from ?? "/", { replace: true });
     } else {
       const err = (result as { ok: false; error: { message: string } }).error;
-      logLogin({
-        actorId: email,
-        actorLabel: email,
-        success: false,
-        reason: err.message,
-      });
       setIsLoading(false);
       toast({
         title: "Login Failed",
