@@ -144,24 +144,22 @@ export const SEARCH_USERS = gql`
   }
 `;
 
-/** Admin: verify a user profile. */
+/** Admin: verify a user profile. Admin identity is taken from the JWT context server-side. */
 export const VERIFY_PROFILE = gql`
-  mutation VerifyProfile($userId: String!, $adminId: String!, $verificationMethod: String, $notes: String) {
-    verifyProfile(input: { userId: $userId, adminId: $adminId, verificationMethod: $verificationMethod, notes: $notes }) {
+  mutation VerifyProfile($userId: String!, $verificationMethod: String, $notes: String) {
+    verifyProfile(input: { userId: $userId, verificationMethod: $verificationMethod, notes: $notes }) {
       success
       message
-      error
     }
   }
 `;
 
-/** Admin: reject a verification request. */
+/** Admin: reject a verification request. Admin identity is taken from the JWT context server-side. */
 export const REJECT_VERIFICATION = gql`
-  mutation RejectVerification($userId: String!, $adminId: String!, $reason: String) {
-    rejectVerification(input: { userId: $userId, adminId: $adminId, reason: $reason }) {
+  mutation RejectVerification($userId: String!, $reason: String) {
+    rejectVerification(input: { userId: $userId, reason: $reason }) {
       success
       message
-      error
     }
   }
 `;

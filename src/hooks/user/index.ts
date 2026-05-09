@@ -91,14 +91,14 @@ export function useSearchUsers(input: SearchUsersOptions, skip = false) {
 
 export function useVerifyProfile() {
   return useMutation<
-    { verifyProfile: { success: boolean; message: string; error?: string } },
-    { userId: string; adminId: string; verificationMethod?: string; notes?: string }
+    { verifyProfile: { success: boolean; message?: string } },
+    { userId: string; verificationMethod?: string; notes?: string }
   >(VERIFY_PROFILE);
 }
 
 export function useRejectVerification() {
   return useMutation<
-    { rejectVerification: { success: boolean; message: string; error?: string } },
-    { userId: string; adminId: string; reason?: string }
+    { rejectVerification: { success: boolean; message?: string } },
+    { userId: string; reason?: string }
   >(REJECT_VERIFICATION);
 }

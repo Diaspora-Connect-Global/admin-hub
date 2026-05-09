@@ -382,8 +382,8 @@ export const BAN_USER = gql`
 `;
 
 export const UNBAN_USER = gql`
-  mutation UnbanUser($userId: ID!, $reason: String) {
-    unbanUser(userId: $userId, reason: $reason) {
+  mutation UnbanUser($input: UnbanUserInput!) {
+    unbanUser(input: $input) {
       success
       message
     }
@@ -2063,7 +2063,7 @@ export const GET_ESCROW_ATTACHMENTS = gql`
 `;
 
 export const ADMIN_FREEZE_ESCROW = gql`
-  mutation AdminFreezeEscrow($escrowId: ID!, $disputeId: ID!, $reason: String!) {
+  mutation AdminFreezeEscrow($escrowId: String!, $disputeId: String!, $reason: String!) {
     adminFreezeEscrow(escrowId: $escrowId, disputeId: $disputeId, reason: $reason) {
       success
       message
@@ -2072,7 +2072,7 @@ export const ADMIN_FREEZE_ESCROW = gql`
 `;
 
 export const ADMIN_UNFREEZE_ESCROW = gql`
-  mutation AdminUnfreezeEscrow($escrowId: ID!, $disputeId: ID!) {
+  mutation AdminUnfreezeEscrow($escrowId: String!, $disputeId: String!) {
     adminUnfreezeEscrow(escrowId: $escrowId, disputeId: $disputeId) {
       success
       message
@@ -2081,7 +2081,7 @@ export const ADMIN_UNFREEZE_ESCROW = gql`
 `;
 
 export const ADMIN_UNBAN_USER = gql`
-  mutation AdminUnbanUser($userId: ID!, $reason: String) {
+  mutation AdminUnbanUser($userId: String!, $reason: String) {
     adminUnbanUser(userId: $userId, reason: $reason) {
       success
       message

@@ -135,6 +135,7 @@ export default function ContentModeration() {
   const gqlStatus = statusFilter === "Pending Approval" ? "PENDING"
     : statusFilter === "Approved" ? "RESOLVED"
     : statusFilter === "Rejected" ? "DISMISSED"
+    : statusFilter === "Flagged" ? "FLAGGED"
     : undefined;
   const gqlTargetType = contentTypeFilter === "Post" ? "POST"
     : contentTypeFilter === "Comment" ? "COMMENT"
