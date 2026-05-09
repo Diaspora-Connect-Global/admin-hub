@@ -32,6 +32,7 @@ export interface GetUsersData {
   getUsers?: {
     items: GetUsersItem[];
     total: number;
+    hasMore: boolean;
   };
 }
 

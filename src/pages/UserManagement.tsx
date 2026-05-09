@@ -24,7 +24,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Slider } from "@/components/ui/slider";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
@@ -36,21 +35,13 @@ import {
   Ban, ShieldOff, Loader2
 } from "lucide-react";
 
-/** Table row shape for the users table (API data mapped + defaults for missing fields). */
+/** Table row shape for the users table (mapped from backend Profile). */
 export type UserTableRow = {
   id: string;
   name: string;
   email: string;
   phone: string;
   role: string;
-  communitiesCount: number;
-  associationsCount: number;
-  postsCount: number;
-  reactionsCount: number;
-  groupsCount: number;
-  opportunitiesApplied: number;
-  trustScore: number;
-  status: string;
   createdAt: string;
 };
 
@@ -71,14 +62,6 @@ function mapApiUserToRow(item: {
     email: item.email ?? "",
     phone: item.phone ?? "—",
     role: "Individual",
-    communitiesCount: 0,
-    associationsCount: 0,
-    postsCount: 0,
-    reactionsCount: 0,
-    groupsCount: 0,
-    opportunitiesApplied: 0,
-    trustScore: 0,
-    status: "Active",
     createdAt: item.createdAt ?? "",
   };
 }
@@ -97,12 +80,6 @@ const getStatusBadge = (status: string) => {
     "Accepted": "badge-status badge-success",
   };
   return <span className={styles[status] || "badge-status badge-muted"}>{status}</span>;
-};
-
-const getTrustScoreBadge = (score: number) => {
-  if (score >= 80) return <span className="badge-status badge-success">{score}</span>;
-  if (score >= 60) return <span className="badge-status badge-warning">{score}</span>;
-  return <span className="badge-status badge-destructive">{score}</span>;
 };
 
 export default function UserManagement() {
@@ -175,6 +152,7 @@ export default function UserManagement() {
   }, [data]);
 
   const totalUsers = data?.getUsers?.total ?? 0;
+  const hasMore = data?.getUsers?.hasMore ?? false;
 
   // Modals
   const [inviteUserOpen, setInviteUserOpen] = useState(false);
@@ -185,8 +163,6 @@ export default function UserManagement() {
   // Filters
   const [communityFilter, setCommunityFilter] = useState("all");
   const [associationFilter, setAssociationFilter] = useState("all");
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [trustScoreRange, setTrustScoreRange] = useState([0, 100]);
 
   const { data: communitiesData, loading: communitiesLoading } = useListCommunities({
     limit: 500,
@@ -218,9 +194,7 @@ export default function UserManagement() {
       user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
       user.phone.includes(searchQuery) ||
       user.id.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = statusFilter === "all" || user.status === statusFilter;
-    const matchesTrustScore = user.trustScore >= trustScoreRange[0] && user.trustScore <= trustScoreRange[1];
-    return matchesSearch && matchesStatus && matchesTrustScore;
+    return matchesSearch;
   });
 
   const handleSelectAll = (checked: boolean) => {
@@ -303,25 +277,9 @@ export default function UserManagement() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="w-44 space-y-2">
-                  <Label className="text-xs text-muted-foreground">Status</Label>
-                  <Select value={statusFilter} onValueChange={setStatusFilter}>
-                    <SelectTrigger><SelectValue placeholder="Select status" /></SelectTrigger>
-                    <SelectContent className="bg-popover border-border">
-                      <SelectItem value="all">All Status</SelectItem>
-                      <SelectItem value="Active">Active</SelectItem>
-                      <SelectItem value="Inactive">Inactive</SelectItem>
-                      <SelectItem value="Suspended">Suspended</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="w-64 space-y-2">
-                  <Label className="text-xs text-muted-foreground">Trust Score: {trustScoreRange[0]} - {trustScoreRange[1]}</Label>
-                  <Slider value={trustScoreRange} onValueChange={setTrustScoreRange} min={0} max={100} step={5} className="mt-2" />
-                </div>
                 <div className="flex gap-2 pb-0.5">
                   <Button size="sm">Apply</Button>
-                  <Button size="sm" variant="ghost" onClick={() => { setCommunityFilter("all"); setAssociationFilter("all"); setStatusFilter("all"); setTrustScoreRange([0, 100]); }}>Clear</Button>
+                  <Button size="sm" variant="ghost" onClick={() => { setCommunityFilter("all"); setAssociationFilter("all"); }}>Clear</Button>
                 </div>
               </div>
             </CardContent>
@@ -347,17 +305,15 @@ export default function UserManagement() {
                         <TableHead>Name</TableHead>
                         <TableHead>Email</TableHead>
                         <TableHead>Phone</TableHead>
-                        <TableHead>Trust Score</TableHead>
-                        <TableHead>Status</TableHead>
                         <TableHead>Created At</TableHead>
                         <TableHead className="w-20">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {loading ? (
-                        <TableRow><TableCell colSpan={9} className="text-center text-muted-foreground py-8">Loading users...</TableCell></TableRow>
+                        <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">Loading users...</TableCell></TableRow>
                       ) : error ? (
-                        <TableRow><TableCell colSpan={9} className="text-center text-destructive py-8">Failed to load users.</TableCell></TableRow>
+                        <TableRow><TableCell colSpan={6} className="text-center text-destructive py-8">Failed to load users.</TableCell></TableRow>
                       ) : (
                       filteredUsers.map((user) => (
                         <TableRow key={user.id} className="border-border/50">
@@ -365,8 +321,6 @@ export default function UserManagement() {
                           <TableCell className="font-medium">{user.name}</TableCell>
                           <TableCell className="text-muted-foreground">{user.email}</TableCell>
                           <TableCell className="text-muted-foreground">{user.phone}</TableCell>
-                          <TableCell>{getTrustScoreBadge(user.trustScore)}</TableCell>
-                          <TableCell>{getStatusBadge(user.status)}</TableCell>
                           <TableCell className="text-muted-foreground">{user.createdAt}</TableCell>
                           <TableCell>
                             <div className="flex items-center gap-1">
@@ -378,15 +332,12 @@ export default function UserManagement() {
                                   <DropdownMenuItem onClick={() => { setSelectedUser(user); setEditUserOpen(true); }}><UserPlus className="mr-2 h-4 w-4" /> Edit</DropdownMenuItem>
                                   <DropdownMenuItem onClick={() => { setSelectedUser(user); setSuspendUserOpen(true); }} className="text-destructive"><Pause className="mr-2 h-4 w-4" /> Suspend</DropdownMenuItem>
                                   <DropdownMenuSeparator />
-                                  {user.status !== "Suspended" ? (
-                                    <DropdownMenuItem onClick={() => openBanDialog(user)} className="text-destructive">
-                                      <Ban className="mr-2 h-4 w-4" /> Ban User
-                                    </DropdownMenuItem>
-                                  ) : (
-                                    <DropdownMenuItem onClick={() => openUnbanDialog(user)}>
-                                      <ShieldOff className="mr-2 h-4 w-4" /> Unban User
-                                    </DropdownMenuItem>
-                                  )}
+                                  <DropdownMenuItem onClick={() => openBanDialog(user)} className="text-destructive">
+                                    <Ban className="mr-2 h-4 w-4" /> Ban User
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => openUnbanDialog(user)}>
+                                    <ShieldOff className="mr-2 h-4 w-4" /> Unban User
+                                  </DropdownMenuItem>
                                   <DropdownMenuSeparator />
                                   <DropdownMenuItem onClick={() => { setSelectedUser(user); setResetPasswordOpen(true); }}><Key className="mr-2 h-4 w-4" /> Reset Password</DropdownMenuItem>
                                   <DropdownMenuItem><FileJson className="mr-2 h-4 w-4" /> Export Data</DropdownMenuItem>
@@ -400,19 +351,24 @@ export default function UserManagement() {
                   </Table>
                 </div>
                 <div className="flex items-center justify-between border-t border-border/50 px-4 py-3">
-                  <p className="text-sm text-muted-foreground">Showing {users.length ? pageOffset + 1 : 0}-{pageOffset + filteredUsers.length} of {totalUsers} users</p>
+                  <p className="text-sm text-muted-foreground">Showing {users.length ? pageOffset + 1 : 0}-{pageOffset + filteredUsers.length}{totalUsers ? ` of ${totalUsers}` : ""} users</p>
                   <div className="flex items-center gap-2">
-                    <Select defaultValue="10">
-                      <SelectTrigger className="w-[80px]"><SelectValue /></SelectTrigger>
-                      <SelectContent className="bg-popover border-border">
-                        <SelectItem value="10">10</SelectItem>
-                        <SelectItem value="25">25</SelectItem>
-                        <SelectItem value="50">50</SelectItem>
-                        <SelectItem value="100">100</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <Button variant="outline" size="sm" disabled>Previous</Button>
-                    <Button variant="outline" size="sm" disabled>Next</Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={pageOffset === 0 || loading}
+                      onClick={() => setPageOffset((o) => Math.max(0, o - pageLimit))}
+                    >
+                      Previous
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={!hasMore || loading}
+                      onClick={() => setPageOffset((o) => o + pageLimit)}
+                    >
+                      Next
+                    </Button>
                   </div>
                 </div>
               </CardContent>
@@ -437,23 +393,18 @@ export default function UserManagement() {
                   </div>
                   <div className="flex items-center gap-2">
                     <Badge variant="secondary">{selectedUser.role}</Badge>
-                    {getTrustScoreBadge(selectedUser.trustScore)}
-                    {getStatusBadge(selectedUser.status)}
                   </div>
                 </div>
                 <div className="flex flex-wrap gap-2 mt-3">
                   <Button size="sm" variant="outline" onClick={() => setEditUserOpen(true)}><UserPlus className="mr-2 h-4 w-4" /> Edit</Button>
                   <Button size="sm" variant="outline" onClick={() => setSuspendUserOpen(true)}><Pause className="mr-2 h-4 w-4" /> Suspend</Button>
                   <Button size="sm" variant="outline" onClick={() => setResetPasswordOpen(true)}><Key className="mr-2 h-4 w-4" /> Reset Password</Button>
-                  {selectedUser.status !== "Suspended" ? (
-                    <Button size="sm" variant="destructive" onClick={() => openBanDialog(selectedUser)} disabled={banLoading}>
-                      {banLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Ban className="mr-2 h-4 w-4" />} Ban User
-                    </Button>
-                  ) : (
-                    <Button size="sm" variant="outline" onClick={() => openUnbanDialog(selectedUser)} disabled={unbanLoading}>
-                      {unbanLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ShieldOff className="mr-2 h-4 w-4" />} Unban User
-                    </Button>
-                  )}
+                  <Button size="sm" variant="destructive" onClick={() => openBanDialog(selectedUser)} disabled={banLoading}>
+                    {banLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Ban className="mr-2 h-4 w-4" />} Ban User
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => openUnbanDialog(selectedUser)} disabled={unbanLoading}>
+                    {unbanLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ShieldOff className="mr-2 h-4 w-4" />} Unban User
+                  </Button>
                 </div>
               </SheetHeader>
 
@@ -477,8 +428,6 @@ export default function UserManagement() {
                       <div><p className="text-muted-foreground text-xs">Email</p><div className="flex items-center gap-2"><Mail className="h-3 w-3 text-muted-foreground" /><p>{selectedUser.email}</p></div></div>
                       <div><p className="text-muted-foreground text-xs">Phone</p><div className="flex items-center gap-2"><Phone className="h-3 w-3 text-muted-foreground" /><p>{selectedUser.phone}</p></div></div>
                       <div><p className="text-muted-foreground text-xs">Role</p><Badge variant="secondary">{selectedUser.role}</Badge></div>
-                      <div><p className="text-muted-foreground text-xs">Status</p>{getStatusBadge(selectedUser.status)}</div>
-                      <div><p className="text-muted-foreground text-xs">Trust Score</p>{getTrustScoreBadge(selectedUser.trustScore)}</div>
                       <div><p className="text-muted-foreground text-xs">Joined</p><div className="flex items-center gap-2"><Calendar className="h-3 w-3 text-muted-foreground" /><p>{selectedUser.createdAt}</p></div></div>
                     </CardContent>
                   </Card>
@@ -706,8 +655,6 @@ export default function UserManagement() {
             <div className="space-y-2"><Label>Email <span className="text-destructive">*</span></Label><Input type="email" defaultValue={selectedUser?.email} /></div>
             <div className="space-y-2"><Label>Phone</Label><Input defaultValue={selectedUser?.phone} /></div>
             <div className="space-y-2"><Label>Role</Label><Select defaultValue={selectedUser?.role?.toLowerCase().replace(' ', '_')}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent className="bg-popover border-border"><SelectItem value="individual">Individual</SelectItem><SelectItem value="association_admin">Association Admin</SelectItem><SelectItem value="community_admin">Community Admin</SelectItem><SelectItem value="system_admin">System Admin</SelectItem></SelectContent></Select></div>
-            <div className="space-y-2"><Label>Trust Score (0-100)</Label><Input type="number" min={0} max={100} defaultValue={selectedUser?.trustScore} /></div>
-            <div className="space-y-2"><Label>Status</Label><Select defaultValue={selectedUser?.status}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent className="bg-popover border-border"><SelectItem value="Active">Active</SelectItem><SelectItem value="Inactive">Inactive</SelectItem><SelectItem value="Suspended">Suspended</SelectItem></SelectContent></Select></div>
           </div>
           <DialogFooter><Button variant="outline" onClick={() => setEditUserOpen(false)}>Cancel</Button><Button onClick={() => { toast({ title: "User Updated" }); setEditUserOpen(false); }}>Save Changes</Button></DialogFooter>
         </DialogContent>

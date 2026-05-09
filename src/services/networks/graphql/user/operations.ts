@@ -69,6 +69,7 @@ export const GET_USERS = gql`
         createdAt
       }
       total
+      hasMore
     }
   }
 `;
