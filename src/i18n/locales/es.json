@@ -56,7 +56,8 @@
     "audit": "Registros de auditoría",
     "roles": "Roles y permisos",
     "systemHealth": "Estado del sistema",
-    "settings": "Configuración del sistema"
+    "settings": "Configuración del sistema",
+    "aiConfig": "Configuración IA"
   },
   "dashboard": {
     "title": "Panel de administración",

@@ -56,7 +56,8 @@
     "audit": "Audit Logs",
     "roles": "Roles & Permissions",
     "systemHealth": "System Health",
-    "settings": "System Settings"
+    "settings": "System Settings",
+    "aiConfig": "AI Configuration"
   },
   "dashboard": {
     "title": "Admin Dashboard",

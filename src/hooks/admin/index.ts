@@ -473,3 +473,24 @@ export {
   type ChatVolumeDataPoint,
   type ActiveChatStat,
 } from "./useChatAnalytics";
+
+export {
+  useAiListProviderCredentials,
+  useAiGetClassifierConfig,
+  useAiGetPostClassification,
+  useAiGetBackfillJob,
+  useAiUpsertProviderCredential,
+  useAiRevokeProviderCredential,
+  useAiUpdateClassifierConfig,
+  useAiSetPrimaryProvider,
+  useAiClassifyPost,
+  useAiStartBackfill,
+  type ProviderCredential as AiProviderCredential,
+  type ClassifierConfig as AiClassifierConfig,
+  type PostClassification as AiPostClassification,
+  type BackfillJob as AiBackfillJob,
+  type UpsertProviderCredentialInput as AiUpsertProviderCredentialInput,
+  type UpdateClassifierConfigInput as AiUpdateClassifierConfigInput,
+  type StartBackfillInput as AiStartBackfillInput,
+  type AiProviderType,
+} from "./useAiConfig";

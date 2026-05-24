@@ -56,7 +56,8 @@
     "audit": "Auditlogs",
     "roles": "Rollen & Rechten",
     "systemHealth": "Systeemstatus",
-    "settings": "Systeeminstellingen"
+    "settings": "Systeeminstellingen",
+    "aiConfig": "AI-configuratie"
   },
   "dashboard": {
     "title": "Admin Dashboard",

@@ -3092,3 +3092,250 @@ export const GET_COMMUNITY_PRODUCTS_ADMIN = gql`
     }
   }
 `;
+
+// ─── AI Configuration (post classification) ─────────────────────────────────
+//
+// Backed by api-gateway's AiModule. Every mutation/query below is server-side
+// gated to `SYSTEM_ADMIN` / `SUPER_ADMIN`; the admin hub re-gates client-side
+// via the route's role check so non-system admins never see the page.
+//
+// SECURITY: `apiKey` on `UpsertProviderCredentialInput` is INPUT-ONLY — the
+// `ProviderCredential` read type carries `keyPreview` (e.g. `sk-...XYZ4`) and
+// never echoes the plaintext back. UI must clear the field on success and
+// never persist it to local/session storage.
+
+export type AiProviderType = "OPENAI" | "GROQ" | "OPENROUTER" | "HUGGINGFACE";
+
+export type AiBackfillJobStatus =
+  | "RUNNING"
+  | "COMPLETED"
+  | "FAILED"
+  | "CANCELLED";
+
+export interface ProviderCredential {
+  id: string;
+  provider: AiProviderType;
+  label: string;
+  modelDefault?: string | null;
+  endpointUrl?: string | null;
+  isActive: boolean;
+  priority: number;
+  keyPreview: string;
+  createdAt: string;
+  updatedAt: string;
+  createdBy?: string | null;
+  lastRotatedAt?: string | null;
+}
+
+export interface UpsertProviderCredentialInput {
+  id?: string;
+  provider: AiProviderType;
+  label: string;
+  apiKey: string;
+  modelDefault?: string;
+  endpointUrl?: string;
+  isActive: boolean;
+  priority: number;
+}
+
+export interface ClassifierConfig {
+  id: string;
+  taskType: string;
+  taxonomy: string[];
+  promptTemplate: string;
+  temperature: number;
+  maxTopics: number;
+  minConfidence: number;
+  providerOrder: string[];
+  isActive: boolean;
+  version: number;
+  updatedAt: string;
+}
+
+export interface UpdateClassifierConfigInput {
+  taxonomy?: string[];
+  promptTemplate?: string;
+  temperature?: number;
+  maxTopics?: number;
+  minConfidence?: number;
+  providerOrder?: string[];
+  isActive?: boolean;
+}
+
+export interface PostClassification {
+  postId: string;
+  categories: string[];
+  topics: string[];
+  confidence: number;
+  providerUsed: string;
+  modelUsed: string;
+  classifierVersion: number;
+  classifiedAt: string;
+}
+
+export interface BackfillJob {
+  id: string;
+  status: AiBackfillJobStatus;
+  processed: number;
+  succeeded: number;
+  failed: number;
+  startedAt: string;
+  finishedAt?: string | null;
+  dryRun: boolean;
+  lastError?: string | null;
+}
+
+export interface StartBackfillInput {
+  batchSize?: number;
+  maxBatches?: number;
+  since?: string;
+  onlyMissing?: boolean;
+  dryRun?: boolean;
+}
+
+export const AI_PROVIDER_CREDENTIAL_FIELDS = gql`
+  fragment AiProviderCredentialFields on ProviderCredential {
+    id
+    provider
+    label
+    modelDefault
+    endpointUrl
+    isActive
+    priority
+    keyPreview
+    createdAt
+    updatedAt
+    createdBy
+    lastRotatedAt
+  }
+`;
+
+export const AI_CLASSIFIER_CONFIG_FIELDS = gql`
+  fragment AiClassifierConfigFields on ClassifierConfig {
+    id
+    taskType
+    taxonomy
+    promptTemplate
+    temperature
+    maxTopics
+    minConfidence
+    providerOrder
+    isActive
+    version
+    updatedAt
+  }
+`;
+
+export const AI_POST_CLASSIFICATION_FIELDS = gql`
+  fragment AiPostClassificationFields on PostClassification {
+    postId
+    categories
+    topics
+    confidence
+    providerUsed
+    modelUsed
+    classifierVersion
+    classifiedAt
+  }
+`;
+
+export const AI_BACKFILL_JOB_FIELDS = gql`
+  fragment AiBackfillJobFields on BackfillJob {
+    id
+    status
+    processed
+    succeeded
+    failed
+    startedAt
+    finishedAt
+    dryRun
+    lastError
+  }
+`;
+
+export const AI_LIST_PROVIDER_CREDENTIALS = gql`
+  ${AI_PROVIDER_CREDENTIAL_FIELDS}
+  query AiListProviderCredentials {
+    aiListProviderCredentials {
+      ...AiProviderCredentialFields
+    }
+  }
+`;
+
+export const AI_GET_CLASSIFIER_CONFIG = gql`
+  ${AI_CLASSIFIER_CONFIG_FIELDS}
+  query AiGetClassifierConfig {
+    aiGetClassifierConfig {
+      ...AiClassifierConfigFields
+    }
+  }
+`;
+
+export const AI_GET_POST_CLASSIFICATION = gql`
+  ${AI_POST_CLASSIFICATION_FIELDS}
+  query AiGetPostClassification($postId: ID!) {
+    aiGetPostClassification(postId: $postId) {
+      ...AiPostClassificationFields
+    }
+  }
+`;
+
+export const AI_GET_BACKFILL_JOB = gql`
+  ${AI_BACKFILL_JOB_FIELDS}
+  query AiGetBackfillJob($jobId: ID!) {
+    aiGetBackfillJob(jobId: $jobId) {
+      ...AiBackfillJobFields
+    }
+  }
+`;
+
+export const AI_UPSERT_PROVIDER_CREDENTIAL = gql`
+  ${AI_PROVIDER_CREDENTIAL_FIELDS}
+  mutation AiUpsertProviderCredential($input: UpsertProviderCredentialInput!) {
+    aiUpsertProviderCredential(input: $input) {
+      ...AiProviderCredentialFields
+    }
+  }
+`;
+
+export const AI_REVOKE_PROVIDER_CREDENTIAL = gql`
+  mutation AiRevokeProviderCredential($id: ID!) {
+    aiRevokeProviderCredential(id: $id)
+  }
+`;
+
+export const AI_UPDATE_CLASSIFIER_CONFIG = gql`
+  ${AI_CLASSIFIER_CONFIG_FIELDS}
+  mutation AiUpdateClassifierConfig($input: UpdateClassifierConfigInput!) {
+    aiUpdateClassifierConfig(input: $input) {
+      ...AiClassifierConfigFields
+    }
+  }
+`;
+
+export const AI_SET_PRIMARY_PROVIDER = gql`
+  ${AI_CLASSIFIER_CONFIG_FIELDS}
+  mutation AiSetPrimaryProvider($provider: ProviderType!) {
+    aiSetPrimaryProvider(provider: $provider) {
+      ...AiClassifierConfigFields
+    }
+  }
+`;
+
+export const AI_CLASSIFY_POST = gql`
+  ${AI_POST_CLASSIFICATION_FIELDS}
+  mutation AiClassifyPost($postId: ID!) {
+    aiClassifyPost(postId: $postId) {
+      ...AiPostClassificationFields
+    }
+  }
+`;
+
+export const AI_START_BACKFILL = gql`
+  ${AI_BACKFILL_JOB_FIELDS}
+  mutation AiStartBackfill($input: StartBackfillInput!) {
+    aiStartBackfill(input: $input) {
+      ...AiBackfillJobFields
+    }
+  }
+`;

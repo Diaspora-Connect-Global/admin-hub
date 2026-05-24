@@ -56,7 +56,8 @@
     "audit": "Journaux d'audit",
     "roles": "Rôles et permissions",
     "systemHealth": "État du système",
-    "settings": "Paramètres système"
+    "settings": "Paramètres système",
+    "aiConfig": "Configuration IA"
   },
   "dashboard": {
     "title": "Tableau de bord admin",

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { LayoutDashboard, Users, Wallet, AlertTriangle, CheckSquare, BarChart3, Settings, Bell, FileText, HeadphonesIcon, Shield, Store, Key, Activity, ChevronLeft, ChevronRight, LogOut, MessageSquare, Calendar, Briefcase, Landmark } from "lucide-react";
+import { LayoutDashboard, Users, Wallet, AlertTriangle, CheckSquare, BarChart3, Settings, Bell, FileText, HeadphonesIcon, Shield, Store, Key, Activity, ChevronLeft, ChevronRight, LogOut, MessageSquare, Calendar, Briefcase, Landmark, Brain } from "lucide-react";
 import { cn } from "@/lib/utils";
 import logo from "@/assets/logo.svg";
 import { useAdminAuth, getPortalRoleTranslationKey } from "@/hooks/auth/useAdminAuth";
@@ -18,6 +18,7 @@ const navItems = [
   { id: "opportunities", titleKey: "nav.opportunities", icon: Briefcase, path: "/opportunities" },
   { id: "reports_analytics", titleKey: "nav.reports", icon: BarChart3, path: "/reports" },
   { id: "system_settings", titleKey: "nav.settings", icon: Settings, path: "/settings" },
+  { id: "ai_configuration", titleKey: "nav.aiConfig", icon: Brain, path: "/settings/ai", systemAdminOnly: true },
   { id: "notifications", titleKey: "nav.notifications", icon: Bell, path: "/notifications" },
   { id: "audit_logs", titleKey: "nav.audit", icon: FileText, path: "/audit" },
   { id: "support_ticketing", titleKey: "nav.support", icon: HeadphonesIcon, path: "/support" },
@@ -30,13 +31,22 @@ export function AdminSidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
   const { t } = useTranslation();
-  const { userEmail, adminProfile } = useAdminAuth();
+  const { userEmail, adminProfile, isSystemAdmin } = useAdminAuth();
   const roleTitleKey = getPortalRoleTranslationKey(adminProfile?.role?.name);
-  
+
   const isActive = (path: string) => {
     if (path === "/") return location.pathname === "/";
-    return location.pathname.startsWith(path);
+    // Prefer the most specific match — e.g. /settings/ai should only highlight
+    // the AI Configuration item, not the parent /settings item.
+    const visibleNav = navItems.filter((it) => !it.systemAdminOnly || isSystemAdmin);
+    const candidates = visibleNav
+      .map((it) => it.path)
+      .filter((p) => p !== "/" && location.pathname.startsWith(p))
+      .sort((a, b) => b.length - a.length);
+    return candidates[0] === path;
   };
+
+  const visibleNavItems = navItems.filter((item) => !item.systemAdminOnly || isSystemAdmin);
   
   return (
     <aside className={cn("fixed left-0 top-0 h-screen bg-sidebar border-r border-sidebar-border flex flex-col transition-all duration-300 z-40", collapsed ? "w-16" : "w-64")}>
@@ -57,7 +67,7 @@ export function AdminSidebar() {
       {/* Navigation */}
       <nav className="flex-1 py-4 px-2 overflow-y-auto scrollbar-thin">
         <ul className="space-y-1">
-          {navItems.map(item => {
+          {visibleNavItems.map(item => {
             const active = isActive(item.path);
             return (
               <li key={item.id}>

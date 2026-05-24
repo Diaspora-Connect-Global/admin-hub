@@ -56,7 +56,8 @@
     "audit": "Audit-Protokolle",
     "roles": "Rollen & Berechtigungen",
     "systemHealth": "Systemstatus",
-    "settings": "Systemeinstellungen"
+    "settings": "Systemeinstellungen",
+    "aiConfig": "KI-Konfiguration"
   },
   "dashboard": {
     "title": "Admin-Dashboard",
