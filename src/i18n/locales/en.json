@@ -57,7 +57,8 @@
     "roles": "Roles & Permissions",
     "systemHealth": "System Health",
     "settings": "System Settings",
-    "aiConfig": "AI Configuration"
+    "aiConfig": "AI Configuration",
+    "paymentKeys": "Payment Provider Keys"
   },
   "dashboard": {
     "title": "Admin Dashboard",

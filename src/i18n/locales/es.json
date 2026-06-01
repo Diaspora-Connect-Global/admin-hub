@@ -57,7 +57,8 @@
     "roles": "Roles y permisos",
     "systemHealth": "Estado del sistema",
     "settings": "Configuración del sistema",
-    "aiConfig": "Configuración IA"
+    "aiConfig": "Configuración IA",
+    "paymentKeys": "Claves de proveedores de pago"
   },
   "dashboard": {
     "title": "Panel de administración",

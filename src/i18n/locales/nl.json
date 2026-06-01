@@ -57,7 +57,8 @@
     "roles": "Rollen & Rechten",
     "systemHealth": "Systeemstatus",
     "settings": "Systeeminstellingen",
-    "aiConfig": "AI-configuratie"
+    "aiConfig": "AI-configuratie",
+    "paymentKeys": "Betaalprovider-sleutels"
   },
   "dashboard": {
     "title": "Admin Dashboard",

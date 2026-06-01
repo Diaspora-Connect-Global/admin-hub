@@ -57,7 +57,8 @@
     "roles": "Rollen & Berechtigungen",
     "systemHealth": "Systemstatus",
     "settings": "Systemeinstellungen",
-    "aiConfig": "KI-Konfiguration"
+    "aiConfig": "KI-Konfiguration",
+    "paymentKeys": "Zahlungsanbieter-Schlüssel"
   },
   "dashboard": {
     "title": "Admin-Dashboard",

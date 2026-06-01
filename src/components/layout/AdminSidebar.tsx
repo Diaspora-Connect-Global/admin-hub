@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { LayoutDashboard, Users, Wallet, AlertTriangle, CheckSquare, BarChart3, Settings, Bell, FileText, HeadphonesIcon, Shield, Store, Key, Activity, ChevronLeft, ChevronRight, LogOut, MessageSquare, Calendar, Briefcase, Landmark, Brain } from "lucide-react";
+import { LayoutDashboard, Users, Wallet, AlertTriangle, CheckSquare, BarChart3, Settings, Bell, FileText, HeadphonesIcon, Shield, Store, Key, Activity, ChevronLeft, ChevronRight, LogOut, MessageSquare, Calendar, Briefcase, Landmark, Brain, CreditCard } from "lucide-react";
 import { cn } from "@/lib/utils";
 import logo from "@/assets/logo.svg";
 import { useAdminAuth, getPortalRoleTranslationKey } from "@/hooks/auth/useAdminAuth";
@@ -19,6 +19,7 @@ const navItems = [
   { id: "reports_analytics", titleKey: "nav.reports", icon: BarChart3, path: "/reports" },
   { id: "system_settings", titleKey: "nav.settings", icon: Settings, path: "/settings" },
   { id: "ai_configuration", titleKey: "nav.aiConfig", icon: Brain, path: "/settings/ai", systemAdminOnly: true },
+  { id: "payment_keys", titleKey: "nav.paymentKeys", icon: CreditCard, path: "/settings/payment-keys", systemAdminOnly: true },
   { id: "notifications", titleKey: "nav.notifications", icon: Bell, path: "/notifications" },
   { id: "audit_logs", titleKey: "nav.audit", icon: FileText, path: "/audit" },
   { id: "support_ticketing", titleKey: "nav.support", icon: HeadphonesIcon, path: "/support" },

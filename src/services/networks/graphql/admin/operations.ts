@@ -3339,3 +3339,119 @@ export const AI_START_BACKFILL = gql`
     }
   }
 `;
+
+// ─── Payment Provider Keys ──────────────────────────────────────────────────
+//
+// Backed by api-gateway's payment-provider-credential admin operations. Every
+// mutation/query below is server-side gated to `SYSTEM_ADMIN` / `SUPER_ADMIN`;
+// the admin hub re-gates client-side via the route's role check so non-system
+// admins never see the page.
+//
+// SECURITY: `apiKey` / `apiSecret` / `webhookSecret` on the input types are
+// INPUT-ONLY — the `PaymentProviderCredential` read type carries only
+// `keyPreview` (e.g. `sk_...XYZ4`) and never echoes any plaintext secret back.
+// UI must clear secret fields on success and never persist them to
+// local/session storage. Editing reuses the Rotate mutation for new secrets;
+// an empty secret means "keep the existing one".
+
+export type PaymentProviderType = "STRIPE" | "PAYPAL" | "PAYSTACK";
+
+export interface PaymentProviderCredential {
+  id: string;
+  provider: PaymentProviderType;
+  environment: string;
+  keyPreview: string;
+  isActive: boolean;
+  enabledCountries: string[];
+  createdBy?: string | null;
+  createdAt?: string | null;
+  updatedAt?: string | null;
+  lastRotatedAt?: string | null;
+  expiresAt?: string | null;
+}
+
+export interface UpsertPaymentProviderCredentialInput {
+  provider: PaymentProviderType;
+  environment: string;
+  apiKey: string;
+  apiSecret?: string;
+  webhookSecret?: string;
+  additionalConfigJson?: string;
+  enabledCountries?: string[];
+  expiresAt?: string;
+}
+
+export interface RotatePaymentProviderCredentialInput {
+  id: string;
+  apiKey: string;
+  apiSecret?: string;
+  webhookSecret?: string;
+  expiresAt?: string;
+}
+
+export const PAYMENT_PROVIDER_CREDENTIAL_FIELDS = gql`
+  fragment PaymentProviderCredentialFields on PaymentProviderCredential {
+    id
+    provider
+    environment
+    keyPreview
+    isActive
+    enabledCountries
+    createdBy
+    createdAt
+    updatedAt
+    lastRotatedAt
+    expiresAt
+  }
+`;
+
+export const PAYMENT_LIST_PROVIDER_CREDENTIALS = gql`
+  ${PAYMENT_PROVIDER_CREDENTIAL_FIELDS}
+  query PaymentListProviderCredentials(
+    $provider: String
+    $environment: String
+    $onlyActive: Boolean
+  ) {
+    paymentListProviderCredentials(
+      provider: $provider
+      environment: $environment
+      onlyActive: $onlyActive
+    ) {
+      ...PaymentProviderCredentialFields
+    }
+  }
+`;
+
+export const PAYMENT_UPSERT_PROVIDER_CREDENTIAL = gql`
+  ${PAYMENT_PROVIDER_CREDENTIAL_FIELDS}
+  mutation PaymentUpsertProviderCredential(
+    $input: UpsertPaymentProviderCredentialInput!
+  ) {
+    paymentUpsertProviderCredential(input: $input) {
+      ...PaymentProviderCredentialFields
+    }
+  }
+`;
+
+export const PAYMENT_ROTATE_PROVIDER_CREDENTIAL = gql`
+  ${PAYMENT_PROVIDER_CREDENTIAL_FIELDS}
+  mutation PaymentRotateProviderCredential(
+    $input: RotatePaymentProviderCredentialInput!
+  ) {
+    paymentRotateProviderCredential(input: $input) {
+      ...PaymentProviderCredentialFields
+    }
+  }
+`;
+
+export const PAYMENT_DISABLE_PROVIDER_CREDENTIAL = gql`
+  mutation PaymentDisableProviderCredential($id: ID!) {
+    paymentDisableProviderCredential(id: $id)
+  }
+`;
+
+export const PAYMENT_ENABLE_PROVIDER_CREDENTIAL = gql`
+  mutation PaymentEnableProviderCredential($id: ID!) {
+    paymentEnableProviderCredential(id: $id)
+  }
+`;

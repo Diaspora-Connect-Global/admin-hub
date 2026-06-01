@@ -32,6 +32,7 @@ import RolesPermissions from "./pages/RolesPermissions";
 import Reports from "./pages/Reports";
 import ChatManagement from "./pages/ChatManagement";
 import AiConfiguration from "./pages/AiConfiguration";
+import PaymentProviderKeys from "./pages/PaymentProviderKeys";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -62,6 +63,7 @@ const App = () => (
               <Route path="/reports" element={<Reports />} />
               <Route path="/settings" element={<SystemSettings />} />
               <Route path="/settings/ai" element={<AiConfiguration />} />
+              <Route path="/settings/payment-keys" element={<PaymentProviderKeys />} />
               <Route path="/notifications" element={<NotificationsBroadcasts />} />
               <Route path="/audit" element={<AuditLogs />} />
               <Route path="/support" element={<SupportTicketing />} />
