@@ -58,7 +58,8 @@
     "systemHealth": "Systeemstatus",
     "settings": "Systeeminstellingen",
     "aiConfig": "AI-configuratie",
-    "paymentKeys": "Betaalprovider-sleutels"
+    "paymentKeys": "Betaalprovider-sleutels",
+    "kycKeys": "KYC-provider-sleutels"
   },
   "dashboard": {
     "title": "Admin Dashboard",

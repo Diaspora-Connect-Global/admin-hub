@@ -35,7 +35,7 @@ export async function exchangeRefreshTokenForSession(): Promise<RefreshResult> {
       },
       body: JSON.stringify({
         query: print(REFRESH_TOKEN),
-        variables: { input: { refreshToken } },
+        variables: { refreshToken },
       }),
     });
 

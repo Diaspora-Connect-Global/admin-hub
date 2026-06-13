@@ -317,8 +317,8 @@ export const ADMIN_LOGIN = gql`
 `;
 
 export const REFRESH_TOKEN = gql`
-  mutation RefreshToken($input: RefreshTokenInput!) {
-    refreshToken(input: $input) {
+  mutation RefreshToken($refreshToken: String!) {
+    refreshToken(refreshToken: $refreshToken) {
       accessToken
       refreshToken
       sessionToken
@@ -3453,5 +3453,98 @@ export const PAYMENT_DISABLE_PROVIDER_CREDENTIAL = gql`
 export const PAYMENT_ENABLE_PROVIDER_CREDENTIAL = gql`
   mutation PaymentEnableProviderCredential($id: ID!) {
     paymentEnableProviderCredential(id: $id)
+  }
+`;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// KYC Provider Credentials (admin-managed, encrypted)
+// ─────────────────────────────────────────────────────────────────────────────
+// Backed by api-gateway's KYC-provider-credential admin operations. Every
+// mutation/query below is server-side gated to `SYSTEM_ADMIN` / `SUPER_ADMIN`;
+// the admin hub re-gates client-side via the route's role check so non-system
+// admins never see the page.
+//
+// SECURITY: `apiKey` / `apiSecret` / `webhookSecret` on the input type are
+// INPUT-ONLY — the `KycProviderCredential` read type carries only `keyPreview`
+// (e.g. `tok_...XYZ4`) plus boolean `hasApiSecret` / `hasWebhookSecret` flags and
+// never echoes any plaintext secret back. UI must clear secret fields on success
+// and never persist them. Each provider keeps a SINGLE active credential — the
+// single-upsert model (like the AI vertical); an empty secret on edit means
+// "keep the existing one". `configJson` carries the non-secret per-provider
+// config (region / redirectUri / environment / baseUrl / levelName) as a JSON
+// string.
+
+export type KycProviderType = "ONFIDO" | "ITSME" | "SUMSUB";
+
+export interface KycProviderCredential {
+  id: string;
+  provider: KycProviderType;
+  keyPreview: string;
+  isActive: boolean;
+  region?: string | null;
+  environment?: string | null;
+  redirectUri?: string | null;
+  baseUrl?: string | null;
+  levelName?: string | null;
+  hasApiSecret: boolean;
+  hasWebhookSecret: boolean;
+  createdBy?: string | null;
+  createdAt?: string | null;
+  updatedAt?: string | null;
+  lastRotatedAt?: string | null;
+}
+
+export interface UpsertKycProviderCredentialInput {
+  provider: KycProviderType;
+  apiKey?: string;
+  apiSecret?: string;
+  webhookSecret?: string;
+  /** JSON string of the non-secret provider config (region / redirectUri / etc.). */
+  configJson?: string;
+}
+
+export const KYC_PROVIDER_CREDENTIAL_FIELDS = gql`
+  fragment KycProviderCredentialFields on KycProviderCredential {
+    id
+    provider
+    keyPreview
+    isActive
+    region
+    environment
+    redirectUri
+    baseUrl
+    levelName
+    hasApiSecret
+    hasWebhookSecret
+    createdBy
+    createdAt
+    updatedAt
+    lastRotatedAt
+  }
+`;
+
+export const KYC_LIST_PROVIDER_CREDENTIALS = gql`
+  ${KYC_PROVIDER_CREDENTIAL_FIELDS}
+  query KycListProviderCredentials($provider: String, $onlyActive: Boolean) {
+    kycListProviderCredentials(provider: $provider, onlyActive: $onlyActive) {
+      ...KycProviderCredentialFields
+    }
+  }
+`;
+
+export const KYC_UPSERT_PROVIDER_CREDENTIAL = gql`
+  ${KYC_PROVIDER_CREDENTIAL_FIELDS}
+  mutation KycUpsertProviderCredential(
+    $input: UpsertKycProviderCredentialInput!
+  ) {
+    kycUpsertProviderCredential(input: $input) {
+      ...KycProviderCredentialFields
+    }
+  }
+`;
+
+export const KYC_REVOKE_PROVIDER_CREDENTIAL = gql`
+  mutation KycRevokeProviderCredential($provider: String!) {
+    kycRevokeProviderCredential(provider: $provider)
   }
 `;

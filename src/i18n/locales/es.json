@@ -58,7 +58,8 @@
     "systemHealth": "Estado del sistema",
     "settings": "Configuración del sistema",
     "aiConfig": "Configuración IA",
-    "paymentKeys": "Claves de proveedores de pago"
+    "paymentKeys": "Claves de proveedores de pago",
+    "kycKeys": "Claves de proveedores KYC"
   },
   "dashboard": {
     "title": "Panel de administración",

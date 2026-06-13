@@ -58,7 +58,8 @@
     "systemHealth": "Systemstatus",
     "settings": "Systemeinstellungen",
     "aiConfig": "KI-Konfiguration",
-    "paymentKeys": "Zahlungsanbieter-Schlüssel"
+    "paymentKeys": "Zahlungsanbieter-Schlüssel",
+    "kycKeys": "KYC-Anbieter-Schlüssel"
   },
   "dashboard": {
     "title": "Admin-Dashboard",

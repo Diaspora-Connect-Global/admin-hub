@@ -58,7 +58,8 @@
     "systemHealth": "System Health",
     "settings": "System Settings",
     "aiConfig": "AI Configuration",
-    "paymentKeys": "Payment Provider Keys"
+    "paymentKeys": "Payment Provider Keys",
+    "kycKeys": "KYC Provider Keys"
   },
   "dashboard": {
     "title": "Admin Dashboard",

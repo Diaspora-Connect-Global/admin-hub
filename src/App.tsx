@@ -33,6 +33,7 @@ import Reports from "./pages/Reports";
 import ChatManagement from "./pages/ChatManagement";
 import AiConfiguration from "./pages/AiConfiguration";
 import PaymentProviderKeys from "./pages/PaymentProviderKeys";
+import KycProviderKeys from "./pages/KycProviderKeys";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -64,6 +65,7 @@ const App = () => (
               <Route path="/settings" element={<SystemSettings />} />
               <Route path="/settings/ai" element={<AiConfiguration />} />
               <Route path="/settings/payment-keys" element={<PaymentProviderKeys />} />
+              <Route path="/settings/kyc-keys" element={<KycProviderKeys />} />
               <Route path="/notifications" element={<NotificationsBroadcasts />} />
               <Route path="/audit" element={<AuditLogs />} />
               <Route path="/support" element={<SupportTicketing />} />

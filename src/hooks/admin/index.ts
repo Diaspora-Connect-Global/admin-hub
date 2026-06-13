@@ -506,3 +506,12 @@ export {
   type UpsertPaymentProviderCredentialInput,
   type RotatePaymentProviderCredentialInput,
 } from "./usePaymentProviderKeys";
+
+export {
+  useKycProviderKeysList,
+  useKycUpsertProviderKey,
+  useKycRevokeProviderKey,
+  type KycProviderCredential,
+  type KycProviderType,
+  type UpsertKycProviderCredentialInput,
+} from "./useKycProviderKeys";

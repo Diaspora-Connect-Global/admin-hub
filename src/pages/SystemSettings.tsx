@@ -143,6 +143,13 @@ export default function SystemSettings() {
     max_upload_size_mb: string;
   }>({ maintenance_mode: "", max_upload_size_mb: "" });
 
+  // SEO search-engine site-verification tokens. Read by the public web app
+  // (getPublicSeoSettings) and rendered into the <head> for domain verification.
+  const [seoSettings, setSeoSettings] = useState<{
+    seo_google_site_verification: string;
+    seo_bing_site_verification: string;
+  }>({ seo_google_site_verification: "", seo_bing_site_verification: "" });
+
   // Seed local state once platform settings are fetched
   useEffect(() => {
     if (platformSettings.length === 0) return;
@@ -164,6 +171,12 @@ export default function SystemSettings() {
     setSystemPlatformSettings({
       maintenance_mode: getSetting("maintenance_mode") || "false",
       max_upload_size_mb: getSetting("max_upload_size_mb") || "50",
+    });
+
+    // SEO verification tokens
+    setSeoSettings({
+      seo_google_site_verification: getSetting("seo_google_site_verification"),
+      seo_bing_site_verification: getSetting("seo_bing_site_verification"),
     });
 
     // General — Platform Info card
@@ -420,6 +433,65 @@ export default function SystemSettings() {
                       disabled={platformSettingsLoading}
                     />
                     <p className="text-xs text-muted-foreground">Maximum file size users can upload. Saves on blur.</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-card border-border">
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Globe className="w-4 h-4" />
+                  SEO &amp; Site Verification
+                  {platformSettingsLoading && <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />}
+                </CardTitle>
+                <CardDescription>
+                  Search-engine domain-verification tokens. Paste the token value (not the full
+                  meta tag); the public site renders it into its &lt;head&gt; automatically. Saves on blur.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="seo_google_site_verification">Google Search Console</Label>
+                    <Input
+                      id="seo_google_site_verification"
+                      placeholder="e.g. ca-google-site-verification token"
+                      value={seoSettings.seo_google_site_verification}
+                      onChange={(e) =>
+                        setSeoSettings((prev) => ({ ...prev, seo_google_site_verification: e.target.value }))
+                      }
+                      onBlur={() =>
+                        savePlatformSetting("seo_google_site_verification", seoSettings.seo_google_site_verification)
+                      }
+                      className="bg-secondary border-border"
+                      disabled={platformSettingsLoading}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      From Search Console → Settings → Ownership verification → HTML tag. Paste only the
+                      <code className="mx-1">content</code> value.
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="seo_bing_site_verification">Bing Webmaster Tools</Label>
+                    <Input
+                      id="seo_bing_site_verification"
+                      placeholder="e.g. msvalidate.01 token"
+                      value={seoSettings.seo_bing_site_verification}
+                      onChange={(e) =>
+                        setSeoSettings((prev) => ({ ...prev, seo_bing_site_verification: e.target.value }))
+                      }
+                      onBlur={() =>
+                        savePlatformSetting("seo_bing_site_verification", seoSettings.seo_bing_site_verification)
+                      }
+                      className="bg-secondary border-border"
+                      disabled={platformSettingsLoading}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      From Bing Webmaster Tools → HTML meta tag. Paste only the
+                      <code className="mx-1">content</code> value.
+                    </p>
                   </div>
                 </div>
               </CardContent>
