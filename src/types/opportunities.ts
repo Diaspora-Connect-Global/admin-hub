@@ -346,6 +346,7 @@ export interface Applicant extends Application {
   name?: string;
   email?: string;
   phone?: string;
+  location?: string;
   appliedAt?: string;
   screeningScore?: number;
   cvUrl?: string;

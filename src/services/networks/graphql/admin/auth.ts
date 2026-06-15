@@ -152,7 +152,9 @@ export async function refreshSession(): Promise<
 > {
   const result = await exchangeRefreshTokenForSession();
   if (result.ok) return result;
-  return { ok: false, error: result.error };
+  // `result` is narrowed to the failure variant here; RefreshError and LoginError
+  // are structurally identical, so the error object maps directly.
+  return result;
 }
 
 /**

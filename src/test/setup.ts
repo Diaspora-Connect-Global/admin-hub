@@ -15,7 +15,7 @@ Object.defineProperty(window, "matchMedia", {
   value: (query: string) => ({
     matches: false,
     media: query,
-    onchange: null,
+    onchange: null as ((this: MediaQueryList, ev: MediaQueryListEvent) => unknown) | null,
     addEventListener: vi.fn(),
     removeEventListener: vi.fn(),
     addListener: vi.fn(),

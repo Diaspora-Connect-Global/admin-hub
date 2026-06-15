@@ -31,7 +31,6 @@ import type {
   ListOpportunitiesInput,
   CreateOpportunityInput,
   UpdateOpportunityInput,
-  GetApplicationsInput,
   SubmitApplicationInput,
   GetOpportunityFeedInput,
 } from "@/types/opportunities";

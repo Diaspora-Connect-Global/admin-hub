@@ -4,7 +4,7 @@
  */
 
 import { useQuery, useMutation, useLazyQuery } from "@apollo/client/react";
-import { Event } from "@/types/events";
+import { Event, EventRegistration } from "@/types/events";
 import {
   LIST_EVENTS,
   GET_EVENT,
@@ -128,11 +128,18 @@ export interface GetEventRegistrationsVariables {
   status?: string;
 }
 
+export interface GetEventRegistrationsResponse {
+  getEventRegistrations: {
+    total: number;
+    registrations: EventRegistration[];
+  };
+}
+
 export function useGetEventRegistrations(variables: GetEventRegistrationsVariables | null) {
   const limit = variables?.limit ?? 50;
   const offset = variables?.offset ?? 0;
   const status = variables?.status;
-  return useQuery(GET_EVENT_REGISTRATIONS, {
+  return useQuery<GetEventRegistrationsResponse>(GET_EVENT_REGISTRATIONS, {
     variables: variables?.eventId
       ? {
           eventId: variables.eventId,

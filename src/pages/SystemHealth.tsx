@@ -103,7 +103,14 @@ export default function SystemHealth() {
     // Fill chart with historical placeholders so "Now" isn't lonely
     const slots = ["00:00", "04:00", "08:00", "12:00", "16:00", "20:00"];
     return [
-      ...slots.map((time) => ({ time, cpu: null, memory: null, requests: null })),
+      ...slots.map(
+        (time): { time: string; cpu: number | null; memory: number | null; requests: number | null } => ({
+          time,
+          cpu: null,
+          memory: null,
+          requests: null,
+        }),
+      ),
       nowPoint,
     ];
   }, [metrics]);

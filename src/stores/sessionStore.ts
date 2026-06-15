@@ -40,7 +40,7 @@ type SessionState = {
 
 export const useSessionStore = create<SessionState>()(
   persist(
-    (set) => ({
+    (set): SessionState => ({
       adminProfile: null,
       accessToken: null,
       sessionId: null, // Legacy alias

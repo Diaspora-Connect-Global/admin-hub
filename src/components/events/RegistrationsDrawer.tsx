@@ -151,7 +151,15 @@ export function RegistrationsDrawer({
       await Promise.all(
         unresolvedIds.map(async (userId) => {
           try {
-            const { data: profileData } = await client.query({
+            const { data: profileData } = await client.query<{
+              getProfile?: {
+                profile?: {
+                  firstName?: string | null;
+                  lastName?: string | null;
+                  email?: string | null;
+                } | null;
+              } | null;
+            }>({
               query: GET_USER_DISPLAY_NAME,
               variables: { userId },
               fetchPolicy: "cache-first",
