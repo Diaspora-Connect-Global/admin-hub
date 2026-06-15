@@ -17,6 +17,7 @@ import {
   MessageSquare,
 } from "lucide-react";
 import { AdminLayout } from "@/components/layout/AdminLayout";
+import { LoadingState, ErrorState } from "@/components/common/StateViews";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -103,7 +104,7 @@ export default function Dashboard() {
   const [dateRange, setDateRange] = useState("30");
   const [searchQuery, setSearchQuery] = useState("");
 
-  const { data: statsData, refetch: refetchStats } = useGetDashboardStats();
+  const { data: statsData, loading: statsLoading, error: statsError, refetch: refetchStats } = useGetDashboardStats();
   const { data: healthData, refetch: refetchHealth } = useGetSystemHealth();
   const analyticsPeriod = dashboardDateRangeToAnalyticsPeriod(dateRange);
   const { data: analyticsData, refetch: refetchAnalytics } =
@@ -224,11 +225,18 @@ export default function Dashboard() {
                 <SelectItem value="365">Last Year</SelectItem>
               </SelectContent>
             </Select>
-            <Button variant="outline" size="icon" onClick={handleRefresh}>
+            <Button variant="outline" size="icon" onClick={handleRefresh} aria-label={t("common.retry")}>
               <RefreshCw className="w-4 h-4" />
             </Button>
           </div>
         </div>
+
+        {statsError && !stats && (
+          <ErrorState onRetry={() => handleRefresh()} />
+        )}
+        {statsLoading && !stats && (
+          <LoadingState rows={6} />
+        )}
 
         {/* Search Bar */}
         <div className="relative max-w-xl">

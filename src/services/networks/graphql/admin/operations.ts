@@ -1973,12 +1973,17 @@ export interface AdminEscrow {
     | "FROZEN"
     | "DISPUTED";
   totalAmount: number;
+  /** Convenience alias some views read instead of totalAmount. */
+  amount?: number;
   releasedAmount?: number;
   remainingAmount?: number;
   currency?: string;
   releaseMode?: string;
   disputeId?: string;
+  buyerId?: string;
+  sellerId?: string;
   frozenAt?: string;
+  releasedAt?: string;
   createdAt: string;
 }
 
@@ -2238,7 +2243,8 @@ export interface DashboardStats {
 
 export interface SystemHealthService {
   service: string;
-  status: "healthy" | "down";
+  // Backend may report any of these states; the UI normalizes via toLowerCase().
+  status: "healthy" | "up" | "warning" | "degraded" | "down";
   latencyMs?: number;
   error?: string;
 }

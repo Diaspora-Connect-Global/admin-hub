@@ -53,6 +53,15 @@ import {
   FileText, Briefcase, History, Shield, Building2, Loader2, Upload,
   ChevronLeft, ChevronRight,
 } from "lucide-react";
+import { CommunityOverviewTab } from "@/components/community/CommunityOverviewTab";
+import { CommunityMembersTab } from "@/components/community/CommunityMembersTab";
+import { CommunityPostsTab } from "@/components/community/CommunityPostsTab";
+import { CommunityEventsTab } from "@/components/community/CommunityEventsTab";
+import { CommunityOpportunitiesTab } from "@/components/community/CommunityOpportunitiesTab";
+import { CommunityVendorTab } from "@/components/community/CommunityVendorTab";
+import { CommunityAuditTab } from "@/components/community/CommunityAuditTab";
+import { EditCommunityDialog } from "@/components/community/EditCommunityDialog";
+import { LinkAssociationDialog, AssignAdminDialog } from "@/components/community/CommunityAdminDialogs";
 
 const allCountries = [
   "Afghanistan", "Albania", "Algeria", "Andorra", "Angola", "Antigua and Barbuda", "Argentina", "Armenia", "Australia", "Austria",
@@ -105,20 +114,6 @@ interface AuditLogItem {
   action?: string;
   actorId?: string | null;
 }
-
-const getStatusBadge = (status: string) => {
-  const styles: Record<string, string> = {
-    "Active": "badge-status badge-success",
-    "Inactive": "badge-status badge-warning",
-    "Suspended": "badge-status badge-destructive",
-    "Approved": "badge-status badge-success",
-    "Pending": "badge-status badge-warning",
-    "Open": "badge-status badge-info",
-    "Scheduled": "badge-status badge-info",
-    "Completed": "badge-status badge-success",
-  };
-  return <span className={styles[status] || "badge-status badge-muted"}>{status}</span>;
-};
 
 export default function CommunityDetail() {
   const { t } = useTranslation();
@@ -778,14 +773,14 @@ export default function CommunityDetail() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => navigate("/communities")}>
+            <Button variant="ghost" size="icon" aria-label="Back to communities" onClick={() => navigate("/communities")}>
               <ArrowLeft className="h-5 w-5" />
             </Button>
             <div>
               <div className="flex items-center gap-3">
                 <h1 className="text-2xl font-semibold text-foreground">{community.name}</h1>
                 {community.communityType && (
-                  <Badge variant="outline" className={community.communityType.isEmbassy ? "border-blue-500 text-blue-500" : ""}>
+                  <Badge variant="outline" className={community.communityType.isEmbassy ? "border-info text-info" : ""}>
                     {community.communityType.name}
                   </Badge>
                 )}
@@ -818,1056 +813,107 @@ export default function CommunityDetail() {
           </ScrollArea>
 
           {/* Overview Tab */}
-          <TabsContent value="overview" className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-2">
-              <Card className="glass">
-                <CardHeader><CardTitle className="text-base">Basic Information</CardTitle></CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <p className="text-muted-foreground text-xs">Name</p>
-                      <p className="font-medium">{community.name}</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground text-xs">Visibility</p>
-                      <p>{community.visibility}</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground text-xs">Join policy</p>
-                      <p>{community.joinPolicy}</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground text-xs">Type</p>
-                      <p>{community.communityType?.name ?? community.communityTypeId ?? "—"}</p>
-                    </div>
-                    <div className="col-span-2">
-                      <p className="text-muted-foreground text-xs">Countries served</p>
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <Globe className="h-3 w-3 text-muted-foreground shrink-0" />
-                        <p>
-                          {community.countriesServed?.length
-                            ? countriesServedIsoCodesToDisplayList(community.countriesServed)
-                            : "—"}
-                        </p>
-                      </div>
-                    </div>
-                    {community.embassyCountry && community.locationCountry && (
-                      <div className="col-span-2">
-                        <p className="text-muted-foreground text-xs">Embassy</p>
-                        <p>
-                          {iso2OrLabelToDisplayName(community.embassyCountry)} →{" "}
-                          {iso2OrLabelToDisplayName(community.locationCountry)}
-                        </p>
-                      </div>
-                    )}
-                    <div className="col-span-2">
-                      <p className="text-muted-foreground text-xs">Description</p>
-                      <p>{community.description ?? "—"}</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground text-xs">Members</p>
-                      <p>{community.memberCount ?? 0}</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground text-xs">Created</p>
-                      <div className="flex items-center gap-2"><Calendar className="h-3 w-3 text-muted-foreground" /><p>{community.createdAt}</p></div>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground text-xs">Updated</p>
-                      <p>{community.updatedAt ?? "—"}</p>
-                    </div>
-                    {(community.contactEmail || community.contactPhone || community.website) && (
-                      <div className="col-span-2 space-y-1">
-                        <p className="text-muted-foreground text-xs">Contact</p>
-                        <p className="text-sm">
-                          {community.contactEmail && <span>{community.contactEmail}</span>}
-                          {community.contactPhone && <span className="ml-2">{community.contactPhone}</span>}
-                          {community.website && <span className="ml-2">{community.website}</span>}
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-
-              <div className="space-y-4">
-                <Card className="glass">
-                  <CardHeader className="pb-2">
-                    <div className="flex items-center justify-between gap-2">
-                      <div>
-                        <CardTitle className="text-base">
-                          Linked Associations
-                          <span className="text-muted-foreground font-normal">
-                            {" "}
-                            ({linkedAssociationsTotal})
-                          </span>
-                        </CardTitle>
-                        <CardDescription className="text-xs mt-0.5">
-                          Associations linked to this community.
-                        </CardDescription>
-                      </div>
-                      <Button size="sm" variant="outline" onClick={() => setLinkAssociationOpen(true)}><Link2 className="mr-2 h-4 w-4" /> Link</Button>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    {linkedAssociationsLoading && linkedAssociations.length === 0 ? (
-                      <div className="flex items-center gap-2 py-4 text-muted-foreground text-sm">
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        Loading associations…
-                      </div>
-                    ) : linkedAssociations.length === 0 ? (
-                      <p className="text-sm text-muted-foreground py-2">No linked associations yet.</p>
-                    ) : (
-                      <>
-                        <div className="space-y-2">
-                          {linkedAssociations.map((assoc) => (
-                            <div key={assoc.id} className="flex items-start justify-between gap-2 p-2 rounded-lg bg-muted/50">
-                              <div className="flex items-start gap-2 min-w-0">
-                                <Building2 className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
-                                <div className="min-w-0">
-                                  <p className="text-sm font-medium">{assoc.name}</p>
-                                  <p className="text-xs text-muted-foreground line-clamp-2">
-                                    {assoc.description?.trim() || "—"}
-                                  </p>
-                                </div>
-                              </div>
-                              <div className="flex gap-1 shrink-0">
-                                <Button variant="ghost" size="sm" onClick={() => navigate(`/associations/${assoc.id}`)}>View</Button>
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="sm"
-                                  className="text-destructive"
-                                  onClick={() => setUnlinkTarget({ id: assoc.id, name: assoc.name })}
-                                  aria-label={t("communities.unlinkAssociation")}
-                                >
-                                  <Unlink className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                        {linkedAssociationsTotal > 0 ? (
-                          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between pt-3 mt-2 border-t border-border/50 text-xs text-muted-foreground">
-                            <span>
-                              {linkedAssociationsOffset + 1}–
-                              {linkedAssociationsOffset + linkedAssociations.length} of{" "}
-                              {linkedAssociationsTotal}
-                            </span>
-                            {linkedAssociationsTotal > LINKED_ASSOCIATIONS_PAGE_SIZE ? (
-                              <div className="flex gap-1">
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  size="sm"
-                                  className="h-8"
-                                  disabled={linkedAssociationsOffset === 0}
-                                  onClick={() =>
-                                    setLinkedAssociationsOffset((o) =>
-                                      Math.max(0, o - LINKED_ASSOCIATIONS_PAGE_SIZE),
-                                    )
-                                  }
-                                >
-                                  <ChevronLeft className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  size="sm"
-                                  className="h-8"
-                                  disabled={
-                                    linkedAssociationsOffset + LINKED_ASSOCIATIONS_PAGE_SIZE >=
-                                    linkedAssociationsTotal
-                                  }
-                                  onClick={() =>
-                                    setLinkedAssociationsOffset((o) => o + LINKED_ASSOCIATIONS_PAGE_SIZE)
-                                  }
-                                >
-                                  <ChevronRight className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            ) : null}
-                          </div>
-                        ) : null}
-                      </>
-                    )}
-                  </CardContent>
-                </Card>
-
-                <Card className="glass">
-                  <CardHeader className="pb-2">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <CardTitle className="text-base">Community Admins</CardTitle>
-                        <CardDescription className="text-xs mt-0.5 space-y-1">
-                          <span className="block">People with admin access to this community.</span>
-                          {communityAdminsError && usingAssignedAdminFallback ? (
-                            <span className="block text-destructive">
-                              Admin list request failed ({communityAdminsError.message}). Showing users from
-                              assigned admin IDs on this community.
-                            </span>
-                          ) : null}
-                        </CardDescription>
-                      </div>
-                      <Button size="sm" variant="outline" onClick={() => setAssignAdminOpen(true)}><UserPlus className="mr-2 h-4 w-4" /> Assign</Button>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    {communityAdminsLoading && communityAdmins.length === 0 ? (
-                      <div className="flex items-center gap-2 py-4 text-muted-foreground text-sm">
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        Loading admins…
-                      </div>
-                    ) : (
-                      <div className="space-y-2">
-                        {communityAdmins.length === 0 ? (
-                          <p className="text-sm text-muted-foreground py-2">No community admins yet.</p>
-                        ) : (
-                          communityAdmins.map((admin) => (
-                            <div key={admin.id} className="flex flex-col gap-2 p-3 rounded-lg bg-muted/50 sm:flex-row sm:items-start sm:justify-between">
-                              <div className="flex items-start gap-2 min-w-0">
-                                <Shield className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
-                                <div className="min-w-0 space-y-1">
-                                  <p className="text-sm font-medium truncate">{admin.email || "—"}</p>
-                                  <div className="flex flex-wrap gap-1">
-                                    <Badge variant="secondary" className="text-xs font-normal">{admin.status}</Badge>
-                                    <Badge variant="outline" className="text-xs font-normal">{admin.adminType}</Badge>
-                                  </div>
-                                  {admin.roles && admin.roles.length > 0 ? (
-                                    <div className="flex flex-wrap gap-1 pt-1">
-                                      {admin.roles.map((r) => (
-                                        <Badge key={r.id} variant="outline" className="text-[10px] font-normal max-w-full truncate">
-                                          {r.roleType}
-                                          {r.scopeType != null && r.scopeType !== "" ? ` · ${r.scopeType}` : ""}
-                                          {r.scopeId != null && r.scopeId !== "" ? ` · ${r.scopeId}` : ""}
-                                        </Badge>
-                                      ))}
-                                    </div>
-                                  ) : null}
-                                </div>
-                              </div>
-                              <Button variant="ghost" size="sm" className="text-destructive shrink-0 self-start">Remove</Button>
-                            </div>
-                          ))
-                        )}
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </div>
-            </div>
-          </TabsContent>
+          <CommunityOverviewTab
+            community={community}
+            linkedAssociations={linkedAssociations}
+            linkedAssociationsTotal={linkedAssociationsTotal}
+            linkedAssociationsLoading={linkedAssociationsLoading}
+            linkedAssociationsOffset={linkedAssociationsOffset}
+            setLinkedAssociationsOffset={setLinkedAssociationsOffset}
+            linkedAssociationsPageSize={LINKED_ASSOCIATIONS_PAGE_SIZE}
+            setLinkAssociationOpen={setLinkAssociationOpen}
+            setUnlinkTarget={setUnlinkTarget}
+            navigate={navigate}
+            t={t}
+            communityAdmins={communityAdmins}
+            communityAdminsLoading={communityAdminsLoading}
+            communityAdminsError={communityAdminsError}
+            usingAssignedAdminFallback={usingAssignedAdminFallback}
+            setAssignAdminOpen={setAssignAdminOpen}
+          />
 
           {/* Members Tab */}
-          <TabsContent value="members" className="space-y-4">
-            <Card className="glass">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="text-base">Members ({communityMemberRows.length})</CardTitle>
-                    <CardDescription>Community members and their roles.</CardDescription>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button variant="outline" size="sm"><Download className="mr-2 h-4 w-4" /> Export CSV</Button>
-                    <Button size="sm" onClick={() => setInviteMemberOpen(true)}><UserPlus className="mr-2 h-4 w-4" /> Invite Member</Button>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="p-0">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="border-border/50">
-                      <TableHead>Member Name</TableHead>
-                      <TableHead>Roles</TableHead>
-                      <TableHead>Associations</TableHead>
-                      <TableHead>Joined At</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {communityMemberRows.map((member) => (
-                      <TableRow key={member.id} className="border-border/50">
-                        <TableCell className="font-medium">{member.name}</TableCell>
-                        <TableCell>
-                          <div className="flex gap-1">{member.roles.map(r => <Badge key={r} variant="secondary">{r}</Badge>)}</div>
-                        </TableCell>
-                        <TableCell>{member.associationsCount}</TableCell>
-                        <TableCell className="text-muted-foreground">{member.joinedAt}</TableCell>
-                        <TableCell>{getStatusBadge(member.status)}</TableCell>
-                        <TableCell>
-                          <div className="flex gap-1">
-                            <Button variant="ghost" size="sm">View</Button>
-                            <Button variant="ghost" size="sm" className="text-destructive">Remove</Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          </TabsContent>
+          <CommunityMembersTab
+            communityMemberRows={communityMemberRows}
+            setInviteMemberOpen={setInviteMemberOpen}
+          />
 
           {/* Posts Tab */}
-          <TabsContent value="posts" className="space-y-4">
-            <Card className="glass">
-              <CardHeader>
-                <CardTitle className="text-base">Posts</CardTitle>
-                <CardDescription>Posts published by the community, reactions, comments, and moderation controls.</CardDescription>
-              </CardHeader>
-              <CardContent className="p-0">
-                {communityPostsLoading ? (
-                  <div className="flex items-center justify-center py-10">
-                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                    <span className="ml-2 text-sm text-muted-foreground">Loading posts…</span>
-                  </div>
-                ) : communityPosts.length === 0 ? (
-                  <div className="text-center py-10">
-                    <FileText className="h-10 w-10 mx-auto text-muted-foreground mb-2" />
-                    <p className="text-sm text-muted-foreground">No posts found for this community.</p>
-                  </div>
-                ) : (
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="border-border/50">
-                        <TableHead>Post ID</TableHead>
-                        <TableHead>Author</TableHead>
-                        <TableHead>Content Preview</TableHead>
-                        <TableHead>Media</TableHead>
-                        <TableHead>Likes</TableHead>
-                        <TableHead>Comments</TableHead>
-                        <TableHead>Created At</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {communityPosts.map((post) => (
-                        <TableRow key={post.id} className="border-border/50">
-                          <TableCell className="font-mono text-xs">{post.id}</TableCell>
-                          <TableCell>{post.authorName ?? post.authorId ?? "—"}</TableCell>
-                          <TableCell className="max-w-[200px] truncate">{post.content ?? "—"}</TableCell>
-                          <TableCell>{post.mediaCount != null ? `${post.mediaCount} file(s)` : "—"}</TableCell>
-                          <TableCell>{post.likeCount}</TableCell>
-                          <TableCell>{post.commentCount}</TableCell>
-                          <TableCell className="text-muted-foreground">{post.createdAt}</TableCell>
-                          <TableCell>{post.status ? getStatusBadge(post.status) : "—"}</TableCell>
-                          <TableCell>
-                            <div className="flex gap-1">
-                              <Button variant="ghost" size="icon" className="text-success"><Check className="h-4 w-4" /></Button>
-                              <Button variant="ghost" size="icon" className="text-destructive"><X className="h-4 w-4" /></Button>
-                              <Button variant="ghost" size="icon" className="text-destructive"><Trash2 className="h-4 w-4" /></Button>
-                              <Button variant="ghost" size="icon"><Eye className="h-4 w-4" /></Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
+          <CommunityPostsTab
+            communityPosts={communityPosts}
+            communityPostsLoading={communityPostsLoading}
+            t={t}
+          />
 
           {/* Events Tab */}
-          <TabsContent value="events" className="space-y-4">
-            <Card className="glass">
-              <CardHeader>
-                <CardTitle className="text-base">Events</CardTitle>
-                <CardDescription>Community events and meetups.</CardDescription>
-              </CardHeader>
-              <CardContent className="p-0">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="border-border/50">
-                      <TableHead>Event ID</TableHead>
-                      <TableHead>Title</TableHead>
-                      <TableHead>Location</TableHead>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Attendees</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {communityEvents.map((evt) => (
-                      <TableRow key={evt.id} className="border-border/50">
-                        <TableCell className="font-mono text-xs">{evt.id}</TableCell>
-                        <TableCell className="font-medium">{evt.title}</TableCell>
-                        <TableCell>{evt.locationDetails?.city || evt.locationDetails?.venueName || evt.locationDetails?.platform || "—"}</TableCell>
-                        <TableCell className="text-muted-foreground">{evt.startAt || "—"}</TableCell>
-                        <TableCell>{evt.registrationCount ?? 0}</TableCell>
-                        <TableCell>{getStatusBadge(evt.status)}</TableCell>
-                        <TableCell>
-                          <div className="flex gap-1">
-                            <Button variant="ghost" size="icon"><Eye className="h-4 w-4" /></Button>
-                            <Button variant="ghost" size="icon"><Edit className="h-4 w-4" /></Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          </TabsContent>
+          <CommunityEventsTab communityEvents={communityEvents} t={t} />
 
           {/* Opportunities Tab */}
-          <TabsContent value="opportunities" className="space-y-4">
-            <Card className="glass">
-              <CardHeader>
-                <CardTitle className="text-base">Opportunities</CardTitle>
-                <CardDescription>Opportunities posted in this community.</CardDescription>
-              </CardHeader>
-              <CardContent className="p-0">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="border-border/50">
-                      <TableHead>Opportunity ID</TableHead>
-                      <TableHead>Title</TableHead>
-                      <TableHead>Type</TableHead>
-                      <TableHead>Applications</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Posted At</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {communityOpportunities.map((opp) => (
-                      <TableRow key={opp.id} className="border-border/50">
-                        <TableCell className="font-mono text-xs">{opp.id}</TableCell>
-                        <TableCell className="font-medium">{opp.title}</TableCell>
-                        <TableCell><Badge variant="outline">{opp.type}</Badge></TableCell>
-                        <TableCell>{opp.applicationCount ?? 0}</TableCell>
-                        <TableCell>{getStatusBadge(opp.status)}</TableCell>
-                        <TableCell className="text-muted-foreground">{opp.createdAt}</TableCell>
-                        <TableCell>
-                          <div className="flex gap-1">
-                            <Button variant="ghost" size="icon" className="text-success"><Check className="h-4 w-4" /></Button>
-                            <Button variant="ghost" size="icon" className="text-destructive"><X className="h-4 w-4" /></Button>
-                            <Button variant="ghost" size="icon"><Eye className="h-4 w-4" /></Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          </TabsContent>
+          <CommunityOpportunitiesTab communityOpportunities={communityOpportunities} t={t} />
 
           {/* Vendor Tab */}
-          <TabsContent value="vendor" className="space-y-4">
-            <Card className="glass">
-              <CardHeader>
-                <CardTitle className="text-base">Vendor Products & Services</CardTitle>
-                <CardDescription>Manage community's vendor listings.</CardDescription>
-              </CardHeader>
-              <CardContent className="p-0">
-                {communityProductsLoading ? (
-                  <div className="flex items-center justify-center py-10">
-                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                    <span className="ml-2 text-sm text-muted-foreground">Loading products…</span>
-                  </div>
-                ) : communityProducts.length === 0 ? (
-                  <div className="text-center py-8">
-                    <Store className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
-                    <p className="text-muted-foreground">No vendor products found for this community.</p>
-                  </div>
-                ) : (
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="border-border/50">
-                        <TableHead>Item ID</TableHead>
-                        <TableHead>Title</TableHead>
-                        <TableHead>Vendor</TableHead>
-                        <TableHead>Type</TableHead>
-                        <TableHead>Price</TableHead>
-                        <TableHead>Stock</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {communityProducts.map((item) => (
-                        <TableRow key={item.id} className="border-border/50">
-                          <TableCell className="font-mono text-xs">{item.id}</TableCell>
-                          <TableCell className="font-medium">{item.title ?? item.name ?? "—"}</TableCell>
-                          <TableCell>{item.vendorName ?? item.vendorId ?? "—"}</TableCell>
-                          <TableCell>{item.productType ?? "—"}</TableCell>
-                          <TableCell>{item.price != null ? `${item.currency ?? ""} ${item.price}`.trim() : "—"}</TableCell>
-                          <TableCell>{item.inventoryCount ?? "—"}</TableCell>
-                          <TableCell>{item.status ? getStatusBadge(item.status) : "—"}</TableCell>
-                          <TableCell>
-                            <div className="flex gap-1">
-                              <Button variant="ghost" size="icon" className="text-success"><Check className="h-4 w-4" /></Button>
-                              <Button variant="ghost" size="icon" className="text-warning"><Pause className="h-4 w-4" /></Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
+          <CommunityVendorTab
+            communityProducts={communityProducts}
+            communityProductsLoading={communityProductsLoading}
+          />
 
           {/* Audit Tab */}
-          <TabsContent value="audit" className="space-y-4">
-            <Card className="glass">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="text-base">Audit Log</CardTitle>
-                    <CardDescription>Immutable log of admin actions on this community.</CardDescription>
-                  </div>
-                  <Button variant="outline" size="sm"><Download className="mr-2 h-4 w-4" /> Export CSV</Button>
-                </div>
-              </CardHeader>
-              <CardContent className="p-0">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="border-border/50">
-                      <TableHead>Timestamp</TableHead>
-                      <TableHead>Action</TableHead>
-                      <TableHead>Performed By</TableHead>
-                      <TableHead>Notes</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {auditLogs.map((log, idx) => (
-                      <TableRow key={idx} className="border-border/50">
-                        <TableCell className="font-mono text-xs">{log.timestamp}</TableCell>
-                        <TableCell><Badge variant="secondary">{log.action}</Badge></TableCell>
-                        <TableCell>{log.performedBy}</TableCell>
-                        <TableCell className="text-muted-foreground">{log.notes}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          </TabsContent>
+          <CommunityAuditTab auditLogs={auditLogs} />
         </Tabs>
       </div>
 
       {/* Edit Community (same fields as create, without admin assignment) */}
-      <Dialog open={editOpen} onOpenChange={setEditOpen}>
-        <DialogContent className="sm:max-w-2xl max-h-[90vh]">
-          <DialogHeader>
-            <DialogTitle>{t("communities.editCommunity")}</DialogTitle>
-            <DialogDescription>{t("communities.editCommunityFormDesc", { name: community.name })}</DialogDescription>
-          </DialogHeader>
-          <ScrollArea className="max-h-[65vh] pr-4">
-            <div className="space-y-6 py-4">
-              <div className="space-y-4">
-                <h3 className="text-sm font-semibold text-foreground border-b border-border pb-2">{t("communities.form.basicInfo")}</h3>
-
-                <div className="space-y-2">
-                  <Label>{t("communities.communityName")} <span className="text-destructive">*</span></Label>
-                  <Input
-                    placeholder={t("communities.form.namePlaceholder")}
-                    value={editForm.name}
-                    onChange={(e) => setEditForm((prev) => ({ ...prev, name: e.target.value }))}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label>{t("common.description")}</Label>
-                  <Textarea
-                    placeholder={t("communities.form.descriptionPlaceholder")}
-                    value={editForm.description}
-                    onChange={(e) => setEditForm((prev) => ({ ...prev, description: e.target.value }))}
-                    rows={3}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label>{t("communities.communityType")} <span className="text-destructive">*</span></Label>
-                  <Select value={editForm.communityType} onValueChange={(value) => setEditForm((prev) => ({ ...prev, communityType: value }))}>
-                    <SelectTrigger>
-                      <SelectValue placeholder={communityTypesLoading ? "Loading types..." : t("communities.form.selectType")} />
-                    </SelectTrigger>
-                    <SelectContent className="bg-popover border-border">
-                      {communityTypesLoading ? (
-                        <SelectItem value="__loading__" disabled>Loading...</SelectItem>
-                      ) : communityTypes.length === 0 ? (
-                        <SelectItem value="__empty__" disabled>No types available</SelectItem>
-                      ) : (
-                        communityTypes.map((type) => (
-                          <SelectItem key={type.id} value={type.id}>{type.name}</SelectItem>
-                        ))
-                      )}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Visibility <span className="text-destructive">*</span></Label>
-                    <Select
-                      value={editForm.visibility}
-                      onValueChange={(v: "PUBLIC" | "PRIVATE") => setEditForm((prev) => ({ ...prev, visibility: v }))}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent className="bg-popover border-border">
-                        <SelectItem value="PUBLIC">Public</SelectItem>
-                        <SelectItem value="PRIVATE">Private</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Join policy <span className="text-destructive">*</span></Label>
-                    <Select
-                      value={editForm.joinPolicy}
-                      onValueChange={(v: "FREE" | "PAID") => setEditForm((prev) => ({ ...prev, joinPolicy: v }))}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent className="bg-popover border-border">
-                        <SelectItem value="FREE">Free</SelectItem>
-                        <SelectItem value="PAID">Paid</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Payment type <span className="text-destructive">*</span></Label>
-                  <Select
-                    value={editForm.paymentType}
-                    onValueChange={(v: "NONE" | "ONE_TIME" | "SUBSCRIPTION") =>
-                      setEditForm((prev) => ({ ...prev, paymentType: v }))
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="bg-popover border-border">
-                      <SelectItem value="NONE">None</SelectItem>
-                      <SelectItem value="ONE_TIME">One-time</SelectItem>
-                      <SelectItem value="SUBSCRIPTION">Subscription</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {(editForm.joinPolicy === "PAID" || editForm.paymentType !== "NONE") && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Price amount</Label>
-                      <Input
-                        type="number"
-                        min={0}
-                        step="any"
-                        placeholder="0.00"
-                        value={editForm.priceAmount}
-                        onChange={(e) => setEditForm((prev) => ({ ...prev, priceAmount: e.target.value }))}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Currency</Label>
-                      <Select value={editForm.priceCurrency} onValueChange={(v) => setEditForm((prev) => ({ ...prev, priceCurrency: v }))}>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent className="bg-popover border-border">
-                          <SelectItem value="EUR">EUR</SelectItem>
-                          <SelectItem value="USD">USD</SelectItem>
-                          <SelectItem value="GBP">GBP</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                )}
-
-                <div className="space-y-2">
-                  <Label>{t("communities.countriesServed")}</Label>
-                  <MultiSelect
-                    options={countryOptions}
-                    selected={editForm.countriesServed}
-                    onChange={(selected) => setEditForm((prev) => ({ ...prev, countriesServed: selected }))}
-                    placeholder={t("communities.form.selectCountries")}
-                    searchPlaceholder={t("common.search")}
-                    maxDisplay={3}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label>{t("communities.form.logoBanner")}</Label>
-                  <div className="border-2 border-dashed border-border rounded-md p-4 text-center hover:border-primary/50 transition-colors">
-                    <input type="file" accept=".jpg,.jpeg,.png" onChange={handleEditLogoUpload} className="hidden" id="edit-logo-upload" />
-                    <label htmlFor="edit-logo-upload" className="cursor-pointer flex flex-col items-center gap-2">
-                      <Upload className="h-8 w-8 text-muted-foreground" />
-                      <span className="text-sm text-muted-foreground">{t("communities.form.uploadImage")}</span>
-                      <span className="text-xs text-muted-foreground">{t("communities.form.acceptedFormats")}</span>
-                    </label>
-                    {editForm.logoBanner && (
-                      <div className="mt-2 flex items-center justify-center gap-2">
-                        <Badge variant="secondary">{editForm.logoBanner.name}</Badge>
-                        <X
-                          className="h-4 w-4 cursor-pointer text-muted-foreground hover:text-destructive"
-                          onClick={() => setEditForm((prev) => ({ ...prev, logoBanner: null }))}
-                        />
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>{t("communities.form.rulesGuidelines")}</Label>
-                  <Textarea
-                    placeholder={t("communities.form.rulesPlaceholder")}
-                    value={editForm.rules}
-                    onChange={(e) => setEditForm((prev) => ({ ...prev, rules: e.target.value }))}
-                    rows={4}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label>{t("communities.form.whoCanPost")}</Label>
-                  <Select
-                    value={editForm.whoCanPost}
-                    onValueChange={(value: "ADMIN_ONLY" | "ALL_MEMBERS") =>
-                      setEditForm((prev) => ({ ...prev, whoCanPost: value }))
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="bg-popover border-border">
-                      <SelectItem value="ADMIN_ONLY">{t("communities.form.adminsOnly")}</SelectItem>
-                      <SelectItem value="ALL_MEMBERS">All members</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>{t("communities.form.groupCreation")} <span className="text-destructive">*</span></Label>
-                    <Select
-                      value={editForm.groupCreationPermission}
-                      onValueChange={(value) => setEditForm((prev) => ({ ...prev, groupCreationPermission: value }))}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent className="bg-popover border-border">
-                        <SelectItem value="Admins Only">{t("communities.form.adminsOnly")}</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="flex items-center justify-between p-3 border border-border rounded-md">
-                    <div>
-                      <Label>{t("communities.form.postModeration")}</Label>
-                      <p className="text-xs text-muted-foreground">{t("communities.form.postModerationDesc")}</p>
-                    </div>
-                    <Switch
-                      checked={editForm.postModeration}
-                      onCheckedChange={(checked) => setEditForm((prev) => ({ ...prev, postModeration: checked }))}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {editForm.communityType && (
-                <div className="space-y-4">
-                  <h3 className="text-sm font-semibold text-foreground border-b border-border pb-2">{t("communities.form.contactInfo")}</h3>
-
-                  <div className="space-y-2">
-                    <Label>{t("communities.form.address")}</Label>
-                    <Input
-                      placeholder={t("communities.form.addressPlaceholder")}
-                      value={editForm.address}
-                      onChange={(e) => setEditForm((prev) => ({ ...prev, address: e.target.value }))}
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>{t("communities.form.contactEmail")}</Label>
-                      <Input
-                        type="email"
-                        placeholder={t("communities.form.contactEmailPlaceholder")}
-                        value={editForm.contactEmail}
-                        onChange={(e) => setEditForm((prev) => ({ ...prev, contactEmail: e.target.value }))}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>{t("communities.form.contactPhone")}</Label>
-                      <Input
-                        placeholder={t("communities.form.contactPhonePlaceholder")}
-                        value={editForm.contactPhone}
-                        onChange={(e) => setEditForm((prev) => ({ ...prev, contactPhone: e.target.value }))}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>{t("communities.form.website")}</Label>
-                    <Input
-                      placeholder={t("communities.form.websitePlaceholder")}
-                      value={editForm.website}
-                      onChange={(e) => setEditForm((prev) => ({ ...prev, website: e.target.value }))}
-                    />
-                  </div>
-                </div>
-              )}
-
-              {communityTypes.find(t => t.id === editForm.communityType)?.isEmbassy && (
-                <div className="space-y-4">
-                  <h3 className="text-sm font-semibold text-foreground border-b border-border pb-2 flex items-center gap-2">
-                    <Globe className="h-4 w-4 text-blue-500" />
-                    {t("communities.form.embassyInfo")}
-                  </h3>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>{t("communities.form.embassyCountry")} <span className="text-destructive">*</span></Label>
-                      <Select
-                        value={editForm.embassyCountry}
-                        onValueChange={(value) => setEditForm((prev) => ({ ...prev, embassyCountry: value }))}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder={t("communities.form.embassyCountryPlaceholder")} />
-                        </SelectTrigger>
-                        <SelectContent className="bg-popover border-border max-h-64">
-                          {allCountries.map((country) => (
-                            <SelectItem key={country} value={country}>
-                              {country}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label>{t("communities.form.locationCountry")} <span className="text-destructive">*</span></Label>
-                      <Select
-                        value={editForm.locationCountry}
-                        onValueChange={(value) => setEditForm((prev) => ({ ...prev, locationCountry: value }))}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder={t("communities.form.locationCountryPlaceholder")} />
-                        </SelectTrigger>
-                        <SelectContent className="bg-popover border-border max-h-64">
-                          {allCountries.map((country) => (
-                            <SelectItem key={`loc-${country}`} value={country}>
-                              {country}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          </ScrollArea>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setEditOpen(false)} disabled={savingEdit}>
-              {t("common.cancel")}
-            </Button>
-            <Button onClick={handleSaveEdit} disabled={savingEdit}>
-              {savingEdit ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  {t("common.loading")}
-                </>
-              ) : (
-                t("common.save")
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <EditCommunityDialog
+        editOpen={editOpen}
+        setEditOpen={setEditOpen}
+        t={t}
+        community={community}
+        editForm={editForm}
+        setEditForm={setEditForm}
+        communityTypesLoading={communityTypesLoading}
+        communityTypes={communityTypes}
+        countryOptions={countryOptions}
+        allCountries={allCountries}
+        handleEditLogoUpload={handleEditLogoUpload}
+        handleSaveEdit={handleSaveEdit}
+        savingEdit={savingEdit}
+      />
 
       {/* Link Association Modal */}
-      <Dialog
-        open={linkAssociationOpen}
-        onOpenChange={(open) => {
-          setLinkAssociationOpen(open);
-          if (!open) setSelectedAssociationId("");
-        }}
-      >
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>{t("communities.linkAssociationTo")}</DialogTitle>
-            <DialogDescription>{t("communities.linkAssociationDesc", { name: community.name })}</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>
-                {t("communities.selectAssociations")} <span className="text-destructive">*</span>
-              </Label>
-              <Select value={selectedAssociationId} onValueChange={setSelectedAssociationId}>
-                <SelectTrigger>
-                  <SelectValue placeholder={t("communities.searchAssociations")} />
-                </SelectTrigger>
-                <SelectContent className="bg-popover border-border max-h-64">
-                  {associationsLoading ? (
-                    <SelectItem value="__loading" disabled>
-                      {t("common.loading")}
-                    </SelectItem>
-                  ) : associationOptions.length === 0 ? (
-                    <SelectItem value="__empty" disabled>
-                      {t("common.noData")}
-                    </SelectItem>
-                  ) : (
-                    associationOptions.map((assoc) => (
-                      <SelectItem key={assoc.id} value={assoc.id}>
-                        {assoc.name}
-                      </SelectItem>
-                    ))
-                  )}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setLinkAssociationOpen(false)}
-              disabled={linkingAssociation}
-            >
-              {t("common.cancel")}
-            </Button>
-            <Button onClick={handleLinkAssociationSubmit} disabled={linkingAssociation || !selectedAssociationId}>
-              {linkingAssociation ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  {t("common.loading")}
-                </>
-              ) : (
-                t("communities.linkAssociation")
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <LinkAssociationDialog
+        linkAssociationOpen={linkAssociationOpen}
+        setLinkAssociationOpen={setLinkAssociationOpen}
+        setSelectedAssociationId={setSelectedAssociationId}
+        selectedAssociationId={selectedAssociationId}
+        t={t}
+        community={community}
+        associationsLoading={associationsLoading}
+        associationOptions={associationOptions}
+        linkingAssociation={linkingAssociation}
+        handleLinkAssociationSubmit={handleLinkAssociationSubmit}
+      />
 
       {/* Assign Admin Modal */}
-      <Dialog open={assignAdminOpen} onOpenChange={handleAssignAdminDialogChange}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle>{t("communities.assignAdmin.title")}</DialogTitle>
-            <DialogDescription>{t("communities.assignAdmin.description")}</DialogDescription>
-          </DialogHeader>
-          <Tabs value={assignAdminTab} onValueChange={(v) => setAssignAdminTab(v as "existing" | "create")} className="py-2">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="existing">{t("communities.assignAdmin.tabExisting")}</TabsTrigger>
-              <TabsTrigger value="create">{t("communities.assignAdmin.tabCreate")}</TabsTrigger>
-            </TabsList>
-            <TabsContent value="existing" className="space-y-4 pt-4">
-              <div className="space-y-2">
-                <Label>{t("communities.assignAdmin.selectAdmin")}</Label>
-                <Select
-                  value={selectedExistingAdminId || "__none__"}
-                  onValueChange={(v) => setSelectedExistingAdminId(v === "__none__" ? "" : v)}
-                  disabled={listAdminsLoading || assignAdminSubmitting}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder={t("communities.assignAdmin.selectPlaceholder")} />
-                  </SelectTrigger>
-                  <SelectContent className="bg-popover border-border max-h-64">
-                    <SelectItem value="__none__">{t("communities.assignAdmin.selectPlaceholder")}</SelectItem>
-                    {listAdminsLoading ? (
-                      <SelectItem value="__loading" disabled>
-                        {t("communities.assignAdmin.loadingAdmins")}
-                      </SelectItem>
-                    ) : eligibleExistingAdmins.length === 0 ? (
-                      <SelectItem value="__empty" disabled>
-                        {t("communities.assignAdmin.noEligibleAdmins")}
-                      </SelectItem>
-                    ) : (
-                      eligibleExistingAdmins.map((admin) => (
-                        <SelectItem key={admin.id} value={admin.id}>
-                          {admin.email}
-                        </SelectItem>
-                      ))
-                    )}
-                  </SelectContent>
-                </Select>
-              </div>
-            </TabsContent>
-            <TabsContent value="create" className="space-y-4 pt-4">
-              <div className="space-y-2">
-                <Label htmlFor="assign-admin-email">{t("common.email")}</Label>
-                <Input
-                  id="assign-admin-email"
-                  type="email"
-                  autoComplete="off"
-                  placeholder={t("communities.assignAdmin.emailPlaceholder")}
-                  value={newAdminEmail}
-                  onChange={(e) => setNewAdminEmail(e.target.value)}
-                  disabled={assignAdminSubmitting}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="assign-admin-password">{t("communities.assignAdmin.initialPassword")}</Label>
-                <Input
-                  id="assign-admin-password"
-                  type="password"
-                  autoComplete="new-password"
-                  value={newAdminPassword}
-                  onChange={(e) => setNewAdminPassword(e.target.value)}
-                  disabled={assignAdminSubmitting}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="assign-admin-confirm">{t("communities.assignAdmin.confirmPassword")}</Label>
-                <Input
-                  id="assign-admin-confirm"
-                  type="password"
-                  autoComplete="new-password"
-                  value={newAdminConfirmPassword}
-                  onChange={(e) => setNewAdminConfirmPassword(e.target.value)}
-                  disabled={assignAdminSubmitting}
-                />
-              </div>
-            </TabsContent>
-          </Tabs>
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => handleAssignAdminDialogChange(false)}
-              disabled={assignAdminSubmitting}
-            >
-              {t("common.cancel")}
-            </Button>
-            <Button
-              type="button"
-              disabled={
-                assignAdminSubmitting ||
-                (assignAdminTab === "existing" &&
-                  (!selectedExistingAdminId || listAdminsLoading || eligibleExistingAdmins.length === 0))
-              }
-              onClick={
-                assignAdminTab === "existing"
-                  ? handleAssignExistingCommunityAdmin
-                  : handleCreateCommunityAdmin
-              }
-            >
-              {assignAdminSubmitting ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  {t("common.loading")}
-                </>
-              ) : assignAdminTab === "existing" ? (
-                t("communities.assignAdmin.assignRole")
-              ) : (
-                t("communities.assignAdmin.createAdmin")
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <AssignAdminDialog
+        assignAdminOpen={assignAdminOpen}
+        handleAssignAdminDialogChange={handleAssignAdminDialogChange}
+        t={t}
+        assignAdminTab={assignAdminTab}
+        setAssignAdminTab={setAssignAdminTab}
+        selectedExistingAdminId={selectedExistingAdminId}
+        setSelectedExistingAdminId={setSelectedExistingAdminId}
+        listAdminsLoading={listAdminsLoading}
+        assignAdminSubmitting={assignAdminSubmitting}
+        eligibleExistingAdmins={eligibleExistingAdmins}
+        newAdminEmail={newAdminEmail}
+        setNewAdminEmail={setNewAdminEmail}
+        newAdminPassword={newAdminPassword}
+        setNewAdminPassword={setNewAdminPassword}
+        newAdminConfirmPassword={newAdminConfirmPassword}
+        setNewAdminConfirmPassword={setNewAdminConfirmPassword}
+        handleAssignExistingCommunityAdmin={handleAssignExistingCommunityAdmin}
+        handleCreateCommunityAdmin={handleCreateCommunityAdmin}
+      />
 
       {/* Unlink association confirmation */}
       <Dialog

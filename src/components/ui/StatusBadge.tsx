@@ -3,18 +3,19 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
 const statusVariantClasses: Record<string, string> = {
-  active: "border-transparent bg-green-600 text-white hover:bg-green-600/90 dark:bg-green-500 dark:text-white",
-  warning: "border-transparent bg-amber-500 text-white hover:bg-amber-500/90 dark:bg-amber-500 dark:text-white",
-  inactive: "border border-border bg-muted text-foreground hover:bg-muted/80 dark:bg-muted dark:text-foreground",
-  error: "border-transparent bg-destructive text-destructive-foreground hover:bg-destructive/90 dark:text-white",
-  pending: "border border-amber-500 bg-amber-500/20 text-amber-700 dark:text-amber-200 dark:border-amber-400 dark:bg-amber-500/20",
+  active: "border-transparent bg-success text-success-foreground hover:bg-success/90",
+  warning: "border-transparent bg-warning text-warning-foreground hover:bg-warning/90",
+  inactive: "border border-border bg-muted text-foreground hover:bg-muted/80",
+  error: "border-transparent bg-destructive text-destructive-foreground hover:bg-destructive/90",
+  pending: "border border-warning bg-warning/20 text-warning hover:bg-warning/30",
+  info: "border-transparent bg-info text-info-foreground hover:bg-info/90",
 };
 
 export interface StatusBadgeProps extends React.HTMLAttributes<HTMLDivElement> {
-  variant?: "active" | "warning" | "inactive" | "error" | "pending";
+  variant?: "active" | "warning" | "inactive" | "error" | "pending" | "info";
 }
 
-function StatusBadge({ className, variant = "inactive", ...props }: StatusBadgeProps) {
+export function StatusBadge({ className, variant = "inactive", ...props }: StatusBadgeProps) {
   return (
     <Badge
       className={cn(
@@ -26,5 +27,3 @@ function StatusBadge({ className, variant = "inactive", ...props }: StatusBadgeP
     />
   );
 }
-
-export { StatusBadge };

@@ -10,6 +10,7 @@ import { AdminLayout } from "@/components/layout/AdminLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { StatusBadge } from "@/components/ui/StatusBadge";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Table,
@@ -165,17 +166,13 @@ export default function ContentModeration() {
   }, [reportsData, searchQuery]);
 
   const getStatusBadge = (status: string) => {
-    const variants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
-      "Pending Approval": "secondary",
-      Approved: "default",
-      Rejected: "destructive",
-      Flagged: "destructive",
+    const variants: Record<string, "active" | "warning" | "inactive" | "error" | "pending" | "info"> = {
+      "Pending Approval": "pending",
+      Approved: "active",
+      Rejected: "error",
+      Flagged: "warning",
     };
-    const colors: Record<string, string> = {
-      Approved: "bg-green-600 hover:bg-green-600",
-      Flagged: "bg-orange-500 hover:bg-orange-500",
-    };
-    return <Badge variant={variants[status]} className={colors[status] || ""}>{status}</Badge>;
+    return <StatusBadge variant={variants[status] ?? "inactive"}>{status}</StatusBadge>;
   };
 
   const getTypeIcon = (type: string) => {
@@ -350,7 +347,7 @@ export default function ContentModeration() {
         </div>
 
         {/* Table */}
-        <div className="rounded-lg border bg-card">
+        <div className="rounded-lg border bg-card overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
@@ -410,21 +407,21 @@ export default function ContentModeration() {
                   <TableCell className="text-sm">{new Date(item.createdAt).toLocaleDateString()}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-1">
-                      <Button variant="ghost" size="icon" onClick={() => openContentDetail(item)}>
+                      <Button variant="ghost" size="icon" aria-label={t('common.view')} onClick={() => openContentDetail(item)}>
                         <Eye className="h-4 w-4" />
                       </Button>
                       {item.status === "PENDING" && (
                         <>
-                          <Button variant="ghost" size="icon" onClick={() => { setSelectedItem(item); setIsApproveModalOpen(true); }}>
-                            <Check className="h-4 w-4 text-green-500" />
+                          <Button variant="ghost" size="icon" aria-label="Resolve report" onClick={() => { setSelectedItem(item); setIsApproveModalOpen(true); }}>
+                            <Check className="h-4 w-4 text-success" />
                           </Button>
-                          <Button variant="ghost" size="icon" onClick={() => { setSelectedItem(item); setIsRejectModalOpen(true); }}>
-                            <X className="h-4 w-4 text-red-500" />
+                          <Button variant="ghost" size="icon" aria-label="Dismiss report" onClick={() => { setSelectedItem(item); setIsRejectModalOpen(true); }}>
+                            <X className="h-4 w-4 text-destructive" />
                           </Button>
                         </>
                       )}
-                      <Button variant="ghost" size="icon" onClick={() => { setSelectedItem(item); setIsFlagModalOpen(true); }}>
-                        <Flag className="h-4 w-4 text-orange-500" />
+                      <Button variant="ghost" size="icon" aria-label="Remove content" onClick={() => { setSelectedItem(item); setIsFlagModalOpen(true); }}>
+                        <Flag className="h-4 w-4 text-warning" />
                       </Button>
                     </div>
                   </TableCell>

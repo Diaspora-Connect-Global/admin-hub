@@ -217,6 +217,7 @@ export default function Login() {
                       onClick={() => setShowPassword(!showPassword)}
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                       tabIndex={-1}
+                      aria-label={showPassword ? "Hide password" : "Show password"}
                     >
                       {showPassword ? (
                         <EyeOff className="h-4 w-4" />
@@ -298,11 +299,11 @@ export default function Login() {
           </p>
           <div className="flex justify-center gap-4">
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <div className="h-2 w-2 rounded-full bg-green-500" />
+              <div className="h-2 w-2 rounded-full bg-success" />
               Secure & Private
             </div>
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <div className="h-2 w-2 rounded-full bg-blue-500" />
+              <div className="h-2 w-2 rounded-full bg-info" />
               Real-time Updates
             </div>
           </div>

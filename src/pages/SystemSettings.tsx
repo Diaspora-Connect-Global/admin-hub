@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { AdminLayout } from "@/components/layout/AdminLayout";
+import { SettingsTabs } from "@/components/settings/SettingsTabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -351,6 +352,8 @@ export default function SystemSettings() {
             Control and configure global platform behavior.
           </p>
         </div>
+
+        <SettingsTabs />
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
@@ -1237,7 +1240,7 @@ export default function SystemSettings() {
                     No community types yet. Create one to get started.
                   </p>
                 ) : (
-                  <div className="table-container">
+                  <div className="table-container overflow-x-auto">
                     <Table>
                       <TableHeader>
                         <TableRow className="border-border">
@@ -1264,6 +1267,7 @@ export default function SystemSettings() {
                                     variant="ghost"
                                     size="icon"
                                     className="h-8 w-8"
+                                    aria-label={t("common.actions")}
                                   >
                                     <MoreHorizontal className="w-4 h-4" />
                                   </Button>
@@ -1321,7 +1325,7 @@ export default function SystemSettings() {
                     No association types yet. Create one to get started.
                   </p>
                 ) : (
-                  <div className="table-container">
+                  <div className="table-container overflow-x-auto">
                     <Table>
                       <TableHeader>
                         <TableRow className="border-border">
@@ -1344,6 +1348,7 @@ export default function SystemSettings() {
                                     variant="ghost"
                                     size="icon"
                                     className="h-8 w-8"
+                                    aria-label={t("common.actions")}
                                   >
                                     <MoreHorizontal className="w-4 h-4" />
                                   </Button>

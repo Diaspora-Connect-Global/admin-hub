@@ -202,7 +202,7 @@ export default function Associations() {
     type: (a.associationTypeId && typeNameById.get(a.associationTypeId)) || "Association",
     description: a.description ?? "",
     countriesServed: a.countriesServed ?? [],
-    linkedCommunities: [],
+    linkedCommunities: [] as string[],
     membersCount: a.memberCount ?? 0,
     postsCount: 0,
     opportunitiesCount: 0,
@@ -211,7 +211,7 @@ export default function Associations() {
     paymentType: a.paymentType ?? null,
     paymentAmount: a.priceAmount ?? null,
     paymentCurrency: a.priceCurrency ?? null,
-    assignedAdmins: [],
+    assignedAdmins: [] as string[],
     joinPolicy: a.joinPolicy ?? "OPEN",
     visibility: a.visibility ?? "PUBLIC",
     whoCanPost: a.whoCanPost ?? "All Members",
@@ -360,6 +360,27 @@ export default function Associations() {
         title: t("associations.validationError"),
         description: e instanceof Error ? e.message : String(e),
         variant: "destructive",
+      });
+    }
+  };
+
+  /**
+   * Upload any newly-selected logo/banner files for an association, then persist
+   * the resulting file keys via updateAssociation. No-op when nothing was picked.
+   * Runs after create/update so the association id exists for the presigned URL.
+   */
+  const persistAssociationImages = async (associationId: string) => {
+    let avatarKey: string | undefined;
+    let coverKey: string | undefined;
+    if (formData.logoFile) {
+      avatarKey = await uploadAssociationAvatar(associationId, formData.logoFile, getAvatarUploadUrl);
+    }
+    if (formData.bannerFile) {
+      coverKey = await uploadAssociationCover(associationId, formData.bannerFile, getCoverUploadUrl);
+    }
+    if (avatarKey || coverKey) {
+      await updateAssociationMutation({
+        variables: { input: { id: associationId, avatarKey, coverKey } },
       });
     }
   };
@@ -729,13 +750,14 @@ export default function Associations() {
                           <Button
                             variant="ghost"
                             size="icon"
+                            aria-label={t('common.view')}
                             onClick={() => navigate(`/associations/${assoc.id}`)}
                           >
                             <Eye className="h-4 w-4" />
                           </Button>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon">
+                              <Button variant="ghost" size="icon" aria-label={t('common.actions')}>
                                 <MoreHorizontal className="h-4 w-4" />
                               </Button>
                             </DropdownMenuTrigger>
@@ -1177,6 +1199,7 @@ export default function Associations() {
                 </TabsContent>
                 <TabsContent value="communities" className="space-y-4">
                   {selectedAssociation.linkedCommunities.length > 0 ? (
+                    <div className="overflow-x-auto">
                     <Table>
                       <TableHeader>
                         <TableRow>
@@ -1207,11 +1230,13 @@ export default function Associations() {
                         })}
                       </TableBody>
                     </Table>
+                    </div>
                   ) : (
                     <p className="text-muted-foreground text-center py-8">{t('associations.noLinkedCommunities')}</p>
                   )}
                 </TabsContent>
                 <TabsContent value="admins" className="space-y-4">
+                  <div className="overflow-x-auto">
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -1240,6 +1265,7 @@ export default function Associations() {
                       })}
                     </TableBody>
                   </Table>
+                  </div>
                 </TabsContent>
                 <TabsContent value="payment" className="space-y-4">
                   <div className="grid gap-4 sm:grid-cols-2">

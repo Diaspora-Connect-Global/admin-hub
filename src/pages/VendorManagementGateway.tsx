@@ -599,6 +599,7 @@ export default function VendorManagementGateway() {
                   <Badge variant="outline">Total: {productsData?.listVendorProducts?.total ?? 0}</Badge>
                 </div>
 
+                <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -648,6 +649,7 @@ export default function VendorManagementGateway() {
                     )}
                   </TableBody>
                 </Table>
+                </div>
 
                 <div className="grid gap-3 md:grid-cols-2">
                   <div className="space-y-2">
@@ -687,6 +689,7 @@ export default function VendorManagementGateway() {
                   <Badge variant="outline">Total: {servicePackagesData?.listVendorServicePackages?.total ?? 0}</Badge>
                 </div>
 
+                <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -728,6 +731,7 @@ export default function VendorManagementGateway() {
                     )}
                   </TableBody>
                 </Table>
+                </div>
 
                 <div className="grid gap-3 md:grid-cols-2">
                   <div className="space-y-2">
@@ -770,6 +774,7 @@ export default function VendorManagementGateway() {
                   <Badge variant="outline">Total: {ordersData?.listVendorOrders?.total ?? 0}</Badge>
                 </div>
 
+                <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -803,6 +808,7 @@ export default function VendorManagementGateway() {
                     )}
                   </TableBody>
                 </Table>
+                </div>
 
                 <div className="grid gap-3 md:grid-cols-3">
                   <div className="space-y-2">

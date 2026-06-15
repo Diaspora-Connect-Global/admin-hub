@@ -1,4 +1,4 @@
-import { Search, ChevronDown, LogOut, User } from "lucide-react";
+import { Search, ChevronDown, LogOut, User, Menu } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -13,7 +13,11 @@ import {
 import { useAdminAuth } from "@/hooks/auth/useAdminAuth";
 import { AdminNotificationBell } from "./AdminNotificationBell";
 
-export function AdminHeader() {
+interface AdminHeaderProps {
+  onOpenMobileNav?: () => void;
+}
+
+export function AdminHeader({ onOpenMobileNav }: AdminHeaderProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { userEmail, logout } = useAdminAuth();
@@ -25,7 +29,18 @@ export function AdminHeader() {
 
   return (
     <header className="h-16 border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-30">
-      <div className="h-full px-6 flex items-center justify-between gap-4">
+      <div className="h-full px-4 sm:px-6 flex items-center justify-between gap-4">
+        {/* Mobile nav trigger */}
+        <Button
+          variant="ghost"
+          size="icon"
+          className="md:hidden flex-shrink-0"
+          onClick={onOpenMobileNav}
+          aria-label={t("nav.openMenu")}
+        >
+          <Menu className="w-5 h-5" />
+        </Button>
+
         {/* Global Search */}
         <div className="relative flex-1 max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />

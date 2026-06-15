@@ -39,13 +39,34 @@ export function useGetMyRoles() {
   return useQuery(GET_MY_ROLES);
 }
 
+export interface ReportListItem {
+  id: string;
+  reporterId: string;
+  targetType: string;
+  targetId: string;
+  reason: string;
+  description?: string | null;
+  status: string;
+  createdAt: string;
+  reviewedBy?: string | null;
+  reviewedAt?: string | null;
+  resolutionNotes?: string | null;
+}
+
+export interface GetReportsResponse {
+  getReports: {
+    items: ReportListItem[];
+    total: number;
+  };
+}
+
 export function useGetReports(options: {
   status?: string;
   targetType?: string;
   limit?: number;
   offset?: number;
 }) {
-  return useQuery(GET_REPORTS, {
+  return useQuery<GetReportsResponse>(GET_REPORTS, {
     variables: {
       status: options.status ?? undefined,
       targetType: options.targetType ?? undefined,
@@ -148,6 +169,23 @@ export function useGetAssociationStats(associationId: string | null) {
   });
 }
 
+export interface AuditLogItem {
+  id: string;
+  actorId: string;
+  action: string;
+  resourceType: string;
+  resourceId: string;
+  createdAt: string;
+  ipAddress?: string | null;
+}
+
+export interface GetAuditLogsResponse {
+  getAuditLogs: {
+    items: AuditLogItem[];
+    total: number;
+  };
+}
+
 export function useGetAuditLogs(options: {
   actorId?: string | null;
   action?: string | null;
@@ -158,7 +196,7 @@ export function useGetAuditLogs(options: {
   limit?: number;
   offset?: number;
 }) {
-  return useQuery(GET_AUDIT_LOGS, {
+  return useQuery<GetAuditLogsResponse>(GET_AUDIT_LOGS, {
     variables: {
       actorId: options.actorId ?? undefined,
       action: options.action ?? undefined,
@@ -262,13 +300,22 @@ export function useForgotPassword() {
   `);
 }
 
+interface GetUsersResponse {
+  getUsers?: {
+    items?: Array<{ id: string; email: string; displayName?: string; createdAt: string }>;
+    total?: number;
+    limit?: number;
+    offset?: number;
+  };
+}
+
 export function useGetUsers(options?: {
   limit?: number;
   offset?: number;
   search?: string;
   skip?: boolean;
 }) {
-  return useQuery(
+  return useQuery<GetUsersResponse>(
     gql`
       query GetUsers($limit: Int, $offset: Int, $search: String) {
         getUsers(limit: $limit, offset: $offset, search: $search) {

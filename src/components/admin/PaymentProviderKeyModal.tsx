@@ -24,6 +24,8 @@ import {
   type PaymentProviderCredential,
   type PaymentProviderType,
 } from "@/hooks/admin";
+import { FieldError } from "@/components/common/FieldError";
+import { isoAlpha2, jsonString } from "@/lib/validation";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 
 interface PaymentProviderKeyModalProps {
@@ -167,14 +169,23 @@ export function PaymentProviderKeyModal({
 
   const [showSecrets, setShowSecrets] = useState(false);
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   const isEdit = !!editing;
+
+  /** Update a field and clear any inline error sitting on it. */
+  const setField = <K extends keyof FormState>(key: K, value: FormState[K]) =>
+    setForm((prev) => {
+      setErrors((e) => (e[key] ? { ...e, [key]: "" } : e));
+      return { ...prev, [key]: value };
+    });
 
   // Reset form when modal opens / mode changes. Never echoes existing secret
   // values back — all secret fields start empty in edit mode (empty = "keep").
   useEffect(() => {
     if (!isOpen) return;
     setShowSecrets(false);
+    setErrors({});
     if (editing) {
       setForm({
         provider: editing.provider,
@@ -196,25 +207,59 @@ export function PaymentProviderKeyModal({
   const clearSecrets = () =>
     setForm((prev) => ({ ...prev, apiKey: "", apiSecret: "", webhookSecret: "" }));
 
-  const handleSubmit = async () => {
-    const countries = parseCountries(form.enabledCountries);
-    const expiresAt = localInputToIso(form.expiresAt);
+  /**
+   * Validate the form, returning the parsed payload when valid, or null after
+   * populating inline field errors. Covers: required-on-add, ISO country codes,
+   * future expiry, valid JSON config, and the rotate-needs-apiKey rule.
+   */
+  const validateForm = (): {
+    countries: string[];
+    expiresAt?: string;
+    additionalConfigJson?: string;
+  } | null => {
+    const next: Record<string, string> = {};
 
-    // Validate additionalConfigJson early so we never ship malformed JSON.
+    const countries = parseCountries(form.enabledCountries);
+    if (countries.some((c) => !isoAlpha2.safeParse(c).success)) {
+      next.enabledCountries = "Use 2-letter ISO country codes (e.g. GH, NG, US)";
+    }
+
+    const expiresAt = localInputToIso(form.expiresAt);
+    if (form.expiresAt.trim()) {
+      if (!expiresAt) next.expiresAt = "Enter a valid date";
+      else if (new Date(expiresAt).getTime() <= Date.now())
+        next.expiresAt = "Expiry must be a future date";
+    }
+
     let additionalConfigJson: string | undefined;
     if (fieldConfig.showAdditionalConfig && form.additionalConfigJson.trim()) {
-      try {
-        JSON.parse(form.additionalConfigJson);
+      if (!jsonString.safeParse(form.additionalConfigJson).success) {
+        next.additionalConfigJson = "Must be valid JSON";
+      } else {
         additionalConfigJson = form.additionalConfigJson.trim();
-      } catch {
-        toast({
-          title: "Invalid JSON",
-          description: "Additional config must be valid JSON.",
-          variant: "destructive",
-        });
-        return;
       }
     }
+
+    const hasNewSecret =
+      !!form.apiKey.trim() || !!form.apiSecret.trim() || !!form.webhookSecret.trim();
+
+    if (!isEdit) {
+      if (!form.apiKey.trim()) next.apiKey = `${fieldConfig.apiKeyLabel} is required`;
+      if (fieldConfig.showApiSecret && !form.apiSecret.trim())
+        next.apiSecret = `${fieldConfig.apiSecretLabel} is required`;
+    } else if (hasNewSecret && !form.apiKey.trim()) {
+      next.apiKey = "Enter the primary key alongside the secrets you're rotating";
+    }
+
+    setErrors(next);
+    if (Object.keys(next).length) return null;
+    return { countries, expiresAt, additionalConfigJson };
+  };
+
+  const handleSubmit = async () => {
+    const parsed = validateForm();
+    if (!parsed) return;
+    const { countries, expiresAt, additionalConfigJson } = parsed;
 
     const hasNewSecret =
       !!form.apiKey.trim() || !!form.apiSecret.trim() || !!form.webhookSecret.trim();
@@ -223,21 +268,8 @@ export function PaymentProviderKeyModal({
       if (isEdit) {
         // Editing => rotate new secrets (if any were entered), and always
         // upsert the non-secret config (environment / enabledCountries /
-        // expiresAt / additionalConfig). Upsert requires apiKey; when the user
-        // didn't enter a new key we skip the rotate and only update config via
-        // upsert — but upsert needs a non-empty apiKey, so config-only edits
-        // route through rotate's sibling: we send the config on upsert only
-        // when a new apiKey is present, otherwise rotate carries the secrets.
+        // expiresAt / additionalConfig).
         if (hasNewSecret) {
-          if (!form.apiKey.trim()) {
-            toast({
-              title: "API key required to rotate",
-              description:
-                "Enter the new primary key alongside the other secrets you're rotating.",
-              variant: "destructive",
-            });
-            return;
-          }
           await rotate({
             variables: {
               input: {
@@ -268,22 +300,6 @@ export function PaymentProviderKeyModal({
           },
         });
       } else {
-        if (!form.apiKey.trim()) {
-          toast({
-            title: `${fieldConfig.apiKeyLabel} required`,
-            description: "Paste the provider key to create the credential.",
-            variant: "destructive",
-          });
-          return;
-        }
-        if (fieldConfig.showApiSecret && !form.apiSecret.trim()) {
-          toast({
-            title: `${fieldConfig.apiSecretLabel} required`,
-            description: "PayPal requires both a client ID and client secret.",
-            variant: "destructive",
-          });
-          return;
-        }
         await upsert({
           variables: {
             input: {
@@ -373,7 +389,9 @@ export function PaymentProviderKeyModal({
               </Select>
             </div>
           </div>
-          <p className="text-xs text-muted-foreground">{fieldConfig.hint}</p>
+          <p className="text-xs text-muted-foreground">
+            {PROVIDER_OPTIONS.find((o) => o.value === form.provider)?.hint}
+          </p>
 
           {/* Show secrets toggle */}
           <div className="flex justify-end">
@@ -403,12 +421,14 @@ export function PaymentProviderKeyModal({
               type={showSecrets ? "text" : "password"}
               placeholder={isEdit ? "Paste new value to rotate" : fieldConfig.apiKeyPlaceholder}
               value={form.apiKey}
-              onChange={(e) => setForm((p) => ({ ...p, apiKey: e.target.value }))}
+              onChange={(e) => setField("apiKey", e.target.value)}
               autoComplete="off"
               spellCheck={false}
               disabled={loading}
               className="bg-secondary border-border"
+              aria-invalid={!!errors.apiKey}
             />
+            <FieldError message={errors.apiKey} />
           </div>
 
           {/* API secret (PayPal only) */}
@@ -429,12 +449,14 @@ export function PaymentProviderKeyModal({
                   isEdit ? "Paste new value to rotate" : fieldConfig.apiSecretPlaceholder
                 }
                 value={form.apiSecret}
-                onChange={(e) => setForm((p) => ({ ...p, apiSecret: e.target.value }))}
+                onChange={(e) => setField("apiSecret", e.target.value)}
                 autoComplete="off"
                 spellCheck={false}
                 disabled={loading}
                 className="bg-secondary border-border"
+                aria-invalid={!!errors.apiSecret}
               />
+              <FieldError message={errors.apiSecret} />
             </div>
           )}
 
@@ -456,7 +478,7 @@ export function PaymentProviderKeyModal({
               type={showSecrets ? "text" : "password"}
               placeholder={isEdit ? "Paste new value to rotate" : fieldConfig.webhookPlaceholder}
               value={form.webhookSecret}
-              onChange={(e) => setForm((p) => ({ ...p, webhookSecret: e.target.value }))}
+              onChange={(e) => setField("webhookSecret", e.target.value)}
               autoComplete="off"
               spellCheck={false}
               disabled={loading}
@@ -472,14 +494,14 @@ export function PaymentProviderKeyModal({
                 id="pp-config"
                 placeholder='{"merchantId":"..."}'
                 value={form.additionalConfigJson}
-                onChange={(e) =>
-                  setForm((p) => ({ ...p, additionalConfigJson: e.target.value }))
-                }
+                onChange={(e) => setField("additionalConfigJson", e.target.value)}
                 spellCheck={false}
                 disabled={loading}
                 rows={3}
+                aria-invalid={!!errors.additionalConfigJson}
                 className="flex w-full rounded-md border border-border bg-secondary px-3 py-2 text-sm font-mono ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
               />
+              <FieldError message={errors.additionalConfigJson} />
             </div>
           )}
 
@@ -490,10 +512,12 @@ export function PaymentProviderKeyModal({
               id="pp-countries"
               placeholder="e.g. GH, NG, US (comma separated)"
               value={form.enabledCountries}
-              onChange={(e) => setForm((p) => ({ ...p, enabledCountries: e.target.value }))}
+              onChange={(e) => setField("enabledCountries", e.target.value)}
               disabled={loading}
               className="bg-secondary border-border"
+              aria-invalid={!!errors.enabledCountries}
             />
+            <FieldError message={errors.enabledCountries} />
             <p className="text-xs text-muted-foreground">
               ISO country codes this provider routes for. Leave empty for all countries.
             </p>
@@ -506,10 +530,12 @@ export function PaymentProviderKeyModal({
               id="pp-expires"
               type="datetime-local"
               value={form.expiresAt}
-              onChange={(e) => setForm((p) => ({ ...p, expiresAt: e.target.value }))}
+              onChange={(e) => setField("expiresAt", e.target.value)}
               disabled={loading}
               className="bg-secondary border-border"
+              aria-invalid={!!errors.expiresAt}
             />
+            <FieldError message={errors.expiresAt} />
           </div>
 
           <p className="text-xs text-muted-foreground">

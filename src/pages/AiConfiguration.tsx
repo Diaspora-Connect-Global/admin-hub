@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Navigate } from "react-router-dom";
 import { AdminLayout } from "@/components/layout/AdminLayout";
+import { SettingsTabs } from "@/components/settings/SettingsTabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -73,6 +74,7 @@ import {
 } from "@/hooks/admin";
 import { AiProviderCredentialModal } from "@/components/admin/AiProviderCredentialModal";
 import { AiClassifierConfigModal } from "@/components/admin/AiClassifierConfigModal";
+import { StatusBadge } from "@/components/ui/StatusBadge";
 
 const PROVIDER_LABELS: Record<AiProviderType, string> = {
   OPENAI: "OpenAI",
@@ -278,6 +280,8 @@ export default function AiConfiguration() {
           </div>
         </div>
 
+        <SettingsTabs />
+
         {/* Active Default (Primary Provider) */}
         <Card className="bg-card border-border">
           <CardHeader>
@@ -386,7 +390,7 @@ export default function AiConfiguration() {
                 No provider credentials yet. Add one to enable post classification.
               </p>
             ) : (
-              <div className="table-container">
+              <div className="table-container overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow className="border-border">
@@ -417,11 +421,9 @@ export default function AiConfiguration() {
                         </TableCell>
                         <TableCell>
                           {cred.isActive ? (
-                            <Badge className="bg-emerald-500/15 text-emerald-400 border-emerald-500/30">
-                              Active
-                            </Badge>
+                            <StatusBadge variant="active">Active</StatusBadge>
                           ) : (
-                            <Badge variant="secondary">Inactive</Badge>
+                            <StatusBadge variant="inactive">Inactive</StatusBadge>
                           )}
                         </TableCell>
                         <TableCell>{cred.priority}</TableCell>
@@ -431,7 +433,7 @@ export default function AiConfiguration() {
                         <TableCell className="text-right">
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-8 w-8">
+                              <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Credential actions">
                                 <MoreHorizontal className="w-4 h-4" />
                               </Button>
                             </DropdownMenuTrigger>
@@ -519,11 +521,9 @@ export default function AiConfiguration() {
                     <p className="text-xs text-muted-foreground">Status</p>
                     <p className="text-sm">
                       {classifierConfig.isActive ? (
-                        <Badge className="bg-emerald-500/15 text-emerald-400 border-emerald-500/30">
-                          Active
-                        </Badge>
+                        <StatusBadge variant="active">Active</StatusBadge>
                       ) : (
-                        <Badge variant="secondary">Paused</Badge>
+                        <StatusBadge variant="warning">Paused</StatusBadge>
                       )}
                     </p>
                   </div>
@@ -656,18 +656,16 @@ export default function AiConfiguration() {
                   </div>
                   <div className="flex items-center gap-2">
                     {job?.status === "RUNNING" && (
-                      <Badge className="bg-blue-500/15 text-blue-400 border-blue-500/30">Running</Badge>
+                      <StatusBadge variant="info">Running</StatusBadge>
                     )}
                     {job?.status === "COMPLETED" && (
-                      <Badge className="bg-emerald-500/15 text-emerald-400 border-emerald-500/30">
-                        Completed
-                      </Badge>
+                      <StatusBadge variant="active">Completed</StatusBadge>
                     )}
                     {job?.status === "FAILED" && (
-                      <Badge className="bg-red-500/15 text-red-400 border-red-500/30">Failed</Badge>
+                      <StatusBadge variant="error">Failed</StatusBadge>
                     )}
                     {job?.status === "CANCELLED" && (
-                      <Badge variant="secondary">Cancelled</Badge>
+                      <StatusBadge variant="inactive">Cancelled</StatusBadge>
                     )}
                     {jobLoading && <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />}
                     <Button
@@ -687,11 +685,11 @@ export default function AiConfiguration() {
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground">Succeeded</p>
-                    <p className="font-semibold text-emerald-400">{job?.succeeded ?? 0}</p>
+                    <p className="font-semibold text-success">{job?.succeeded ?? 0}</p>
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground">Failed</p>
-                    <p className="font-semibold text-red-400">{job?.failed ?? 0}</p>
+                    <p className="font-semibold text-destructive">{job?.failed ?? 0}</p>
                   </div>
                 </div>
 
@@ -712,9 +710,9 @@ export default function AiConfiguration() {
                 })()}
 
                 {job?.lastError && (
-                  <div className="flex items-start gap-2 rounded-md border border-red-500/30 bg-red-500/10 p-3">
-                    <AlertTriangle className="w-4 h-4 text-red-400 mt-0.5 flex-shrink-0" />
-                    <div className="text-xs text-red-300 break-words">
+                  <div className="flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/10 p-3">
+                    <AlertTriangle className="w-4 h-4 text-destructive mt-0.5 flex-shrink-0" />
+                    <div className="text-xs text-destructive break-words">
                       <p className="font-medium">Last error</p>
                       <p className="font-mono">{job.lastError}</p>
                     </div>

@@ -340,7 +340,7 @@ export default function Events() {
             startAt,
             endAt,
             timezone,
-            tags: [],
+            tags: [] as string[],
             isPaid: isPaidEvent,
             ticketPrice: updateTicketPriceInCents,
             visibility: data.visibility ?? DEFAULT_EVENT_VISIBILITY,
@@ -379,7 +379,7 @@ export default function Events() {
             visibility: data.visibility ?? DEFAULT_EVENT_VISIBILITY,
             ...(capacityValue != null ? { capacity: capacityValue } : {}),
             ...(coverImageUrl != null ? { coverImageUrl } : {}),
-            tags: [],
+            tags: [] as string[],
             ...pricingPayload,
           },
         };

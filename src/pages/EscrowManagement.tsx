@@ -135,12 +135,12 @@ export default function EscrowManagement() {
 
   const getStatusBadge = (status: AdminEscrow["status"]) => {
     const variants: Record<AdminEscrow["status"], string> = {
-      PENDING: "bg-yellow-500/20 text-yellow-400 border-yellow-500/50",
-      HELD: "bg-blue-500/20 text-blue-400 border-blue-500/50",
-      RELEASED: "bg-emerald-500/20 text-emerald-400 border-emerald-500/50",
-      FROZEN: "bg-cyan-500/20 text-cyan-400 border-cyan-500/50",
+      PENDING: "bg-warning/20 text-warning border-warning/50",
+      HELD: "bg-info/20 text-info border-info/50",
+      RELEASED: "bg-success/20 text-success border-success/50",
+      FROZEN: "bg-info/20 text-info border-info/50",
       REFUNDED: "bg-muted text-muted-foreground",
-      DISPUTED: "bg-red-500/20 text-red-400 border-red-500/50",
+      DISPUTED: "bg-destructive/20 text-destructive border-destructive/50",
     };
     return (
       <Badge variant="outline" className={variants[status]}>
@@ -327,6 +327,7 @@ export default function EscrowManagement() {
 
         {/* Table */}
         <div className="glass rounded-xl border border-border overflow-hidden">
+          <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow className="border-border hover:bg-transparent">
@@ -401,7 +402,7 @@ export default function EscrowManagement() {
                   <TableCell>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                        <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Escrow actions">
                           <MoreHorizontal className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
@@ -431,6 +432,7 @@ export default function EscrowManagement() {
               ))}
             </TableBody>
           </Table>
+          </div>
 
           {/* Pagination */}
           <div className="flex items-center justify-between px-4 py-3 border-t border-border">
@@ -442,6 +444,7 @@ export default function EscrowManagement() {
                 variant="outline"
                 size="sm"
                 disabled={page <= 1}
+                aria-label="Previous page"
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
               >
                 <ChevronLeft className="h-4 w-4" />
@@ -461,6 +464,7 @@ export default function EscrowManagement() {
                 variant="outline"
                 size="sm"
                 disabled={page >= totalPages}
+                aria-label="Next page"
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
               >
                 <ChevronRight className="h-4 w-4" />
@@ -565,7 +569,7 @@ export default function EscrowManagement() {
                           setDetailOpen(false);
                           openReleaseModal(selectedEscrow!);
                         }}
-                        className="bg-emerald-600 hover:bg-emerald-700"
+                        className="bg-success hover:bg-success/90 text-success-foreground"
                       >
                         <CheckCircle className="h-4 w-4 mr-2" /> Force Release
                       </Button>
@@ -577,7 +581,7 @@ export default function EscrowManagement() {
                         setDetailOpen(false);
                         openFreezeModal(selectedEscrow!);
                       }}
-                      className="border-yellow-500/50 text-yellow-400 hover:bg-yellow-500/10"
+                      className="border-warning/50 text-warning hover:bg-warning/10"
                     >
                       <Lock className="h-4 w-4 mr-2" /> Freeze
                     </Button>
@@ -589,7 +593,7 @@ export default function EscrowManagement() {
                         setDetailOpen(false);
                         openUnfreezeModal(selectedEscrow!);
                       }}
-                      className="border-cyan-500/50 text-cyan-400 hover:bg-cyan-500/10"
+                      className="border-info/50 text-info hover:bg-info/10"
                     >
                       <Unlock className="h-4 w-4 mr-2" /> Unfreeze
                     </Button>
@@ -605,7 +609,7 @@ export default function EscrowManagement() {
                       <Download className="h-4 w-4 mr-2" /> Export CSV
                     </Button>
                   </div>
-                  <div className="border border-border rounded-lg overflow-hidden">
+                  <div className="border border-border rounded-lg overflow-hidden overflow-x-auto">
                     <Table>
                       <TableHeader>
                         <TableRow className="border-border">
@@ -658,7 +662,7 @@ export default function EscrowManagement() {
                       <p className="text-sm text-muted-foreground">No attachments found for this escrow.</p>
                     </div>
                   ) : (
-                    <div className="border border-border rounded-lg overflow-hidden">
+                    <div className="border border-border rounded-lg overflow-hidden overflow-x-auto">
                       <Table>
                         <TableHeader>
                           <TableRow className="border-border">
@@ -746,7 +750,7 @@ export default function EscrowManagement() {
               <Button
                 onClick={handleForceRelease}
                 disabled={!releaseNotes.trim() || releasing}
-                className="bg-emerald-600 hover:bg-emerald-700"
+                className="bg-success hover:bg-success/90 text-success-foreground"
               >
                 {releasing ? "Releasing..." : "Force Release"}
               </Button>
@@ -794,7 +798,7 @@ export default function EscrowManagement() {
               <Button
                 onClick={handleFreeze}
                 disabled={!freezeReason.trim() || !freezeDisputeId.trim() || freezing}
-                className="bg-yellow-600 hover:bg-yellow-700"
+                className="bg-warning hover:bg-warning/90 text-warning-foreground"
               >
                 {freezing ? "Freezing..." : "Freeze Escrow"}
               </Button>
@@ -825,7 +829,7 @@ export default function EscrowManagement() {
               <Button
                 onClick={handleUnfreeze}
                 disabled={unfreezing}
-                className="bg-cyan-600 hover:bg-cyan-700"
+                className="bg-info hover:bg-info/90 text-info-foreground"
               >
                 {unfreezing ? "Unfreezing..." : "Unfreeze Escrow"}
               </Button>

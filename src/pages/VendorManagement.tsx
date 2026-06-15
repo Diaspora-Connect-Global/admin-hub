@@ -4,6 +4,7 @@ import { AdminLayout } from "@/components/layout/AdminLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { StatusBadge } from "@/components/ui/StatusBadge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -161,13 +162,17 @@ export default function VendorManagement() {
   const [verifyVendor, { loading: verifyingVendor }] = useVerifyVendor();
 
   const getStatusBadge = (status: VendorStatus | string | undefined) => {
-    const variants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
-      ACTIVE: "default",
-      DRAFT: "secondary",
-      KYC_PENDING: "outline",
-      SUSPENDED: "destructive",
+    const variants: Record<string, "active" | "warning" | "inactive" | "error" | "pending" | "info"> = {
+      ACTIVE: "active",
+      DRAFT: "inactive",
+      KYC_PENDING: "pending",
+      SUSPENDED: "error",
+      PUBLISHED: "active",
+      PENDING: "pending",
+      PAID: "active",
+      DISPUTED: "error",
     };
-    return <Badge variant={variants[status as string] || "outline"}>{status}</Badge>;
+    return <StatusBadge variant={variants[status as string] ?? "inactive"}>{status}</StatusBadge>;
   };
 
   const handleSelectAll = (checked: boolean) => {
@@ -284,7 +289,7 @@ export default function VendorManagement() {
             key={star}
             className={`h-4 w-4 ${
               star <= r
-                ? "fill-yellow-400 text-yellow-400"
+                ? "fill-warning text-warning"
                 : "text-muted-foreground"
             }`}
           />
@@ -303,7 +308,7 @@ export default function VendorManagement() {
   if (vendorsError) {
     return (
       <AdminLayout>
-        <div className="flex items-center gap-3 p-4 rounded-lg border border-red-200 bg-red-50 text-red-900">
+        <div className="flex items-center gap-3 p-4 rounded-lg border border-destructive/30 bg-destructive/10 text-destructive">
           <AlertCircle className="h-5 w-5 flex-shrink-0" />
           <div>
             <p className="font-medium">Error loading vendors</p>
@@ -398,7 +403,7 @@ export default function VendorManagement() {
         </div>
 
         {/* Table */}
-        <div className="rounded-lg border bg-card">
+        <div className="rounded-lg border bg-card overflow-x-auto">
           {vendorsLoading ? (
             <div className="p-4 space-y-3">
               {[...Array(5)].map((_, i) => (
@@ -468,6 +473,7 @@ export default function VendorManagement() {
                           <Button
                             variant="ghost"
                             size="icon"
+                            aria-label={t("common.view")}
                             onClick={() => openVendorDetail(vendor as unknown as Vendor)}
                           >
                             <Eye className="h-4 w-4" />
@@ -476,6 +482,7 @@ export default function VendorManagement() {
                             <Button
                               variant="ghost"
                               size="icon"
+                              aria-label="Suspend vendor"
                               onClick={() => {
                                 setSelectedVendor(vendor as unknown as Vendor);
                                 setIsSuspendModalOpen(true);
@@ -488,6 +495,7 @@ export default function VendorManagement() {
                             <Button
                               variant="ghost"
                               size="icon"
+                              aria-label="Reinstate vendor"
                               onClick={() => {
                                 setSelectedVendor(vendor as unknown as Vendor);
                                 setIsReinstateModalOpen(true);
@@ -498,7 +506,7 @@ export default function VendorManagement() {
                           )}
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon">
+                              <Button variant="ghost" size="icon" aria-label={t("common.actions")}>
                                 <MoreHorizontal className="h-4 w-4" />
                               </Button>
                             </DropdownMenuTrigger>
@@ -572,14 +580,14 @@ export default function VendorManagement() {
                     {getStatusBadge(selectedVendor.status)}
                     {/* KYC Badge */}
                     {kycVerified === true && (
-                      <Badge className="bg-green-600 text-white hover:bg-green-700">
+                      <StatusBadge variant="active">
                         <ShieldCheck className="mr-1 h-3 w-3" /> KYC Verified
-                      </Badge>
+                      </StatusBadge>
                     )}
                     {kycVerified === false && (
-                      <Badge variant="outline" className="border-yellow-500 text-yellow-600">
+                      <StatusBadge variant="pending">
                         <ShieldAlert className="mr-1 h-3 w-3" /> KYC Pending
-                      </Badge>
+                      </StatusBadge>
                     )}
                   </SheetTitle>
                   <div className="text-sm text-muted-foreground space-y-1 mt-4">
@@ -624,7 +632,7 @@ export default function VendorManagement() {
                       <Button
                         size="sm"
                         variant="outline"
-                        className="border-green-500 text-green-600 hover:bg-green-50"
+                        className="border-success/50 text-success hover:bg-success/10"
                         onClick={handleVerifyVendor}
                         disabled={verifyingVendor}
                       >
@@ -638,7 +646,7 @@ export default function VendorManagement() {
                       <Button
                         size="sm"
                         variant="outline"
-                        className="border-blue-500 text-blue-600 hover:bg-blue-50"
+                        className="border-info/50 text-info hover:bg-info/10"
                         onClick={handleApproveKyc}
                         disabled={approvingKyc}
                       >
@@ -652,7 +660,7 @@ export default function VendorManagement() {
                       <Button
                         size="sm"
                         variant="outline"
-                        className="border-red-400 text-red-600 hover:bg-red-50"
+                        className="border-destructive/50 text-destructive hover:bg-destructive/10"
                         onClick={() => setIsRejectKycModalOpen(true)}
                       >
                         <ShieldX className="mr-2 h-4 w-4" /> Reject KYC
@@ -737,7 +745,7 @@ export default function VendorManagement() {
                   <TabsContent value="products" className="mt-4">
                     {productsData?.listVendorProducts?.items &&
                     productsData.listVendorProducts.items.length > 0 ? (
-                      <div className="rounded-lg border">
+                      <div className="rounded-lg border overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow>
@@ -777,7 +785,7 @@ export default function VendorManagement() {
                   <TabsContent value="orders" className="mt-4">
                     {ordersData?.listVendorOrders?.items &&
                     ordersData.listVendorOrders.items.length > 0 ? (
-                      <div className="rounded-lg border">
+                      <div className="rounded-lg border overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow>
@@ -823,7 +831,7 @@ export default function VendorManagement() {
                         <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
                       </div>
                     ) : suspensions.length > 0 ? (
-                      <div className="rounded-lg border">
+                      <div className="rounded-lg border overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow>
@@ -855,9 +863,9 @@ export default function VendorManagement() {
                                 </TableCell>
                                 <TableCell>
                                   {s.isActive ? (
-                                    <Badge variant="destructive">Active</Badge>
+                                    <StatusBadge variant="error">Active</StatusBadge>
                                   ) : (
-                                    <Badge variant="secondary">Resolved</Badge>
+                                    <StatusBadge variant="inactive">Resolved</StatusBadge>
                                   )}
                                 </TableCell>
                               </TableRow>

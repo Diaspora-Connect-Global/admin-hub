@@ -5,7 +5,7 @@
 
 import { useTokenExpiry } from "@/hooks/auth/useTokenExpiry";
 
-export function TokenExpiryMonitor() {
+export function TokenExpiryMonitor(): null {
   // Hook runs on mount and tracks token expiry
   useTokenExpiry();
   

@@ -520,7 +520,7 @@ export default function Opportunities() {
         <h1 className="text-2xl font-semibold text-foreground">{t.opportunitiesTitle}</h1>
         <p className="text-sm text-muted-foreground mt-1">{t.opportunitiesSubtitle}</p>
         {!isOpportunityReadAdmin && (
-          <p className="mt-2 text-sm text-amber-600">
+          <p className="mt-2 text-sm text-warning">
             Read-only access. Privileged opportunity actions require an admin role. Current role: {adminRoleName} ({adminScopeType}).
           </p>
         )}
@@ -573,15 +573,15 @@ export default function Opportunities() {
         <div className="flex items-center gap-2">
           <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as "list" | "card")}>
             <TabsList className="h-9">
-              <TabsTrigger value="list" className="px-3">
+              <TabsTrigger value="list" className="px-3" aria-label="List view">
                 <LayoutList className="h-4 w-4" />
               </TabsTrigger>
-              <TabsTrigger value="card" className="px-3">
+              <TabsTrigger value="card" className="px-3" aria-label="Card view">
                 <LayoutGrid className="h-4 w-4" />
               </TabsTrigger>
             </TabsList>
           </Tabs>
-          <Button variant="outline" size="icon" className="h-9 w-9" onClick={() => refetchList()}>
+          <Button variant="outline" size="icon" className="h-9 w-9" aria-label="Refresh" onClick={() => refetchList()}>
             <RefreshCw className="h-4 w-4" />
           </Button>
           <Button
@@ -628,12 +628,12 @@ export default function Opportunities() {
                 .replace("{total}", listTotal.toString())}
         </p>
         {listError && (
-          <p className="text-sm text-red-600 mt-2">
+          <p className="text-sm text-destructive mt-2">
             ⚠️ Error loading opportunities: {listError.message}
           </p>
         )}
         {!listLoading && listTotal === 0 && (
-          <p className="text-sm text-amber-600 mt-2">
+          <p className="text-sm text-warning mt-2">
             ℹ️ No opportunities found. {!isOpportunityReadAdmin ? "Log in with an admin role to access opportunity moderation." : "Create your first opportunity!"}
           </p>
         )}

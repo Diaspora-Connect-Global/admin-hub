@@ -24,6 +24,8 @@ import {
   type AiProviderCredential,
   type AiProviderType,
 } from "@/hooks/admin";
+import { FieldError } from "@/components/common/FieldError";
+import { httpUrl } from "@/lib/validation";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 
 interface AiProviderCredentialModalProps {
@@ -56,12 +58,20 @@ export function AiProviderCredentialModal({
     isActive: true,
     priority: 100,
   });
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  /** Update a field and clear any inline error sitting on it. */
+  const setField = (key: string, value: unknown) => {
+    setErrors((e) => (e[key] ? { ...e, [key]: "" } : e));
+    setForm((prev) => ({ ...prev, [key]: value }));
+  };
 
   // Reset form when modal opens / mode changes. Never echoes the existing key
   // back — apiKey starts empty in edit mode (empty = "do not rotate").
   useEffect(() => {
     if (!isOpen) return;
     setShowKey(false);
+    setErrors({});
     if (editing) {
       setForm({
         provider: editing.provider,
@@ -88,18 +98,17 @@ export function AiProviderCredentialModal({
   const isEdit = !!editing;
 
   const handleSubmit = async () => {
-    if (!form.label.trim()) {
-      toast({ title: "Label required", variant: "destructive" });
-      return;
+    const next: Record<string, string> = {};
+    if (!form.label.trim()) next.label = "Label is required";
+    if (!isEdit && !form.apiKey.trim()) next.apiKey = "API key is required";
+    if (form.endpointUrl.trim() && !httpUrl.safeParse(form.endpointUrl.trim()).success) {
+      next.endpointUrl = "Enter a valid URL (https://…)";
     }
-    if (!isEdit && !form.apiKey.trim()) {
-      toast({
-        title: "API key required",
-        description: "Paste the provider API key to create the credential.",
-        variant: "destructive",
-      });
-      return;
+    if (!Number.isFinite(Number(form.priority)) || Number(form.priority) < 0) {
+      next.priority = "Priority must be a non-negative number";
     }
+    setErrors(next);
+    if (Object.keys(next).length) return;
 
     try {
       await upsert({
@@ -179,10 +188,12 @@ export function AiProviderCredentialModal({
               id="ai-label"
               placeholder="e.g. Production Groq"
               value={form.label}
-              onChange={(e) => setForm((p) => ({ ...p, label: e.target.value }))}
+              onChange={(e) => setField("label", e.target.value)}
               disabled={loading}
               className="bg-secondary border-border"
+              aria-invalid={!!errors.label}
             />
+            <FieldError message={errors.label} />
             <p className="text-xs text-muted-foreground">
               Friendly name shown in this admin only.
             </p>
@@ -199,11 +210,12 @@ export function AiProviderCredentialModal({
                   type={showKey ? "text" : "password"}
                   placeholder={isEdit ? "Paste new key to rotate" : "sk-..."}
                   value={form.apiKey}
-                  onChange={(e) => setForm((p) => ({ ...p, apiKey: e.target.value }))}
+                  onChange={(e) => setField("apiKey", e.target.value)}
                   autoComplete="off"
                   spellCheck={false}
                   disabled={loading}
                   className="bg-secondary border-border pr-10"
+                  aria-invalid={!!errors.apiKey}
                 />
                 <button
                   type="button"
@@ -216,6 +228,7 @@ export function AiProviderCredentialModal({
                 </button>
               </div>
             </div>
+            <FieldError message={errors.apiKey} />
             <p className="text-xs text-muted-foreground">
               Encrypted with AES-256-GCM before storage. Never logged or echoed back over the wire.
             </p>
@@ -228,7 +241,7 @@ export function AiProviderCredentialModal({
                 id="ai-model"
                 placeholder="e.g. llama-3.1-70b-versatile"
                 value={form.modelDefault}
-                onChange={(e) => setForm((p) => ({ ...p, modelDefault: e.target.value }))}
+                onChange={(e) => setField("modelDefault", e.target.value)}
                 disabled={loading}
                 className="bg-secondary border-border"
               />
@@ -241,10 +254,12 @@ export function AiProviderCredentialModal({
                 type="number"
                 min={0}
                 value={form.priority}
-                onChange={(e) => setForm((p) => ({ ...p, priority: Number(e.target.value) }))}
+                onChange={(e) => setField("priority", Number(e.target.value))}
                 disabled={loading}
                 className="bg-secondary border-border"
+                aria-invalid={!!errors.priority}
               />
+              <FieldError message={errors.priority} />
               <p className="text-xs text-muted-foreground">Lower runs first within the same provider.</p>
             </div>
           </div>
@@ -255,10 +270,12 @@ export function AiProviderCredentialModal({
               id="ai-endpoint"
               placeholder="Override the default provider endpoint"
               value={form.endpointUrl}
-              onChange={(e) => setForm((p) => ({ ...p, endpointUrl: e.target.value }))}
+              onChange={(e) => setField("endpointUrl", e.target.value)}
               disabled={loading}
               className="bg-secondary border-border"
+              aria-invalid={!!errors.endpointUrl}
             />
+            <FieldError message={errors.endpointUrl} />
           </div>
 
           <div className="flex items-center justify-between rounded-md border border-border bg-secondary px-3 h-10">

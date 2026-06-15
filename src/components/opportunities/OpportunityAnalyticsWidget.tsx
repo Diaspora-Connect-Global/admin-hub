@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Briefcase, Users, Clock, TrendingUp, ExternalLink, Lightbulb } from "lucide-react";
-import { Applicant } from "@/types/opportunities";
+import { Applicant, ApplicationStatus } from "@/types/opportunities";
 
 interface OpportunityAnalyticsWidgetProps {
   openOppsCount: number;
@@ -83,9 +83,9 @@ export function OpportunityAnalyticsWidget({
                     </div>
                     <Badge
                       variant={
-                        applicant.status === "shortlisted"
+                        applicant.status === ApplicationStatus.REVIEWING
                           ? "default"
-                          : applicant.status === "hired"
+                          : applicant.status === ApplicationStatus.ACCEPTED
                           ? "default"
                           : "secondary"
                       }
