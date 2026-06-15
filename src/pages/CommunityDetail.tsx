@@ -778,14 +778,14 @@ export default function CommunityDetail() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => navigate("/communities")}>
+            <Button variant="ghost" size="icon" aria-label="Back to communities" onClick={() => navigate("/communities")}>
               <ArrowLeft className="h-5 w-5" />
             </Button>
             <div>
               <div className="flex items-center gap-3">
                 <h1 className="text-2xl font-semibold text-foreground">{community.name}</h1>
                 {community.communityType && (
-                  <Badge variant="outline" className={community.communityType.isEmbassy ? "border-blue-500 text-blue-500" : ""}>
+                  <Badge variant="outline" className={community.communityType.isEmbassy ? "border-info text-info" : ""}>
                     {community.communityType.name}
                   </Badge>
                 )}
@@ -1074,6 +1074,7 @@ export default function CommunityDetail() {
                 </div>
               </CardHeader>
               <CardContent className="p-0">
+                <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow className="border-border/50">
@@ -1105,6 +1106,7 @@ export default function CommunityDetail() {
                     ))}
                   </TableBody>
                 </Table>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
@@ -1128,6 +1130,7 @@ export default function CommunityDetail() {
                     <p className="text-sm text-muted-foreground">No posts found for this community.</p>
                   </div>
                 ) : (
+                  <div className="overflow-x-auto">
                   <Table>
                     <TableHeader>
                       <TableRow className="border-border/50">
@@ -1155,16 +1158,17 @@ export default function CommunityDetail() {
                           <TableCell>{post.status ? getStatusBadge(post.status) : "—"}</TableCell>
                           <TableCell>
                             <div className="flex gap-1">
-                              <Button variant="ghost" size="icon" className="text-success"><Check className="h-4 w-4" /></Button>
-                              <Button variant="ghost" size="icon" className="text-destructive"><X className="h-4 w-4" /></Button>
-                              <Button variant="ghost" size="icon" className="text-destructive"><Trash2 className="h-4 w-4" /></Button>
-                              <Button variant="ghost" size="icon"><Eye className="h-4 w-4" /></Button>
+                              <Button variant="ghost" size="icon" className="text-success" aria-label="Approve post"><Check className="h-4 w-4" /></Button>
+                              <Button variant="ghost" size="icon" className="text-destructive" aria-label="Reject post"><X className="h-4 w-4" /></Button>
+                              <Button variant="ghost" size="icon" className="text-destructive" aria-label={t('common.delete')}><Trash2 className="h-4 w-4" /></Button>
+                              <Button variant="ghost" size="icon" aria-label={t('common.view')}><Eye className="h-4 w-4" /></Button>
                             </div>
                           </TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
                   </Table>
+                  </div>
                 )}
               </CardContent>
             </Card>
@@ -1178,6 +1182,7 @@ export default function CommunityDetail() {
                 <CardDescription>Community events and meetups.</CardDescription>
               </CardHeader>
               <CardContent className="p-0">
+                <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow className="border-border/50">
@@ -1201,14 +1206,15 @@ export default function CommunityDetail() {
                         <TableCell>{getStatusBadge(evt.status)}</TableCell>
                         <TableCell>
                           <div className="flex gap-1">
-                            <Button variant="ghost" size="icon"><Eye className="h-4 w-4" /></Button>
-                            <Button variant="ghost" size="icon"><Edit className="h-4 w-4" /></Button>
+                            <Button variant="ghost" size="icon" aria-label={t('common.view')}><Eye className="h-4 w-4" /></Button>
+                            <Button variant="ghost" size="icon" aria-label={t('common.edit')}><Edit className="h-4 w-4" /></Button>
                           </div>
                         </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
                 </Table>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
@@ -1221,6 +1227,7 @@ export default function CommunityDetail() {
                 <CardDescription>Opportunities posted in this community.</CardDescription>
               </CardHeader>
               <CardContent className="p-0">
+                <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow className="border-border/50">
@@ -1244,15 +1251,16 @@ export default function CommunityDetail() {
                         <TableCell className="text-muted-foreground">{opp.createdAt}</TableCell>
                         <TableCell>
                           <div className="flex gap-1">
-                            <Button variant="ghost" size="icon" className="text-success"><Check className="h-4 w-4" /></Button>
-                            <Button variant="ghost" size="icon" className="text-destructive"><X className="h-4 w-4" /></Button>
-                            <Button variant="ghost" size="icon"><Eye className="h-4 w-4" /></Button>
+                            <Button variant="ghost" size="icon" className="text-success" aria-label="Approve opportunity"><Check className="h-4 w-4" /></Button>
+                            <Button variant="ghost" size="icon" className="text-destructive" aria-label="Reject opportunity"><X className="h-4 w-4" /></Button>
+                            <Button variant="ghost" size="icon" aria-label={t('common.view')}><Eye className="h-4 w-4" /></Button>
                           </div>
                         </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
                 </Table>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
@@ -1276,6 +1284,7 @@ export default function CommunityDetail() {
                     <p className="text-muted-foreground">No vendor products found for this community.</p>
                   </div>
                 ) : (
+                  <div className="overflow-x-auto">
                   <Table>
                     <TableHeader>
                       <TableRow className="border-border/50">
@@ -1301,14 +1310,15 @@ export default function CommunityDetail() {
                           <TableCell>{item.status ? getStatusBadge(item.status) : "—"}</TableCell>
                           <TableCell>
                             <div className="flex gap-1">
-                              <Button variant="ghost" size="icon" className="text-success"><Check className="h-4 w-4" /></Button>
-                              <Button variant="ghost" size="icon" className="text-warning"><Pause className="h-4 w-4" /></Button>
+                              <Button variant="ghost" size="icon" className="text-success" aria-label="Approve product"><Check className="h-4 w-4" /></Button>
+                              <Button variant="ghost" size="icon" className="text-warning" aria-label="Pause product"><Pause className="h-4 w-4" /></Button>
                             </div>
                           </TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
                   </Table>
+                  </div>
                 )}
               </CardContent>
             </Card>
@@ -1327,6 +1337,7 @@ export default function CommunityDetail() {
                 </div>
               </CardHeader>
               <CardContent className="p-0">
+                <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow className="border-border/50">
@@ -1347,6 +1358,7 @@ export default function CommunityDetail() {
                     ))}
                   </TableBody>
                 </Table>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
@@ -1622,7 +1634,7 @@ export default function CommunityDetail() {
               {communityTypes.find(t => t.id === editForm.communityType)?.isEmbassy && (
                 <div className="space-y-4">
                   <h3 className="text-sm font-semibold text-foreground border-b border-border pb-2 flex items-center gap-2">
-                    <Globe className="h-4 w-4 text-blue-500" />
+                    <Globe className="h-4 w-4 text-info" />
                     {t("communities.form.embassyInfo")}
                   </h3>
 

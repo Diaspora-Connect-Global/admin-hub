@@ -18,6 +18,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { StatusBadge } from "@/components/ui/StatusBadge";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -181,27 +182,19 @@ export default function NotificationsBroadcasts() {
     switch (status.toLowerCase()) {
       case "delivered":
       case "sent":
-        return (
-          <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30">
-            Delivered
-          </Badge>
-        );
+        return <StatusBadge variant="active">Delivered</StatusBadge>;
       case "sending":
-        return (
-          <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30">Sending</Badge>
-        );
+        return <StatusBadge variant="info">Sending</StatusBadge>;
       case "scheduled":
-        return (
-          <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30">Scheduled</Badge>
-        );
+        return <StatusBadge variant="warning">Scheduled</StatusBadge>;
       case "draft":
-        return <Badge variant="secondary">Draft</Badge>;
+        return <StatusBadge variant="inactive">Draft</StatusBadge>;
       case "failed":
-        return <Badge variant="destructive">Failed</Badge>;
+        return <StatusBadge variant="error">Failed</StatusBadge>;
       case "active":
-        return <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30">Active</Badge>;
+        return <StatusBadge variant="active">Active</StatusBadge>;
       case "inactive":
-        return <Badge variant="secondary">Inactive</Badge>;
+        return <StatusBadge variant="inactive">Inactive</StatusBadge>;
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
@@ -210,13 +203,13 @@ export default function NotificationsBroadcasts() {
   const getPriorityBadge = (priority: string) => {
     switch (priority.toLowerCase()) {
       case "critical":
-        return <Badge variant="destructive">Critical</Badge>;
+        return <StatusBadge variant="error">Critical</StatusBadge>;
       case "high":
-        return <Badge className="bg-orange-500/20 text-orange-400 border-orange-500/30">High</Badge>;
+        return <StatusBadge variant="warning">High</StatusBadge>;
       case "medium":
-        return <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30">Medium</Badge>;
+        return <StatusBadge variant="warning">Medium</StatusBadge>;
       case "low":
-        return <Badge variant="secondary">Low</Badge>;
+        return <StatusBadge variant="inactive">Low</StatusBadge>;
       default:
         return <Badge variant="outline">{priority}</Badge>;
     }
@@ -288,13 +281,13 @@ export default function NotificationsBroadcasts() {
                 </CardContent>
               </Card>
 
-              <Card className="cursor-pointer hover:border-amber-500/30 transition-colors border-amber-500/20">
+              <Card className="cursor-pointer hover:border-warning/30 transition-colors border-warning/20">
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                   <CardTitle className="text-sm font-medium">Pending</CardTitle>
-                  <Clock className="h-4 w-4 text-amber-500" />
+                  <Clock className="h-4 w-4 text-warning" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold text-amber-500">
+                  <div className="text-2xl font-bold text-warning">
                     {broadcastsLoading ? "—" : pendingCount}
                   </div>
                   <p className="text-xs text-muted-foreground">Scheduled / sending</p>
@@ -304,10 +297,10 @@ export default function NotificationsBroadcasts() {
               <Card className="cursor-pointer hover:border-primary/30 transition-colors">
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                   <CardTitle className="text-sm font-medium">Delivery Rate</CardTitle>
-                  <CheckCircle className="h-4 w-4 text-emerald-500" />
+                  <CheckCircle className="h-4 w-4 text-success" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold text-emerald-500">
+                  <div className="text-2xl font-bold text-success">
                     {analyticsLoading
                       ? "—"
                       : avgDeliveryRate !== null
@@ -486,6 +479,7 @@ export default function NotificationsBroadcasts() {
                   <CardDescription>Latest system-wide announcements</CardDescription>
                 </CardHeader>
                 <CardContent>
+                  <div className="overflow-x-auto">
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -532,6 +526,7 @@ export default function NotificationsBroadcasts() {
                       )}
                     </TableBody>
                   </Table>
+                  </div>
                 </CardContent>
               </Card>
             </div>
@@ -571,6 +566,7 @@ export default function NotificationsBroadcasts() {
                 </div>
 
                 {/* Table */}
+                <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -636,7 +632,7 @@ export default function NotificationsBroadcasts() {
                             <TableCell>
                               <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
-                                  <Button variant="ghost" size="icon">
+                                  <Button variant="ghost" size="icon" aria-label={t("common.actions")}>
                                     <MoreHorizontal className="h-4 w-4" />
                                   </Button>
                                 </DropdownMenuTrigger>
@@ -655,6 +651,7 @@ export default function NotificationsBroadcasts() {
                     )}
                   </TableBody>
                 </Table>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
@@ -703,6 +700,7 @@ export default function NotificationsBroadcasts() {
                 </div>
 
                 {/* Table */}
+                <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -760,17 +758,15 @@ export default function NotificationsBroadcasts() {
                             <TableCell>{item.viewCount.toLocaleString()}</TableCell>
                             <TableCell>
                               {item.active ? (
-                                <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30">
-                                  Active
-                                </Badge>
+                                <StatusBadge variant="active">Active</StatusBadge>
                               ) : (
-                                <Badge variant="secondary">Inactive</Badge>
+                                <StatusBadge variant="inactive">Inactive</StatusBadge>
                               )}
                             </TableCell>
                             <TableCell>
                               <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
-                                  <Button variant="ghost" size="icon">
+                                  <Button variant="ghost" size="icon" aria-label={t("common.actions")}>
                                     <MoreHorizontal className="h-4 w-4" />
                                   </Button>
                                 </DropdownMenuTrigger>
@@ -789,6 +785,7 @@ export default function NotificationsBroadcasts() {
                     )}
                   </TableBody>
                 </Table>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
@@ -833,6 +830,7 @@ export default function NotificationsBroadcasts() {
                 </div>
 
                 {/* Table */}
+                <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -892,7 +890,7 @@ export default function NotificationsBroadcasts() {
                             <TableCell>
                               <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
-                                  <Button variant="ghost" size="icon">
+                                  <Button variant="ghost" size="icon" aria-label={t("common.actions")}>
                                     <MoreHorizontal className="h-4 w-4" />
                                   </Button>
                                 </DropdownMenuTrigger>
@@ -911,6 +909,7 @@ export default function NotificationsBroadcasts() {
                     )}
                   </TableBody>
                 </Table>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
@@ -968,6 +967,7 @@ export default function NotificationsBroadcasts() {
                 </div>
 
                 {/* Table */}
+                <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -1029,7 +1029,7 @@ export default function NotificationsBroadcasts() {
                             <TableCell>
                               <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
-                                  <Button variant="ghost" size="icon">
+                                  <Button variant="ghost" size="icon" aria-label={t("common.actions")}>
                                     <MoreHorizontal className="h-4 w-4" />
                                   </Button>
                                 </DropdownMenuTrigger>
@@ -1048,6 +1048,7 @@ export default function NotificationsBroadcasts() {
                     )}
                   </TableBody>
                 </Table>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>

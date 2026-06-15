@@ -154,9 +154,9 @@ export default function DisputesResolution() {
       Closed: "outline",
     };
     const colors: Record<string, string> = {
-      "In Review": "bg-blue-600 hover:bg-blue-600",
-      Resolved: "bg-green-600 hover:bg-green-600 text-white",
-      Escalated: "bg-orange-500 hover:bg-orange-500",
+      "In Review": "bg-info hover:bg-info text-info-foreground",
+      Resolved: "bg-success hover:bg-success text-success-foreground",
+      Escalated: "bg-warning hover:bg-warning text-warning-foreground",
     };
     return <Badge variant={variants[display]} className={colors[display] || ""}>{display}</Badge>;
   };
@@ -169,8 +169,8 @@ export default function DisputesResolution() {
       Low: "outline",
     };
     const colors: Record<string, string> = {
-      Critical: "bg-red-600 hover:bg-red-600",
-      High: "bg-orange-500 hover:bg-orange-500",
+      Critical: "bg-destructive hover:bg-destructive text-destructive-foreground",
+      High: "bg-warning hover:bg-warning text-warning-foreground",
     };
     return <Badge variant={variants[priority]} className={colors[priority] || ""}>{priority}</Badge>;
   };
@@ -368,7 +368,7 @@ export default function DisputesResolution() {
         </div>
 
         {/* Table */}
-        <div className="rounded-lg border bg-card">
+        <div className="rounded-lg border bg-card overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
@@ -413,18 +413,18 @@ export default function DisputesResolution() {
                   <TableCell className="text-sm">{dispute.created_at}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-1">
-                      <Button variant="ghost" size="icon" onClick={() => openDisputeDetail(dispute)}>
+                      <Button variant="ghost" size="icon" aria-label="View dispute" onClick={() => openDisputeDetail(dispute)}>
                         <Eye className="h-4 w-4" />
                       </Button>
-                      <Button variant="ghost" size="icon" onClick={() => { setSelectedDispute(dispute); setIsAssignModalOpen(true); }}>
+                      <Button variant="ghost" size="icon" aria-label="Assign dispute" onClick={() => { setSelectedDispute(dispute); setIsAssignModalOpen(true); }}>
                         <UserCheck className="h-4 w-4" />
                       </Button>
-                      <Button variant="ghost" size="icon" onClick={() => { setSelectedDispute(dispute); setNewStatus(dispute.status); setIsStatusModalOpen(true); }}>
+                      <Button variant="ghost" size="icon" aria-label="Update status" onClick={() => { setSelectedDispute(dispute); setNewStatus(dispute.status); setIsStatusModalOpen(true); }}>
                         <Edit className="h-4 w-4" />
                       </Button>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon">
+                          <Button variant="ghost" size="icon" aria-label="More actions">
                             <MoreHorizontal className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>
@@ -524,7 +524,7 @@ export default function DisputesResolution() {
                         <Download className="mr-2 h-4 w-4" /> Export History (CSV)
                       </Button>
                     </div>
-                    <div className="rounded-lg border">
+                    <div className="rounded-lg border overflow-x-auto">
                       <Table>
                         <TableHeader>
                           <TableRow>
@@ -736,7 +736,7 @@ export default function DisputesResolution() {
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setIsEscalateModalOpen(false)}>Cancel</Button>
-              <Button className="bg-orange-500 hover:bg-orange-600" onClick={handleEscalate} disabled={!escalateReason.trim()}>Escalate</Button>
+              <Button className="bg-warning hover:bg-warning/90 text-warning-foreground" onClick={handleEscalate} disabled={!escalateReason.trim()}>Escalate</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>

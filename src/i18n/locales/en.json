@@ -36,7 +36,11 @@
     "rejected": "Rejected",
     "all": "All",
     "yes": "Yes",
-    "no": "No"
+    "no": "No",
+    "logout": "Log out",
+    "retry": "Retry",
+    "errorTitle": "Something went wrong",
+    "errorLoading": "Failed to load data. Please try again."
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -59,7 +63,10 @@
     "settings": "System Settings",
     "aiConfig": "AI Configuration",
     "paymentKeys": "Payment Provider Keys",
-    "kycKeys": "KYC Provider Keys"
+    "kycKeys": "KYC Provider Keys",
+    "openMenu": "Open menu",
+    "collapseSidebar": "Collapse sidebar",
+    "expandSidebar": "Expand sidebar"
   },
   "dashboard": {
     "title": "Admin Dashboard",

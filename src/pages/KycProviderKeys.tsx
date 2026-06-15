@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Navigate } from "react-router-dom";
 import { AdminLayout } from "@/components/layout/AdminLayout";
+import { SettingsTabs } from "@/components/settings/SettingsTabs";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -53,6 +54,7 @@ import {
   type KycProviderType,
 } from "@/hooks/admin";
 import { KycProviderCredentialModal } from "@/components/admin/KycProviderCredentialModal";
+import { StatusBadge } from "@/components/ui/StatusBadge";
 
 const PROVIDER_LABELS: Record<KycProviderType, string> = {
   ONFIDO: "Onfido",
@@ -159,6 +161,8 @@ export default function KycProviderKeys() {
           </div>
         </div>
 
+        <SettingsTabs />
+
         {/* Provider Credentials */}
         <Card className="bg-card border-border">
           <CardHeader>
@@ -193,6 +197,7 @@ export default function KycProviderKeys() {
               </p>
             ) : (
               <div className="table-container">
+                <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow className="border-border">
@@ -238,11 +243,9 @@ export default function KycProviderKeys() {
                         </TableCell>
                         <TableCell>
                           {cred.isActive ? (
-                            <Badge className="bg-emerald-500/15 text-emerald-400 border-emerald-500/30">
-                              Active
-                            </Badge>
+                            <StatusBadge variant="active">Active</StatusBadge>
                           ) : (
-                            <Badge variant="secondary">Disabled</Badge>
+                            <StatusBadge variant="inactive">Disabled</StatusBadge>
                           )}
                         </TableCell>
                         <TableCell className="text-muted-foreground text-sm">
@@ -251,7 +254,7 @@ export default function KycProviderKeys() {
                         <TableCell className="text-right">
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-8 w-8">
+                              <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Actions">
                                 <MoreHorizontal className="w-4 h-4" />
                               </Button>
                             </DropdownMenuTrigger>
@@ -275,6 +278,7 @@ export default function KycProviderKeys() {
                     ))}
                   </TableBody>
                 </Table>
+                </div>
               </div>
             )}
           </CardContent>

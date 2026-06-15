@@ -213,8 +213,8 @@ export default function SupportTicketing() {
       Low: "outline",
     };
     const colors: Record<string, string> = {
-      Critical: "bg-red-600 hover:bg-red-600",
-      High: "bg-orange-500 hover:bg-orange-500",
+      Critical: "bg-destructive hover:bg-destructive",
+      High: "bg-warning text-warning-foreground hover:bg-warning",
     };
     return (
       <Badge variant={variants[label]} className={colors[label] || ""}>
@@ -578,7 +578,7 @@ export default function SupportTicketing() {
         </div>
 
         {/* Table */}
-        <div className="rounded-lg border bg-card">
+        <div className="rounded-lg border bg-card overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
@@ -635,12 +635,13 @@ export default function SupportTicketing() {
                     <TableCell className="text-sm">{ticket.resolvedAt ?? "—"}</TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-1">
-                        <Button variant="ghost" size="icon" onClick={() => openTicketDetail(ticket)}>
+                        <Button variant="ghost" size="icon" aria-label={t("common.view")} onClick={() => openTicketDetail(ticket)}>
                           <Eye className="h-4 w-4" />
                         </Button>
                         <Button
                           variant="ghost"
                           size="icon"
+                          aria-label="Assign ticket"
                           onClick={() => {
                             setSelectedTicket(ticket);
                             setIsAssignModalOpen(true);
@@ -651,6 +652,7 @@ export default function SupportTicketing() {
                         <Button
                           variant="ghost"
                           size="icon"
+                          aria-label={t("common.edit")}
                           onClick={() => {
                             setSelectedTicket(ticket);
                             setNewStatus(STATUS_LABEL[ticket.status] ?? ticket.status);
@@ -661,7 +663,7 @@ export default function SupportTicketing() {
                         </Button>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon">
+                            <Button variant="ghost" size="icon" aria-label={t("common.actions")}>
                               <MoreHorizontal className="h-4 w-4" />
                             </Button>
                           </DropdownMenuTrigger>
@@ -881,11 +883,12 @@ export default function SupportTicketing() {
                           className="flex-1"
                         />
                         <div className="flex flex-col gap-2">
-                          <Button variant="outline" size="icon">
+                          <Button variant="outline" size="icon" aria-label="Attach file">
                             <Paperclip className="h-4 w-4" />
                           </Button>
                           <Button
                             size="icon"
+                            aria-label="Send message"
                             onClick={handleSendMessage}
                             disabled={replyLoading || !newMessage.trim()}
                           >
@@ -903,7 +906,7 @@ export default function SupportTicketing() {
                         <Download className="mr-2 h-4 w-4" /> Export History (CSV)
                       </Button>
                     </div>
-                    <div className="rounded-lg border">
+                    <div className="rounded-lg border overflow-x-auto">
                       <Table>
                         <TableHeader>
                           <TableRow>

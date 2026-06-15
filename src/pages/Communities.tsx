@@ -558,7 +558,7 @@ export default function Communities() {
                       <TableCell>
                         {community.type === "Embassy" && community.embassyCountry && community.locationCountry ? (
                           <div className="flex items-center gap-1 text-xs">
-                            <Globe className="h-3 w-3 text-blue-500" />
+                            <Globe className="h-3 w-3 text-info" />
                             <span>
                               {iso2OrLabelToDisplayName(community.embassyCountry)} →{" "}
                               {iso2OrLabelToDisplayName(community.locationCountry)}
@@ -581,15 +581,15 @@ export default function Communities() {
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1">
-                          <Button variant="ghost" size="icon" onClick={() => navigate(`/communities/${community.id}`)}>
+                          <Button variant="ghost" size="icon" aria-label={t('communities.viewDetails')} onClick={() => navigate(`/communities/${community.id}`)}>
                             <Eye className="h-4 w-4" />
                           </Button>
-                          <Button variant="ghost" size="icon" onClick={() => { setSelectedCommunity(community); setLinkAssociationOpen(true); }}>
+                          <Button variant="ghost" size="icon" aria-label={t('communities.manageAssociations')} onClick={() => { setSelectedCommunity(community); setLinkAssociationOpen(true); }}>
                             <Link2 className="h-4 w-4" />
                           </Button>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button>
+                              <Button variant="ghost" size="icon" aria-label={t('common.actions')}><MoreHorizontal className="h-4 w-4" /></Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="bg-popover border-border">
                               <DropdownMenuItem onClick={() => navigate(`/communities/${community.id}`)}>
@@ -966,7 +966,7 @@ export default function Communities() {
               {communityTypes.find(t => t.id === formData.communityType)?.isEmbassy && (
                 <div className="space-y-4">
                   <h3 className="text-sm font-semibold text-foreground border-b border-border pb-2 flex items-center gap-2">
-                    <Globe className="h-4 w-4 text-blue-500" />
+                    <Globe className="h-4 w-4 text-info" />
                     {t('communities.form.embassyInfo')}
                   </h3>
 

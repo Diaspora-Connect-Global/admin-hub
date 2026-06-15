@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { format, subDays, startOfDay, endOfDay } from "date-fns";
 import { useGetAuditLogs } from "@/hooks/admin";
 import { AdminLayout } from "@/components/layout/AdminLayout";
+import { ErrorState } from "@/components/common/StateViews";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -103,7 +104,7 @@ export default function AuditLogs() {
 
   const { fromDate, toDate } = useMemo(() => dateRangeToIso(dateRange, selectedDate), [dateRange, selectedDate]);
 
-  const { data, loading } = useGetAuditLogs({
+  const { data, loading, error, refetch } = useGetAuditLogs({
     action: actionFilter !== "all" ? actionFilter : undefined,
     fromDate,
     toDate,
@@ -296,11 +297,18 @@ export default function AuditLogs() {
               {loading && (
                 <TableRow>
                   <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                    Loading audit logs...
+                    {t("common.loading")}
                   </TableCell>
                 </TableRow>
               )}
-              {!loading && filteredLogs.length === 0 && (
+              {!loading && error && (
+                <TableRow>
+                  <TableCell colSpan={7} className="py-8">
+                    <ErrorState onRetry={() => refetch()} className="border-0 bg-transparent p-0" />
+                  </TableCell>
+                </TableRow>
+              )}
+              {!loading && !error && filteredLogs.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                     No audit logs found.

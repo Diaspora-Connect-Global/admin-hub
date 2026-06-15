@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { StatusBadge, type StatusBadgeProps } from "@/components/ui/StatusBadge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -44,7 +45,6 @@ import {
   Lock,
   Loader2,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import {
   useListAdmins,
@@ -257,16 +257,15 @@ export default function RolesPermissions() {
     r.label.toLowerCase().includes(searchFilter.toLowerCase())
   );
 
-  const getStatusBadgeColor = (status: string) => {
+  const getStatusVariant = (status: string): StatusBadgeProps["variant"] => {
     switch (status) {
       case "ACTIVE":
-        return "bg-success/20 text-success border-success/30";
-      case "INACTIVE":
-        return "bg-muted text-muted-foreground border-muted";
+        return "active";
       case "SUSPENDED":
-        return "bg-destructive/20 text-destructive border-destructive/30";
+        return "error";
+      case "INACTIVE":
       default:
-        return "bg-muted text-muted-foreground border-muted";
+        return "inactive";
     }
   };
 
@@ -319,7 +318,7 @@ export default function RolesPermissions() {
 
           {/* Roles Tab */}
           <TabsContent value="roles" className="space-y-4">
-            <div className="table-container">
+            <div className="table-container overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow className="border-border hover:bg-transparent">
@@ -391,7 +390,7 @@ export default function RolesPermissions() {
                             asChild
                             onClick={(e) => e.stopPropagation()}
                           >
-                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <Button variant="ghost" size="icon" className="h-8 w-8" aria-label={t("common.actions")}>
                               <MoreHorizontal className="w-4 h-4" />
                             </Button>
                           </DropdownMenuTrigger>
@@ -473,7 +472,7 @@ export default function RolesPermissions() {
                 <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
               </div>
             ) : (
-              <div className="table-container">
+              <div className="table-container overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow className="border-border hover:bg-transparent">
@@ -496,15 +495,9 @@ export default function RolesPermissions() {
                         <TableCell className="font-medium">{admin.email}</TableCell>
                         <TableCell>{admin.adminType}</TableCell>
                         <TableCell>
-                          <Badge
-                            variant="outline"
-                            className={cn(
-                              "border",
-                              getStatusBadgeColor(admin.status)
-                            )}
-                          >
+                          <StatusBadge variant={getStatusVariant(admin.status)}>
                             {admin.status}
-                          </Badge>
+                          </StatusBadge>
                         </TableCell>
                         <TableCell>
                           <div className="flex gap-1 flex-wrap">
@@ -537,6 +530,7 @@ export default function RolesPermissions() {
                                 variant="ghost"
                                 size="icon"
                                 className="h-8 w-8"
+                                aria-label={t("common.actions")}
                               >
                                 <MoreHorizontal className="w-4 h-4" />
                               </Button>

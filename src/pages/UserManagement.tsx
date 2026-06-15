@@ -25,6 +25,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { StatusBadge } from "@/components/ui/StatusBadge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -68,18 +69,18 @@ function mapApiUserToRow(item: {
 
 
 const getStatusBadge = (status: string) => {
-  const styles: Record<string, string> = {
-    "Active": "badge-status badge-success",
-    "Inactive": "badge-status badge-warning",
-    "Suspended": "badge-status badge-destructive",
-    "Published": "badge-status badge-success",
-    "Applied": "badge-status badge-info",
-    "Completed": "badge-status badge-success",
-    "Held": "badge-status badge-warning",
-    "Pending": "badge-status badge-warning",
-    "Accepted": "badge-status badge-success",
+  const variants: Record<string, "active" | "warning" | "inactive" | "error" | "pending" | "info"> = {
+    "Active": "active",
+    "Inactive": "warning",
+    "Suspended": "error",
+    "Published": "active",
+    "Applied": "info",
+    "Completed": "active",
+    "Held": "warning",
+    "Pending": "pending",
+    "Accepted": "active",
   };
-  return <span className={styles[status] || "badge-status badge-muted"}>{status}</span>;
+  return <StatusBadge variant={variants[status] ?? "inactive"}>{status}</StatusBadge>;
 };
 
 export default function UserManagement() {
@@ -324,9 +325,9 @@ export default function UserManagement() {
                           <TableCell className="text-muted-foreground">{user.createdAt}</TableCell>
                           <TableCell>
                             <div className="flex items-center gap-1">
-                              <Button variant="ghost" size="icon" onClick={() => openUserDrawer(user)}><Eye className="h-4 w-4" /></Button>
+                              <Button variant="ghost" size="icon" aria-label={t("common.view")} onClick={() => openUserDrawer(user)}><Eye className="h-4 w-4" /></Button>
                               <DropdownMenu>
-                                <DropdownMenuTrigger asChild><Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
+                                <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" aria-label={t("common.actions")}><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
                                 <DropdownMenuContent align="end" className="bg-popover border-border">
                                   <DropdownMenuItem onClick={() => openUserDrawer(user)}><Eye className="mr-2 h-4 w-4" /> View</DropdownMenuItem>
                                   <DropdownMenuItem onClick={() => { setSelectedUser(user); setEditUserOpen(true); }}><UserPlus className="mr-2 h-4 w-4" /> Edit</DropdownMenuItem>
@@ -446,6 +447,7 @@ export default function UserManagement() {
                       <CardDescription>Recent posts by this user across all communities.</CardDescription>
                     </CardHeader>
                     <CardContent className="p-0">
+                      <div className="overflow-x-auto">
                       <Table>
                         <TableHeader>
                           <TableRow>
@@ -478,6 +480,7 @@ export default function UserManagement() {
                           )}
                         </TableBody>
                       </Table>
+                      </div>
                     </CardContent>
                   </Card>
                 </TabsContent>
@@ -489,6 +492,7 @@ export default function UserManagement() {
                       <CardDescription>Groups the user has joined.</CardDescription>
                     </CardHeader>
                     <CardContent className="p-0">
+                      <div className="overflow-x-auto">
                       <Table>
                         <TableHeader>
                           <TableRow>
@@ -517,6 +521,7 @@ export default function UserManagement() {
                           )}
                         </TableBody>
                       </Table>
+                      </div>
                     </CardContent>
                   </Card>
                 </TabsContent>
@@ -528,6 +533,7 @@ export default function UserManagement() {
                       <CardDescription>Opportunities this user posted or applied to.</CardDescription>
                     </CardHeader>
                     <CardContent className="p-0">
+                      <div className="overflow-x-auto">
                       <Table>
                         <TableHeader>
                           <TableRow>
@@ -558,6 +564,7 @@ export default function UserManagement() {
                           )}
                         </TableBody>
                       </Table>
+                      </div>
                     </CardContent>
                   </Card>
                 </TabsContent>
@@ -569,6 +576,7 @@ export default function UserManagement() {
                       <CardDescription>All escrow or platform transactions this user participated in.</CardDescription>
                     </CardHeader>
                     <CardContent className="p-0">
+                      <div className="overflow-x-auto">
                       <Table>
                         <TableHeader>
                           <TableRow>
@@ -601,6 +609,7 @@ export default function UserManagement() {
                           )}
                         </TableBody>
                       </Table>
+                      </div>
                     </CardContent>
                   </Card>
                 </TabsContent>
@@ -609,6 +618,7 @@ export default function UserManagement() {
                   <Card className="glass">
                     <CardHeader className="pb-2"><div className="flex items-center justify-between"><CardTitle className="text-sm">Audit Log</CardTitle><Button size="sm" variant="outline"><Download className="mr-2 h-4 w-4" /> Export CSV</Button></div><CardDescription>Logs of admin actions where this user is the actor.</CardDescription></CardHeader>
                     <CardContent className="p-0">
+                      <div className="overflow-x-auto">
                       <Table>
                         <TableHeader><TableRow><TableHead>Timestamp</TableHead><TableHead>Action</TableHead><TableHead>Resource Type</TableHead><TableHead>Resource ID</TableHead></TableRow></TableHeader>
                         <TableBody>
@@ -621,6 +631,7 @@ export default function UserManagement() {
                           )}
                         </TableBody>
                       </Table>
+                      </div>
                     </CardContent>
                   </Card>
                 </TabsContent>

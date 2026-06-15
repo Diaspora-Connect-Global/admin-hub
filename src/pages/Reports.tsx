@@ -26,6 +26,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
+import { LoadingState, ErrorState } from "@/components/common/StateViews";
 import {
   Search,
   Download,
@@ -129,7 +130,7 @@ export default function Reports() {
   const [vendorPeriod, setVendorPeriod] = useState<string>("last_30_days");
 
   // ── Real data queries ─────────────────────────────────────────────────────
-  const { data: analyticsData, refetch: refetchAnalytics } = useGetPlatformAnalytics("last_30_days");
+  const { data: analyticsData, loading: analyticsLoading, error: analyticsError, refetch: refetchAnalytics } = useGetPlatformAnalytics("last_30_days");
   const { data: usersData, refetch: refetchUsers } = useGetUsers({ limit: 10, skip: false });
   const { data: escrowData, refetch: refetchEscrows } = useAdminListEscrows({ limit: 20 });
   const { data: disputeData, refetch: refetchDisputes } = useAdminListDisputes({ limit: 20 });
@@ -550,6 +551,11 @@ export default function Reports() {
         </div>
 
         {/* Main Content - Tabs */}
+        {analyticsError && !analyticsData ? (
+          <ErrorState onRetry={() => handleRefresh()} />
+        ) : analyticsLoading && !analyticsData ? (
+          <LoadingState rows={8} />
+        ) : (
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList className="glass p-1 h-auto flex-wrap">
             <TabsTrigger value="users" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
@@ -1792,6 +1798,7 @@ export default function Reports() {
             </div>
           </TabsContent>
         </Tabs>
+        )}
       </div>
     </AdminLayout>
   );

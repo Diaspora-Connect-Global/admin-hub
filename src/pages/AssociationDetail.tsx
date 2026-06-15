@@ -336,7 +336,7 @@ export default function AssociationDetail() {
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/associations")}>
+          <Button variant="ghost" size="icon" aria-label="Back to associations" onClick={() => navigate("/associations")}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div className="flex-1">
@@ -545,6 +545,7 @@ export default function AssociationDetail() {
                     <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
                   </div>
                 ) : (
+                <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow className="border-border/50">
@@ -575,6 +576,7 @@ export default function AssociationDetail() {
                     ))}
                   </TableBody>
                 </Table>
+                </div>
                 )}
               </CardContent>
             </Card>
@@ -592,6 +594,7 @@ export default function AssociationDetail() {
                 </div>
               </CardHeader>
               <CardContent className="p-0">
+                <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow className="border-border/50">
@@ -613,6 +616,7 @@ export default function AssociationDetail() {
                     </TableRow>
                   </TableBody>
                 </Table>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
@@ -630,6 +634,7 @@ export default function AssociationDetail() {
                 </div>
               </CardHeader>
               <CardContent className="p-0">
+                <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow className="border-border/50">
@@ -650,6 +655,7 @@ export default function AssociationDetail() {
                     </TableRow>
                   </TableBody>
                 </Table>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
@@ -695,6 +701,7 @@ export default function AssociationDetail() {
                 </div>
               </CardHeader>
               <CardContent className="p-0">
+                <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow className="border-border/50">
@@ -714,6 +721,7 @@ export default function AssociationDetail() {
                     </TableRow>
                   </TableBody>
                 </Table>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
@@ -778,6 +786,7 @@ export default function AssociationDetail() {
                 </div>
               </CardHeader>
               <CardContent className="p-0">
+                <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow className="border-border/50">
@@ -795,6 +804,7 @@ export default function AssociationDetail() {
                     </TableRow>
                   </TableBody>
                 </Table>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>

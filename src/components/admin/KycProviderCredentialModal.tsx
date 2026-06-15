@@ -23,6 +23,8 @@ import {
   type KycProviderCredential,
   type KycProviderType,
 } from "@/hooks/admin";
+import { FieldError } from "@/components/common/FieldError";
+import { httpUrl } from "@/lib/validation";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 
 interface KycProviderCredentialModalProps {
@@ -160,14 +162,22 @@ export function KycProviderCredentialModal({
   const [upsert, { loading }] = useKycUpsertProviderKey();
   const [showSecrets, setShowSecrets] = useState(false);
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   const isEdit = !!editing;
+
+  /** Update a field and clear any inline error sitting on it. */
+  const setField = <K extends keyof FormState>(key: K, value: FormState[K]) => {
+    setErrors((e) => (e[key] ? { ...e, [key]: "" } : e));
+    setForm((prev) => ({ ...prev, [key]: value }));
+  };
 
   // Reset form when modal opens / mode changes. Never echoes existing secret
   // values back — all secret fields start empty in edit mode (empty = "keep").
   useEffect(() => {
     if (!isOpen) return;
     setShowSecrets(false);
+    setErrors({});
     if (editing) {
       setForm({
         provider: editing.provider,
@@ -190,6 +200,7 @@ export function KycProviderCredentialModal({
   // When the provider changes (add mode only), reset config fields to that
   // provider's sensible defaults.
   const handleProviderChange = (provider: KycProviderType) => {
+    setErrors({});
     setForm((prev) => ({
       ...prev,
       provider,
@@ -229,28 +240,21 @@ export function KycProviderCredentialModal({
 
   const handleSubmit = async () => {
     // Validation: on add, require apiKey (+ apiSecret for itsme/sumsub).
-    // On edit, empty secret = keep existing.
+    // On edit, empty secret = keep existing. Plus URL checks on config fields.
+    const next: Record<string, string> = {};
     if (!isEdit) {
-      if (!form.apiKey.trim()) {
-        toast({
-          title: `${fieldConfig.apiKeyLabel} required`,
-          description: "Paste the provider key to create the credential.",
-          variant: "destructive",
-        });
-        return;
-      }
-      if (fieldConfig.showApiSecret && !form.apiSecret.trim()) {
-        toast({
-          title: `${fieldConfig.apiSecretLabel} required`,
-          description: `${
-            PROVIDER_OPTIONS.find((o) => o.value === form.provider)?.label ??
-            form.provider
-          } requires both an identifier and a secret.`,
-          variant: "destructive",
-        });
-        return;
-      }
+      if (!form.apiKey.trim()) next.apiKey = `${fieldConfig.apiKeyLabel} is required`;
+      if (fieldConfig.showApiSecret && !form.apiSecret.trim())
+        next.apiSecret = `${fieldConfig.apiSecretLabel} is required`;
     }
+    if (form.provider === "ITSME" && form.redirectUri.trim() && !httpUrl.safeParse(form.redirectUri.trim()).success) {
+      next.redirectUri = "Enter a valid URL (https://…)";
+    }
+    if (form.provider === "SUMSUB" && form.baseUrl.trim() && !httpUrl.safeParse(form.baseUrl.trim()).success) {
+      next.baseUrl = "Enter a valid URL (https://…)";
+    }
+    setErrors(next);
+    if (Object.keys(next).length) return;
 
     const configJson = buildConfigJson();
 
@@ -368,12 +372,14 @@ export function KycProviderCredentialModal({
                 isEdit ? "Paste new value to rotate" : fieldConfig.apiKeyPlaceholder
               }
               value={form.apiKey}
-              onChange={(e) => setForm((p) => ({ ...p, apiKey: e.target.value }))}
+              onChange={(e) => setField("apiKey", e.target.value)}
               autoComplete="off"
               spellCheck={false}
               disabled={loading}
               className="bg-secondary border-border"
+              aria-invalid={!!errors.apiKey}
             />
+            <FieldError message={errors.apiKey} />
             {form.provider === "ITSME" && (
               <p className="text-xs text-muted-foreground">
                 The itsme <span className="font-medium">Client ID</span> goes
@@ -403,14 +409,14 @@ export function KycProviderCredentialModal({
                     : fieldConfig.apiSecretPlaceholder
                 }
                 value={form.apiSecret}
-                onChange={(e) =>
-                  setForm((p) => ({ ...p, apiSecret: e.target.value }))
-                }
+                onChange={(e) => setField("apiSecret", e.target.value)}
                 autoComplete="off"
                 spellCheck={false}
                 disabled={loading}
                 className="bg-secondary border-border"
+                aria-invalid={!!errors.apiSecret}
               />
+              <FieldError message={errors.apiSecret} />
             </div>
           )}
 
@@ -434,9 +440,7 @@ export function KycProviderCredentialModal({
                     : fieldConfig.webhookPlaceholder
                 }
                 value={form.webhookSecret}
-                onChange={(e) =>
-                  setForm((p) => ({ ...p, webhookSecret: e.target.value }))
-                }
+                onChange={(e) => setField("webhookSecret", e.target.value)}
                 autoComplete="off"
                 spellCheck={false}
                 disabled={loading}
@@ -482,12 +486,12 @@ export function KycProviderCredentialModal({
                   id="kyc-redirect"
                   placeholder="https://app.diaspoplug.com/kyc/itsme/callback"
                   value={form.redirectUri}
-                  onChange={(e) =>
-                    setForm((p) => ({ ...p, redirectUri: e.target.value }))
-                  }
+                  onChange={(e) => setField("redirectUri", e.target.value)}
                   disabled={loading}
                   className="bg-secondary border-border"
+                  aria-invalid={!!errors.redirectUri}
                 />
+                <FieldError message={errors.redirectUri} />
               </div>
               <div className="space-y-2">
                 <Label>Environment</Label>
@@ -522,12 +526,12 @@ export function KycProviderCredentialModal({
                   id="kyc-base-url"
                   placeholder={SUMSUB_DEFAULT_BASE_URL}
                   value={form.baseUrl}
-                  onChange={(e) =>
-                    setForm((p) => ({ ...p, baseUrl: e.target.value }))
-                  }
+                  onChange={(e) => setField("baseUrl", e.target.value)}
                   disabled={loading}
                   className="bg-secondary border-border"
+                  aria-invalid={!!errors.baseUrl}
                 />
+                <FieldError message={errors.baseUrl} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="kyc-level">Level Name</Label>

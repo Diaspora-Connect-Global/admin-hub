@@ -362,6 +362,7 @@ export default function ChatManagement() {
                     <Label htmlFor="dm-flagged" className="text-sm">Flagged</Label>
                   </div>
                 </div>
+                <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -405,7 +406,7 @@ export default function ChatManagement() {
                             <TableCell>
                               <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
-                                  <Button variant="ghost" size="icon">
+                                  <Button variant="ghost" size="icon" aria-label="Conversation actions">
                                     <MoreHorizontal className="h-4 w-4" />
                                   </Button>
                                 </DropdownMenuTrigger>
@@ -454,6 +455,7 @@ export default function ChatManagement() {
                     )}
                   </TableBody>
                 </Table>
+                </div>
                 {!dmLoading && dmTotal > dmConversations.length && (
                   <p className="text-xs text-muted-foreground text-center pt-2">
                     Showing {dmConversations.length} of {dmTotal} conversations
@@ -487,6 +489,7 @@ export default function ChatManagement() {
                     <Label htmlFor="grp-flagged" className="text-sm">Flagged</Label>
                   </div>
                 </div>
+                <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -529,7 +532,7 @@ export default function ChatManagement() {
                           <TableCell>
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon">
+                                <Button variant="ghost" size="icon" aria-label="Group actions">
                                   <MoreHorizontal className="h-4 w-4" />
                                 </Button>
                               </DropdownMenuTrigger>
@@ -580,6 +583,7 @@ export default function ChatManagement() {
                     )}
                   </TableBody>
                 </Table>
+                </div>
                 {!groupLoading && groupTotal > groupConversations.length && (
                   <p className="text-xs text-muted-foreground text-center pt-2">
                     Showing {groupConversations.length} of {groupTotal} conversations
@@ -600,6 +604,7 @@ export default function ChatManagement() {
                 ) : flaggedConversations.length === 0 ? (
                   <p className="text-muted-foreground text-center py-8">No flagged chats</p>
                 ) : (
+                  <div className="overflow-x-auto">
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -634,6 +639,7 @@ export default function ChatManagement() {
                       ))}
                     </TableBody>
                   </Table>
+                  </div>
                 )}
               </CardContent>
             </Card>
@@ -671,6 +677,7 @@ export default function ChatManagement() {
                 ) : flaggedConversations.length === 0 ? (
                   <p className="text-muted-foreground text-center py-8">No flagged chats found.</p>
                 ) : (
+                  <div className="overflow-x-auto">
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -707,7 +714,7 @@ export default function ChatManagement() {
                           <TableCell>
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon" disabled={reviewLoading}>
+                                <Button variant="ghost" size="icon" disabled={reviewLoading} aria-label="Flagged chat actions">
                                   <MoreHorizontal className="h-4 w-4" />
                                 </Button>
                               </DropdownMenuTrigger>
@@ -738,6 +745,7 @@ export default function ChatManagement() {
                       ))}
                     </TableBody>
                   </Table>
+                  </div>
                 )}
               </CardContent>
             </Card>
@@ -792,8 +800,8 @@ export default function ChatManagement() {
                         <p className="text-sm text-muted-foreground">End-to-end encryption status</p>
                       </div>
                       <div className="flex items-center gap-2">
-                        <Lock className="h-4 w-4 text-green-500" />
-                        <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-500/20">
+                        <Lock className="h-4 w-4 text-success" />
+                        <Badge variant="outline" className="bg-success/10 text-success border-success/20">
                           Mandatory
                         </Badge>
                       </div>
@@ -856,7 +864,7 @@ export default function ChatManagement() {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Encryption</span>
-                    <Badge variant="outline" className="bg-green-500/10 text-green-600">E2E Enabled</Badge>
+                    <Badge variant="outline" className="bg-success/10 text-success">E2E Enabled</Badge>
                   </div>
                 </div>
 
@@ -906,7 +914,7 @@ export default function ChatManagement() {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Encryption</span>
-                    <Badge variant="outline" className="bg-green-500/10 text-green-600">E2E Enabled</Badge>
+                    <Badge variant="outline" className="bg-success/10 text-success">E2E Enabled</Badge>
                   </div>
                 </div>
 
@@ -993,6 +1001,7 @@ export default function ChatManagement() {
                         size="icon"
                         className="h-8 w-8 text-destructive hover:text-destructive"
                         disabled={banLoading}
+                        aria-label="Ban user from conversation"
                         onClick={() =>
                           setBanDialog({
                             conversationId: membersModal!.conversationId,

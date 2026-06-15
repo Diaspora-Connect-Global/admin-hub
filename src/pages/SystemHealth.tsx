@@ -13,6 +13,7 @@ import { AdminLayout } from "@/components/layout/AdminLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { StatusBadge, type StatusBadgeProps } from "@/components/ui/StatusBadge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import {
@@ -111,40 +112,37 @@ export default function SystemHealth() {
     switch (status.toLowerCase()) {
       case "healthy":
       case "up":
-        return <CheckCircle className="h-5 w-5 text-green-500" />;
+        return <CheckCircle className="h-5 w-5 text-success" />;
       case "warning":
       case "degraded":
-        return <AlertTriangle className="h-5 w-5 text-yellow-500" />;
+        return <AlertTriangle className="h-5 w-5 text-warning" />;
       case "critical":
       case "down":
-        return <XCircle className="h-5 w-5 text-red-500" />;
+        return <XCircle className="h-5 w-5 text-destructive" />;
       default:
         return <Clock className="h-5 w-5 text-muted-foreground" />;
     }
   };
 
   const getStatusBadge = (status: string) => {
-    const variants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
-      Healthy: "default",
-      healthy: "default",
-      Warning: "secondary",
-      warning: "secondary",
-      Critical: "destructive",
-      critical: "destructive",
-      Offline: "destructive",
-      Active: "destructive",
-      Acknowledged: "outline",
-    };
-    const colors: Record<string, string> = {
-      Healthy: "bg-green-600 hover:bg-green-600",
-      healthy: "bg-green-600 hover:bg-green-600",
-      Warning: "bg-yellow-500 hover:bg-yellow-500 text-black",
-      warning: "bg-yellow-500 hover:bg-yellow-500 text-black",
+    const variants: Record<string, StatusBadgeProps["variant"]> = {
+      Healthy: "active",
+      healthy: "active",
+      up: "active",
+      Warning: "warning",
+      warning: "warning",
+      degraded: "warning",
+      Critical: "error",
+      critical: "error",
+      down: "error",
+      Offline: "error",
+      Active: "error",
+      Acknowledged: "inactive",
     };
     return (
-      <Badge variant={variants[status] ?? "outline"} className={colors[status] || ""}>
+      <StatusBadge variant={variants[status] ?? "inactive"}>
         {status}
-      </Badge>
+      </StatusBadge>
     );
   };
 
@@ -220,9 +218,9 @@ export default function SystemHealth() {
         {/* Overall status banner */}
         {systemHealth && (
           <div className={`flex items-center gap-3 px-4 py-3 rounded-lg border text-sm font-medium ${
-            systemHealth.overallStatus === "healthy" ? "bg-green-500/10 border-green-500/30 text-green-600" :
-            systemHealth.overallStatus === "degraded" ? "bg-yellow-500/10 border-yellow-500/30 text-yellow-600" :
-            "bg-red-500/10 border-red-500/30 text-red-600"
+            systemHealth.overallStatus === "healthy" ? "bg-success/10 border-success/30 text-success" :
+            systemHealth.overallStatus === "degraded" ? "bg-warning/10 border-warning/30 text-warning" :
+            "bg-destructive/10 border-destructive/30 text-destructive"
           }`}>
             {getStatusIcon(systemHealth.overallStatus)}
             Overall system status: <span className="font-bold capitalize">{systemHealth.overallStatus}</span>
@@ -307,10 +305,10 @@ export default function SystemHealth() {
                 <Clock className="h-4 w-4 text-muted-foreground" />
                 Service Uptime
               </CardTitle>
-              <CheckCircle className="h-5 w-5 text-green-500" />
+              <CheckCircle className="h-5 w-5 text-success" />
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-green-500">{uptimePercent}%</div>
+              <div className="text-3xl font-bold text-success">{uptimePercent}%</div>
               <p className="text-xs text-muted-foreground mt-1">
                 {liveServices.filter((s) => s.status === "healthy" || s.status === "up").length} of {liveServices.length} services healthy
               </p>
@@ -323,7 +321,7 @@ export default function SystemHealth() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-yellow-500" />
+              <AlertTriangle className="h-5 w-5 text-warning" />
               Critical System Alerts
             </CardTitle>
             <CardDescription>Active alerts requiring attention</CardDescription>
@@ -333,9 +331,10 @@ export default function SystemHealth() {
               <p className="text-muted-foreground text-sm py-4 text-center">Loading alerts...</p>
             ) : alerts.length === 0 ? (
               <p className="text-muted-foreground text-sm py-4 text-center flex items-center justify-center gap-2">
-                <CheckCircle className="h-4 w-4 text-green-500" /> No active alerts
+                <CheckCircle className="h-4 w-4 text-success" /> No active alerts
               </p>
             ) : (
+              <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -353,12 +352,9 @@ export default function SystemHealth() {
                       <TableCell className="font-medium">{alert.type}</TableCell>
                       <TableCell>{alert.component}</TableCell>
                       <TableCell>
-                        <Badge
-                          variant={alert.severity === "Critical" ? "destructive" : "secondary"}
-                          className={alert.severity === "Warning" ? "bg-yellow-500 text-black" : ""}
-                        >
+                        <StatusBadge variant={alert.severity === "Critical" ? "error" : "warning"}>
                           {alert.severity}
-                        </Badge>
+                        </StatusBadge>
                       </TableCell>
                       <TableCell className="text-sm">{alert.timestamp}</TableCell>
                       <TableCell>{getStatusBadge(alert.status)}</TableCell>
@@ -371,7 +367,7 @@ export default function SystemHealth() {
                         >
                           Acknowledge
                         </Button>
-                        <Button variant="ghost" size="sm">
+                        <Button variant="ghost" size="sm" aria-label={t("common.view")}>
                           <Eye className="h-4 w-4" />
                         </Button>
                       </TableCell>
@@ -379,6 +375,7 @@ export default function SystemHealth() {
                   ))}
                 </TableBody>
               </Table>
+              </div>
             )}
           </CardContent>
         </Card>
@@ -453,6 +450,7 @@ export default function SystemHealth() {
             {auditLogs.length === 0 ? (
               <p className="text-muted-foreground text-sm py-4 text-center">No recent events</p>
             ) : (
+              <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -479,6 +477,7 @@ export default function SystemHealth() {
                   ))}
                 </TableBody>
               </Table>
+              </div>
             )}
           </CardContent>
         </Card>
