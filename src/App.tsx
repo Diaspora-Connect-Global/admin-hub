@@ -27,6 +27,7 @@ const Associations = lazy(() => import("./pages/Associations"));
 const AssociationDetail = lazy(() => import("./pages/AssociationDetail"));
 const VendorManagement = lazy(() => import("./pages/VendorManagement"));
 const SupportTicketing = lazy(() => import("./pages/SupportTicketing"));
+const CaseTypeConfig = lazy(() => import("./pages/CaseTypeConfig"));
 const SystemHealth = lazy(() => import("./pages/SystemHealth"));
 const ContentModeration = lazy(() => import("./pages/ContentModeration"));
 const DisputesResolution = lazy(() => import("./pages/DisputesResolution"));
@@ -38,6 +39,9 @@ const ChatManagement = lazy(() => import("./pages/ChatManagement"));
 const AiConfiguration = lazy(() => import("./pages/AiConfiguration"));
 const PaymentProviderKeys = lazy(() => import("./pages/PaymentProviderKeys"));
 const KycProviderKeys = lazy(() => import("./pages/KycProviderKeys"));
+// Escrow Wallet / Ledger / Payout (escrow-service)
+const WalletLedger = lazy(() => import("./pages/WalletLedger"));
+const Payouts = lazy(() => import("./pages/Payouts"));
 
 const queryClient = new QueryClient();
 
@@ -64,6 +68,9 @@ const App = () => (
                 <Route path="/users" element={<UserManagement />} />
                 <Route path="/chats" element={<ChatManagement />} />
                 <Route path="/escrow" element={<EscrowManagement />} />
+                {/* Escrow Wallet / Ledger / Payout (escrow-service) */}
+                <Route path="/wallet" element={<WalletLedger />} />
+                <Route path="/payouts" element={<Payouts />} />
                 <Route path="/disputes" element={<DisputesResolution />} />
                 <Route path="/communities" element={<Communities />} />
                 <Route path="/communities/:id" element={<CommunityDetail />} />
@@ -79,6 +86,7 @@ const App = () => (
                 <Route path="/notifications" element={<NotificationsBroadcasts />} />
                 <Route path="/audit" element={<AuditLogs />} />
                 <Route path="/support" element={<SupportTicketing />} />
+                <Route path="/support/case-types" element={<CaseTypeConfig />} />
                 <Route path="/moderation" element={<ContentModeration />} />
                 <Route path="/vendors" element={<VendorManagement />} />
                 <Route path="/roles" element={<RolesPermissions />} />

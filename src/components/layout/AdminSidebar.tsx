@@ -1,6 +1,6 @@
 import { Link, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { LayoutDashboard, Users, Wallet, AlertTriangle, BarChart3, Settings, Bell, FileText, HeadphonesIcon, Shield, Store, Key, Activity, ChevronLeft, ChevronRight, LogOut, MessageSquare, Calendar, Briefcase, Landmark } from "lucide-react";
+import { LayoutDashboard, Users, Wallet, AlertTriangle, BarChart3, Settings, Bell, FileText, HeadphonesIcon, Shield, Store, Key, Activity, ChevronLeft, ChevronRight, LogOut, MessageSquare, Calendar, Briefcase, Landmark, ClipboardList, WalletCards, Banknote } from "lucide-react";
 import { cn } from "@/lib/utils";
 import logo from "@/assets/logo.svg";
 import { useAdminAuth, getPortalRoleTranslationKey } from "@/hooks/auth/useAdminAuth";
@@ -10,6 +10,9 @@ const navItems = [
   { id: "user_management", titleKey: "nav.users", icon: Users, path: "/users" },
   { id: "chat_management", titleKey: "nav.chat", icon: MessageSquare, path: "/chats" },
   { id: "escrow_management", titleKey: "nav.escrow", icon: Wallet, path: "/escrow" },
+  // Escrow Wallet / Ledger / Payout (escrow-service) — admin-only.
+  { id: "wallet_ledger", titleKey: "nav.wallet", icon: WalletCards, path: "/wallet", systemAdminOnly: true },
+  { id: "payouts", titleKey: "nav.payouts", icon: Banknote, path: "/payouts", systemAdminOnly: true },
   { id: "disputes", titleKey: "nav.disputes", icon: AlertTriangle, path: "/disputes" },
   { id: "communities", titleKey: "nav.communities", icon: Users, path: "/communities" },
   { id: "associations", titleKey: "nav.associations", icon: Landmark, path: "/associations" },
@@ -19,7 +22,8 @@ const navItems = [
   { id: "system_settings", titleKey: "nav.settings", icon: Settings, path: "/settings" },
   { id: "notifications", titleKey: "nav.notifications", icon: Bell, path: "/notifications" },
   { id: "audit_logs", titleKey: "nav.audit", icon: FileText, path: "/audit" },
-  { id: "support_ticketing", titleKey: "nav.support", icon: HeadphonesIcon, path: "/support" },
+  { id: "support_cases", titleKey: "nav.supportCases", icon: HeadphonesIcon, path: "/support" },
+  { id: "case_types", titleKey: "nav.caseTypes", icon: ClipboardList, path: "/support/case-types" },
   { id: "content_moderation", titleKey: "nav.content", icon: Shield, path: "/moderation" },
   { id: "vendor_management", titleKey: "nav.vendors", icon: Store, path: "/vendors" },
   { id: "roles_permissions", titleKey: "nav.roles", icon: Key, path: "/roles" },

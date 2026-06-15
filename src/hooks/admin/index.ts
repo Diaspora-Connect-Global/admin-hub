@@ -380,6 +380,7 @@ export {
   type BroadcastCampaign,
 } from "./useBroadcast";
 
+// @deprecated legacy ticket model — replaced by support cases (useSupportCases).
 export {
   useGetSupportTickets,
   useGetSupportTicket,
@@ -392,6 +393,37 @@ export {
   type SupportTicket,
   type TicketMessage,
 } from "./useSupportTickets";
+
+export {
+  useAllCases,
+  useSupportCase,
+  useCaseInternalNotes,
+  useCaseEvidence,
+  useCaseStatusHistory,
+  useAdminCaseTypes,
+  useAssignCase,
+  useUpdateCaseStatus,
+  useAddCaseInternalNote,
+  useRequestCaseEvidenceUploadUrl,
+  useAddCaseEvidence,
+  useCreateCaseType,
+  useUpdateCaseType,
+  useDeactivateCaseType,
+  type AllCasesFilters,
+  type AllCasesResponse,
+  type SupportCase,
+  type SupportCaseSummary,
+  type SupportCaseNote,
+  type SupportCaseEvidence,
+  type SupportCaseStatusHistoryEntry,
+  type SupportCaseType,
+  type SupportEvidenceUploadUrl,
+  type CaseStatus,
+  type OwnerType,
+  type CasePriority,
+  type CreateSupportCaseTypeInput,
+  type UpdateSupportCaseTypeInput,
+} from "./useSupportCases";
 
 export {
   useGetFlaggedConversations,
@@ -562,3 +594,27 @@ export {
   type KycProviderType,
   type UpsertKycProviderCredentialInput,
 } from "./useKycProviderKeys";
+
+// ===== Escrow Wallet / Ledger / Payout (escrow-service) =====
+export {
+  useGetWalletBalance,
+  useGetTransactionHistory,
+  type WalletBalance,
+  type LedgerHistoryResponse,
+} from "./useWallet";
+
+export {
+  useListPayoutAccounts,
+  useAdminVerifyPayoutAccount,
+  useAdminSetPrimaryPayoutAccount,
+  useAdminDeletePayoutAccount,
+  type PayoutAccount,
+  type PayoutAccountListResponse,
+} from "./usePayoutAccounts";
+
+export {
+  useRequestPayout,
+  type Payout,
+  type AdminRequestPayoutInput,
+} from "./usePayouts";
+// ===== End Escrow Wallet / Ledger / Payout (escrow-service) =====

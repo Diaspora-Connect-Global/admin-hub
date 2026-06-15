@@ -1,10 +1,9 @@
-import { useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   Table,
   TableBody,
@@ -20,12 +19,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import {
   Dialog,
   DialogContent,
@@ -48,66 +41,102 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import {
   Search,
-  Plus,
   Eye,
   UserCheck,
   Edit,
-  CheckCircle,
-  Trash2,
-  MoreHorizontal,
-  Download,
-  ChevronDown,
-  Paperclip,
   Send,
+  Upload,
+  FileText,
+  ExternalLink,
 } from "lucide-react";
 import {
-  useGetSupportTickets,
-  useGetSupportTicket,
-  useCreateSupportTicket,
-  useUpdateSupportTicket,
-  useReplyToSupportTicket,
-  useDeleteSupportTicket,
-  useBulkUpdateTicketStatus,
-  useBulkAssignTickets,
-  type SupportTicket,
+  useAllCases,
+  useSupportCase,
+  useCaseInternalNotes,
+  useCaseEvidence,
+  useCaseStatusHistory,
+  useAssignCase,
+  useUpdateCaseStatus,
+  useAddCaseInternalNote,
+  useRequestCaseEvidenceUploadUrl,
+  useAddCaseEvidence,
+  useListAdmins,
+  type SupportCaseSummary,
+  type CaseStatus,
+  type OwnerType,
+  type CasePriority,
 } from "@/hooks/admin";
+
+// ─── constants ──────────────────────────────────────────────────────────────
+
+const CASE_STATUSES: CaseStatus[] = [
+  "SUBMITTED",
+  "ASSIGNED",
+  "INVESTIGATING",
+  "RESOLVED",
+  "CLOSED",
+  "REOPENED",
+  "REJECTED",
+  "CANCELLED",
+];
+const OWNER_TYPES: OwnerType[] = ["COMMUNITY", "ASSOCIATION", "MARKETPLACE", "SYSTEM"];
+const PRIORITIES: CasePriority[] = ["LOW", "MEDIUM", "HIGH", "URGENT"];
+
+const PAGE_LIMIT = 25;
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
-/** Map API status enum → display label */
-const STATUS_LABEL: Record<string, string> = {
-  OPEN: "Open",
-  IN_PROGRESS: "In Progress",
-  RESOLVED: "Resolved",
-  CLOSED: "Closed",
+const titleCase = (value?: string | null) =>
+  value
+    ? value
+        .toLowerCase()
+        .split("_")
+        .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+        .join(" ")
+    : "—";
+
+const formatTs = (ts?: string | null) => {
+  if (!ts) return "—";
+  const d = new Date(ts);
+  return Number.isNaN(d.getTime()) ? ts : d.toLocaleString();
 };
 
-/** Map display label → API enum */
-const STATUS_API: Record<string, string> = {
-  Open: "OPEN",
-  "In Progress": "IN_PROGRESS",
-  Resolved: "RESOLVED",
-  Closed: "CLOSED",
+const statusVariant = (
+  status: string,
+): "default" | "secondary" | "destructive" | "outline" => {
+  switch (status) {
+    case "SUBMITTED":
+    case "REOPENED":
+      return "secondary";
+    case "ASSIGNED":
+    case "INVESTIGATING":
+      return "default";
+    case "REJECTED":
+    case "CANCELLED":
+      return "destructive";
+    case "RESOLVED":
+    case "CLOSED":
+    default:
+      return "outline";
+  }
 };
 
-/** Map API priority enum → display label */
-const PRIORITY_LABEL: Record<string, string> = {
-  LOW: "Low",
-  MEDIUM: "Medium",
-  HIGH: "High",
-  URGENT: "Critical",
+const priorityVariant = (
+  priority?: string | null,
+): "default" | "secondary" | "destructive" | "outline" => {
+  switch (priority) {
+    case "URGENT":
+    case "HIGH":
+      return "destructive";
+    case "MEDIUM":
+      return "secondary";
+    case "LOW":
+    default:
+      return "outline";
+  }
 };
 
-const admins = ["Admin Sarah", "Admin Mike", "Admin John", "Admin Lisa"];
-
-/** Map form category display label → API enum value */
-const CATEGORY_API: Record<string, string> = {
-  Technical: "OTHER",
-  Billing: "PAYMENT",
-  Escrow: "PAYMENT",
-  Community: "CONTENT",
-  Vendor: "VENDOR",
-};
+const isImage = (mime?: string | null) => !!mime && mime.startsWith("image/");
 
 // ─── component ────────────────────────────────────────────────────────────────
 
@@ -115,332 +144,197 @@ export default function SupportTicketing() {
   const { toast } = useToast();
   const { t } = useTranslation();
 
-  // ── filter / search state ──────────────────────────────────────────────────
+  // ── filters / pagination ──────────────────────────────────────────────────
   const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [priorityFilter, setPriorityFilter] = useState("all");
-  const [categoryFilter, setCategoryFilter] = useState("all");
+  const [ownerTypeFilter, setOwnerTypeFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [priorityFilter, setPriorityFilter] = useState<string>("all");
+  const [offset, setOffset] = useState(0);
 
-  // ── selection state ────────────────────────────────────────────────────────
-  const [selectedTickets, setSelectedTickets] = useState<string[]>([]);
-
-  // ── detail sheet state ─────────────────────────────────────────────────────
-  const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
-  const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(null);
+  // ── detail / dialogs ───────────────────────────────────────────────────────
+  const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
-  const [newMessage, setNewMessage] = useState("");
+  const [isAssignOpen, setIsAssignOpen] = useState(false);
+  const [isStatusOpen, setIsStatusOpen] = useState(false);
 
-  // ── modal states ───────────────────────────────────────────────────────────
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
-  const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
-  const [isCloseModalOpen, setIsCloseModalOpen] = useState(false);
-  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-
-  // ── form states ────────────────────────────────────────────────────────────
-  const [formData, setFormData] = useState({
-    title: "",
-    category: "Technical",
-    priority: "Medium",
-    description: "",
-    assigned_to: "",
-  });
+  // ── form state ─────────────────────────────────────────────────────────────
   const [assignTo, setAssignTo] = useState("");
-  const [assignNotes, setAssignNotes] = useState("");
-  const [newStatus, setNewStatus] = useState("Open");
-  const [statusNotes, setStatusNotes] = useState("");
+  const [targetStatus, setTargetStatus] = useState<CaseStatus>("ASSIGNED");
+  const [statusReason, setStatusReason] = useState("");
+  const [resolutionSummary, setResolutionSummary] = useState("");
+  const [resolutionError, setResolutionError] = useState(false);
+  const [newNote, setNewNote] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // ── GraphQL hooks ──────────────────────────────────────────────────────────
-  const statusVar = statusFilter !== "all" ? STATUS_API[statusFilter] : undefined;
-  const { data: ticketsData, loading: ticketsLoading, refetch: refetchTickets } =
-    useGetSupportTickets({ status: statusVar });
+  // ── admin list for assignment (same hook DisputesResolution uses) ──────────
+  const { data: adminsData, loading: adminsLoading } = useListAdmins(100, 0);
+  const adminList = (adminsData?.listAdmins?.admins ?? []).map((admin) => ({
+    id: admin.id,
+    name: admin.email,
+  }));
 
-  const { data: ticketDetailData, loading: ticketDetailLoading } =
-    useGetSupportTicket(selectedTicketId);
-
-  const [createTicket, { loading: createLoading }] = useCreateSupportTicket();
-  const [updateTicket, { loading: updateLoading }] = useUpdateSupportTicket();
-  const [replyToTicket, { loading: replyLoading }] = useReplyToSupportTicket();
-  const [deleteTicket, { loading: deleteLoading }] = useDeleteSupportTicket();
-  const [bulkUpdateStatus, { loading: bulkStatusLoading }] = useBulkUpdateTicketStatus();
-  const [bulkAssign, { loading: bulkAssignLoading }] = useBulkAssignTickets();
-
-  // Live tickets (fallback to empty array)
-  const liveTickets: SupportTicket[] = ticketsData?.getSupportTickets?.tickets ?? [];
-
-  // Apply client-side search, priority and category filters
-  const filteredTickets = liveTickets.filter((ticket) => {
-    const label = STATUS_LABEL[ticket.status] ?? ticket.status;
-    const priorityLabel = PRIORITY_LABEL[ticket.priority] ?? ticket.priority;
-
-    if (
-      searchQuery &&
-      !ticket.id.toLowerCase().includes(searchQuery.toLowerCase()) &&
-      !ticket.subject.toLowerCase().includes(searchQuery.toLowerCase()) &&
-      !(ticket.submittedBy ?? "").toLowerCase().includes(searchQuery.toLowerCase())
-    ) {
-      return false;
-    }
-    if (priorityFilter !== "all" && priorityLabel !== priorityFilter) return false;
-    if (categoryFilter !== "all") {
-      const categoryMap: Record<string, string> = {
-        Technical: "OTHER",
-        Billing: "PAYMENT",
-        Escrow: "PAYMENT",
-        Community: "CONTENT",
-        Vendor: "VENDOR",
-      };
-      if (ticket.category !== categoryMap[categoryFilter] && ticket.category !== categoryFilter) {
-        return false;
-      }
-    }
-    return true;
+  // ── list query ─────────────────────────────────────────────────────────────
+  const { data, loading } = useAllCases({
+    ownerType: ownerTypeFilter !== "all" ? (ownerTypeFilter as OwnerType) : undefined,
+    status: statusFilter !== "all" ? (statusFilter as CaseStatus) : undefined,
+    priority: priorityFilter !== "all" ? (priorityFilter as CasePriority) : undefined,
+    limit: PAGE_LIMIT,
+    offset,
   });
+  const total = data?.allCases?.total ?? 0;
 
-  // Messages from the detail query; fall back to messages embedded in list
-  const detailMessages =
-    ticketDetailData?.getSupportTicket?.messages ??
-    selectedTicket?.messages ??
-    [];
-
-  // ── badge helpers ──────────────────────────────────────────────────────────
-  const getPriorityBadge = (priority: string) => {
-    const label = PRIORITY_LABEL[priority] ?? priority;
-    const variants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
-      Critical: "destructive",
-      High: "destructive",
-      Medium: "secondary",
-      Low: "outline",
-    };
-    const colors: Record<string, string> = {
-      Critical: "bg-destructive hover:bg-destructive",
-      High: "bg-warning text-warning-foreground hover:bg-warning",
-    };
-    return (
-      <Badge variant={variants[label]} className={colors[label] || ""}>
-        {label}
-      </Badge>
+  // Client-side search across the current page.
+  const cases = useMemo(() => {
+    const allCases = data?.allCases?.cases ?? [];
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return allCases;
+    return allCases.filter(
+      (c) =>
+        c.caseNumber.toLowerCase().includes(q) ||
+        c.title.toLowerCase().includes(q) ||
+        c.reporterUserId.toLowerCase().includes(q),
     );
-  };
+  }, [data, searchQuery]);
 
-  const getStatusBadge = (status: string) => {
-    const label = STATUS_LABEL[status] ?? status;
-    const variants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
-      Open: "secondary",
-      "In Progress": "default",
-      Resolved: "outline",
-      Closed: "outline",
-    };
-    return <Badge variant={variants[label]}>{label}</Badge>;
-  };
+  // ── detail queries ─────────────────────────────────────────────────────────
+  const { data: caseData, loading: caseLoading } = useSupportCase(selectedCaseId);
+  const supportCase = caseData?.supportCase ?? null;
+  const { data: notesData, loading: notesLoading } =
+    useCaseInternalNotes(selectedCaseId);
+  const notes = notesData?.caseInternalNotes ?? [];
+  const { data: evidenceData, loading: evidenceLoading } =
+    useCaseEvidence(selectedCaseId);
+  const evidence = evidenceData?.caseEvidence ?? [];
+  const { data: historyData, loading: historyLoading } =
+    useCaseStatusHistory(selectedCaseId);
+  const history = historyData?.caseStatusHistory ?? [];
 
-  // ── selection handlers ─────────────────────────────────────────────────────
-  const handleSelectAll = (checked: boolean) => {
-    if (checked) {
-      setSelectedTickets(filteredTickets.map((t) => t.id));
-    } else {
-      setSelectedTickets([]);
-    }
-  };
+  // ── mutations ──────────────────────────────────────────────────────────────
+  const [assignCase, { loading: assignLoading }] = useAssignCase();
+  const [updateCaseStatus, { loading: statusLoading }] = useUpdateCaseStatus();
+  const [addNote, { loading: noteLoading }] = useAddCaseInternalNote();
+  const [requestUploadUrl] = useRequestCaseEvidenceUploadUrl();
+  const [addEvidence, { loading: evidenceUploading }] = useAddCaseEvidence();
+  const [uploadInFlight, setUploadInFlight] = useState(false);
 
-  const handleSelectTicket = (ticketId: string, checked: boolean) => {
-    if (checked) {
-      setSelectedTickets([...selectedTickets, ticketId]);
-    } else {
-      setSelectedTickets(selectedTickets.filter((id) => id !== ticketId));
-    }
-  };
-
-  // ── detail sheet ───────────────────────────────────────────────────────────
-  const openTicketDetail = (ticket: SupportTicket) => {
-    setSelectedTicket(ticket);
-    setSelectedTicketId(ticket.id);
+  // ── handlers ───────────────────────────────────────────────────────────────
+  const openDetail = (c: SupportCaseSummary) => {
+    setSelectedCaseId(c.id);
     setIsDetailOpen(true);
   };
 
-  // ── action handlers ────────────────────────────────────────────────────────
-  const handleCreateTicket = async () => {
+  const handleAssign = async () => {
+    if (!selectedCaseId || !assignTo) return;
     try {
-      await createTicket({
-        variables: {
-          input: {
-            subject: formData.title,
-            description: formData.description,
-            category: CATEGORY_API[formData.category] ?? formData.category,
-            priority: formData.priority.toUpperCase(),
-          },
-        },
-      });
-      toast({ title: "Success", description: "Ticket created successfully." });
-      refetchTickets();
-      setIsCreateModalOpen(false);
-      setFormData({ title: "", category: "Technical", priority: "Medium", description: "", assigned_to: "" });
-    } catch {
-      toast({ title: "Error", description: "Failed to create ticket.", variant: "destructive" });
-    }
-  };
-
-  const handleBulkUpdateStatus = async (status: string) => {
-    if (selectedTickets.length === 0) return;
-    try {
-      await bulkUpdateStatus({ variables: { ticketIds: selectedTickets, status } });
-      toast({
-        title: "Success",
-        description: `${selectedTickets.length} ticket(s) updated to ${STATUS_LABEL[status] ?? status}.`,
-      });
-      setSelectedTickets([]);
-      refetchTickets();
-    } catch {
-      toast({ title: "Error", description: "Failed to update ticket statuses.", variant: "destructive" });
-    }
-  };
-
-  const handleBulkAssign = async () => {
-    if (selectedTickets.length === 0 || !assignTo) return;
-    try {
-      await bulkAssign({ variables: { ticketIds: selectedTickets, assigneeId: assignTo } });
-      toast({
-        title: "Success",
-        description: `${selectedTickets.length} ticket(s) assigned to ${assignTo}.`,
-      });
-      setSelectedTickets([]);
+      await assignCase({ variables: { caseId: selectedCaseId, assigneeUserId: assignTo } });
+      toast({ title: t("common.save"), description: t("supportCases.assignSuccess") });
+      setIsAssignOpen(false);
       setAssignTo("");
-      setIsAssignModalOpen(false);
-      refetchTickets();
-    } catch {
-      toast({ title: "Error", description: "Failed to assign tickets.", variant: "destructive" });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : t("supportCases.assignError");
+      toast({ title: t("common.errorTitle"), description: message, variant: "destructive" });
     }
-  };
-
-  const handleAssignTicket = async () => {
-    // Bulk path: no single ticket selected but multiple tickets checked
-    if (!selectedTicket && selectedTickets.length > 0) {
-      await handleBulkAssign();
-      return;
-    }
-    if (!selectedTicket) return;
-    try {
-      await updateTicket({
-        variables: {
-          input: {
-            ticketId: selectedTicket.id,
-            assignedTo: assignTo,
-          },
-        },
-      });
-      toast({ title: "Success", description: "Ticket assigned successfully." });
-      refetchTickets();
-    } catch {
-      toast({ title: "Error", description: "Failed to assign ticket.", variant: "destructive" });
-    }
-    setIsAssignModalOpen(false);
-    setAssignTo("");
-    setAssignNotes("");
   };
 
   const handleUpdateStatus = async () => {
-    // Bulk path: no single ticket selected but multiple tickets checked
-    if (!selectedTicket && selectedTickets.length > 0) {
-      await handleBulkUpdateStatus(STATUS_API[newStatus] ?? newStatus);
-      setIsStatusModalOpen(false);
-      setStatusNotes("");
+    if (!selectedCaseId) return;
+    const needsResolution = targetStatus === "RESOLVED";
+    if (needsResolution && !resolutionSummary.trim()) {
+      setResolutionError(true);
       return;
     }
-    if (!selectedTicket) return;
     try {
-      await updateTicket({
+      await updateCaseStatus({
         variables: {
-          input: {
-            ticketId: selectedTicket.id,
-            status: STATUS_API[newStatus] ?? newStatus,
-          },
+          caseId: selectedCaseId,
+          targetStatus,
+          reason: statusReason.trim() || undefined,
+          resolutionSummary: needsResolution ? resolutionSummary.trim() : undefined,
         },
       });
-      toast({ title: "Success", description: "Ticket status updated successfully." });
-      refetchTickets();
-    } catch {
-      toast({ title: "Error", description: "Failed to update status.", variant: "destructive" });
+      toast({ title: t("common.save"), description: t("supportCases.statusSuccess") });
+      setIsStatusOpen(false);
+      setStatusReason("");
+      setResolutionSummary("");
+      setResolutionError(false);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : t("supportCases.statusError");
+      toast({ title: t("common.errorTitle"), description: message, variant: "destructive" });
     }
-    setIsStatusModalOpen(false);
-    setStatusNotes("");
   };
 
-  const handleCloseTicket = async () => {
-    if (!selectedTicket) return;
+  const handleAddNote = async () => {
+    if (!selectedCaseId || !newNote.trim()) return;
     try {
-      await updateTicket({
+      await addNote({ variables: { input: { caseId: selectedCaseId, body: newNote.trim() } } });
+      toast({ title: t("common.save"), description: t("supportCases.noteSuccess") });
+      setNewNote("");
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : t("supportCases.noteError");
+      toast({ title: t("common.errorTitle"), description: message, variant: "destructive" });
+    }
+  };
+
+  // Two-step upload: request signed URL -> PUT bytes -> confirm via addEvidence.
+  const handleEvidenceSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file || !selectedCaseId) return;
+    setUploadInFlight(true);
+    try {
+      const { data: urlData } = await requestUploadUrl({
         variables: {
-          input: {
-            ticketId: selectedTicket.id,
-            status: "CLOSED",
-          },
+          caseId: selectedCaseId,
+          contentType: file.type || "application/octet-stream",
+          fileName: file.name,
         },
       });
-      toast({ title: "Success", description: "Ticket closed successfully." });
-      refetchTickets();
-    } catch {
-      toast({ title: "Error", description: "Failed to close ticket.", variant: "destructive" });
-    }
-    setIsCloseModalOpen(false);
-  };
-
-  const handleDeleteTicket = async () => {
-    if (!selectedTicket) return;
-    try {
-      await deleteTicket({ variables: { ticketId: selectedTicket.id } });
-      toast({ title: "Success", description: "Ticket deleted successfully." });
-      refetchTickets();
-      setIsDeleteModalOpen(false);
-      setSelectedTicket(null);
-    } catch {
-      toast({ title: "Error", description: "Failed to delete ticket.", variant: "destructive" });
-    }
-  };
-
-  const handleSendMessage = async () => {
-    if (!newMessage.trim() || !selectedTicket) return;
-    try {
-      await replyToTicket({
+      const ticket = urlData?.requestCaseEvidenceUploadUrl;
+      if (!ticket?.uploadUrl || !ticket?.evidenceId) {
+        throw new Error(t("supportCases.evidenceError"));
+      }
+      const putRes = await fetch(ticket.uploadUrl, {
+        method: "PUT",
+        headers: { "Content-Type": file.type || "application/octet-stream" },
+        body: file,
+      });
+      if (!putRes.ok) {
+        throw new Error(`Upload failed (${putRes.status})`);
+      }
+      await addEvidence({
         variables: {
-          ticketId: selectedTicket.id,
-          message: newMessage.trim(),
+          caseId: selectedCaseId,
+          evidenceId: ticket.evidenceId,
+          sizeBytes: file.size,
         },
       });
-      toast({ title: "Success", description: "Message sent." });
-      setNewMessage("");
-      // Re-fetch ticket detail to show the new message
-      refetchTickets();
-    } catch {
-      toast({ title: "Error", description: "Failed to send message.", variant: "destructive" });
+      toast({ title: t("common.save"), description: t("supportCases.evidenceSuccess") });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : t("supportCases.evidenceError");
+      toast({ title: t("common.errorTitle"), description: message, variant: "destructive" });
+    } finally {
+      setUploadInFlight(false);
     }
   };
 
-  const handleBulkExport = () => {
-    const ticketsToExport = filteredTickets.filter((t) => selectedTickets.includes(t.id));
-    const headers = ["ID", "Subject", "Category", "Priority", "Status", "Created By", "Assigned To", "Created At", "Resolved At"];
-    const rows = ticketsToExport.map((t) => [
-      t.id,
-      `"${(t.subject ?? "").replace(/"/g, '""')}"`,
-      t.category,
-      PRIORITY_LABEL[t.priority] ?? t.priority,
-      STATUS_LABEL[t.status] ?? t.status,
-      t.submittedBy ?? "",
-      t.assignedTo ?? "",
-      t.createdAt,
-      t.resolvedAt ?? "",
-    ]);
-    const csv = [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `tickets-export-${new Date().toISOString().slice(0, 10)}.csv`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-    toast({ title: "Export complete", description: `${ticketsToExport.length} ticket(s) exported.` });
+  const resetFilters = () => {
+    setOwnerTypeFilter("all");
+    setStatusFilter("all");
+    setPriorityFilter("all");
+    setSearchQuery("");
+    setOffset(0);
   };
+
+  const linkedEntities = supportCase
+    ? [
+        { key: "linkedDispute", value: supportCase.linkedDisputeId },
+        { key: "linkedEscrow", value: supportCase.linkedEscrowId },
+        { key: "linkedOrder", value: supportCase.linkedOrderId },
+        { key: "linkedVendor", value: supportCase.linkedVendorId },
+      ].filter((x) => !!x.value)
+    : [];
+
+  const hasMore = offset + PAGE_LIMIT < total;
 
   // ── render ─────────────────────────────────────────────────────────────────
   return (
@@ -448,132 +342,93 @@ export default function SupportTicketing() {
       <div className="space-y-6">
         {/* Header */}
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">{t('support.title')}</h1>
-          <p className="text-muted-foreground">
-            {t('support.searchPlaceholder')}
-          </p>
+          <h1 className="text-3xl font-bold tracking-tight">{t("supportCases.title")}</h1>
+          <p className="text-muted-foreground">{t("supportCases.subtitle")}</p>
         </div>
 
-        {/* Top Bar */}
+        {/* Top bar */}
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div className="flex flex-1 items-center gap-4">
-            <div className="relative flex-1 max-w-sm">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                placeholder="Ticket ID, user, vendor, community, keyword"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" disabled={selectedTickets.length === 0}>
-                  Bulk Actions <ChevronDown className="ml-2 h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent className="bg-popover">
-                <DropdownMenuItem
-                  disabled={bulkAssignLoading}
-                  onClick={() => {
-                    setSelectedTicket(null);
-                    setAssignTo("");
-                    setAssignNotes("");
-                    setIsAssignModalOpen(true);
-                  }}
-                >
-                  Bulk Assign Tickets
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  disabled={bulkStatusLoading}
-                  onClick={() => {
-                    setSelectedTicket(null);
-                    setNewStatus("Open");
-                    setStatusNotes("");
-                    setIsStatusModalOpen(true);
-                  }}
-                >
-                  Bulk Update Status
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  disabled={bulkStatusLoading}
-                  onClick={() => handleBulkUpdateStatus("CLOSED")}
-                >
-                  Bulk Close Tickets
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleBulkExport}>
-                  Bulk Export Tickets
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-            <Button onClick={() => setIsCreateModalOpen(true)}>
-              <Plus className="mr-2 h-4 w-4" />
-              Create Ticket
-            </Button>
+          <div className="relative flex-1 max-w-sm">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder={t("supportCases.searchPlaceholder")}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
+            />
           </div>
         </div>
 
         {/* Filters */}
-        <div className="flex flex-wrap items-center gap-4 p-4 bg-card rounded-lg border">
+        <div className="flex flex-wrap items-end gap-4 p-4 bg-card rounded-lg border">
           <div className="space-y-1">
-            <Label className="text-xs">Status</Label>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[140px]">
-                <SelectValue placeholder="All" />
+            <Label className="text-xs">{t("supportCases.ownerType")}</Label>
+            <Select
+              value={ownerTypeFilter}
+              onValueChange={(v) => {
+                setOwnerTypeFilter(v);
+                setOffset(0);
+              }}
+            >
+              <SelectTrigger className="w-[150px]">
+                <SelectValue />
               </SelectTrigger>
               <SelectContent className="bg-popover">
-                <SelectItem value="all">All</SelectItem>
-                <SelectItem value="Open">Open</SelectItem>
-                <SelectItem value="In Progress">In Progress</SelectItem>
-                <SelectItem value="Resolved">Resolved</SelectItem>
-                <SelectItem value="Closed">Closed</SelectItem>
+                <SelectItem value="all">{t("common.all")}</SelectItem>
+                {OWNER_TYPES.map((o) => (
+                  <SelectItem key={o} value={o}>
+                    {titleCase(o)}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
           <div className="space-y-1">
-            <Label className="text-xs">Priority</Label>
-            <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-              <SelectTrigger className="w-[140px]">
-                <SelectValue placeholder="All" />
+            <Label className="text-xs">{t("supportCases.status")}</Label>
+            <Select
+              value={statusFilter}
+              onValueChange={(v) => {
+                setStatusFilter(v);
+                setOffset(0);
+              }}
+            >
+              <SelectTrigger className="w-[150px]">
+                <SelectValue />
               </SelectTrigger>
               <SelectContent className="bg-popover">
-                <SelectItem value="all">All</SelectItem>
-                <SelectItem value="Low">Low</SelectItem>
-                <SelectItem value="Medium">Medium</SelectItem>
-                <SelectItem value="High">High</SelectItem>
-                <SelectItem value="Critical">Critical</SelectItem>
+                <SelectItem value="all">{t("common.all")}</SelectItem>
+                {CASE_STATUSES.map((s) => (
+                  <SelectItem key={s} value={s}>
+                    {titleCase(s)}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
           <div className="space-y-1">
-            <Label className="text-xs">Category</Label>
-            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-              <SelectTrigger className="w-[140px]">
-                <SelectValue placeholder="All" />
+            <Label className="text-xs">{t("supportCases.priority")}</Label>
+            <Select
+              value={priorityFilter}
+              onValueChange={(v) => {
+                setPriorityFilter(v);
+                setOffset(0);
+              }}
+            >
+              <SelectTrigger className="w-[150px]">
+                <SelectValue />
               </SelectTrigger>
               <SelectContent className="bg-popover">
-                <SelectItem value="all">All</SelectItem>
-                <SelectItem value="Technical">Technical</SelectItem>
-                <SelectItem value="Billing">Billing</SelectItem>
-                <SelectItem value="Escrow">Escrow</SelectItem>
-                <SelectItem value="Community">Community</SelectItem>
-                <SelectItem value="Vendor">Vendor</SelectItem>
+                <SelectItem value="all">{t("common.all")}</SelectItem>
+                {PRIORITIES.map((p) => (
+                  <SelectItem key={p} value={p}>
+                    {titleCase(p)}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            className="mt-5"
-            onClick={() => {
-              setStatusFilter("all");
-              setPriorityFilter("all");
-              setCategoryFilter("all");
-            }}
-          >
-            Clear Filters
+          <Button variant="outline" size="sm" onClick={resetFilters}>
+            {t("supportCases.clearFilters")}
           </Button>
         </div>
 
@@ -582,69 +437,71 @@ export default function SupportTicketing() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-12">
-                  <Checkbox
-                    checked={filteredTickets.length > 0 && selectedTickets.length === filteredTickets.length}
-                    onCheckedChange={handleSelectAll}
-                  />
-                </TableHead>
-                <TableHead>Ticket ID</TableHead>
-                <TableHead>Title</TableHead>
-                <TableHead>Category</TableHead>
-                <TableHead>Priority</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Created By</TableHead>
-                <TableHead>Assigned To</TableHead>
-                <TableHead>Created</TableHead>
-                <TableHead>Updated</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                <TableHead>{t("supportCases.caseNumber")}</TableHead>
+                <TableHead>{t("common.name")}</TableHead>
+                <TableHead>{t("supportCases.ownerType")}</TableHead>
+                <TableHead>{t("supportCases.priority")}</TableHead>
+                <TableHead>{t("supportCases.status")}</TableHead>
+                <TableHead>{t("supportCases.reporter")}</TableHead>
+                <TableHead>{t("supportCases.assignee")}</TableHead>
+                <TableHead>{t("supportCases.submitted")}</TableHead>
+                <TableHead className="text-right">{t("common.actions")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {ticketsLoading ? (
+              {loading && cases.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={11} className="text-center py-8 text-muted-foreground">
-                    Loading tickets...
+                  <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                    {t("supportCases.loading")}
                   </TableCell>
                 </TableRow>
-              ) : filteredTickets.length === 0 ? (
+              ) : cases.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={11} className="text-center py-8 text-muted-foreground">
-                    No tickets found.
+                  <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                    {t("supportCases.noCases")}
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredTickets.map((ticket) => (
-                  <TableRow key={ticket.id}>
+                cases.map((c) => (
+                  <TableRow key={c.id}>
+                    <TableCell className="font-medium">{c.caseNumber}</TableCell>
+                    <TableCell className="max-w-[220px] truncate">{c.title}</TableCell>
                     <TableCell>
-                      <Checkbox
-                        checked={selectedTickets.includes(ticket.id)}
-                        onCheckedChange={(checked) => handleSelectTicket(ticket.id, checked as boolean)}
-                      />
+                      <Badge variant="outline">{titleCase(c.ownerType)}</Badge>
                     </TableCell>
-                    <TableCell className="font-medium">{ticket.id}</TableCell>
-                    <TableCell className="max-w-[200px] truncate">{ticket.subject}</TableCell>
                     <TableCell>
-                      <Badge variant="outline">{ticket.category}</Badge>
+                      <Badge variant={priorityVariant(c.priority)}>{titleCase(c.priority)}</Badge>
                     </TableCell>
-                    <TableCell>{getPriorityBadge(ticket.priority)}</TableCell>
-                    <TableCell>{getStatusBadge(ticket.status)}</TableCell>
-                    <TableCell>{ticket.submittedBy ?? "—"}</TableCell>
-                    <TableCell>{ticket.assignedTo ?? "Unassigned"}</TableCell>
-                    <TableCell className="text-sm">{ticket.createdAt}</TableCell>
-                    <TableCell className="text-sm">{ticket.resolvedAt ?? "—"}</TableCell>
+                    <TableCell>
+                      <Badge variant={statusVariant(c.status)}>{titleCase(c.status)}</Badge>
+                    </TableCell>
+                    <TableCell className="font-mono text-xs">
+                      {c.reporterUserId ? c.reporterUserId.slice(0, 8) + "…" : "—"}
+                    </TableCell>
+                    <TableCell className="font-mono text-xs">
+                      {c.assigneeUserId
+                        ? c.assigneeUserId.slice(0, 8) + "…"
+                        : t("supportCases.unassigned")}
+                    </TableCell>
+                    <TableCell className="text-sm">{formatTs(c.submittedAt)}</TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-1">
-                        <Button variant="ghost" size="icon" aria-label={t("common.view")} onClick={() => openTicketDetail(ticket)}>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          aria-label={t("common.view")}
+                          onClick={() => openDetail(c)}
+                        >
                           <Eye className="h-4 w-4" />
                         </Button>
                         <Button
                           variant="ghost"
                           size="icon"
-                          aria-label="Assign ticket"
+                          aria-label={t("supportCases.assign")}
                           onClick={() => {
-                            setSelectedTicket(ticket);
-                            setIsAssignModalOpen(true);
+                            setSelectedCaseId(c.id);
+                            setAssignTo("");
+                            setIsAssignOpen(true);
                           }}
                         >
                           <UserCheck className="h-4 w-4" />
@@ -652,40 +509,18 @@ export default function SupportTicketing() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          aria-label={t("common.edit")}
+                          aria-label={t("supportCases.updateStatus")}
                           onClick={() => {
-                            setSelectedTicket(ticket);
-                            setNewStatus(STATUS_LABEL[ticket.status] ?? ticket.status);
-                            setIsStatusModalOpen(true);
+                            setSelectedCaseId(c.id);
+                            setTargetStatus(c.status as CaseStatus);
+                            setStatusReason("");
+                            setResolutionSummary("");
+                            setResolutionError(false);
+                            setIsStatusOpen(true);
                           }}
                         >
                           <Edit className="h-4 w-4" />
                         </Button>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" aria-label={t("common.actions")}>
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="bg-popover">
-                            <DropdownMenuItem
-                              onClick={() => {
-                                setSelectedTicket(ticket);
-                                setIsCloseModalOpen(true);
-                              }}
-                            >
-                              <CheckCircle className="mr-2 h-4 w-4" /> Close Ticket
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => {
-                                setSelectedTicket(ticket);
-                                setIsDeleteModalOpen(true);
-                              }}
-                            >
-                              <Trash2 className="mr-2 h-4 w-4" /> Delete Ticket
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -693,247 +528,324 @@ export default function SupportTicketing() {
               )}
             </TableBody>
           </Table>
+
+          {/* Pagination */}
+          <div className="flex items-center justify-between border-t border-border/50 px-4 py-3">
+            <p className="text-sm text-muted-foreground">
+              {t("supportCases.showing", {
+                from: total === 0 ? 0 : offset + 1,
+                to: offset + cases.length,
+                total,
+              })}
+            </p>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={offset === 0 || loading}
+                onClick={() => setOffset((o) => Math.max(0, o - PAGE_LIMIT))}
+              >
+                {t("common.previous")}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={!hasMore || loading}
+                onClick={() => setOffset((o) => o + PAGE_LIMIT)}
+              >
+                {t("common.next")}
+              </Button>
+            </div>
+          </div>
         </div>
 
-        {/* Ticket Detail Sheet */}
+        {/* Detail sheet */}
         <Sheet
           open={isDetailOpen}
           onOpenChange={(open) => {
             setIsDetailOpen(open);
-            if (!open) {
-              setSelectedTicketId(null);
-              setSelectedTicket(null);
-            }
+            if (!open) setSelectedCaseId(null);
           }}
         >
           <SheetContent className="w-full sm:max-w-2xl overflow-y-auto">
-            {selectedTicket && (
+            {caseLoading && !supportCase ? (
+              <p className="text-sm text-muted-foreground py-8 text-center">
+                {t("supportCases.loading")}
+              </p>
+            ) : supportCase ? (
               <>
                 <SheetHeader>
-                  <SheetTitle className="flex items-center gap-3">
-                    {selectedTicket.subject}
-                  </SheetTitle>
+                  <SheetTitle>{supportCase.title}</SheetTitle>
                   <div className="flex flex-wrap items-center gap-2 text-sm">
-                    <Badge variant="outline">{selectedTicket.id}</Badge>
-                    <Badge variant="outline">{selectedTicket.category}</Badge>
-                    {getPriorityBadge(selectedTicket.priority)}
-                    {getStatusBadge(selectedTicket.status)}
+                    <Badge variant="outline">{supportCase.caseNumber}</Badge>
+                    <Badge variant="outline">{titleCase(supportCase.ownerType)}</Badge>
+                    <Badge variant={priorityVariant(supportCase.priority)}>
+                      {titleCase(supportCase.priority)}
+                    </Badge>
+                    <Badge variant={statusVariant(supportCase.status)}>
+                      {titleCase(supportCase.status)}
+                    </Badge>
                   </div>
-                  <p className="text-sm text-muted-foreground">
-                    Created by {selectedTicket.submittedBy ?? "—"} | Assigned to{" "}
-                    {selectedTicket.assignedTo ?? "Unassigned"}
-                  </p>
                 </SheetHeader>
 
-                <div className="flex gap-2 mt-4">
+                <div className="flex flex-wrap gap-2 mt-4">
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => {
-                      setIsDetailOpen(false);
-                      setIsAssignModalOpen(true);
+                      setAssignTo(supportCase.assigneeUserId ?? "");
+                      setIsAssignOpen(true);
                     }}
                   >
-                    <UserCheck className="mr-2 h-4 w-4" /> Assign
+                    <UserCheck className="mr-2 h-4 w-4" /> {t("supportCases.assign")}
                   </Button>
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => {
-                      setIsDetailOpen(false);
-                      setNewStatus(STATUS_LABEL[selectedTicket.status] ?? selectedTicket.status);
-                      setIsStatusModalOpen(true);
+                      setTargetStatus(supportCase.status as CaseStatus);
+                      setStatusReason("");
+                      setResolutionSummary(supportCase.resolutionSummary ?? "");
+                      setResolutionError(false);
+                      setIsStatusOpen(true);
                     }}
                   >
-                    <Edit className="mr-2 h-4 w-4" /> Update Status
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setIsDetailOpen(false);
-                      setIsCloseModalOpen(true);
-                    }}
-                  >
-                    <CheckCircle className="mr-2 h-4 w-4" /> Close
+                    <Edit className="mr-2 h-4 w-4" /> {t("supportCases.updateStatus")}
                   </Button>
                 </div>
 
                 <Tabs defaultValue="overview" className="mt-6">
-                  <TabsList className="grid w-full grid-cols-3">
-                    <TabsTrigger value="overview">Overview</TabsTrigger>
-                    <TabsTrigger value="conversation">Conversation</TabsTrigger>
-                    <TabsTrigger value="history">History</TabsTrigger>
+                  <TabsList className="grid w-full grid-cols-4">
+                    <TabsTrigger value="overview">{t("supportCases.tabOverview")}</TabsTrigger>
+                    <TabsTrigger value="evidence">{t("supportCases.tabEvidence")}</TabsTrigger>
+                    <TabsTrigger value="notes">{t("supportCases.tabNotes")}</TabsTrigger>
+                    <TabsTrigger value="history">{t("supportCases.tabHistory")}</TabsTrigger>
                   </TabsList>
 
                   {/* Overview */}
                   <TabsContent value="overview" className="space-y-4 mt-4">
                     <div className="p-4 rounded-lg border bg-card space-y-3">
-                      <h4 className="font-semibold">Ticket Details</h4>
                       <div className="grid grid-cols-2 gap-4 text-sm">
                         <div>
-                          <span className="text-muted-foreground">Ticket ID:</span>{" "}
-                          <span className="ml-2">{selectedTicket.id}</span>
+                          <span className="text-muted-foreground">{t("supportCases.caseType")}:</span>
+                          <span className="ml-2">{supportCase.category ?? "—"}</span>
                         </div>
                         <div>
-                          <span className="text-muted-foreground">Category:</span>{" "}
-                          <span className="ml-2">{selectedTicket.category}</span>
+                          <span className="text-muted-foreground">{t("supportCases.status")}:</span>
+                          <span className="ml-2">{titleCase(supportCase.status)}</span>
                         </div>
                         <div>
-                          <span className="text-muted-foreground">Priority:</span>{" "}
-                          <span className="ml-2">
-                            {PRIORITY_LABEL[selectedTicket.priority] ?? selectedTicket.priority}
+                          <span className="text-muted-foreground">{t("supportCases.reporter")}:</span>
+                          <span className="ml-2 font-mono text-xs">{supportCase.reporterUserId}</span>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">{t("supportCases.assignee")}:</span>
+                          <span className="ml-2 font-mono text-xs">
+                            {supportCase.assigneeUserId ?? t("supportCases.unassigned")}
                           </span>
                         </div>
                         <div>
-                          <span className="text-muted-foreground">Status:</span>{" "}
-                          <span className="ml-2">
-                            {STATUS_LABEL[selectedTicket.status] ?? selectedTicket.status}
-                          </span>
+                          <span className="text-muted-foreground">{t("supportCases.submitted")}:</span>
+                          <span className="ml-2">{formatTs(supportCase.submittedAt)}</span>
                         </div>
                         <div>
-                          <span className="text-muted-foreground">Created By:</span>{" "}
-                          <span className="ml-2">{selectedTicket.submittedBy ?? "—"}</span>
-                        </div>
-                        <div>
-                          <span className="text-muted-foreground">Assigned To:</span>{" "}
-                          <span className="ml-2">{selectedTicket.assignedTo ?? "Unassigned"}</span>
-                        </div>
-                        <div>
-                          <span className="text-muted-foreground">Created:</span>{" "}
-                          <span className="ml-2">{selectedTicket.createdAt}</span>
-                        </div>
-                        <div>
-                          <span className="text-muted-foreground">Resolved:</span>{" "}
-                          <span className="ml-2">{selectedTicket.resolvedAt ?? "—"}</span>
+                          <span className="text-muted-foreground">{t("supportCases.updated")}:</span>
+                          <span className="ml-2">{formatTs(supportCase.updatedAt)}</span>
                         </div>
                       </div>
                     </div>
-                    <div className="p-4 rounded-lg border bg-card space-y-3">
-                      <h4 className="font-semibold">Description</h4>
-                      <p className="text-sm text-muted-foreground">
-                        {selectedTicket.description ?? "No description provided."}
+
+                    {linkedEntities.length > 0 && (
+                      <div className="p-4 rounded-lg border bg-card space-y-2">
+                        <h4 className="font-semibold">{t("supportCases.linkedEntities")}</h4>
+                        <div className="grid grid-cols-2 gap-2 text-sm">
+                          {linkedEntities.map((le) => (
+                            <div key={le.key}>
+                              <span className="text-muted-foreground">
+                                {t(`supportCases.${le.key}`)}:
+                              </span>
+                              <span className="ml-2 font-mono text-xs">{le.value}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="p-4 rounded-lg border bg-card space-y-2">
+                      <h4 className="font-semibold">{t("supportCases.description")}</h4>
+                      <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                        {supportCase.description ?? t("supportCases.noDescription")}
                       </p>
                     </div>
+
+                    {supportCase.resolutionSummary && (
+                      <div className="p-4 rounded-lg border bg-card space-y-2">
+                        <h4 className="font-semibold">{t("supportCases.resolutionSummary")}</h4>
+                        <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                          {supportCase.resolutionSummary}
+                        </p>
+                      </div>
+                    )}
                   </TabsContent>
 
-                  {/* Conversation */}
-                  <TabsContent value="conversation" className="mt-4">
-                    <div className="space-y-4">
-                      <ScrollArea className="h-[300px] rounded-lg border p-4">
-                        <div className="space-y-4">
-                          {ticketDetailLoading ? (
-                            <p className="text-sm text-muted-foreground text-center py-4">
-                              Loading messages...
-                            </p>
-                          ) : detailMessages.length === 0 ? (
-                            <p className="text-sm text-muted-foreground text-center py-4">
-                              No messages yet.
-                            </p>
-                          ) : (
-                            detailMessages.map((msg) => {
-                              const isAdmin = msg.senderType?.toLowerCase() === "admin";
-                              const senderInitials = msg.senderId
-                                ? msg.senderId.slice(0, 2).toUpperCase()
-                                : "?";
-                              return (
-                                <div
-                                  key={msg.id}
-                                  className={`flex gap-3 ${isAdmin ? "flex-row-reverse" : ""}`}
-                                >
-                                  <Avatar className="h-8 w-8">
-                                    <AvatarFallback
-                                      className={
-                                        isAdmin ? "bg-primary text-primary-foreground" : ""
-                                      }
-                                    >
-                                      {senderInitials}
-                                    </AvatarFallback>
-                                  </Avatar>
-                                  <div
-                                    className={`flex-1 max-w-[80%] ${isAdmin ? "text-right" : ""}`}
-                                  >
-                                    <div className="flex items-center gap-2 mb-1">
-                                      <span className="text-sm font-medium">{msg.senderId}</span>
-                                      <span className="text-xs text-muted-foreground">
-                                        {msg.createdAt}
-                                      </span>
-                                    </div>
-                                    <div
-                                      className={`p-3 rounded-lg text-sm ${
-                                        isAdmin
-                                          ? "bg-primary text-primary-foreground ml-auto"
-                                          : "bg-muted"
-                                      }`}
-                                    >
-                                      {msg.message}
-                                    </div>
-                                  </div>
-                                </div>
-                              );
-                            })
-                          )}
-                        </div>
-                      </ScrollArea>
-                      <div className="flex gap-2">
-                        <Textarea
-                          placeholder="Write your response..."
-                          value={newMessage}
-                          onChange={(e) => setNewMessage(e.target.value)}
-                          className="flex-1"
-                        />
-                        <div className="flex flex-col gap-2">
-                          <Button variant="outline" size="icon" aria-label="Attach file">
-                            <Paperclip className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            size="icon"
-                            aria-label="Send message"
-                            onClick={handleSendMessage}
-                            disabled={replyLoading || !newMessage.trim()}
+                  {/* Evidence */}
+                  <TabsContent value="evidence" className="mt-4 space-y-4">
+                    <div className="flex justify-end">
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        className="hidden"
+                        onChange={handleEvidenceSelected}
+                      />
+                      <Button
+                        size="sm"
+                        disabled={uploadInFlight || evidenceUploading}
+                        onClick={() => fileInputRef.current?.click()}
+                      >
+                        <Upload className="mr-2 h-4 w-4" />
+                        {uploadInFlight || evidenceUploading
+                          ? t("supportCases.uploading")
+                          : t("supportCases.uploadEvidence")}
+                      </Button>
+                    </div>
+                    {evidenceLoading ? (
+                      <p className="text-sm text-muted-foreground text-center py-6">
+                        {t("supportCases.loadingEvidence")}
+                      </p>
+                    ) : evidence.length === 0 ? (
+                      <p className="text-sm text-muted-foreground text-center py-6">
+                        {t("supportCases.noEvidence")}
+                      </p>
+                    ) : (
+                      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                        {evidence.map((ev) => (
+                          <a
+                            key={ev.id}
+                            href={ev.readUrl ?? "#"}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="group rounded-lg border bg-card p-2 hover:bg-accent transition-colors"
                           >
-                            <Send className="h-4 w-4" />
-                          </Button>
-                        </div>
+                            {isImage(ev.mimeType) && ev.readUrl ? (
+                              <img
+                                src={ev.readUrl}
+                                alt={ev.fileName ?? ev.id}
+                                className="h-24 w-full rounded object-cover"
+                              />
+                            ) : (
+                              <div className="flex h-24 w-full items-center justify-center rounded bg-muted">
+                                <FileText className="h-8 w-8 text-muted-foreground" />
+                              </div>
+                            )}
+                            <div className="mt-2 flex items-center gap-1 text-xs">
+                              <ExternalLink className="h-3 w-3 flex-shrink-0" />
+                              <span className="truncate">
+                                {ev.fileName ?? titleCase(ev.kind) ?? ev.id}
+                              </span>
+                            </div>
+                          </a>
+                        ))}
                       </div>
+                    )}
+                  </TabsContent>
+
+                  {/* Internal notes */}
+                  <TabsContent value="notes" className="mt-4 space-y-4">
+                    <ScrollArea className="h-[280px] rounded-lg border p-4">
+                      {notesLoading ? (
+                        <p className="text-sm text-muted-foreground text-center py-4">
+                          {t("supportCases.loadingNotes")}
+                        </p>
+                      ) : notes.length === 0 ? (
+                        <p className="text-sm text-muted-foreground text-center py-4">
+                          {t("supportCases.noNotes")}
+                        </p>
+                      ) : (
+                        <div className="space-y-4">
+                          {notes.map((note) => (
+                            <div key={note.id} className="flex gap-3">
+                              <Avatar className="h-8 w-8">
+                                <AvatarFallback>
+                                  {note.authorUserId.slice(0, 2).toUpperCase()}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <span className="font-mono text-xs font-medium">
+                                    {note.authorUserId.slice(0, 8)}…
+                                  </span>
+                                  <span className="text-xs text-muted-foreground">
+                                    {formatTs(note.createdAt)}
+                                  </span>
+                                </div>
+                                <div className="p-3 rounded-lg bg-muted text-sm whitespace-pre-wrap">
+                                  {note.body}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </ScrollArea>
+                    <div className="flex gap-2">
+                      <Textarea
+                        placeholder={t("supportCases.addNote")}
+                        value={newNote}
+                        onChange={(e) => setNewNote(e.target.value)}
+                        className="flex-1"
+                      />
+                      <Button
+                        size="icon"
+                        aria-label={t("supportCases.postNote")}
+                        disabled={noteLoading || !newNote.trim()}
+                        onClick={handleAddNote}
+                      >
+                        <Send className="h-4 w-4" />
+                      </Button>
                     </div>
                   </TabsContent>
 
                   {/* History */}
                   <TabsContent value="history" className="mt-4">
-                    <div className="flex justify-end mb-2">
-                      <Button variant="outline" size="sm">
-                        <Download className="mr-2 h-4 w-4" /> Export History (CSV)
-                      </Button>
-                    </div>
                     <div className="rounded-lg border overflow-x-auto">
                       <Table>
                         <TableHeader>
                           <TableRow>
-                            <TableHead>Timestamp</TableHead>
-                            <TableHead>Action</TableHead>
-                            <TableHead>Performed By</TableHead>
-                            <TableHead>Notes</TableHead>
+                            <TableHead>{t("supportCases.timestamp")}</TableHead>
+                            <TableHead>{t("supportCases.transition")}</TableHead>
+                            <TableHead>{t("supportCases.actor")}</TableHead>
+                            <TableHead>{t("supportCases.reason")}</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {detailMessages.map((msg) => (
-                            <TableRow key={msg.id}>
-                              <TableCell className="text-sm">{msg.createdAt}</TableCell>
-                              <TableCell>Message</TableCell>
-                              <TableCell>{msg.senderId}</TableCell>
-                              <TableCell className="max-w-xs truncate">{msg.message}</TableCell>
-                            </TableRow>
-                          ))}
-                          {detailMessages.length === 0 && !ticketDetailLoading && (
+                          {historyLoading ? (
                             <TableRow>
-                              <TableCell
-                                colSpan={4}
-                                className="text-center py-4 text-muted-foreground"
-                              >
-                                No history available.
+                              <TableCell colSpan={4} className="text-center py-6 text-muted-foreground">
+                                {t("supportCases.loadingHistory")}
                               </TableCell>
                             </TableRow>
+                          ) : history.length === 0 ? (
+                            <TableRow>
+                              <TableCell colSpan={4} className="text-center py-6 text-muted-foreground">
+                                {t("supportCases.noHistory")}
+                              </TableCell>
+                            </TableRow>
+                          ) : (
+                            history.map((h) => (
+                              <TableRow key={h.id}>
+                                <TableCell className="text-sm">{formatTs(h.createdAt)}</TableCell>
+                                <TableCell className="text-sm">
+                                  {h.fromStatus ? `${titleCase(h.fromStatus)} → ` : ""}
+                                  {titleCase(h.toStatus)}
+                                </TableCell>
+                                <TableCell className="font-mono text-xs">
+                                  {h.actorUserId ? h.actorUserId.slice(0, 8) + "…" : "System"}
+                                </TableCell>
+                                <TableCell className="max-w-xs truncate text-muted-foreground">
+                                  {h.reason ?? "—"}
+                                </TableCell>
+                              </TableRow>
+                            ))
                           )}
                         </TableBody>
                       </Table>
@@ -941,226 +853,111 @@ export default function SupportTicketing() {
                   </TabsContent>
                 </Tabs>
               </>
-            )}
+            ) : null}
           </SheetContent>
         </Sheet>
 
-        {/* Create Ticket Modal */}
-        <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
-          <DialogContent className="sm:max-w-md">
+        {/* Assign dialog */}
+        <Dialog open={isAssignOpen} onOpenChange={setIsAssignOpen}>
+          <DialogContent>
             <DialogHeader>
-              <DialogTitle>Create Ticket</DialogTitle>
-              <DialogDescription>Create a new support ticket.</DialogDescription>
+              <DialogTitle>{t("supportCases.assignCase")}</DialogTitle>
+              <DialogDescription>{t("supportCases.assign")}</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-2">
+              <Label>{t("supportCases.assignTo")} *</Label>
+              <Select value={assignTo} onValueChange={setAssignTo}>
+                <SelectTrigger>
+                  <SelectValue placeholder={t("supportCases.selectAdmin")} />
+                </SelectTrigger>
+                <SelectContent className="bg-popover">
+                  {adminsLoading ? (
+                    <SelectItem value="loading" disabled>
+                      {t("supportCases.loadingAdmins")}
+                    </SelectItem>
+                  ) : (
+                    adminList.map((admin) => (
+                      <SelectItem key={admin.id} value={admin.id}>
+                        {admin.name}
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsAssignOpen(false)}>
+                {t("common.cancel")}
+              </Button>
+              <Button onClick={handleAssign} disabled={!assignTo || assignLoading}>
+                {t("supportCases.assign")}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Status dialog */}
+        <Dialog open={isStatusOpen} onOpenChange={setIsStatusOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>{t("supportCases.updateStatus")}</DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label>Title *</Label>
-                <Input
-                  value={formData.title}
-                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  placeholder="Brief description of the issue"
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Category *</Label>
-                  <Select
-                    value={formData.category}
-                    onValueChange={(v) => setFormData({ ...formData, category: v })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="bg-popover">
-                      <SelectItem value="Technical">Technical</SelectItem>
-                      <SelectItem value="Billing">Billing</SelectItem>
-                      <SelectItem value="Escrow">Escrow</SelectItem>
-                      <SelectItem value="Community">Community</SelectItem>
-                      <SelectItem value="Vendor">Vendor</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Priority *</Label>
-                  <Select
-                    value={formData.priority}
-                    onValueChange={(v) => setFormData({ ...formData, priority: v })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="bg-popover">
-                      <SelectItem value="Low">Low</SelectItem>
-                      <SelectItem value="Medium">Medium</SelectItem>
-                      <SelectItem value="High">High</SelectItem>
-                      <SelectItem value="Critical">Critical</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label>Description *</Label>
-                <Textarea
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  placeholder="Detailed description of the issue..."
-                  rows={4}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Assign To</Label>
+                <Label>{t("supportCases.targetStatus")} *</Label>
                 <Select
-                  value={formData.assigned_to}
-                  onValueChange={(v) => setFormData({ ...formData, assigned_to: v })}
+                  value={targetStatus}
+                  onValueChange={(v) => {
+                    setTargetStatus(v as CaseStatus);
+                    if (v !== "RESOLVED") setResolutionError(false);
+                  }}
                 >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select admin..." />
-                  </SelectTrigger>
-                  <SelectContent className="bg-popover">
-                    {admins.map((admin) => (
-                      <SelectItem key={admin} value={admin}>
-                        {admin}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setIsCreateModalOpen(false)}>
-                Cancel
-              </Button>
-              <Button
-                onClick={handleCreateTicket}
-                disabled={!formData.title || !formData.description || createLoading}
-              >
-                {createLoading ? "Creating..." : "Create Ticket"}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-
-        {/* Assign Ticket Modal */}
-        <Dialog open={isAssignModalOpen} onOpenChange={setIsAssignModalOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Assign / Change Admin</DialogTitle>
-              <DialogDescription>Assign this ticket to an admin.</DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label>Assign To *</Label>
-                <Select value={assignTo} onValueChange={setAssignTo}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select admin..." />
-                  </SelectTrigger>
-                  <SelectContent className="bg-popover">
-                    {admins.map((admin) => (
-                      <SelectItem key={admin} value={admin}>
-                        {admin}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Notes</Label>
-                <Textarea
-                  value={assignNotes}
-                  onChange={(e) => setAssignNotes(e.target.value)}
-                  placeholder="Optional notes..."
-                />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setIsAssignModalOpen(false)}>
-                Cancel
-              </Button>
-              <Button onClick={handleAssignTicket} disabled={!assignTo || updateLoading}>
-                Assign
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-
-        {/* Update Status Modal */}
-        <Dialog open={isStatusModalOpen} onOpenChange={setIsStatusModalOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Update Ticket Status</DialogTitle>
-              <DialogDescription>Change the status of this ticket.</DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label>Status *</Label>
-                <Select value={newStatus} onValueChange={setNewStatus}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent className="bg-popover">
-                    <SelectItem value="Open">Open</SelectItem>
-                    <SelectItem value="In Progress">In Progress</SelectItem>
-                    <SelectItem value="Resolved">Resolved</SelectItem>
-                    <SelectItem value="Closed">Closed</SelectItem>
+                    {CASE_STATUSES.map((s) => (
+                      <SelectItem key={s} value={s}>
+                        {titleCase(s)}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>Notes / Reason</Label>
+                <Label>{t("supportCases.reason")}</Label>
                 <Textarea
-                  value={statusNotes}
-                  onChange={(e) => setStatusNotes(e.target.value)}
-                  placeholder="Optional notes..."
+                  value={statusReason}
+                  onChange={(e) => setStatusReason(e.target.value)}
+                  placeholder={t("supportCases.reasonOptional")}
                 />
               </div>
+              {targetStatus === "RESOLVED" && (
+                <div className="space-y-2">
+                  <Label>{t("supportCases.resolutionSummary")} *</Label>
+                  <Textarea
+                    value={resolutionSummary}
+                    onChange={(e) => {
+                      setResolutionSummary(e.target.value);
+                      if (e.target.value.trim()) setResolutionError(false);
+                    }}
+                    aria-invalid={resolutionError}
+                    className={resolutionError ? "border-destructive" : ""}
+                  />
+                  {resolutionError && (
+                    <p className="text-xs text-destructive">
+                      {t("supportCases.resolutionRequired")}
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setIsStatusModalOpen(false)}>
-                Cancel
+              <Button variant="outline" onClick={() => setIsStatusOpen(false)}>
+                {t("common.cancel")}
               </Button>
-              <Button onClick={handleUpdateStatus} disabled={updateLoading}>
-                Update Status
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-
-        {/* Close Ticket Modal */}
-        <Dialog open={isCloseModalOpen} onOpenChange={setIsCloseModalOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Close Ticket</DialogTitle>
-              <DialogDescription>
-                Are you sure you want to close this ticket? All unresolved actions will be archived.
-              </DialogDescription>
-            </DialogHeader>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setIsCloseModalOpen(false)}>
-                Cancel
-              </Button>
-              <Button onClick={handleCloseTicket} disabled={updateLoading}>
-                Close Ticket
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-
-        {/* Delete Ticket Modal */}
-        <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Delete Ticket</DialogTitle>
-              <DialogDescription>
-                Deleting a ticket is irreversible and will remove all associated messages and
-                history.
-              </DialogDescription>
-            </DialogHeader>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setIsDeleteModalOpen(false)}>
-                Cancel
-              </Button>
-              <Button variant="destructive" onClick={handleDeleteTicket} disabled={deleteLoading}>
-                {deleteLoading ? "Deleting..." : "Delete Ticket"}
+              <Button onClick={handleUpdateStatus} disabled={statusLoading}>
+                {t("supportCases.updateStatus")}
               </Button>
             </DialogFooter>
           </DialogContent>

@@ -1,3 +1,5 @@
+// @deprecated legacy ticket model — replaced by support cases (useSupportCases.ts).
+// Kept in place so any remaining legacy-ticket gateway usage keeps working.
 import { useQuery, useMutation } from "@apollo/client/react";
 import {
   GET_SUPPORT_TICKETS,

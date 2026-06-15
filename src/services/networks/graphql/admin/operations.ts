@@ -2449,6 +2449,10 @@ export const SEND_BROADCAST = gql`
 `;
 
 // ─── Support Ticketing ────────────────────────────────────────────────────────
+// @deprecated legacy ticket model — replaced by support cases (support-service).
+// See the "Support Cases (support-service)" block at the bottom of this file and
+// src/hooks/admin/useSupportCases.ts. Kept in place to avoid breaking any code
+// still pointing at the legacy gateway endpoints.
 
 export interface TicketMessage {
   id: string;
@@ -3554,3 +3558,687 @@ export const KYC_REVOKE_PROVIDER_CREDENTIAL = gql`
     kycRevokeProviderCredential(provider: $provider)
   }
 `;
+
+// ===== Support Cases (support-service) =====
+//
+// New CASE model that replaces the legacy ticket model above. The api-gateway
+// support resolver maps proto snake_case -> camelCase, so every field below is
+// camelCase. Enums are plain strings on the wire (proto-loader runs with
+// `enums: String`). The system-admin `allCases` query returns the paginated
+// `AllCasesResponse` wrapper `{ cases, total }`, NOT a bare array.
+//
+// Gateway query/mutation names (from support.resolver.ts):
+//   Queries:   allCases, supportCase, caseInternalNotes, caseEvidence,
+//              caseStatusHistory, adminCaseTypes
+//   Mutations: assignCase, updateCaseStatus, addCaseInternalNote,
+//              requestCaseEvidenceUploadUrl, addCaseEvidence,
+//              createSupportCaseType, updateSupportCaseType,
+//              deactivateSupportCaseType
+// -----------------------------------------------------------------------------
+
+export type CaseStatus =
+  | "SUBMITTED"
+  | "ASSIGNED"
+  | "INVESTIGATING"
+  | "RESOLVED"
+  | "CLOSED"
+  | "REOPENED"
+  | "REJECTED"
+  | "CANCELLED";
+
+export type OwnerType = "COMMUNITY" | "ASSOCIATION" | "MARKETPLACE" | "SYSTEM";
+
+export type CasePriority = "LOW" | "MEDIUM" | "HIGH" | "URGENT";
+
+export type EvidenceKind = "PHOTO" | "VIDEO" | "PDF" | "VOICE" | "OTHER";
+
+export interface SupportCaseLocation {
+  label?: string | null;
+  lat?: number | null;
+  lng?: number | null;
+}
+
+export interface SupportCaseStatusHistoryEntry {
+  id: string;
+  caseId: string;
+  fromStatus?: string | null;
+  toStatus: string;
+  actorUserId?: string | null;
+  reason?: string | null;
+  createdAt: string;
+}
+
+export interface SupportCaseSummary {
+  id: string;
+  caseNumber: string;
+  ownerType: string;
+  ownerEntityId?: string | null;
+  category?: string | null;
+  title: string;
+  priority?: string | null;
+  status: string;
+  reporterUserId: string;
+  assigneeUserId?: string | null;
+  submittedAt?: string | null;
+  updatedAt?: string | null;
+}
+
+export interface SupportCase {
+  id: string;
+  caseNumber: string;
+  ownerType: string;
+  ownerEntityId?: string | null;
+  caseTypeId?: string | null;
+  category?: string | null;
+  title: string;
+  description?: string | null;
+  priority?: string | null;
+  status: string;
+  reporterUserId: string;
+  assigneeUserId?: string | null;
+  location?: SupportCaseLocation | null;
+  conversationId?: string | null;
+  linkedDisputeId?: string | null;
+  linkedEscrowId?: string | null;
+  linkedOrderId?: string | null;
+  linkedVendorId?: string | null;
+  resolutionSummary?: string | null;
+  submittedAt?: string | null;
+  assignedAt?: string | null;
+  resolvedAt?: string | null;
+  closedAt?: string | null;
+  createdAt?: string | null;
+  updatedAt?: string | null;
+  statusHistory: SupportCaseStatusHistoryEntry[];
+}
+
+export interface AllCasesResponse {
+  allCases: {
+    cases: SupportCaseSummary[];
+    total: number;
+  };
+}
+
+export interface SupportCaseType {
+  id: string;
+  ownerType: string;
+  ownerEntityId?: string | null;
+  code: string;
+  displayName: string;
+  description?: string | null;
+  defaultPriority?: string | null;
+  slaHours?: number | null;
+  caseNumberPrefix?: string | null;
+  isActive: boolean;
+  sortOrder?: number | null;
+  version?: number | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SupportCaseNote {
+  id: string;
+  caseId: string;
+  authorUserId: string;
+  body: string;
+  createdAt: string;
+}
+
+export interface SupportCaseEvidence {
+  id: string;
+  caseId: string;
+  uploaderUserId: string;
+  storageKey?: string | null;
+  mimeType?: string | null;
+  fileName?: string | null;
+  sizeBytes?: number | null;
+  kind?: string | null;
+  confirmed: boolean;
+  readUrl?: string | null;
+  uploadedAt: string;
+}
+
+export interface SupportEvidenceUploadUrl {
+  evidenceId: string;
+  uploadUrl: string;
+  readUrl?: string | null;
+  storageKey?: string | null;
+  expiresAt?: string | null;
+}
+
+export interface CreateSupportCaseTypeInput {
+  ownerType: OwnerType;
+  ownerEntityId?: string;
+  code: string;
+  displayName: string;
+  description?: string;
+  defaultPriority?: CasePriority;
+  slaHours?: number;
+  caseNumberPrefix?: string;
+  sortOrder?: number;
+}
+
+export interface UpdateSupportCaseTypeInput {
+  id: string;
+  displayName?: string;
+  description?: string;
+  defaultPriority?: CasePriority;
+  slaHours?: number;
+  caseNumberPrefix?: string;
+  sortOrder?: number;
+  isActive?: boolean;
+}
+
+// --- Fragments ---
+
+export const SUPPORT_CASE_SUMMARY_FIELDS = gql`
+  fragment SupportCaseSummaryFields on SupportCaseSummary {
+    id
+    caseNumber
+    ownerType
+    ownerEntityId
+    category
+    title
+    priority
+    status
+    reporterUserId
+    assigneeUserId
+    submittedAt
+    updatedAt
+  }
+`;
+
+export const SUPPORT_CASE_FIELDS = gql`
+  fragment SupportCaseFields on SupportCase {
+    id
+    caseNumber
+    ownerType
+    ownerEntityId
+    caseTypeId
+    category
+    title
+    description
+    priority
+    status
+    reporterUserId
+    assigneeUserId
+    location {
+      label
+      lat
+      lng
+    }
+    conversationId
+    linkedDisputeId
+    linkedEscrowId
+    linkedOrderId
+    linkedVendorId
+    resolutionSummary
+    submittedAt
+    assignedAt
+    resolvedAt
+    closedAt
+    createdAt
+    updatedAt
+    statusHistory {
+      id
+      caseId
+      fromStatus
+      toStatus
+      actorUserId
+      reason
+      createdAt
+    }
+  }
+`;
+
+export const SUPPORT_CASE_TYPE_FIELDS = gql`
+  fragment SupportCaseTypeFields on SupportCaseType {
+    id
+    ownerType
+    ownerEntityId
+    code
+    displayName
+    description
+    defaultPriority
+    slaHours
+    caseNumberPrefix
+    isActive
+    sortOrder
+    version
+    createdAt
+    updatedAt
+  }
+`;
+
+// --- Queries ---
+
+export const ALL_CASES = gql`
+  ${SUPPORT_CASE_SUMMARY_FIELDS}
+  query AllCases(
+    $ownerType: SupportOwnerType
+    $status: SupportCaseStatus
+    $priority: SupportPriority
+    $limit: Int
+    $offset: Int
+  ) {
+    allCases(
+      ownerType: $ownerType
+      status: $status
+      priority: $priority
+      limit: $limit
+      offset: $offset
+    ) {
+      cases {
+        ...SupportCaseSummaryFields
+      }
+      total
+    }
+  }
+`;
+
+export const SUPPORT_CASE = gql`
+  ${SUPPORT_CASE_FIELDS}
+  query SupportCase($id: ID!) {
+    supportCase(id: $id) {
+      ...SupportCaseFields
+    }
+  }
+`;
+
+export const CASE_INTERNAL_NOTES = gql`
+  query CaseInternalNotes($caseId: ID!, $limit: Int, $offset: Int) {
+    caseInternalNotes(caseId: $caseId, limit: $limit, offset: $offset) {
+      id
+      caseId
+      authorUserId
+      body
+      createdAt
+    }
+  }
+`;
+
+export const CASE_EVIDENCE = gql`
+  query CaseEvidence($caseId: ID!) {
+    caseEvidence(caseId: $caseId) {
+      id
+      caseId
+      uploaderUserId
+      storageKey
+      mimeType
+      fileName
+      sizeBytes
+      kind
+      confirmed
+      readUrl
+      uploadedAt
+    }
+  }
+`;
+
+export const CASE_STATUS_HISTORY = gql`
+  query CaseStatusHistory($caseId: ID!) {
+    caseStatusHistory(caseId: $caseId) {
+      id
+      caseId
+      fromStatus
+      toStatus
+      actorUserId
+      reason
+      createdAt
+    }
+  }
+`;
+
+export const ADMIN_CASE_TYPES = gql`
+  ${SUPPORT_CASE_TYPE_FIELDS}
+  query AdminCaseTypes($ownerType: SupportOwnerType, $ownerEntityId: String) {
+    adminCaseTypes(ownerType: $ownerType, ownerEntityId: $ownerEntityId) {
+      ...SupportCaseTypeFields
+    }
+  }
+`;
+
+// --- Mutations ---
+
+export const ASSIGN_CASE = gql`
+  ${SUPPORT_CASE_FIELDS}
+  mutation AssignCase($caseId: ID!, $assigneeUserId: ID!) {
+    assignCase(caseId: $caseId, assigneeUserId: $assigneeUserId) {
+      ...SupportCaseFields
+    }
+  }
+`;
+
+export const UPDATE_CASE_STATUS = gql`
+  ${SUPPORT_CASE_FIELDS}
+  mutation UpdateCaseStatus(
+    $caseId: ID!
+    $targetStatus: SupportCaseStatus!
+    $reason: String
+    $resolutionSummary: String
+  ) {
+    updateCaseStatus(
+      caseId: $caseId
+      targetStatus: $targetStatus
+      reason: $reason
+      resolutionSummary: $resolutionSummary
+    ) {
+      ...SupportCaseFields
+    }
+  }
+`;
+
+export const ADD_CASE_INTERNAL_NOTE = gql`
+  mutation AddCaseInternalNote($input: AddCaseInternalNoteInput!) {
+    addCaseInternalNote(input: $input) {
+      id
+      caseId
+      authorUserId
+      body
+      createdAt
+    }
+  }
+`;
+
+export const REQUEST_CASE_EVIDENCE_UPLOAD_URL = gql`
+  mutation RequestCaseEvidenceUploadUrl(
+    $caseId: ID!
+    $contentType: String!
+    $fileName: String!
+  ) {
+    requestCaseEvidenceUploadUrl(
+      caseId: $caseId
+      contentType: $contentType
+      fileName: $fileName
+    ) {
+      evidenceId
+      uploadUrl
+      readUrl
+      storageKey
+      expiresAt
+    }
+  }
+`;
+
+export const ADD_CASE_EVIDENCE = gql`
+  mutation AddCaseEvidence($caseId: ID!, $evidenceId: ID!, $sizeBytes: Int) {
+    addCaseEvidence(caseId: $caseId, evidenceId: $evidenceId, sizeBytes: $sizeBytes) {
+      id
+      caseId
+      uploaderUserId
+      storageKey
+      mimeType
+      fileName
+      sizeBytes
+      kind
+      confirmed
+      readUrl
+      uploadedAt
+    }
+  }
+`;
+
+export const CREATE_SUPPORT_CASE_TYPE = gql`
+  ${SUPPORT_CASE_TYPE_FIELDS}
+  mutation CreateSupportCaseType($input: CreateSupportCaseTypeInput!) {
+    createSupportCaseType(input: $input) {
+      ...SupportCaseTypeFields
+    }
+  }
+`;
+
+export const UPDATE_SUPPORT_CASE_TYPE = gql`
+  ${SUPPORT_CASE_TYPE_FIELDS}
+  mutation UpdateSupportCaseType($input: UpdateSupportCaseTypeInput!) {
+    updateSupportCaseType(input: $input) {
+      ...SupportCaseTypeFields
+    }
+  }
+`;
+
+export const DEACTIVATE_SUPPORT_CASE_TYPE = gql`
+  ${SUPPORT_CASE_TYPE_FIELDS}
+  mutation DeactivateSupportCaseType($id: ID!) {
+    deactivateSupportCaseType(id: $id) {
+      ...SupportCaseTypeFields
+    }
+  }
+`;
+// ===== End Support Cases (support-service) =====
+
+// ===== Escrow Wallet / Ledger / Payout (escrow-service) =====
+//
+// Admin-only surface over escrow-service's WalletService / PayoutAccountService /
+// PayoutService, exposed by api-gateway's EscrowAdminResolver. All operations
+// require SUPER_ADMIN / SYSTEM_ADMIN (enforced server-side by the gateway guards).
+// Field names mirror the gateway DTOs in
+//   services/api-gateway/src/escrow-admin/dto/escrow-admin.types.ts
+//
+// CURRENCY UNITS (these differ per type — do NOT confuse them):
+//   - AdminWalletBalance.{availableBalance,escrowBalance,totalBalance} and
+//     AdminLedgerEntry.amount are GraphQL `Float` = DECIMAL currency
+//     (e.g. 12.34 == $12.34). Format directly; do NOT divide by 100.
+//   - AdminPayout.amount and AdminRequestPayoutInput.amount are GraphQL `Int` =
+//     MINOR units (e.g. 1234 == $12.34). Divide by 100 to display; multiply a
+//     user-entered major-unit amount by 100 to build the request.
+//
+// Payout accounts expose only `accountIdentifierMasked` (last-4); there is no
+// raw account number on this surface.
+// -----------------------------------------------------------------------------
+
+// --- TS result types ---
+
+export interface WalletBalance {
+  ownerId: string;
+  ownerType: string;
+  /** Decimal currency (Float), NOT minor units. */
+  availableBalance: number;
+  /** Decimal currency (Float), NOT minor units. */
+  escrowBalance: number;
+  /** Decimal currency (Float), NOT minor units. */
+  totalBalance: number;
+  currency: string;
+}
+
+export interface LedgerEntry {
+  id: string;
+  batchId?: string | null;
+  entryType?: string | null;
+  /** Decimal currency (Float), NOT minor units. */
+  amount: number;
+  createdAt?: string | null;
+}
+
+export interface LedgerHistoryResponse {
+  entries: LedgerEntry[];
+  total: number;
+}
+
+export interface PayoutAccount {
+  id: string;
+  userId: string;
+  accountType?: string | null;
+  provider?: string | null;
+  /** Last-4 masked identifier only — never a raw account number. */
+  accountIdentifierMasked?: string | null;
+  accountHolderName?: string | null;
+  isVerified: boolean;
+  isPrimary: boolean;
+  currency?: string | null;
+  createdAt?: string | null;
+  updatedAt?: string | null;
+}
+
+export interface PayoutAccountListResponse {
+  payoutAccounts: PayoutAccount[];
+  total: number;
+}
+
+export interface Payout {
+  id: string;
+  vendorId: string;
+  /** Minor units (Int), e.g. 1234 == $12.34. Divide by 100 to display. */
+  amount: number;
+  currency: string;
+  status: string;
+  providerReference?: string | null;
+  failureReason?: string | null;
+  createdAt?: string | null;
+}
+
+/** Input for adminRequestPayout. `amount` is MINOR units (Int). */
+export interface AdminRequestPayoutInput {
+  vendorId: string;
+  /** Minor units (Int), e.g. 1234 == $12.34. */
+  amount: number;
+  currency: string;
+  idempotencyKey: string;
+}
+
+// --- Fragments ---
+
+export const ADMIN_WALLET_BALANCE_FIELDS = gql`
+  fragment AdminWalletBalanceFields on AdminWalletBalance {
+    ownerId
+    ownerType
+    availableBalance
+    escrowBalance
+    totalBalance
+    currency
+  }
+`;
+
+export const ADMIN_LEDGER_ENTRY_FIELDS = gql`
+  fragment AdminLedgerEntryFields on AdminLedgerEntry {
+    id
+    batchId
+    entryType
+    amount
+    createdAt
+  }
+`;
+
+export const ADMIN_PAYOUT_ACCOUNT_FIELDS = gql`
+  fragment AdminPayoutAccountFields on AdminPayoutAccount {
+    id
+    userId
+    accountType
+    provider
+    accountIdentifierMasked
+    accountHolderName
+    isVerified
+    isPrimary
+    currency
+    createdAt
+    updatedAt
+  }
+`;
+
+export const ADMIN_PAYOUT_FIELDS = gql`
+  fragment AdminPayoutFields on AdminPayout {
+    id
+    vendorId
+    amount
+    currency
+    status
+    providerReference
+    failureReason
+    createdAt
+  }
+`;
+
+// --- Queries ---
+
+export const ADMIN_GET_WALLET_BALANCE = gql`
+  ${ADMIN_WALLET_BALANCE_FIELDS}
+  query AdminGetWalletBalance($ownerId: ID!, $ownerType: String!) {
+    adminGetWalletBalance(ownerId: $ownerId, ownerType: $ownerType) {
+      ...AdminWalletBalanceFields
+    }
+  }
+`;
+
+export const ADMIN_GET_TRANSACTION_HISTORY = gql`
+  ${ADMIN_LEDGER_ENTRY_FIELDS}
+  query AdminGetTransactionHistory(
+    $ownerId: ID!
+    $ownerType: String!
+    $limit: Int
+    $offset: Int
+  ) {
+    adminGetTransactionHistory(
+      ownerId: $ownerId
+      ownerType: $ownerType
+      limit: $limit
+      offset: $offset
+    ) {
+      entries {
+        ...AdminLedgerEntryFields
+      }
+      total
+    }
+  }
+`;
+
+export const ADMIN_LIST_PAYOUT_ACCOUNTS = gql`
+  ${ADMIN_PAYOUT_ACCOUNT_FIELDS}
+  query AdminListPayoutAccounts($userId: ID!) {
+    adminListPayoutAccounts(userId: $userId) {
+      payoutAccounts {
+        ...AdminPayoutAccountFields
+      }
+      total
+    }
+  }
+`;
+
+export const ADMIN_GET_PAYOUT_ACCOUNT = gql`
+  ${ADMIN_PAYOUT_ACCOUNT_FIELDS}
+  query AdminGetPayoutAccount($id: ID!) {
+    adminGetPayoutAccount(id: $id) {
+      ...AdminPayoutAccountFields
+    }
+  }
+`;
+
+// --- Mutations ---
+
+export const ADMIN_VERIFY_PAYOUT_ACCOUNT = gql`
+  ${ADMIN_PAYOUT_ACCOUNT_FIELDS}
+  mutation AdminVerifyPayoutAccount(
+    $payoutAccountId: ID!
+    $verificationCode: String!
+  ) {
+    adminVerifyPayoutAccount(
+      payoutAccountId: $payoutAccountId
+      verificationCode: $verificationCode
+    ) {
+      ...AdminPayoutAccountFields
+    }
+  }
+`;
+
+export const ADMIN_SET_PRIMARY_PAYOUT_ACCOUNT = gql`
+  ${ADMIN_PAYOUT_ACCOUNT_FIELDS}
+  mutation AdminSetPrimaryPayoutAccount($payoutAccountId: ID!) {
+    adminSetPrimaryPayoutAccount(payoutAccountId: $payoutAccountId) {
+      ...AdminPayoutAccountFields
+    }
+  }
+`;
+
+export const ADMIN_DELETE_PAYOUT_ACCOUNT = gql`
+  mutation AdminDeletePayoutAccount($payoutAccountId: ID!) {
+    adminDeletePayoutAccount(payoutAccountId: $payoutAccountId)
+  }
+`;
+
+export const ADMIN_REQUEST_PAYOUT = gql`
+  ${ADMIN_PAYOUT_FIELDS}
+  mutation AdminRequestPayout($input: AdminRequestPayoutInput!) {
+    adminRequestPayout(input: $input) {
+      ...AdminPayoutFields
+    }
+  }
+`;
+// ===== End Escrow Wallet / Ledger / Payout (escrow-service) =====
