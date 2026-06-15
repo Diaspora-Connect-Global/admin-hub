@@ -3,7 +3,7 @@
  * Uses central logger; never include passwords or tokens.
  */
 
-import { logger } from "@/lib/logger";
+import { logger, type LogLevel } from "@/lib/logger";
 
 export type AuditAction =
   | "auth.login"
@@ -28,9 +28,9 @@ const MAX_BUFFER = 500;
 const eventBuffer: AuditEvent[] = [];
 const auditLog = logger.child("Audit");
 
-function emit(event: AuditEvent): void {
+function emit(event: AuditEvent, level: LogLevel = "info"): void {
   const { action, actorId, actorLabel, resourceType, resourceId, success, reason, metadata } = event;
-  auditLog.info(`Audit: ${action}`, {
+  auditLog[level](`Audit: ${action}`, {
     action,
     actorId,
     ...(actorLabel != null && { actorLabel }),
@@ -44,8 +44,8 @@ function emit(event: AuditEvent): void {
   if (eventBuffer.length > MAX_BUFFER) eventBuffer.shift();
 }
 
-export function audit(event: Omit<AuditEvent, "timestamp">): void {
-  emit({ ...event, timestamp: new Date().toISOString() });
+export function audit(event: Omit<AuditEvent, "timestamp">, level: LogLevel = "info"): void {
+  emit({ ...event, timestamp: new Date().toISOString() }, level);
 }
 
 export function logLogin(params: {
@@ -93,7 +93,7 @@ export function logRouteAccessDenied(params: {
     resourceId: params.path,
     success: false,
     metadata: params.metadata,
-  });
+  }, "debug");
 }
 
 export function getRecentAuditEvents(limit = 100): AuditEvent[] {

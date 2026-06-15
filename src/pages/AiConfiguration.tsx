@@ -552,7 +552,26 @@ export default function AiConfiguration() {
                 </div>
               </>
             ) : (
-              <p className="text-sm text-muted-foreground">Classifier config not loaded.</p>
+              <div className="flex flex-col items-center gap-3 rounded-md border border-border bg-secondary/50 p-6 text-center">
+                <AlertTriangle className="w-6 h-6 text-warning" />
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-foreground">
+                    AI service is currently unavailable
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    Classifier configuration can't be loaded right now.
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  onClick={() => refetchConfig()}
+                  disabled={configLoading}
+                  className="gap-2"
+                >
+                  {configLoading && <Loader2 className="w-4 h-4 animate-spin" />}
+                  Retry
+                </Button>
+              </div>
             )}
           </CardContent>
         </Card>

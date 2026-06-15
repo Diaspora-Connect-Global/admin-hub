@@ -48,7 +48,7 @@ export function useAiListProviderCredentials() {
 }
 
 export function useAiGetClassifierConfig() {
-  return useQuery<{ aiGetClassifierConfig: ClassifierConfig }>(
+  return useQuery<{ aiGetClassifierConfig: ClassifierConfig | null }>(
     AI_GET_CLASSIFIER_CONFIG,
     { fetchPolicy: "cache-and-network" },
   );
