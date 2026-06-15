@@ -18,9 +18,38 @@ export type RefreshResult =
   | { ok: false; error: RefreshError };
 
 /**
- * Calls refreshToken mutation over fetch; updates session store on success.
+ * A refresh failure is "definitive" only when the refresh token itself is
+ * genuinely dead/revoked (UNAUTHENTICATED) or absent (NO_REFRESH_TOKEN).
+ * Everything else (HTTP errors, 5xx, network failures, INTERNAL_SERVER_ERROR,
+ * generic REFRESH_FAILED) is transient and must NOT log the admin out — the
+ * next interval tick or user activity will retry.
  */
-export async function exchangeRefreshTokenForSession(): Promise<RefreshResult> {
+export function isDefinitiveAuthFailure(error: RefreshError): boolean {
+  return error.code === "UNAUTHENTICATED" || error.code === "NO_REFRESH_TOKEN";
+}
+
+/**
+ * Module-level single-flight: the backend rotates the refresh token on every
+ * successful exchange, so concurrent refreshes using the same (now-stale) token
+ * would make all-but-one fail. All callers (Apollo error link, background
+ * interval, proactive-on-activity) share this one in-flight promise.
+ */
+let inFlight: Promise<RefreshResult> | null = null;
+
+/**
+ * Calls refreshToken mutation over fetch; updates session store on success.
+ * Deduplicates concurrent calls via a shared in-flight promise.
+ */
+export function exchangeRefreshTokenForSession(): Promise<RefreshResult> {
+  if (inFlight) return inFlight;
+
+  inFlight = doRefresh().finally(() => {
+    inFlight = null;
+  });
+  return inFlight;
+}
+
+async function doRefresh(): Promise<RefreshResult> {
   const refreshToken = getRefreshToken();
   if (!refreshToken) {
     return { ok: false, error: { code: "NO_REFRESH_TOKEN", message: "No refresh token available" } };
@@ -41,7 +70,7 @@ export async function exchangeRefreshTokenForSession(): Promise<RefreshResult> {
 
     const json = (await res.json()) as {
       data?: { refreshToken?: { accessToken?: string; refreshToken?: string } };
-      errors?: Array<{ message?: string }>;
+      errors?: Array<{ message?: string; extensions?: { code?: string } }>;
     };
 
     if (!res.ok) {
@@ -52,8 +81,12 @@ export async function exchangeRefreshTokenForSession(): Promise<RefreshResult> {
     }
 
     if (json.errors?.length) {
-      const msg = json.errors[0]?.message ?? "Refresh failed";
-      return { ok: false, error: { code: "REFRESH_FAILED", message: msg } };
+      const first = json.errors[0];
+      const msg = first?.message ?? "Refresh failed";
+      // Propagate the GraphQL extensions.code when present (e.g. UNAUTHENTICATED)
+      // so definitive auth failures can be distinguished from transient ones.
+      const code = first?.extensions?.code ?? "REFRESH_FAILED";
+      return { ok: false, error: { code, message: msg } };
     }
 
     const data = json.data?.refreshToken;

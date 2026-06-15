@@ -9,7 +9,11 @@ import { useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { getAccessToken, clearSession } from "@/stores/session";
 import { useSessionStore } from "@/stores/sessionStore";
-import { exchangeRefreshTokenForSession } from "@/services/networks/graphql/admin/refreshAccessToken";
+import {
+  exchangeRefreshTokenForSession,
+  isDefinitiveAuthFailure,
+  type RefreshResult,
+} from "@/services/networks/graphql/admin/refreshAccessToken";
 import { toast } from "@/hooks/use-toast";
 import { getJwtExpiry } from "@/lib/jwt";
 
@@ -19,6 +23,12 @@ const WARN_BEFORE_MS = 60 * 1000;              // warn 60 s before that
 const PROACTIVE_REFRESH_BEFORE_EXP_MS = 120_000;
 
 const ACTIVITY_EVENTS = ["mousedown", "mousemove", "keydown", "scroll", "touchstart", "click"] as const;
+
+/** Resolved value used when no refresh is needed (no token / not near expiry). */
+const NOOP_OK: RefreshResult = {
+  ok: true,
+  data: { accessToken: "", refreshToken: "" },
+};
 
 function getTokenExpMs(token: string): number | null {
   const expiry = getJwtExpiry(token);
@@ -31,7 +41,6 @@ export function useTokenExpiry() {
   const expiryTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const warningTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const warningToastShown = useRef(false);
-  const refreshInFlight = useRef(false);
 
   const clearTimers = useCallback(() => {
     if (expiryTimer.current) { clearTimeout(expiryTimer.current); expiryTimer.current = null; }
@@ -60,27 +69,35 @@ export function useTokenExpiry() {
     });
   }, [navigate, clearTimers]);
 
-  const maybeRefreshAccessTokenSoon = useCallback(async (): Promise<boolean> => {
-    if (refreshInFlight.current) return true;
-
+  // Returns a RefreshResult so callers can distinguish a definitive auth
+  // failure (genuinely dead/revoked refresh token -> log out) from a transient
+  // one (5xx, network, INTERNAL_SERVER_ERROR -> stay logged in, retry later).
+  // When no refresh is needed (no token / not near expiry) it resolves ok.
+  const maybeRefreshAccessTokenSoon = useCallback(async (): Promise<RefreshResult> => {
     const token = getAccessToken();
-    if (!token) return true;
+    if (!token) return NOOP_OK;
 
     const expMs = getTokenExpMs(token);
-    if (!expMs) return true;
+    if (!expMs) return NOOP_OK;
 
     const msLeft = expMs - Date.now();
     const shouldRefresh = msLeft <= 0 || msLeft <= PROACTIVE_REFRESH_BEFORE_EXP_MS;
-    if (!shouldRefresh) return true;
+    if (!shouldRefresh) return NOOP_OK;
 
-    refreshInFlight.current = true;
-    try {
-      const result = await exchangeRefreshTokenForSession();
-      return result.ok;
-    } finally {
-      refreshInFlight.current = false;
-    }
+    // Network refresh is deduplicated at the module level (single-flight), so a
+    // concurrent caller will simply receive the same in-flight promise.
+    return exchangeRefreshTokenForSession();
   }, []);
+
+  // Refresh, and only log out when the refresh failed definitively (dead/revoked
+  // refresh token). Transient failures are swallowed so a one-off 5xx/network
+  // blip never kicks the admin out — the next tick or activity retries.
+  const refreshOrLogoutIfDefinitive = useCallback(async () => {
+    const result = await maybeRefreshAccessTokenSoon();
+    if (!result.ok && isDefinitiveAuthFailure(result.error)) {
+      logoutExpired();
+    }
+  }, [maybeRefreshAccessTokenSoon, logoutExpired]);
 
   // Called on every user interaction — resets the countdown from scratch
   const resetInactivityTimer = useCallback(() => {
@@ -104,23 +121,17 @@ export function useTokenExpiry() {
     // Log out after full inactivity window
     expiryTimer.current = setTimeout(logout, INACTIVITY_TIMEOUT_MS);
 
-    void maybeRefreshAccessTokenSoon().then((ok) => {
-      if (!ok) logoutExpired();
-    });
-  }, [clearTimers, logout, maybeRefreshAccessTokenSoon, logoutExpired]);
+    void refreshOrLogoutIfDefinitive();
+  }, [clearTimers, logout, refreshOrLogoutIfDefinitive]);
 
   useEffect(() => {
     if (!sessionId) return;
     const id = setInterval(() => {
-      void maybeRefreshAccessTokenSoon().then((ok) => {
-        if (!ok) logoutExpired();
-      });
+      void refreshOrLogoutIfDefinitive();
     }, 60_000);
-    void maybeRefreshAccessTokenSoon().then((ok) => {
-      if (!ok) logoutExpired();
-    });
+    void refreshOrLogoutIfDefinitive();
     return () => clearInterval(id);
-  }, [sessionId, maybeRefreshAccessTokenSoon, logoutExpired]);
+  }, [sessionId, refreshOrLogoutIfDefinitive]);
 
   useEffect(() => {
     if (!getAccessToken()) return;

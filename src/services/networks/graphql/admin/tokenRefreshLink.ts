@@ -3,22 +3,22 @@ import type { ApolloLink } from "@apollo/client/link";
 import { ErrorLink } from "@apollo/client/link/error";
 import { CombinedGraphQLErrors, ServerError } from "@apollo/client/errors";
 import { clearSession } from "@/stores/session";
-import { exchangeRefreshTokenForSession } from "./refreshAccessToken";
+import {
+  exchangeRefreshTokenForSession,
+  isDefinitiveAuthFailure,
+  type RefreshResult,
+} from "./refreshAccessToken";
 
 /** Mutations that must never trigger refresh+retry (avoid loops / wrong semantics). */
 const SKIP_REFRESH_OPERATION_NAMES = new Set(["AdminLogin", "Logout"]);
 
-let refreshInFlight: Promise<boolean> | null = null;
-
-function refreshOnce(): Promise<boolean> {
-  if (!refreshInFlight) {
-    refreshInFlight = exchangeRefreshTokenForSession()
-      .then((r) => r.ok)
-      .finally(() => {
-        refreshInFlight = null;
-      });
-  }
-  return refreshInFlight;
+/**
+ * Refresh deduplication now lives in exchangeRefreshTokenForSession (module-level
+ * single-flight), so we can call it directly and share the one network refresh
+ * with the inactivity hook and background interval.
+ */
+function refreshOnce(): Promise<RefreshResult> {
+  return exchangeRefreshTokenForSession();
 }
 
 function isAuthFailure(error: unknown): boolean {
@@ -68,10 +68,15 @@ export function createTokenRefreshErrorLink(): ErrorLink {
       let innerSub: { unsubscribe: () => void } | undefined;
 
       refreshOnce()
-        .then((ok) => {
-          if (!ok) {
-            clearSession();
-            redirectToLoginExpired();
+        .then((result) => {
+          if (!result.ok) {
+            // Only kick the admin out for a genuinely dead/revoked refresh
+            // token. Transient failures (5xx, network, INTERNAL_SERVER_ERROR)
+            // surface the original error without clearing the session.
+            if (isDefinitiveAuthFailure(result.error)) {
+              clearSession();
+              redirectToLoginExpired();
+            }
             observer.error(error);
             return;
           }
