@@ -1,6 +1,6 @@
 import { Link, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { LayoutDashboard, Users, Wallet, AlertTriangle, BarChart3, Settings, Bell, FileText, HeadphonesIcon, Shield, Store, Key, Activity, ChevronLeft, ChevronRight, LogOut, MessageSquare, Calendar, Briefcase, Landmark, Brain, CreditCard, ShieldCheck } from "lucide-react";
+import { LayoutDashboard, Users, Wallet, AlertTriangle, BarChart3, Settings, Bell, FileText, HeadphonesIcon, Shield, Store, Key, Activity, ChevronLeft, ChevronRight, LogOut, MessageSquare, Calendar, Briefcase, Landmark } from "lucide-react";
 import { cn } from "@/lib/utils";
 import logo from "@/assets/logo.svg";
 import { useAdminAuth, getPortalRoleTranslationKey } from "@/hooks/auth/useAdminAuth";
@@ -17,9 +17,6 @@ const navItems = [
   { id: "opportunities", titleKey: "nav.opportunities", icon: Briefcase, path: "/opportunities" },
   { id: "reports_analytics", titleKey: "nav.reports", icon: BarChart3, path: "/reports" },
   { id: "system_settings", titleKey: "nav.settings", icon: Settings, path: "/settings" },
-  { id: "ai_configuration", titleKey: "nav.aiConfig", icon: Brain, path: "/settings/ai", systemAdminOnly: true },
-  { id: "payment_keys", titleKey: "nav.paymentKeys", icon: CreditCard, path: "/settings/payment-keys", systemAdminOnly: true },
-  { id: "kyc_keys", titleKey: "nav.kycKeys", icon: ShieldCheck, path: "/settings/kyc-keys", systemAdminOnly: true },
   { id: "notifications", titleKey: "nav.notifications", icon: Bell, path: "/notifications" },
   { id: "audit_logs", titleKey: "nav.audit", icon: FileText, path: "/audit" },
   { id: "support_ticketing", titleKey: "nav.support", icon: HeadphonesIcon, path: "/support" },
@@ -52,8 +49,8 @@ function SidebarContent({ collapsed = false, onToggleCollapse, onNavigate }: Sid
 
   const isActive = (path: string) => {
     if (path === "/") return location.pathname === "/";
-    // Prefer the most specific match — e.g. /settings/ai should only highlight
-    // the AI Configuration item, not the parent /settings item.
+    // Prefer the most specific match so a nested route highlights its own
+    // item rather than a parent (e.g. /vendors/123 over /vendors).
     const candidates = visibleNavItems
       .map((it) => it.path)
       .filter((p) => p !== "/" && location.pathname.startsWith(p))

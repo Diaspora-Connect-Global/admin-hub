@@ -11,6 +11,7 @@ import {
   iso2OrLabelToDisplayName,
 } from "@/lib/countriesServedIso";
 import type { CommunityAdminListItem } from "@/hooks/admin/useAssociation";
+import { formatAdminRole } from "@/lib/adminRoleLabel";
 
 interface LinkedAssociation {
   id: string;
@@ -20,6 +21,7 @@ interface LinkedAssociation {
 
 interface CommunityOverviewTabProps {
   community: NonNullable<unknown> & {
+    id?: string;
     name?: string;
     visibility?: string;
     joinPolicy?: string;
@@ -72,6 +74,12 @@ export function CommunityOverviewTab({
   setAssignAdminOpen,
 }: CommunityOverviewTabProps) {
   const LINKED_ASSOCIATIONS_PAGE_SIZE = linkedAssociationsPageSize;
+
+  // Resolve role scope UUIDs to human names using data already on the page.
+  const scopeNameById = new Map<string, string>();
+  if (community.id && community.name) scopeNameById.set(community.id, community.name);
+  for (const assoc of linkedAssociations) scopeNameById.set(assoc.id, assoc.name);
+
   return (
     <TabsContent value="overview" className="space-y-4">
       <div className="grid gap-4 md:grid-cols-2">
@@ -292,9 +300,7 @@ export function CommunityOverviewTab({
                               <div className="flex flex-wrap gap-1 pt-1">
                                 {admin.roles.map((r) => (
                                   <Badge key={r.id} variant="outline" className="text-[10px] font-normal max-w-full truncate">
-                                    {r.roleType}
-                                    {r.scopeType != null && r.scopeType !== "" ? ` · ${r.scopeType}` : ""}
-                                    {r.scopeId != null && r.scopeId !== "" ? ` · ${r.scopeId}` : ""}
+                                    {formatAdminRole(r, scopeNameById)}
                                   </Badge>
                                 ))}
                               </div>
