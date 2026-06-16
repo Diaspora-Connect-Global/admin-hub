@@ -22,7 +22,8 @@ export interface EditForm {
   priceAmount: string;
   priceCurrency: string;
   countriesServed: string[];
-  logoBanner: File | null;
+  avatarFile: File | null;
+  bannerFile: File | null;
   rules: string;
   whoCanPost: "ADMIN_ONLY" | "ALL_MEMBERS";
   groupCreationPermission: string;
@@ -39,14 +40,19 @@ interface EditCommunityDialogProps {
   editOpen: boolean;
   setEditOpen: (open: boolean) => void;
   t: (key: string, opts?: Record<string, unknown>) => string;
-  community: { name?: string };
+  community: { name?: string; avatarUrl?: string; coverImageUrl?: string };
   editForm: EditForm;
   setEditForm: Dispatch<SetStateAction<EditForm>>;
   communityTypesLoading: boolean;
   communityTypes: CommunityType[];
   countryOptions: { label: string; value: string }[];
   allCountries: string[];
-  handleEditLogoUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  handleEditAvatarUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  handleEditBannerUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  handleRemoveAvatar: () => void;
+  handleRemoveBanner: () => void;
+  removingAvatar: boolean;
+  removingBanner: boolean;
   handleSaveEdit: () => void;
   savingEdit: boolean;
 }
@@ -62,7 +68,12 @@ export function EditCommunityDialog({
   communityTypes,
   countryOptions,
   allCountries,
-  handleEditLogoUpload,
+  handleEditAvatarUpload,
+  handleEditBannerUpload,
+  handleRemoveAvatar,
+  handleRemoveBanner,
+  removingAvatar,
+  removingBanner,
   handleSaveEdit,
   savingEdit,
 }: EditCommunityDialogProps) {
@@ -212,22 +223,67 @@ export function EditCommunityDialog({
 
                 <div className="space-y-2">
                   <Label>{t("communities.form.logoBanner")}</Label>
-                  <div className="border-2 border-dashed border-border rounded-md p-4 text-center hover:border-primary/50 transition-colors">
-                    <input type="file" accept=".jpg,.jpeg,.png" onChange={handleEditLogoUpload} className="hidden" id="edit-logo-upload" />
-                    <label htmlFor="edit-logo-upload" className="cursor-pointer flex flex-col items-center gap-2">
-                      <Upload className="h-8 w-8 text-muted-foreground" />
-                      <span className="text-sm text-muted-foreground">{t("communities.form.uploadImage")}</span>
-                      <span className="text-xs text-muted-foreground">{t("communities.form.acceptedFormats")}</span>
-                    </label>
-                    {editForm.logoBanner && (
-                      <div className="mt-2 flex items-center justify-center gap-2">
-                        <Badge variant="secondary">{editForm.logoBanner.name}</Badge>
-                        <X
-                          className="h-4 w-4 cursor-pointer text-muted-foreground hover:text-destructive"
-                          onClick={() => setEditForm((prev) => ({ ...prev, logoBanner: null }))}
-                        />
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    {/* Avatar / logo */}
+                    <div className="space-y-2">
+                      <Label className="text-xs text-muted-foreground">{t("communities.form.logo")}</Label>
+                      <div className="border-2 border-dashed border-border rounded-md p-4 text-center hover:border-primary/50 transition-colors">
+                        <input type="file" accept="image/jpeg,image/png,image/webp" onChange={handleEditAvatarUpload} className="hidden" id="edit-avatar-upload" />
+                        <label htmlFor="edit-avatar-upload" className="cursor-pointer flex flex-col items-center gap-2">
+                          <Upload className="h-8 w-8 text-muted-foreground" />
+                          <span className="text-sm text-muted-foreground">{t("communities.form.uploadImage")}</span>
+                          <span className="text-xs text-muted-foreground">{t("communities.form.acceptedFormats")}</span>
+                        </label>
+                        {editForm.avatarFile && (
+                          <div className="mt-2 flex items-center justify-center gap-2">
+                            <Badge variant="secondary" className="max-w-[180px] truncate">{editForm.avatarFile.name}</Badge>
+                            <X
+                              className="h-4 w-4 cursor-pointer text-muted-foreground hover:text-destructive"
+                              onClick={() => setEditForm((prev) => ({ ...prev, avatarFile: null }))}
+                            />
+                          </div>
+                        )}
+                        {!editForm.avatarFile && community.avatarUrl && (
+                          <div className="mt-3 flex flex-col items-center gap-2">
+                            <img src={community.avatarUrl} alt="" className="h-16 w-16 rounded-md object-cover border border-border" />
+                            <Button type="button" variant="ghost" size="sm" className="h-7 text-destructive hover:text-destructive" onClick={handleRemoveAvatar} disabled={removingAvatar}>
+                              {removingAvatar ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <X className="h-3.5 w-3.5" />}
+                              <span className="ml-1">{t("common.remove")}</span>
+                            </Button>
+                          </div>
+                        )}
                       </div>
-                    )}
+                    </div>
+                    {/* Banner / cover */}
+                    <div className="space-y-2">
+                      <Label className="text-xs text-muted-foreground">{t("communities.form.banner")}</Label>
+                      <div className="border-2 border-dashed border-border rounded-md p-4 text-center hover:border-primary/50 transition-colors">
+                        <input type="file" accept="image/jpeg,image/png,image/webp" onChange={handleEditBannerUpload} className="hidden" id="edit-banner-upload" />
+                        <label htmlFor="edit-banner-upload" className="cursor-pointer flex flex-col items-center gap-2">
+                          <Upload className="h-8 w-8 text-muted-foreground" />
+                          <span className="text-sm text-muted-foreground">{t("communities.form.uploadImage")}</span>
+                          <span className="text-xs text-muted-foreground">{t("communities.form.acceptedFormats")}</span>
+                        </label>
+                        {editForm.bannerFile && (
+                          <div className="mt-2 flex items-center justify-center gap-2">
+                            <Badge variant="secondary" className="max-w-[180px] truncate">{editForm.bannerFile.name}</Badge>
+                            <X
+                              className="h-4 w-4 cursor-pointer text-muted-foreground hover:text-destructive"
+                              onClick={() => setEditForm((prev) => ({ ...prev, bannerFile: null }))}
+                            />
+                          </div>
+                        )}
+                        {!editForm.bannerFile && community.coverImageUrl && (
+                          <div className="mt-3 flex flex-col items-center gap-2">
+                            <img src={community.coverImageUrl} alt="" className="h-16 w-full max-w-xs rounded-md object-cover border border-border" />
+                            <Button type="button" variant="ghost" size="sm" className="h-7 text-destructive hover:text-destructive" onClick={handleRemoveBanner} disabled={removingBanner}>
+                              {removingBanner ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <X className="h-3.5 w-3.5" />}
+                              <span className="ml-1">{t("common.remove")}</span>
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 </div>
 

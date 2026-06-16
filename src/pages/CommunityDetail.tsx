@@ -31,6 +31,9 @@ import {
   useAssignCommunityAdmin,
   useGetCommunityPostsAdmin,
   useGetCommunityProductsAdmin,
+  useGetCommunityAvatarUploadUrl,
+  useGetCommunityCoverUploadUrl,
+  useDeleteEntityImage,
 } from "@/hooks/admin";
 import { useListAdmins, useAssignAdminRole } from "@/hooks/admin/useAdminAccounts";
 import { useListCommunityTypes } from "@/hooks/admin/useEntityTypes";
@@ -62,6 +65,7 @@ import { CommunityVendorTab } from "@/components/community/CommunityVendorTab";
 import { CommunityAuditTab } from "@/components/community/CommunityAuditTab";
 import { EditCommunityDialog } from "@/components/community/EditCommunityDialog";
 import { LinkAssociationDialog, AssignAdminDialog } from "@/components/community/CommunityAdminDialogs";
+import { uploadCommunityAvatar, uploadCommunityCover } from "@/lib/communityImageUpload";
 
 const allCountries = [
   "Afghanistan", "Albania", "Algeria", "Andorra", "Angola", "Antigua and Barbuda", "Argentina", "Armenia", "Australia", "Austria",
@@ -124,6 +128,11 @@ export default function CommunityDetail() {
   const [updateCommunityMutation, { loading: savingEdit }] = useUpdateCommunity();
   const [updateVisibilityMutation] = useUpdateCommunityVisibility();
   const [updateJoinPolicyMutation] = useUpdateCommunityJoinPolicy();
+  const [getAvatarUploadUrl] = useGetCommunityAvatarUploadUrl();
+  const [getCoverUploadUrl] = useGetCommunityCoverUploadUrl();
+  const [deleteEntityImage] = useDeleteEntityImage();
+  const [removingAvatar, setRemovingAvatar] = useState(false);
+  const [removingBanner, setRemovingBanner] = useState(false);
   const community = data?.getCommunity;
   const { data: membersData } = useListCommunityMembers(id ?? null, 50, 0);
   const {
@@ -296,7 +305,8 @@ export default function CommunityDetail() {
     priceAmount: "",
     priceCurrency: "EUR",
     countriesServed: [] as string[],
-    logoBanner: null as File | null,
+    avatarFile: null as File | null,
+    bannerFile: null as File | null,
     rules: "",
     whoCanPost: "ADMIN_ONLY" as "ADMIN_ONLY" | "ALL_MEMBERS",
     groupCreationPermission: "Admins Only",
@@ -328,7 +338,8 @@ export default function CommunityDetail() {
       priceAmount: community.priceAmount != null ? String(community.priceAmount) : "",
       priceCurrency: community.priceCurrency ?? "EUR",
       countriesServed: (community.countriesServed ?? []).map(iso2OrLabelToDisplayName).filter(Boolean),
-      logoBanner: null,
+      avatarFile: null,
+      bannerFile: null,
       rules: community.communityRules ?? "",
       whoCanPost: community.whoCanPost === "ALL_MEMBERS" ? "ALL_MEMBERS" : "ADMIN_ONLY",
       groupCreationPermission: groupCreationApiToUi(community.groupCreationPermission),
@@ -360,9 +371,50 @@ export default function CommunityDetail() {
     toast({ title: checked ? "Vendor mode enabled" : "Vendor mode disabled" });
   };
 
-  const handleEditLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleEditAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) setEditForm((prev) => ({ ...prev, logoBanner: file }));
+    if (file) setEditForm((prev) => ({ ...prev, avatarFile: file }));
+    e.target.value = "";
+  };
+
+  const handleEditBannerUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) setEditForm((prev) => ({ ...prev, bannerFile: file }));
+    e.target.value = "";
+  };
+
+  const handleRemoveAvatar = async () => {
+    if (!community?.id) return;
+    setRemovingAvatar(true);
+    try {
+      await deleteEntityImage({
+        variables: { entityId: community.id, entityType: "COMMUNITY", imageType: "AVATAR" },
+      });
+      await refetch();
+      toast({ title: "Logo removed", description: "The community logo was removed." });
+    } catch (e) {
+      const message = e instanceof Error ? e.message : "Failed to remove logo.";
+      toast({ title: "Remove failed", description: message, variant: "destructive" });
+    } finally {
+      setRemovingAvatar(false);
+    }
+  };
+
+  const handleRemoveBanner = async () => {
+    if (!community?.id) return;
+    setRemovingBanner(true);
+    try {
+      await deleteEntityImage({
+        variables: { entityId: community.id, entityType: "COMMUNITY", imageType: "COVER" },
+      });
+      await refetch();
+      toast({ title: "Banner removed", description: "The community banner was removed." });
+    } catch (e) {
+      const message = e instanceof Error ? e.message : "Failed to remove banner.";
+      toast({ title: "Remove failed", description: message, variant: "destructive" });
+    } finally {
+      setRemovingBanner(false);
+    }
   };
 
   const handleLinkAssociationSubmit = async () => {
@@ -698,6 +750,13 @@ export default function CommunityDetail() {
         variables: { input: joinPolicyInput },
       });
 
+      if (editForm.avatarFile) {
+        await uploadCommunityAvatar(community.id, editForm.avatarFile, getAvatarUploadUrl);
+      }
+      if (editForm.bannerFile) {
+        await uploadCommunityCover(community.id, editForm.bannerFile, getCoverUploadUrl);
+      }
+
       await refetch();
       setEditOpen(false);
       toast({ title: "Community updated", description: "Changes were saved successfully." });
@@ -874,7 +933,12 @@ export default function CommunityDetail() {
         communityTypes={communityTypes}
         countryOptions={countryOptions}
         allCountries={allCountries}
-        handleEditLogoUpload={handleEditLogoUpload}
+        handleEditAvatarUpload={handleEditAvatarUpload}
+        handleEditBannerUpload={handleEditBannerUpload}
+        handleRemoveAvatar={handleRemoveAvatar}
+        handleRemoveBanner={handleRemoveBanner}
+        removingAvatar={removingAvatar}
+        removingBanner={removingBanner}
         handleSaveEdit={handleSaveEdit}
         savingEdit={savingEdit}
       />

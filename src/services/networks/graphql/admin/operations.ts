@@ -641,6 +641,7 @@ export interface Community {
   address?: string;
   assignedAdminIds?: string[];
   avatarUrl?: string;
+  coverImageUrl?: string;
   communityRules?: string;
   communityType?: CommunityType;
   communityTypeId?: string;
@@ -751,6 +752,7 @@ export const GET_COMMUNITY = gql`
       address
       assignedAdminIds
       avatarUrl
+      coverImageUrl
       communityRules
       contactEmail
       contactPhone
