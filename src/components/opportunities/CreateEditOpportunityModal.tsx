@@ -58,6 +58,11 @@ import {
 } from "@/types/opportunities";
 import { toast } from "@/hooks/use-toast";
 import { getUserId } from "@/stores/session";
+import {
+  OPPORTUNITY_CATEGORIES,
+  getSubCategoryOptions,
+  defaultCategoryForType,
+} from "@/lib/opportunityTaxonomy";
 
 const NONE_SELECTED = "__NONE__";
 
@@ -78,18 +83,6 @@ const defaultFormFields: FormField[] = [
   { key: "cover_letter", label: "Cover Letter", type: "textarea",    required: false },
   { key: "resume",       label: "Resume/CV",    type: "file_upload", required: true  },
 ];
-
-const defaultCategoryForType: Record<OpportunityType, OpportunityCategory> = {
-  [OpportunityType.EMPLOYMENT]:  OpportunityCategory.EMPLOYMENT_CAREER,
-  [OpportunityType.CONTRACT]:    OpportunityCategory.EMPLOYMENT_CAREER,
-  [OpportunityType.SCHOLARSHIP]: OpportunityCategory.EDUCATION_TRAINING,
-  [OpportunityType.PROGRAM]:     OpportunityCategory.EDUCATION_TRAINING,
-  [OpportunityType.INVESTMENT]:  OpportunityCategory.BUSINESS_INVESTMENT,
-  [OpportunityType.FELLOWSHIP]:  OpportunityCategory.FELLOWSHIPS_LEADERSHIP,
-  [OpportunityType.INITIATIVE]:  OpportunityCategory.GOVERNMENT_EMBASSY_INITIATIVES,
-  [OpportunityType.GRANT]:       OpportunityCategory.FUNDING_GRANTS,
-  [OpportunityType.VOLUNTEER]:   OpportunityCategory.VOLUNTEERING_SOCIAL_IMPACT,
-};
 
 const slugifyFieldKey = (value: string) =>
   value
@@ -146,6 +139,7 @@ export function CreateEditOpportunityModal({
   // Core Details
   const [title, setTitle] = useState("");
   const [type, setType] = useState<OpportunityType>(OpportunityType.EMPLOYMENT);
+  const [category, setCategory] = useState<OpportunityCategory>(OpportunityCategory.EMPLOYMENT_CAREER);
   const [subCategory, setSubCategory] = useState("");
   const [description, setDescription] = useState("");
   const [tags, setTags] = useState<string[]>([]);
@@ -181,9 +175,22 @@ export function CreateEditOpportunityModal({
   const [newFieldType, setNewFieldType] = useState<FormField["type"]>("text");
   const [newFieldRequired, setNewFieldRequired] = useState(false);
 
-  // Sync type (category is now derived from type)
+  // Picking a type pre-fills the category (admin can still override it below).
   const handleTypeChange = (v: OpportunityType) => {
     setType(v);
+    const nextCategory = defaultCategoryForType[v];
+    setCategory(nextCategory);
+    // Sub-category options depend on the category — reset to avoid a stale value.
+    if (!getSubCategoryOptions(nextCategory).some((o) => o.value === subCategory)) {
+      setSubCategory("");
+    }
+  };
+
+  const handleCategoryChange = (v: OpportunityCategory) => {
+    setCategory(v);
+    if (!getSubCategoryOptions(v).some((o) => o.value === subCategory)) {
+      setSubCategory("");
+    }
   };
 
   useEffect(() => {
@@ -194,6 +201,7 @@ export function CreateEditOpportunityModal({
     if (opportunity) {
       setTitle(opportunity.title);
       setType(opportunity.type);
+      setCategory(opportunity.category ?? defaultCategoryForType[opportunity.type] ?? OpportunityCategory.EMPLOYMENT_CAREER);
       setSubCategory(opportunity.subCategory ?? "");
       setDescription(opportunity.description ?? "");
       setTags(opportunity.tags ?? []);
@@ -219,6 +227,7 @@ export function CreateEditOpportunityModal({
     } else {
       setTitle("");
       setType(OpportunityType.EMPLOYMENT);
+      setCategory(OpportunityCategory.EMPLOYMENT_CAREER);
       setSubCategory("");
       setDescription("");
       setTags([]);
@@ -316,7 +325,7 @@ export function CreateEditOpportunityModal({
     if (isEdit) {
       const input: UpdateOpportunityInput = {
         type,
-        category: defaultCategoryForType[type],
+        category,
         title: title.trim(),
         description: description || undefined,
         subCategory: subCategory || undefined,
@@ -351,7 +360,7 @@ export function CreateEditOpportunityModal({
         ownerType: OwnerType.USER,
         ownerId,
         type,
-        category: defaultCategoryForType[type],
+        category,
         title: title.trim(),
         description,
         visibility,
@@ -381,6 +390,8 @@ export function CreateEditOpportunityModal({
 
     onOpenChange(false);
   };
+
+  const subCategoryOptions = getSubCategoryOptions(category);
 
   // ── Type-aware field visibility & labels ──────────────────────────────────
   const isEmploymentLike = type === OpportunityType.EMPLOYMENT || type === OpportunityType.CONTRACT;
@@ -450,7 +461,7 @@ export function CreateEditOpportunityModal({
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Type / Category *</Label>
+                  <Label>Type *</Label>
                   <Select value={type} onValueChange={(v) => handleTypeChange(v as OpportunityType)}>
                     <SelectTrigger>
                       <SelectValue />
@@ -467,20 +478,50 @@ export function CreateEditOpportunityModal({
                       <SelectItem value={OpportunityType.INITIATIVE}>Initiative</SelectItem>
                     </SelectContent>
                   </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Category *</Label>
+                  <Select value={category} onValueChange={(v) => handleCategoryChange(v as OpportunityCategory)}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {OPPORTUNITY_CATEGORIES.map((c) => (
+                        <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <p className="text-xs text-muted-foreground">
-                    Category auto-set to {defaultCategoryForType[type].split("_").join(" ")}
+                    Determines where this appears under Explore opportunities.
                   </p>
                 </div>
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="subCategory">Sub-category</Label>
-                <Input
-                  id="subCategory"
-                  placeholder="Optional sub-category"
-                  value={subCategory}
-                  onChange={(e) => setSubCategory(e.target.value)}
-                />
+                {subCategoryOptions.length > 0 ? (
+                  <Select
+                    value={subCategory || NONE_SELECTED}
+                    onValueChange={(v) => setSubCategory(v === NONE_SELECTED ? "" : v)}
+                  >
+                    <SelectTrigger id="subCategory">
+                      <SelectValue placeholder="Optional sub-category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={NONE_SELECTED}>None</SelectItem>
+                      {subCategoryOptions.map((s) => (
+                        <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                      ))}
+                      {subCategory && !subCategoryOptions.some((s) => s.value === subCategory) && (
+                        <SelectItem value={subCategory}>{subCategory} (custom)</SelectItem>
+                      )}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <p className="text-xs text-muted-foreground">
+                    This category has no sub-categories.
+                  </p>
+                )}
               </div>
 
               <div className="space-y-2">
