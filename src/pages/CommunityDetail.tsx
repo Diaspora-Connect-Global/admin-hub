@@ -577,7 +577,7 @@ export default function CommunityDetail() {
       });
       return;
     }
-    if (newAdminPassword.length < 8) {
+    if (newAdminPassword.length < 12) {
       toast({
         title: t("communities.validationError"),
         description: t("communities.assignAdmin.passwordTooShort"),

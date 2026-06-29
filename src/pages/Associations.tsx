@@ -315,7 +315,7 @@ export default function Associations() {
       });
       return;
     }
-    if (assocAdminPassword.length < 8) {
+    if (assocAdminPassword.length < 12) {
       toast({
         title: t("associations.validationError"),
         description: t("communities.assignAdmin.passwordTooShort"),

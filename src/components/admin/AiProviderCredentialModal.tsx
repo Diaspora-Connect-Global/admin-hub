@@ -25,7 +25,7 @@ import {
   type AiProviderType,
 } from "@/hooks/admin";
 import { FieldError } from "@/components/common/FieldError";
-import { httpUrl } from "@/lib/validation";
+import { secureHttpsUrl } from "@/lib/validation";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 
 interface AiProviderCredentialModalProps {
@@ -101,8 +101,13 @@ export function AiProviderCredentialModal({
     const next: Record<string, string> = {};
     if (!form.label.trim()) next.label = "Label is required";
     if (!isEdit && !form.apiKey.trim()) next.apiKey = "API key is required";
-    if (form.endpointUrl.trim() && !httpUrl.safeParse(form.endpointUrl.trim()).success) {
-      next.endpointUrl = "Enter a valid URL (https://…)";
+    if (form.endpointUrl.trim()) {
+      const parsed = secureHttpsUrl.safeParse(form.endpointUrl.trim());
+      if (!parsed.success) {
+        // Mirror the server-side SSRF guard (https + public host only).
+        next.endpointUrl =
+          parsed.error.issues[0]?.message ?? "Use a public https endpoint";
+      }
     }
     if (!Number.isFinite(Number(form.priority)) || Number(form.priority) < 0) {
       next.priority = "Priority must be a non-negative number";

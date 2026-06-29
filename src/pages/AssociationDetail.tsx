@@ -295,8 +295,8 @@ export default function AssociationDetail() {
       toast({ title: "Validation Error", description: "Password is required.", variant: "destructive" });
       return;
     }
-    if (assignAdminPassword.length < 8) {
-      toast({ title: "Validation Error", description: "Password must be at least 8 characters.", variant: "destructive" });
+    if (assignAdminPassword.length < 12) {
+      toast({ title: "Validation Error", description: "Password must be at least 12 characters.", variant: "destructive" });
       return;
     }
     try {

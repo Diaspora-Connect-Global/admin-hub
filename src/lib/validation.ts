@@ -19,6 +19,42 @@ export const httpUrl = z
   .url("Enter a valid URL (https://…)")
   .refine((v) => /^https?:\/\//i.test(v), "URL must start with http:// or https://");
 
+/** True for literal private / loopback / link-local IPs (incl. cloud metadata). */
+function isPrivateOrReservedHost(host: string): boolean {
+  const h = host.toLowerCase();
+  if (h === "localhost" || h.endsWith(".local") || h.endsWith(".internal")) return true;
+  if (h === "::1" || h.startsWith("fe80:") || h.startsWith("fc") || h.startsWith("fd")) return true;
+  const m = h.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
+  if (!m) return false;
+  const [a, b] = m.slice(1).map((n) => parseInt(n, 10));
+  if ([a, b].some((n) => Number.isNaN(n) || n > 255)) return true;
+  return (
+    a === 0 ||
+    a === 10 ||
+    a === 127 ||
+    (a === 169 && b === 254) ||
+    (a === 172 && b >= 16 && b <= 31) ||
+    (a === 192 && b === 168)
+  );
+}
+
+/**
+ * A public HTTPS URL safe to use as an outbound request target. Mirrors the
+ * server-side SSRF guard on AI provider endpoints: https only, and no
+ * private/loopback/link-local/metadata hosts.
+ */
+export const secureHttpsUrl = z
+  .string()
+  .url("Enter a valid URL (https://…)")
+  .refine((v) => /^https:\/\//i.test(v), "Endpoint must use https://")
+  .refine((v) => {
+    try {
+      return !isPrivateOrReservedHost(new URL(v).hostname);
+    } catch {
+      return false;
+    }
+  }, "Endpoint must be a public host (no localhost or private IPs)");
+
 /** A string that must parse as JSON. */
 export const jsonString = z
   .string()

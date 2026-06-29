@@ -271,8 +271,8 @@ export default function Communities() {
         toast({ title: t('communities.validationError'), description: "Please enter a valid email for each new admin.", variant: "destructive" });
         return;
       }
-      if (!admin.password || admin.password.length < 8) {
-        toast({ title: t('communities.validationError'), description: "Each new admin password must be at least 8 characters.", variant: "destructive" });
+      if (!admin.password || admin.password.length < 12) {
+        toast({ title: t('communities.validationError'), description: "Each new admin password must be at least 12 characters.", variant: "destructive" });
         return;
       }
     }
