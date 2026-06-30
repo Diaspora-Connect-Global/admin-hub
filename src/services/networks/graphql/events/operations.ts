@@ -34,6 +34,7 @@ const EVENT_LIST_FIELDS = gql`
     availableSpots
     registrationCount
     coverImageUrl
+    registrationLink
     tags
     tickets {
       id
@@ -79,6 +80,7 @@ const EVENT_FULL_FIELDS = gql`
     isPaid
     currency
     coverImageUrl
+    registrationLink
     tags
     registrationCount
     isRegistered
@@ -341,6 +343,7 @@ export const CREATE_EVENT = gql`
       isRegistered
       canRegister
       coverImageUrl
+      registrationLink
       visibility
       timezone
       tags
@@ -396,6 +399,7 @@ export const UPDATE_EVENT = gql`
       isRegistered
       canRegister
       coverImageUrl
+      registrationLink
       visibility
       timezone
       tags

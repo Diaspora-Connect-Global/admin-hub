@@ -34,7 +34,13 @@ export async function uploadEventBannerToStorage(
   const res = await fetch(uploadUrl, {
     method: "PUT",
     body: file,
-    headers: { "Content-Type": contentType },
+    // The signed URL includes a `cache-control` extension header (see api-gateway
+    // src/user/services/gcs-storage.service.ts). GCS V4 signatures require the client
+    // to replay every signed header, so this value MUST byte-match the backend's.
+    headers: {
+      "Content-Type": contentType,
+      "Cache-Control": "public, max-age=31536000, immutable",
+    },
   });
   if (!res.ok) {
     throw new Error(`Banner upload failed (${res.status}).`);
