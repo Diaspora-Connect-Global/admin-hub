@@ -6,7 +6,14 @@ export async function putFileToPresignedUrl(uploadUrl: string, file: File): Prom
   const res = await fetch(uploadUrl, {
     method: "PUT",
     body: file,
-    headers: { "Content-Type": contentType },
+    // The signed URL includes a `cache-control` extension header (see backend
+    // gcs-storage.service.ts in api-gateway and community-service). GCS V4 signatures
+    // require the client to replay every signed header, so this value MUST byte-match
+    // the backend's. Covers association + community avatar/cover uploads.
+    headers: {
+      "Content-Type": contentType,
+      "Cache-Control": "public, max-age=31536000, immutable",
+    },
   });
   if (!res.ok) {
     throw new Error(`Upload failed (${res.status}).`);

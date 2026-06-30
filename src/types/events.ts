@@ -79,6 +79,7 @@ export interface Event {
   canRegister?: boolean;
   tickets?: EventTicket[] | null;
   coverImageUrl?: string | null;
+  registrationLink?: string | null;
   tags?: string[] | null;
   publishedAt?: string | null;
   cancelledAt?: string | null;
@@ -127,7 +128,10 @@ export interface EventFormData {
   title: string;
   description: string;
   bannerImage: File | null;
+  /** Start date. Paired with startTime. */
   date?: Date;
+  /** End date. Defaults to the start date for single-day events; later for multi-day. */
+  endDate?: Date;
   startTime: string;
   endTime: string;
   eventType: EventType;
@@ -137,6 +141,8 @@ export interface EventFormData {
   city: string;
   country: string;
   virtualLink: string;
+  /** Optional external registration / RSVP URL. */
+  registrationLink: string;
   isPaid: boolean;
   tickets: EventTicketFormData[];
   ticketType: "general" | "free";

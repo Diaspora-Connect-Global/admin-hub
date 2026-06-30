@@ -1,5 +1,5 @@
 import { useState, useEffect, useId, useCallback, useRef } from "react";
-import { format } from "date-fns";
+import { format, isSameDay } from "date-fns";
 import { Event, EventFormData, EventType } from "@/types/events";
 import {
   Dialog,
@@ -45,6 +45,7 @@ const EMPTY_EVENT_FORM: EventFormData = {
   visibility: "public",
   bannerImage: null,
   date: undefined,
+  endDate: undefined,
   startTime: "",
   endTime: "",
   eventType: "in-person",
@@ -53,6 +54,7 @@ const EMPTY_EVENT_FORM: EventFormData = {
   city: "",
   country: "",
   virtualLink: "",
+  registrationLink: "",
   isPaid: false,
   tickets: [createDefaultTicket("USD")],
   ticketType: "free",
@@ -123,6 +125,7 @@ export function CreateEditEventModal({
       eventCategory: event.eventCategory ?? "OTHER",
       visibility: (event.visibility ?? "public").toLowerCase(),
       date: event.startAt ? new Date(event.startAt) : undefined,
+      endDate: event.endAt ? new Date(event.endAt) : undefined,
       startTime: event.startAt ? format(new Date(event.startAt), "HH:mm") : "",
       endTime: event.endAt ? format(new Date(event.endAt), "HH:mm") : "",
       eventType,
@@ -131,6 +134,7 @@ export function CreateEditEventModal({
       city: event.locationDetails?.city ?? "",
       country: event.locationDetails?.country ?? "",
       virtualLink: event.locationDetails?.virtualLink || "",
+      registrationLink: event.registrationLink ?? "",
       isPaid: event.isPaid,
       tickets:
         event.tickets && event.tickets.length > 0
@@ -279,7 +283,15 @@ export function CreateEditEventModal({
       if (!formData.date) return "Event date is required.";
       if (!formData.startTime) return "Start time is required.";
       if (!formData.endTime) return "End time is required.";
-      if (formData.endTime <= formData.startTime) return "End time must be after start time.";
+      if (formData.endDate && formData.endDate < formData.date) {
+        return "End date cannot be before the start date.";
+      }
+      // Time ordering only matters within a single day; multi-day events may end at
+      // any time on a later date.
+      const singleDay = !formData.endDate || isSameDay(formData.date, formData.endDate);
+      if (singleDay && formData.endTime <= formData.startTime) {
+        return "End time must be after start time.";
+      }
       if (formData.eventType === "in-person" || formData.eventType === "hybrid") {
         if (!formData.venue.trim()) return "Venue name is required.";
         if (!formData.address.trim()) return "Street address is required.";
@@ -547,20 +559,31 @@ export function CreateEditEventModal({
                       )}
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
-                      {formData.date ? format(formData.date, "PPP") : t.pickDate}
+                      {formData.date
+                        ? formData.endDate && !isSameDay(formData.date, formData.endDate)
+                          ? `${format(formData.date, "PPP")} – ${format(formData.endDate, "PPP")}`
+                          : format(formData.date, "PPP")
+                        : t.pickDate}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
                     <Calendar
-                      mode="single"
-                      selected={formData.date}
-                      onSelect={(date) => updateField("date", date)}
+                      mode="range"
+                      selected={{ from: formData.date, to: formData.endDate }}
+                      onSelect={(range) => {
+                        updateField("date", range?.from);
+                        updateField("endDate", range?.to);
+                      }}
+                      numberOfMonths={2}
                       initialFocus
                       className="pointer-events-auto"
                       fromDate={isCreatingNew ? new Date() : undefined}
                     />
                   </PopoverContent>
                 </Popover>
+                <p className="text-xs text-muted-foreground">
+                  Select a single day, or pick a start and end date for a multi-day event.
+                </p>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -652,6 +675,17 @@ export function CreateEditEventModal({
                   />
                 </div>
               )}
+              <div className="space-y-2">
+                <Label htmlFor="registrationLink">{t.registrationLinkLabel}</Label>
+                <Input
+                  id="registrationLink"
+                  type="url"
+                  placeholder={t.addRegistrationLink}
+                  value={formData.registrationLink}
+                  onChange={(e) => updateField("registrationLink", e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">{t.registrationLinkHelp}</p>
+              </div>
             </>
           )}
 

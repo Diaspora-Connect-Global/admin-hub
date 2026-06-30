@@ -272,14 +272,16 @@ export default function Events() {
       return;
     }
 
-    const localDateStr = data.date
-      ? `${data.date.getFullYear()}-${String(data.date.getMonth() + 1).padStart(2, "0")}-${String(data.date.getDate()).padStart(2, "0")}`
-      : null;
-    const startAt = localDateStr && data.startTime
-      ? new Date(`${localDateStr}T${data.startTime}`).toISOString()
+    const toLocalDateStr = (d: Date) =>
+      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    const startLocalDateStr = data.date ? toLocalDateStr(data.date) : null;
+    // Multi-day events end on a later date; single-day events fall back to the start date.
+    const endLocalDateStr = data.endDate ? toLocalDateStr(data.endDate) : startLocalDateStr;
+    const startAt = startLocalDateStr && data.startTime
+      ? new Date(`${startLocalDateStr}T${data.startTime}`).toISOString()
       : new Date().toISOString();
-    const endAt = localDateStr && data.endTime
-      ? new Date(`${localDateStr}T${data.endTime}`).toISOString()
+    const endAt = endLocalDateStr && data.endTime
+      ? new Date(`${endLocalDateStr}T${data.endTime}`).toISOString()
       : new Date().toISOString();
 
     if (requiresPhysicalLocation(data.eventType)) {
@@ -347,6 +349,9 @@ export default function Events() {
             ...(isPaidEvent && eventCurrency ? { currency: eventCurrency } : {}),
             capacity: capacityValue ?? 0,
             ...(coverImageUrl != null ? { coverImageUrl } : {}),
+            ...(data.registrationLink?.trim()
+              ? { registrationLink: data.registrationLink.trim() }
+              : { registrationLink: "" }),
           },
         };
         logEventMutation("UpdateEvent (edit)", updateVariables);
@@ -379,6 +384,9 @@ export default function Events() {
             visibility: data.visibility ?? DEFAULT_EVENT_VISIBILITY,
             ...(capacityValue != null ? { capacity: capacityValue } : {}),
             ...(coverImageUrl != null ? { coverImageUrl } : {}),
+            ...(data.registrationLink?.trim()
+              ? { registrationLink: data.registrationLink.trim() }
+              : {}),
             tags: [] as string[],
             ...pricingPayload,
           },
