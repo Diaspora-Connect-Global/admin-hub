@@ -837,6 +837,7 @@
     "alertsEmpty": "No active alerts",
     "performanceTitle": "System performance",
     "performanceSubtitle": "Live CPU, memory, and request metrics",
+    "performanceUnavailable": "Live metrics unavailable — no monitoring source connected yet.",
     "eventsTitle": "Recent system events",
     "eventsSubtitle": "Latest audit log entries",
     "eventsEmpty": "No recent events",

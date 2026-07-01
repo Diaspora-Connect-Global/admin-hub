@@ -835,6 +835,7 @@
     "alertsEmpty": "Keine aktiven Warnungen",
     "performanceTitle": "Systemleistung",
     "performanceSubtitle": "Live-CPU-, Speicher- und Anfragemetriken",
+    "performanceUnavailable": "Live-Metriken nicht verfügbar — noch keine Überwachungsquelle verbunden.",
     "eventsTitle": "Aktuelle Systemereignisse",
     "eventsSubtitle": "Neueste Audit-Log-Einträge",
     "eventsEmpty": "Keine aktuellen Ereignisse",

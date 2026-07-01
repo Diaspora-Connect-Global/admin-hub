@@ -835,6 +835,7 @@
     "alertsEmpty": "Aucune alerte active",
     "performanceTitle": "Performance du système",
     "performanceSubtitle": "Métriques en direct du CPU, de la mémoire et des requêtes",
+    "performanceUnavailable": "Métriques en direct indisponibles — aucune source de surveillance connectée pour le moment.",
     "eventsTitle": "Événements système récents",
     "eventsSubtitle": "Dernières entrées du journal d'audit",
     "eventsEmpty": "Aucun événement récent",

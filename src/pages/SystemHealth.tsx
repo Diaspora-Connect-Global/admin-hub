@@ -515,6 +515,9 @@ export default function SystemHealth() {
                 <CardDescription>{t("systemHealth.performanceSubtitle")}</CardDescription>
               </CardHeader>
               <CardContent>
+                {metrics.length === 0 ? (
+                  <EmptyState title={t("systemHealth.performanceUnavailable")} />
+                ) : (
                 <div className="h-[300px]">
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={performanceData}>
@@ -563,6 +566,7 @@ export default function SystemHealth() {
                     </LineChart>
                   </ResponsiveContainer>
                 </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>

@@ -835,6 +835,7 @@
     "alertsEmpty": "Geen actieve waarschuwingen",
     "performanceTitle": "Systeemprestaties",
     "performanceSubtitle": "Live CPU-, geheugen- en verzoekmetrieken",
+    "performanceUnavailable": "Live-metrieken niet beschikbaar — nog geen monitoringbron verbonden.",
     "eventsTitle": "Recente systeemgebeurtenissen",
     "eventsSubtitle": "Nieuwste auditlogboekvermeldingen",
     "eventsEmpty": "Geen recente gebeurtenissen",

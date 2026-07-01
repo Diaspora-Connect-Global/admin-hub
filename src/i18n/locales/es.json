@@ -835,6 +835,7 @@
     "alertsEmpty": "No hay alertas activas",
     "performanceTitle": "Rendimiento del sistema",
     "performanceSubtitle": "Métricas en vivo de CPU, memoria y solicitudes",
+    "performanceUnavailable": "Métricas en vivo no disponibles: aún no hay una fuente de monitoreo conectada.",
     "eventsTitle": "Eventos recientes del sistema",
     "eventsSubtitle": "Últimas entradas del registro de auditoría",
     "eventsEmpty": "No hay eventos recientes",
