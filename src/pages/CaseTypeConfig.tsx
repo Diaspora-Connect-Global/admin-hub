@@ -31,6 +31,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
+import { friendlyErrorMessage } from "@/lib/graphqlErrors";
 import { Plus, Edit, Power } from "lucide-react";
 import {
   useAdminCaseTypes,
@@ -165,7 +166,7 @@ export default function CaseTypeConfig() {
       setIsDialogOpen(false);
     } catch (err: unknown) {
       const fallback = editing ? t("caseTypes.updateError") : t("caseTypes.createError");
-      const message = err instanceof Error ? err.message : fallback;
+      const message = friendlyErrorMessage(err, fallback);
       toast({ title: t("common.errorTitle"), description: message, variant: "destructive" });
     }
   };
@@ -176,7 +177,7 @@ export default function CaseTypeConfig() {
       await deactivateMutation({ variables: { id: ct.id } });
       toast({ title: t("common.save"), description: t("caseTypes.deactivateSuccess") });
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : t("caseTypes.deactivateError");
+      const message = friendlyErrorMessage(err, t("caseTypes.deactivateError"));
       toast({ title: t("common.errorTitle"), description: message, variant: "destructive" });
     }
   };

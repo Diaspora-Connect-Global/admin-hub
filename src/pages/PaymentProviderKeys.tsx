@@ -56,6 +56,7 @@ import {
 } from "@/hooks/admin";
 import { PaymentProviderKeyModal } from "@/components/admin/PaymentProviderKeyModal";
 import { StatusBadge } from "@/components/ui/StatusBadge";
+import { friendlyErrorMessage } from "@/lib/graphqlErrors";
 
 const PROVIDER_LABELS: Record<PaymentProviderType, string> = {
   STRIPE: "Stripe",
@@ -112,7 +113,7 @@ export default function PaymentProviderKeys() {
     } catch (err) {
       toast({
         title: "Error",
-        description: (err as Error).message,
+        description: friendlyErrorMessage(err),
         variant: "destructive",
       });
     }
@@ -130,7 +131,7 @@ export default function PaymentProviderKeys() {
     } catch (err) {
       toast({
         title: "Error",
-        description: (err as Error).message,
+        description: friendlyErrorMessage(err),
         variant: "destructive",
       });
     }

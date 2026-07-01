@@ -66,6 +66,7 @@ import { CommunityAuditTab } from "@/components/community/CommunityAuditTab";
 import { EditCommunityDialog } from "@/components/community/EditCommunityDialog";
 import { LinkAssociationDialog, AssignAdminDialog } from "@/components/community/CommunityAdminDialogs";
 import { uploadCommunityAvatar, uploadCommunityCover } from "@/lib/communityImageUpload";
+import { friendlyErrorMessage } from "@/lib/graphqlErrors";
 
 const allCountries = [
   "Afghanistan", "Albania", "Algeria", "Andorra", "Angola", "Antigua and Barbuda", "Argentina", "Armenia", "Australia", "Austria",
@@ -393,7 +394,7 @@ export default function CommunityDetail() {
       await refetch();
       toast({ title: "Logo removed", description: "The community logo was removed." });
     } catch (e) {
-      const message = e instanceof Error ? e.message : "Failed to remove logo.";
+      const message = friendlyErrorMessage(e, "Failed to remove logo.");
       toast({ title: "Remove failed", description: message, variant: "destructive" });
     } finally {
       setRemovingAvatar(false);
@@ -410,7 +411,7 @@ export default function CommunityDetail() {
       await refetch();
       toast({ title: "Banner removed", description: "The community banner was removed." });
     } catch (e) {
-      const message = e instanceof Error ? e.message : "Failed to remove banner.";
+      const message = friendlyErrorMessage(e, "Failed to remove banner.");
       toast({ title: "Remove failed", description: message, variant: "destructive" });
     } finally {
       setRemovingBanner(false);
@@ -453,7 +454,7 @@ export default function CommunityDetail() {
         });
       }
     } catch (e) {
-      const message = e instanceof Error ? e.message : "Link failed.";
+      const message = friendlyErrorMessage(e, "Link failed.");
       toast({
         title: t("communities.validationError"),
         description: message,
@@ -492,7 +493,7 @@ export default function CommunityDetail() {
     } catch (e) {
       toast({
         title: t("communities.validationError"),
-        description: e instanceof Error ? e.message : "Unlink failed.",
+        description: friendlyErrorMessage(e, "Unlink failed."),
         variant: "destructive",
       });
     }
@@ -550,7 +551,7 @@ export default function CommunityDetail() {
     } catch (e) {
       toast({
         title: t("communities.validationError"),
-        description: e instanceof Error ? e.message : String(e),
+        description: friendlyErrorMessage(e),
         variant: "destructive",
       });
     } finally {
@@ -623,7 +624,7 @@ export default function CommunityDetail() {
     } catch (e) {
       toast({
         title: t("communities.validationError"),
-        description: e instanceof Error ? e.message : String(e),
+        description: friendlyErrorMessage(e),
         variant: "destructive",
       });
     } finally {
@@ -761,7 +762,7 @@ export default function CommunityDetail() {
       setEditOpen(false);
       toast({ title: "Community updated", description: "Changes were saved successfully." });
     } catch (e) {
-      const message = e instanceof Error ? e.message : "Failed to update community.";
+      const message = friendlyErrorMessage(e, "Failed to update community.");
       toast({ title: "Update failed", description: message, variant: "destructive" });
     }
   };

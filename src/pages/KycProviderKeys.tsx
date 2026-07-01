@@ -55,6 +55,7 @@ import {
 } from "@/hooks/admin";
 import { KycProviderCredentialModal } from "@/components/admin/KycProviderCredentialModal";
 import { StatusBadge } from "@/components/ui/StatusBadge";
+import { friendlyErrorMessage } from "@/lib/graphqlErrors";
 
 const PROVIDER_LABELS: Record<KycProviderType, string> = {
   ONFIDO: "Onfido",
@@ -134,7 +135,7 @@ export default function KycProviderKeys() {
     } catch (err) {
       toast({
         title: "Error",
-        description: (err as Error).message,
+        description: friendlyErrorMessage(err),
         variant: "destructive",
       });
     }

@@ -25,6 +25,7 @@ import {
 } from "@/hooks/admin";
 import { FieldError } from "@/components/common/FieldError";
 import { httpUrl } from "@/lib/validation";
+import { friendlyErrorMessage } from "@/lib/graphqlErrors";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 
 interface KycProviderCredentialModalProps {
@@ -293,7 +294,7 @@ export function KycProviderCredentialModal({
     } catch (err) {
       toast({
         title: "Error",
-        description: (err as Error).message,
+        description: friendlyErrorMessage(err),
         variant: "destructive",
       });
     }

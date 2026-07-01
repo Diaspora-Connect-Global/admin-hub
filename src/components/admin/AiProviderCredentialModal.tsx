@@ -26,6 +26,7 @@ import {
 } from "@/hooks/admin";
 import { FieldError } from "@/components/common/FieldError";
 import { secureHttpsUrl } from "@/lib/validation";
+import { friendlyErrorMessage } from "@/lib/graphqlErrors";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 
 interface AiProviderCredentialModalProps {
@@ -143,7 +144,7 @@ export function AiProviderCredentialModal({
     } catch (err) {
       toast({
         title: "Error",
-        description: (err as Error).message,
+        description: friendlyErrorMessage(err),
         variant: "destructive",
       });
     }

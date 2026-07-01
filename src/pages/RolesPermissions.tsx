@@ -57,6 +57,7 @@ import { CreateAdminModal } from "@/components/admin/CreateAdminModal";
 import { UpdateAdminStatusModal } from "@/components/admin/UpdateAdminStatusModal";
 import { AssignRoleModal } from "@/components/admin/AssignRoleModal";
 import type { AdminAccount, RoleDefinition } from "@/services/networks/graphql/admin";
+import { friendlyErrorMessage } from "@/lib/graphqlErrors";
 
 const resources = [
   { id: "users", label: "Users" },
@@ -171,7 +172,7 @@ export default function RolesPermissions() {
     } catch (error) {
       toast({
         title: "Error",
-        description: (error as Error).message,
+        description: friendlyErrorMessage(error),
         variant: "destructive",
       });
     }
@@ -247,7 +248,7 @@ export default function RolesPermissions() {
     } catch (error) {
       toast({
         title: "Error",
-        description: (error as Error).message,
+        description: friendlyErrorMessage(error),
         variant: "destructive",
       });
     }
@@ -799,7 +800,7 @@ export default function RolesPermissions() {
                       toast({ title: "Error", description: "Failed to update role", variant: "destructive" });
                     }
                   } catch (error) {
-                    toast({ title: "Error", description: (error as Error).message, variant: "destructive" });
+                    toast({ title: "Error", description: friendlyErrorMessage(error), variant: "destructive" });
                   }
                 }}
               >
@@ -851,7 +852,7 @@ export default function RolesPermissions() {
                       toast({ title: "Error", description: "Failed to delete role", variant: "destructive" });
                     }
                   } catch (error) {
-                    toast({ title: "Error", description: (error as Error).message, variant: "destructive" });
+                    toast({ title: "Error", description: friendlyErrorMessage(error), variant: "destructive" });
                   }
                 }}
               >

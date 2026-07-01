@@ -57,6 +57,7 @@ import {
 } from "@/hooks/opportunity";
 import { useSetOpportunityPriority } from "@/hooks/opportunity/superAdmin";
 import { LIST_OPPORTUNITIES } from "@/services/networks/graphql/opportunity";
+import { friendlyErrorMessage } from "@/lib/graphqlErrors";
 
 export default function Opportunities() {
   const location = useLocation();
@@ -323,7 +324,7 @@ export default function Opportunities() {
         setEditOpportunity(null);
         refetchList();
       } catch (e) {
-        toast({ title: "Error", description: (e as Error).message, variant: "destructive" });
+        toast({ title: "Error", description: friendlyErrorMessage(e), variant: "destructive" });
       }
       return;
     }
@@ -356,7 +357,7 @@ export default function Opportunities() {
       } else {
         toast({
           title: "Error",
-          description: graphQLError?.message || (e as Error).message || "Failed to create opportunity",
+          description: friendlyErrorMessage(e, "Failed to create opportunity"),
           variant: "destructive",
         });
       }
@@ -371,7 +372,7 @@ export default function Opportunities() {
       toast({ title: "Success", description: "Opportunity published successfully." });
       refetchList();
     } catch (e) {
-      toast({ title: "Error", description: (e as Error).message, variant: "destructive" });
+      toast({ title: "Error", description: friendlyErrorMessage(e), variant: "destructive" });
     }
   };
 
@@ -382,7 +383,7 @@ export default function Opportunities() {
       toast({ title: "Success", description: "Opportunity closed successfully." });
       refetchList();
     } catch (e) {
-      toast({ title: "Error", description: (e as Error).message, variant: "destructive" });
+      toast({ title: "Error", description: friendlyErrorMessage(e), variant: "destructive" });
     }
   };
 
@@ -395,7 +396,7 @@ export default function Opportunities() {
       setDeleteOpportunity(null);
       refetchList();
     } catch (e) {
-      toast({ title: "Error", description: (e as Error).message, variant: "destructive" });
+      toast({ title: "Error", description: friendlyErrorMessage(e), variant: "destructive" });
     }
   };
 
@@ -406,7 +407,7 @@ export default function Opportunities() {
       toast({ title: "Success", description: `Priority set to ${priority.toLowerCase()}.` });
       refetchList();
     } catch (e) {
-      toast({ title: "Error", description: (e as Error).message, variant: "destructive" });
+      toast({ title: "Error", description: friendlyErrorMessage(e), variant: "destructive" });
     }
   };
 
@@ -417,7 +418,7 @@ export default function Opportunities() {
       toast({ title: "Success", description: "Application marked for review." });
       refetchApplications();
     } catch (e) {
-      toast({ title: "Error", description: (e as Error).message, variant: "destructive" });
+      toast({ title: "Error", description: friendlyErrorMessage(e), variant: "destructive" });
     }
   };
 
@@ -430,7 +431,7 @@ export default function Opportunities() {
       setApplicationModalOpen(false);
       setSelectedApplicant(null);
     } catch (e) {
-      toast({ title: "Error", description: (e as Error).message, variant: "destructive" });
+      toast({ title: "Error", description: friendlyErrorMessage(e), variant: "destructive" });
     }
   };
 
@@ -443,7 +444,7 @@ export default function Opportunities() {
       setRejectModalOpen(false);
       setSelectedApplicant(null);
     } catch (e) {
-      toast({ title: "Error", description: (e as Error).message, variant: "destructive" });
+      toast({ title: "Error", description: friendlyErrorMessage(e), variant: "destructive" });
     }
   };
 
@@ -462,7 +463,7 @@ export default function Opportunities() {
       setSelectedOpportunities([]);
       refetchList();
     } catch (e) {
-      toast({ title: "Error", description: (e as Error).message, variant: "destructive" });
+      toast({ title: "Error", description: friendlyErrorMessage(e), variant: "destructive" });
     }
   };
 
@@ -476,7 +477,7 @@ export default function Opportunities() {
       setSelectedOpportunities([]);
       refetchList();
     } catch (e) {
-      toast({ title: "Error", description: (e as Error).message, variant: "destructive" });
+      toast({ title: "Error", description: friendlyErrorMessage(e), variant: "destructive" });
     }
   };
 

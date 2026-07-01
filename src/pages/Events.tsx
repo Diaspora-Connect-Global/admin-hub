@@ -46,6 +46,7 @@ import {
 import { uploadEventBannerToStorage } from "@/lib/eventBannerUpload";
 import { getUserId } from "@/stores/session";
 import { useSessionStore } from "@/stores/sessionStore";
+import { friendlyErrorMessage } from "@/lib/graphqlErrors";
 
 export default function Events() {
   const location = useLocation();
@@ -419,7 +420,7 @@ export default function Events() {
       setCreateModalOpen(false);
       refetch();
     } catch (e) {
-      toast({ title: "Error", description: (e as Error).message, variant: "destructive" });
+      toast({ title: "Error", description: friendlyErrorMessage(e), variant: "destructive" });
       throw e;
     }
   };

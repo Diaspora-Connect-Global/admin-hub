@@ -75,6 +75,7 @@ import {
 import { AiProviderCredentialModal } from "@/components/admin/AiProviderCredentialModal";
 import { AiClassifierConfigModal } from "@/components/admin/AiClassifierConfigModal";
 import { StatusBadge } from "@/components/ui/StatusBadge";
+import { friendlyErrorMessage } from "@/lib/graphqlErrors";
 
 const PROVIDER_LABELS: Record<AiProviderType, string> = {
   OPENAI: "OpenAI",
@@ -142,7 +143,7 @@ export default function AiConfiguration() {
     } catch (err) {
       toast({
         title: "Error",
-        description: (err as Error).message,
+        description: friendlyErrorMessage(err),
         variant: "destructive",
       });
     }
@@ -187,7 +188,7 @@ export default function AiConfiguration() {
     } catch (err) {
       toast({
         title: "Error",
-        description: (err as Error).message,
+        description: friendlyErrorMessage(err),
         variant: "destructive",
       });
     }
@@ -230,7 +231,7 @@ export default function AiConfiguration() {
     } catch (err) {
       toast({
         title: "Error",
-        description: (err as Error).message,
+        description: friendlyErrorMessage(err),
         variant: "destructive",
       });
     }
@@ -252,7 +253,7 @@ export default function AiConfiguration() {
     } catch (err) {
       toast({
         title: "Error",
-        description: (err as Error).message,
+        description: friendlyErrorMessage(err),
         variant: "destructive",
       });
     }

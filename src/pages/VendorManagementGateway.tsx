@@ -29,6 +29,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
+import { friendlyErrorMessage } from "@/lib/graphqlErrors";
 import {
   useAddMilestone,
   useCreateProduct,
@@ -209,7 +210,7 @@ export default function VendorManagementGateway() {
     } catch (error) {
       toast({
         title: "Create vendor failed",
-        description: extractErrorMessage(error),
+        description: friendlyErrorMessage(error),
         variant: "destructive",
       });
     }
@@ -227,7 +228,7 @@ export default function VendorManagementGateway() {
       setSuspendReason("");
       await Promise.all([refetchVendor(), refetchEligibility(), refetchDashboard()]);
     } catch (error) {
-      toast({ title: "Suspend failed", description: extractErrorMessage(error), variant: "destructive" });
+      toast({ title: "Suspend failed", description: friendlyErrorMessage(error), variant: "destructive" });
     }
   };
 
@@ -238,7 +239,7 @@ export default function VendorManagementGateway() {
       toast({ title: "Vendor reinstated" });
       await Promise.all([refetchVendor(), refetchEligibility(), refetchDashboard()]);
     } catch (error) {
-      toast({ title: "Reinstate failed", description: extractErrorMessage(error), variant: "destructive" });
+      toast({ title: "Reinstate failed", description: friendlyErrorMessage(error), variant: "destructive" });
     }
   };
 
@@ -258,7 +259,7 @@ export default function VendorManagementGateway() {
       );
       toast({ title: "Upload URL created", description: "Upload file to uploadUrl, then store readUrl in later mutations." });
     } catch (error) {
-      toast({ title: "Upload URL request failed", description: extractErrorMessage(error), variant: "destructive" });
+      toast({ title: "Upload URL request failed", description: friendlyErrorMessage(error), variant: "destructive" });
     }
   };
 
@@ -280,7 +281,7 @@ export default function VendorManagementGateway() {
       toast({ title: "Payout requested" });
       await refetchOrders();
     } catch (error) {
-      toast({ title: "Payout request failed", description: extractErrorMessage(error), variant: "destructive" });
+      toast({ title: "Payout request failed", description: friendlyErrorMessage(error), variant: "destructive" });
     }
   };
 
@@ -295,7 +296,7 @@ export default function VendorManagementGateway() {
       toast({ title: "Product created" });
       await Promise.all([refetchProducts(), refetchDashboard()]);
     } catch (error) {
-      toast({ title: "Create product failed", description: extractErrorMessage(error), variant: "destructive" });
+      toast({ title: "Create product failed", description: friendlyErrorMessage(error), variant: "destructive" });
     }
   };
 
@@ -310,7 +311,7 @@ export default function VendorManagementGateway() {
       toast({ title: "Product updated" });
       await refetchProducts();
     } catch (error) {
-      toast({ title: "Update product failed", description: extractErrorMessage(error), variant: "destructive" });
+      toast({ title: "Update product failed", description: friendlyErrorMessage(error), variant: "destructive" });
     }
   };
 
@@ -320,7 +321,7 @@ export default function VendorManagementGateway() {
       toast({ title: "Product published" });
       await refetchProducts();
     } catch (error) {
-      toast({ title: "Publish product failed", description: extractErrorMessage(error), variant: "destructive" });
+      toast({ title: "Publish product failed", description: friendlyErrorMessage(error), variant: "destructive" });
     }
   };
 
@@ -330,7 +331,7 @@ export default function VendorManagementGateway() {
       toast({ title: "Product deleted" });
       await Promise.all([refetchProducts(), refetchDashboard()]);
     } catch (error) {
-      toast({ title: "Delete product failed", description: extractErrorMessage(error), variant: "destructive" });
+      toast({ title: "Delete product failed", description: friendlyErrorMessage(error), variant: "destructive" });
     }
   };
 
@@ -345,7 +346,7 @@ export default function VendorManagementGateway() {
       toast({ title: "Service package created" });
       await Promise.all([refetchServicePackages(), refetchDashboard()]);
     } catch (error) {
-      toast({ title: "Create service package failed", description: extractErrorMessage(error), variant: "destructive" });
+      toast({ title: "Create service package failed", description: friendlyErrorMessage(error), variant: "destructive" });
     }
   };
 
@@ -360,7 +361,7 @@ export default function VendorManagementGateway() {
       toast({ title: "Milestone added" });
       await refetchServicePackages();
     } catch (error) {
-      toast({ title: "Add milestone failed", description: extractErrorMessage(error), variant: "destructive" });
+      toast({ title: "Add milestone failed", description: friendlyErrorMessage(error), variant: "destructive" });
     }
   };
 
@@ -372,7 +373,7 @@ export default function VendorManagementGateway() {
     } catch (error) {
       toast({
         title: "Publish package failed",
-        description: extractErrorMessage(error),
+        description: friendlyErrorMessage(error),
         variant: "destructive",
       });
     }

@@ -65,6 +65,7 @@ import {
 import { CreateCommunityTypeModal } from "@/components/admin/CreateCommunityTypeModal";
 import { CreateAssociationTypeModal } from "@/components/admin/CreateAssociationTypeModal";
 import type { CommunityType, AssociationType } from "@/services/networks/graphql/admin";
+import { friendlyErrorMessage } from "@/lib/graphqlErrors";
 
 // Language options
 const languages = [
@@ -223,7 +224,7 @@ export default function SystemSettings() {
     } catch (err) {
       toast({
         title: "Error",
-        description: (err as Error).message,
+        description: friendlyErrorMessage(err),
         variant: "destructive",
       });
     }
@@ -242,7 +243,7 @@ export default function SystemSettings() {
     } catch (err) {
       toast({
         title: "Error",
-        description: (err as Error).message,
+        description: friendlyErrorMessage(err),
         variant: "destructive",
       });
     }
@@ -317,7 +318,7 @@ export default function SystemSettings() {
     } catch (error) {
       toast({
         title: "Error",
-        description: (error as Error).message,
+        description: friendlyErrorMessage(error),
         variant: "destructive",
       });
     }
@@ -336,7 +337,7 @@ export default function SystemSettings() {
     } catch (error) {
       toast({
         title: "Error",
-        description: (error as Error).message,
+        description: friendlyErrorMessage(error),
         variant: "destructive",
       });
     }

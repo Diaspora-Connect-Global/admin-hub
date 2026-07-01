@@ -53,6 +53,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
+import { friendlyErrorMessage } from "@/lib/graphqlErrors";
 import {
   Search,
   CheckSquare,
@@ -213,7 +214,7 @@ export default function ContentModeration() {
       toast({ title: "Success", description: "Report resolved successfully." });
       refetchReports();
     } catch (e) {
-      toast({ title: "Error", description: (e as Error).message, variant: "destructive" });
+      toast({ title: "Error", description: friendlyErrorMessage(e), variant: "destructive" });
     }
     setIsApproveModalOpen(false);
     setApproveNote("");
@@ -226,7 +227,7 @@ export default function ContentModeration() {
       toast({ title: "Success", description: "Report dismissed." });
       refetchReports();
     } catch (e) {
-      toast({ title: "Error", description: (e as Error).message, variant: "destructive" });
+      toast({ title: "Error", description: friendlyErrorMessage(e), variant: "destructive" });
     }
     setIsRejectModalOpen(false);
     setRejectReason("");
@@ -238,7 +239,7 @@ export default function ContentModeration() {
       toast({ title: "Success", description: "Content removed." });
       refetchReports();
     } catch (e) {
-      toast({ title: "Error", description: (e as Error).message, variant: "destructive" });
+      toast({ title: "Error", description: friendlyErrorMessage(e), variant: "destructive" });
     }
     setIsFlagModalOpen(false);
     setFlagReason("");

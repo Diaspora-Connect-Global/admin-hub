@@ -47,6 +47,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
+import { friendlyErrorMessage } from "@/lib/graphqlErrors";
 import {
   Search,
   Plus,
@@ -247,7 +248,7 @@ export default function DisputesResolution() {
       setResolveNotes("");
       refetchDisputes();
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Failed to resolve dispute.";
+      const message = friendlyErrorMessage(err, "Failed to resolve dispute.");
       toast({ title: "Error", description: message, variant: "destructive" });
     }
   };

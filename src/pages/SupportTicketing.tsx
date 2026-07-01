@@ -39,6 +39,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
+import { friendlyErrorMessage } from "@/lib/graphqlErrors";
 import {
   Search,
   Eye,
@@ -231,7 +232,7 @@ export default function SupportTicketing() {
       setIsAssignOpen(false);
       setAssignTo("");
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : t("supportCases.assignError");
+      const message = friendlyErrorMessage(err, t("supportCases.assignError"));
       toast({ title: t("common.errorTitle"), description: message, variant: "destructive" });
     }
   };
@@ -258,7 +259,7 @@ export default function SupportTicketing() {
       setResolutionSummary("");
       setResolutionError(false);
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : t("supportCases.statusError");
+      const message = friendlyErrorMessage(err, t("supportCases.statusError"));
       toast({ title: t("common.errorTitle"), description: message, variant: "destructive" });
     }
   };
@@ -270,7 +271,7 @@ export default function SupportTicketing() {
       toast({ title: t("common.save"), description: t("supportCases.noteSuccess") });
       setNewNote("");
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : t("supportCases.noteError");
+      const message = friendlyErrorMessage(err, t("supportCases.noteError"));
       toast({ title: t("common.errorTitle"), description: message, variant: "destructive" });
     }
   };
@@ -310,7 +311,7 @@ export default function SupportTicketing() {
       });
       toast({ title: t("common.save"), description: t("supportCases.evidenceSuccess") });
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : t("supportCases.evidenceError");
+      const message = friendlyErrorMessage(err, t("supportCases.evidenceError"));
       toast({ title: t("common.errorTitle"), description: message, variant: "destructive" });
     } finally {
       setUploadInFlight(false);

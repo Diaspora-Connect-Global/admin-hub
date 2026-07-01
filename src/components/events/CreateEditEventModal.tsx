@@ -277,7 +277,13 @@ export function CreateEditEventModal({
   const validateStep = (step: number): string | null => {
     if (step === 1) {
       if (!formData.title.trim()) return "Event title is required.";
+      if (formData.title.trim().length < 5) {
+        return "Event title must be at least 5 characters long.";
+      }
       if (!formData.description.trim()) return "Event description is required.";
+      if (formData.description.trim().length < 20) {
+        return "Event description must be at least 20 characters long.";
+      }
     }
     if (step === 2) {
       if (!formData.date) return "Event date is required.";
@@ -326,6 +332,11 @@ export function CreateEditEventModal({
         if (ticket.maxPerOrder > ticket.quantity) {
           return `Ticket #${i + 1} max per order cannot exceed quantity.`;
         }
+      }
+    }
+    if (step === 3 && formData.hasParticipantLimit) {
+      if (!Number.isFinite(formData.maxParticipants) || formData.maxParticipants <= 0) {
+        return "Maximum participants must be greater than 0.";
       }
     }
     return null;
@@ -433,6 +444,15 @@ export function CreateEditEventModal({
                   value={formData.title}
                   onChange={(e) => updateField("title", e.target.value)}
                 />
+                <p
+                  className={`text-xs ${
+                    formData.title.trim().length > 0 && formData.title.trim().length < 5
+                      ? "text-destructive"
+                      : "text-muted-foreground"
+                  }`}
+                >
+                  Minimum 5 characters ({formData.title.trim().length}/5)
+                </p>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="description">{t.eventDescription} *</Label>
@@ -443,6 +463,15 @@ export function CreateEditEventModal({
                   value={formData.description}
                   onChange={(e) => updateField("description", e.target.value)}
                 />
+                <p
+                  className={`text-xs ${
+                    formData.description.trim().length > 0 && formData.description.trim().length < 20
+                      ? "text-destructive"
+                      : "text-muted-foreground"
+                  }`}
+                >
+                  Minimum 20 characters ({formData.description.trim().length}/20)
+                </p>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="space-y-2">

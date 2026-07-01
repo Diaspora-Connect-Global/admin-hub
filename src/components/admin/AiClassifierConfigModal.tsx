@@ -18,6 +18,7 @@ import {
   type AiClassifierConfig,
 } from "@/hooks/admin";
 import { Loader2 } from "lucide-react";
+import { friendlyErrorMessage } from "@/lib/graphqlErrors";
 
 interface AiClassifierConfigModalProps {
   isOpen: boolean;
@@ -106,7 +107,7 @@ export function AiClassifierConfigModal({
     } catch (err) {
       toast({
         title: "Error",
-        description: (err as Error).message,
+        description: friendlyErrorMessage(err),
         variant: "destructive",
       });
     }

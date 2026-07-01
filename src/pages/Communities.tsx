@@ -18,6 +18,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { MultiSelect } from "@/components/ui/multi-select";
 import { Search, Plus, MoreHorizontal, Eye, Edit, Link2, Pause, ChevronDown, Download, FileJson, BarChart3, Trash2, Upload, Globe, Loader2, X } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { friendlyErrorMessage } from "@/lib/graphqlErrors";
 import { useCreateCommunity, useDiscoverAssociations, useGetUsers, useListCommunities } from "@/hooks/admin";
 import { useListCommunityTypes } from "@/hooks/admin/useEntityTypes";
 import type { CreateCommunityInput, Community, CommunityType } from "@/services/networks/graphql/admin";
@@ -336,11 +337,10 @@ export default function Communities() {
         setFormData(initialFormData);
         refetchCommunities();
       } else if (result.error) {
-        toast({ title: t('communities.validationError'), description: result.error.message, variant: "destructive" });
+        toast({ title: t('communities.validationError'), description: friendlyErrorMessage(result.error), variant: "destructive" });
       }
     } catch (e) {
-      const message = e instanceof Error ? e.message : "Failed to create community";
-      toast({ title: t('communities.validationError'), description: message, variant: "destructive" });
+      toast({ title: t('communities.validationError'), description: friendlyErrorMessage(e, "Failed to create community"), variant: "destructive" });
     }
   };
 
