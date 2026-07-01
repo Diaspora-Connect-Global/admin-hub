@@ -9,12 +9,20 @@ import {
   useGetAuditLogs,
   type SystemAlert,
 } from "@/hooks/admin";
+import type { SystemHealthService } from "@/services/networks/graphql/admin";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { StatusBadge, type StatusBadgeProps } from "@/components/ui/StatusBadge";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { MetricCard } from "@/components/dashboard/MetricCard";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import {
   Select,
@@ -39,8 +47,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  LoadingState,
+  ErrorState,
+  EmptyState,
+} from "@/components/common/StateViews";
 import { useToast } from "@/hooks/use-toast";
 import {
   Search,
@@ -50,14 +64,42 @@ import {
   XCircle,
   Clock,
   Server,
-  Database,
+  Layers,
+  ListChecks,
+  ArrowDownCircle,
+  Gauge,
   FileText,
   Settings,
   Wallet,
   Activity,
   Eye,
 } from "lucide-react";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Legend,
+} from "recharts";
+
+/** Maps backend category strings to translation keys. */
+const CATEGORY_KEYS: Record<string, string> = {
+  "Core Platform": "systemHealth.categoryCorePlatform",
+  "Social & Content": "systemHealth.categorySocialContent",
+  "Commerce & Payments": "systemHealth.categoryCommercePayments",
+  "Discovery & Knowledge": "systemHealth.categoryDiscoveryKnowledge",
+  "AI & Intelligence": "systemHealth.categoryAiIntelligence",
+};
+
+const isHealthy = (status: string) =>
+  status.toLowerCase() === "healthy" || status.toLowerCase() === "up";
+const isDegraded = (status: string) =>
+  status.toLowerCase() === "warning" || status.toLowerCase() === "degraded";
+const isDown = (status: string) =>
+  status.toLowerCase() === "critical" || status.toLowerCase() === "down";
 
 export default function SystemHealth() {
   const { toast } = useToast();
@@ -70,7 +112,12 @@ export default function SystemHealth() {
   const [selectedAlert, setSelectedAlert] = useState<SystemAlert | null>(null);
   const [acknowledgeNote, setAcknowledgeNote] = useState("");
 
-  const { data: healthData, loading: healthLoading, refetch: refetchHealth } = useGetSystemHealth();
+  const {
+    data: healthData,
+    loading: healthLoading,
+    error: healthError,
+    refetch: refetchHealth,
+  } = useGetSystemHealth();
   const { data: alertsData, loading: alertsLoading, refetch: refetchAlerts } = useGetSystemAlerts();
   const { data: metricsData } = useGetPerformanceMetrics();
   const { data: auditData } = useGetAuditLogs({ limit: 10 });
@@ -84,10 +131,48 @@ export default function SystemHealth() {
   const auditLogs = auditData?.getAuditLogs?.items ?? [];
 
   const filteredServices = liveServices.filter((svc) => {
-    const matchesSearch = !searchQuery || svc.service.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = statusFilter === "all" || svc.status.toLowerCase() === statusFilter.toLowerCase();
+    const matchesSearch =
+      !searchQuery || svc.service.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesStatus =
+      statusFilter === "all" ||
+      (statusFilter === "healthy" && isHealthy(svc.status)) ||
+      (statusFilter === "degraded" && isDegraded(svc.status)) ||
+      (statusFilter === "down" && isDown(svc.status));
     return matchesSearch && matchesStatus;
   });
+
+  // Group filtered services by their backend `category` field, preserving order.
+  const groupedServices = useMemo(() => {
+    const groups = new Map<string, SystemHealthService[]>();
+    for (const svc of filteredServices) {
+      const key = svc.category ?? "__other__";
+      const bucket = groups.get(key);
+      if (bucket) bucket.push(svc);
+      else groups.set(key, [svc]);
+    }
+    return Array.from(groups.entries());
+  }, [filteredServices]);
+
+  const categoryLabel = (rawKey: string) => {
+    if (rawKey === "__other__") return t("systemHealth.categoryOther");
+    return CATEGORY_KEYS[rawKey] ? t(CATEGORY_KEYS[rawKey]) : rawKey;
+  };
+
+  // KPI aggregates computed from all live services (not filtered).
+  const totalServices = liveServices.length;
+  const healthyCount = liveServices.filter((s) => isHealthy(s.status)).length;
+  const degradedCount = liveServices.filter((s) => isDegraded(s.status)).length;
+  const downCount = liveServices.filter((s) => isDown(s.status)).length;
+  const latencies = liveServices
+    .map((s) => s.latencyMs)
+    .filter((l): l is number => typeof l === "number");
+  const avgLatency = latencies.length
+    ? Math.round(latencies.reduce((a, b) => a + b, 0) / latencies.length)
+    : 0;
+  const uptimePercent =
+    totalServices > 0
+      ? Math.round((healthyCount / totalServices) * 10000) / 100
+      : 0;
 
   // Build a single "Now" chart data point from live metrics + pad with historical context
   const performanceData = useMemo(() => {
@@ -116,19 +201,10 @@ export default function SystemHealth() {
   }, [metrics]);
 
   const getStatusIcon = (status: string) => {
-    switch (status.toLowerCase()) {
-      case "healthy":
-      case "up":
-        return <CheckCircle className="h-5 w-5 text-success" />;
-      case "warning":
-      case "degraded":
-        return <AlertTriangle className="h-5 w-5 text-warning" />;
-      case "critical":
-      case "down":
-        return <XCircle className="h-5 w-5 text-destructive" />;
-      default:
-        return <Clock className="h-5 w-5 text-muted-foreground" />;
-    }
+    if (isHealthy(status)) return <CheckCircle className="h-5 w-5 text-success" />;
+    if (isDegraded(status)) return <AlertTriangle className="h-5 w-5 text-warning" />;
+    if (isDown(status)) return <XCircle className="h-5 w-5 text-destructive" />;
+    return <Clock className="h-5 w-5 text-muted-foreground" />;
   };
 
   const getStatusBadge = (status: string) => {
@@ -146,11 +222,7 @@ export default function SystemHealth() {
       Active: "error",
       Acknowledged: "inactive",
     };
-    return (
-      <StatusBadge variant={variants[status] ?? "inactive"}>
-        {status}
-      </StatusBadge>
-    );
+    return <StatusBadge variant={variants[status] ?? "inactive"}>{status}</StatusBadge>;
   };
 
   const handleRefresh = async () => {
@@ -178,329 +250,389 @@ export default function SystemHealth() {
     }
   };
 
-  // Uptime derived from service statuses
-  const uptimePercent = liveServices.length > 0
-    ? Math.round((liveServices.filter((s) => s.status === "healthy" || s.status === "up").length / liveServices.length) * 10000) / 100
-    : 99.97;
+  const overallStatus = systemHealth?.overallStatus ?? "healthy";
+  const bannerClass = isDown(overallStatus)
+    ? "bg-destructive/10 border-destructive/30 text-destructive"
+    : isDegraded(overallStatus)
+      ? "bg-warning/10 border-warning/30 text-warning"
+      : "bg-success/10 border-success/30 text-success";
 
   return (
     <AdminLayout>
-      <div className="space-y-6">
+      <div className="space-y-6 animate-fade-in">
         {/* Header */}
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">{t('systemHealth.title')}</h1>
-          <p className="text-muted-foreground">{t('systemHealth.serverStatus')}</p>
-        </div>
-
-        {/* Top Bar */}
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div className="flex flex-1 items-center gap-4">
-            <div className="relative flex-1 max-w-sm">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                placeholder="Service name, database, cache, external API"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
-              />
+        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">{t("systemHealth.title")}</h1>
+            <p className="text-muted-foreground">{t("systemHealth.serverStatus")}</p>
+            <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+              <span className="inline-flex items-center gap-1.5">
+                <span className="relative flex h-2 w-2">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-success opacity-75" />
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-success" />
+                </span>
+                {t("systemHealth.autoRefreshing")}
+              </span>
+              {systemHealth?.checkedAt && (
+                <span className="inline-flex items-center gap-1.5">
+                  <Clock className="h-3 w-3" />
+                  {t("systemHealth.lastChecked")}{" "}
+                  {new Date(systemHealth.checkedAt).toLocaleTimeString()}
+                </span>
+              )}
             </div>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[130px]">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent className="bg-popover">
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="healthy">Healthy</SelectItem>
-                <SelectItem value="degraded">Degraded</SelectItem>
-                <SelectItem value="down">Down</SelectItem>
-              </SelectContent>
-            </Select>
           </div>
           <Button onClick={handleRefresh} disabled={isRefreshing}>
             <RefreshCw className={`mr-2 h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
-            Refresh Status
+            {t("systemHealth.refresh")}
           </Button>
         </div>
 
-        {/* Overall status banner */}
-        {systemHealth && (
-          <div className={`flex items-center gap-3 px-4 py-3 rounded-lg border text-sm font-medium ${
-            systemHealth.overallStatus === "healthy" ? "bg-success/10 border-success/30 text-success" :
-            systemHealth.overallStatus === "degraded" ? "bg-warning/10 border-warning/30 text-warning" :
-            "bg-destructive/10 border-destructive/30 text-destructive"
-          }`}>
-            {getStatusIcon(systemHealth.overallStatus)}
-            Overall system status: <span className="font-bold capitalize">{systemHealth.overallStatus}</span>
-            {systemHealth.checkedAt && (
-              <span className="ml-auto text-xs font-normal text-muted-foreground">
-                Last checked: {new Date(systemHealth.checkedAt).toLocaleTimeString()}
-              </span>
+        {healthLoading && !systemHealth ? (
+          <LoadingState rows={6} />
+        ) : healthError ? (
+          <ErrorState title={t("systemHealth.errorTitle")} onRetry={() => refetchHealth()} />
+        ) : (
+          <>
+            {/* Overall status banner */}
+            {systemHealth && (
+              <div
+                className={`flex items-center gap-3 rounded-lg border px-4 py-3 text-sm font-medium ${bannerClass}`}
+              >
+                {getStatusIcon(overallStatus)}
+                {t("systemHealth.overallStatus")}:{" "}
+                <span className="font-bold capitalize">{overallStatus}</span>
+              </div>
             )}
-          </div>
+
+            {/* Summary KPI row */}
+            <div className="grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
+              <MetricCard
+                label={t("systemHealth.kpiTotal")}
+                value={String(totalServices)}
+                icon={<Layers className="h-5 w-5" />}
+              />
+              <MetricCard
+                label={t("systemHealth.kpiHealthy")}
+                value={String(healthyCount)}
+                icon={<ListChecks className="h-5 w-5" />}
+              />
+              <MetricCard
+                label={t("systemHealth.kpiDegraded")}
+                value={String(degradedCount)}
+                icon={<AlertTriangle className="h-5 w-5" />}
+              />
+              <MetricCard
+                label={t("systemHealth.kpiDown")}
+                value={String(downCount)}
+                icon={<ArrowDownCircle className="h-5 w-5" />}
+              />
+              <MetricCard
+                label={t("systemHealth.kpiAvgLatency")}
+                value={`${avgLatency}ms`}
+                icon={<Gauge className="h-5 w-5" />}
+              />
+            </div>
+
+            {/* Uptime card */}
+            <div className="glass rounded-xl p-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-sm font-medium">
+                  <CheckCircle className="h-4 w-4 text-success" />
+                  {t("systemHealth.uptime")}
+                </div>
+                <span className="text-2xl font-bold text-success">{uptimePercent}%</span>
+              </div>
+              <Progress value={uptimePercent} className="mt-3 h-2" />
+              <p className="mt-2 text-xs text-muted-foreground">
+                {t("systemHealth.servicesHealthy", {
+                  healthy: healthyCount,
+                  total: totalServices,
+                })}
+              </p>
+            </div>
+
+            {/* Search + status filter */}
+            <div className="flex flex-col gap-4 md:flex-row md:items-center">
+              <div className="relative flex-1 max-w-sm">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  placeholder={t("systemHealth.searchPlaceholder")}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-[160px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-popover">
+                  <SelectItem value="all">{t("systemHealth.filterAll")}</SelectItem>
+                  <SelectItem value="healthy">{t("systemHealth.statusHealthy")}</SelectItem>
+                  <SelectItem value="degraded">{t("systemHealth.statusDegraded")}</SelectItem>
+                  <SelectItem value="down">{t("systemHealth.statusDown")}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Category-grouped service sections */}
+            {filteredServices.length === 0 ? (
+              <EmptyState title={t("systemHealth.noMatch")} />
+            ) : (
+              <div className="space-y-8">
+                {groupedServices.map(([categoryKey, services]) => (
+                  <section key={categoryKey} className="space-y-3">
+                    <h2 className="flex items-center gap-2 text-lg font-semibold tracking-tight">
+                      <Layers className="h-4 w-4 text-muted-foreground" />
+                      {categoryLabel(categoryKey)}
+                      <Badge variant="outline" className="ml-1">
+                        {services.length}
+                      </Badge>
+                    </h2>
+                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                      {services.map((svc) => (
+                        <div key={svc.service} className="glass rounded-xl p-4">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex items-center gap-2 text-sm font-medium">
+                              <Server className="h-4 w-4 text-muted-foreground" />
+                              {svc.service}
+                            </div>
+                            {getStatusIcon(svc.status)}
+                          </div>
+                          <div className="mt-3 flex flex-wrap items-center gap-2">
+                            {getStatusBadge(svc.status)}
+                            {svc.latencyMs != null && (
+                              <Badge variant="outline" className="text-xs font-normal">
+                                {t("systemHealth.latency")}: {svc.latencyMs}ms
+                              </Badge>
+                            )}
+                          </div>
+                          {svc.error && (
+                            <div
+                              className="mt-2 truncate text-xs text-destructive"
+                              title={svc.error}
+                            >
+                              {svc.error}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+                ))}
+              </div>
+            )}
+          </>
         )}
 
-        {/* Service Status Cards */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {healthLoading && (
-            <Card className="col-span-full">
-              <CardContent className="py-8 text-center text-muted-foreground">Loading service status...</CardContent>
-            </Card>
-          )}
-          {!healthLoading && filteredServices.length === 0 && liveServices.length > 0 && (
-            <Card className="col-span-full">
-              <CardContent className="py-8 text-center text-muted-foreground">No services match filters.</CardContent>
-            </Card>
-          )}
-          {filteredServices.map((svc) => (
-            <Card key={svc.service}>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium flex items-center gap-2">
-                  <Server className="h-4 w-4 text-muted-foreground" />
-                  {svc.service}
-                </CardTitle>
-                {getStatusIcon(svc.status)}
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center justify-between mb-3">
-                  {getStatusBadge(svc.status)}
-                </div>
-                <div className="space-y-2 text-sm">
-                  {svc.latencyMs != null && (
-                    <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground">Latency</span>
-                      <span className="font-medium">{svc.latencyMs}ms</span>
-                    </div>
-                  )}
-                  {svc.error && (
-                    <div className="text-destructive text-xs mt-1 truncate" title={svc.error}>
-                      {svc.error}
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+        {/* Tabbed lower section */}
+        <Tabs defaultValue="alerts" className="w-full">
+          <TabsList>
+            <TabsTrigger value="alerts">{t("systemHealth.tabAlerts")}</TabsTrigger>
+            <TabsTrigger value="performance">{t("systemHealth.tabPerformance")}</TabsTrigger>
+            <TabsTrigger value="events">{t("systemHealth.tabEvents")}</TabsTrigger>
+          </TabsList>
 
-          {/* Live Performance Metrics Cards */}
-          {metrics.length > 0 && metrics.map((m) => (
-            <Card key={m.label}>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium flex items-center gap-2">
-                  <Database className="h-4 w-4 text-muted-foreground" />
-                  {m.label.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}
+          {/* Alerts tab */}
+          <TabsContent value="alerts">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-xl">
+                  <AlertTriangle className="h-5 w-5 text-warning" />
+                  {t("systemHealth.alertsTitle")}
                 </CardTitle>
-                <Activity className="h-4 w-4 text-primary" />
+                <CardDescription>{t("systemHealth.alertsSubtitle")}</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{Math.round(m.value)}{m.unit ?? ""}</div>
-                {m.unit === "%" && (
-                  <Progress value={Math.min(m.value, 100)} className="mt-2 h-2" />
-                )}
-                {m.timestamp && (
-                  <p className="text-xs text-muted-foreground mt-1">
-                    As of {new Date(m.timestamp).toLocaleTimeString()}
+                {alertsLoading ? (
+                  <LoadingState rows={3} />
+                ) : alerts.length === 0 ? (
+                  <p className="flex items-center justify-center gap-2 py-4 text-center text-sm text-muted-foreground">
+                    <CheckCircle className="h-4 w-4 text-success" /> {t("systemHealth.alertsEmpty")}
                   </p>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Alert Type</TableHead>
+                          <TableHead>Component</TableHead>
+                          <TableHead>Severity</TableHead>
+                          <TableHead>Timestamp</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead className="text-right">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {alerts.map((alert) => (
+                          <TableRow key={alert.id}>
+                            <TableCell className="font-medium">{alert.type}</TableCell>
+                            <TableCell>{alert.component}</TableCell>
+                            <TableCell>
+                              <StatusBadge
+                                variant={alert.severity === "Critical" ? "error" : "warning"}
+                              >
+                                {alert.severity}
+                              </StatusBadge>
+                            </TableCell>
+                            <TableCell className="text-sm">{alert.timestamp}</TableCell>
+                            <TableCell>{getStatusBadge(alert.status)}</TableCell>
+                            <TableCell className="text-right">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  setSelectedAlert(alert);
+                                  setIsAcknowledgeModalOpen(true);
+                                }}
+                                disabled={alert.status === "Acknowledged"}
+                              >
+                                {t("systemHealth.acknowledge")}
+                              </Button>
+                              <Button variant="ghost" size="sm" aria-label={t("common.view")}>
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
                 )}
               </CardContent>
             </Card>
-          ))}
+          </TabsContent>
 
-          {/* Uptime Card */}
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium flex items-center gap-2">
-                <Clock className="h-4 w-4 text-muted-foreground" />
-                Service Uptime
-              </CardTitle>
-              <CheckCircle className="h-5 w-5 text-success" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-success">{uptimePercent}%</div>
-              <p className="text-xs text-muted-foreground mt-1">
-                {liveServices.filter((s) => s.status === "healthy" || s.status === "up").length} of {liveServices.length} services healthy
-              </p>
-              <Progress value={uptimePercent} className="mt-3 h-2" />
-            </CardContent>
-          </Card>
-        </div>
+          {/* Performance tab */}
+          <TabsContent value="performance">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-xl">
+                  <Activity className="h-5 w-5 text-primary" />
+                  {t("systemHealth.performanceTitle")}
+                </CardTitle>
+                <CardDescription>{t("systemHealth.performanceSubtitle")}</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="h-[300px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={performanceData}>
+                      <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                      <XAxis dataKey="time" className="text-xs" />
+                      <YAxis className="text-xs" />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: "hsl(var(--card))",
+                          border: "1px solid hsl(var(--border))",
+                          borderRadius: "8px",
+                        }}
+                      />
+                      <Legend />
+                      <Line
+                        type="monotone"
+                        dataKey="cpu"
+                        name="CPU %"
+                        stroke="hsl(var(--primary))"
+                        strokeWidth={2}
+                        dot={(props) => (props.payload.cpu !== null ? <circle {...props} r={4} /> : <g />)}
+                        connectNulls={false}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="memory"
+                        name="Memory %"
+                        stroke="#22c55e"
+                        strokeWidth={2}
+                        dot={(props) =>
+                          props.payload.memory !== null ? <circle {...props} r={4} /> : <g />
+                        }
+                        connectNulls={false}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="requests"
+                        name="Req/min"
+                        stroke="#f59e0b"
+                        strokeWidth={2}
+                        dot={(props) =>
+                          props.payload.requests !== null ? <circle {...props} r={4} /> : <g />
+                        }
+                        connectNulls={false}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
 
-        {/* Critical Alerts */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-warning" />
-              Critical System Alerts
-            </CardTitle>
-            <CardDescription>Active alerts requiring attention</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {alertsLoading ? (
-              <p className="text-muted-foreground text-sm py-4 text-center">Loading alerts...</p>
-            ) : alerts.length === 0 ? (
-              <p className="text-muted-foreground text-sm py-4 text-center flex items-center justify-center gap-2">
-                <CheckCircle className="h-4 w-4 text-success" /> No active alerts
-              </p>
-            ) : (
-              <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Alert Type</TableHead>
-                    <TableHead>Component</TableHead>
-                    <TableHead>Severity</TableHead>
-                    <TableHead>Timestamp</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {alerts.map((alert) => (
-                    <TableRow key={alert.id}>
-                      <TableCell className="font-medium">{alert.type}</TableCell>
-                      <TableCell>{alert.component}</TableCell>
-                      <TableCell>
-                        <StatusBadge variant={alert.severity === "Critical" ? "error" : "warning"}>
-                          {alert.severity}
-                        </StatusBadge>
-                      </TableCell>
-                      <TableCell className="text-sm">{alert.timestamp}</TableCell>
-                      <TableCell>{getStatusBadge(alert.status)}</TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => { setSelectedAlert(alert); setIsAcknowledgeModalOpen(true); }}
-                          disabled={alert.status === "Acknowledged"}
-                        >
-                          Acknowledge
-                        </Button>
-                        <Button variant="ghost" size="sm" aria-label={t("common.view")}>
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Performance Chart */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Activity className="h-5 w-5 text-primary" />
-              System Performance
-            </CardTitle>
-            <CardDescription>Live CPU, memory, and request metrics — historical points pending time-series API</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={performanceData}>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                  <XAxis dataKey="time" className="text-xs" />
-                  <YAxis className="text-xs" />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: "hsl(var(--card))",
-                      border: "1px solid hsl(var(--border))",
-                      borderRadius: "8px",
-                    }}
-                  />
-                  <Legend />
-                  <Line
-                    type="monotone"
-                    dataKey="cpu"
-                    name="CPU %"
-                    stroke="hsl(var(--primary))"
-                    strokeWidth={2}
-                    dot={(props) => props.payload.cpu !== null ? <circle {...props} r={4} /> : <g />}
-                    connectNulls={false}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="memory"
-                    name="Memory %"
-                    stroke="#22c55e"
-                    strokeWidth={2}
-                    dot={(props) => props.payload.memory !== null ? <circle {...props} r={4} /> : <g />}
-                    connectNulls={false}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="requests"
-                    name="Req/min"
-                    stroke="#f59e0b"
-                    strokeWidth={2}
-                    dot={(props) => props.payload.requests !== null ? <circle {...props} r={4} /> : <g />}
-                    connectNulls={false}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Recent System Events (Audit Logs) */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <FileText className="h-5 w-5 text-muted-foreground" />
-              Recent System Events
-            </CardTitle>
-            <CardDescription>Latest audit log entries</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {auditLogs.length === 0 ? (
-              <p className="text-muted-foreground text-sm py-4 text-center">No recent events</p>
-            ) : (
-              <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Timestamp</TableHead>
-                    <TableHead>Resource Type</TableHead>
-                    <TableHead>Action</TableHead>
-                    <TableHead>Actor</TableHead>
-                    <TableHead>Resource ID</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {auditLogs.map((log) => (
-                    <TableRow key={log.id}>
-                      <TableCell className="text-sm">
-                        {log.createdAt ? new Date(log.createdAt).toLocaleString() : "—"}
-                      </TableCell>
-                      <TableCell>{log.resourceType ?? "—"}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline">{log.action}</Badge>
-                      </TableCell>
-                      <TableCell className="font-mono text-xs">{log.actorId?.slice(0, 8) ?? "—"}</TableCell>
-                      <TableCell className="font-mono text-xs">{log.resourceId?.slice(0, 8) ?? "—"}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+          {/* Events tab */}
+          <TabsContent value="events">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-xl">
+                  <FileText className="h-5 w-5 text-muted-foreground" />
+                  {t("systemHealth.eventsTitle")}
+                </CardTitle>
+                <CardDescription>{t("systemHealth.eventsSubtitle")}</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {auditLogs.length === 0 ? (
+                  <p className="py-4 text-center text-sm text-muted-foreground">
+                    {t("systemHealth.eventsEmpty")}
+                  </p>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Timestamp</TableHead>
+                          <TableHead>Resource Type</TableHead>
+                          <TableHead>Action</TableHead>
+                          <TableHead>Actor</TableHead>
+                          <TableHead>Resource ID</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {auditLogs.map((log) => (
+                          <TableRow key={log.id}>
+                            <TableCell className="text-sm">
+                              {log.createdAt ? new Date(log.createdAt).toLocaleString() : "—"}
+                            </TableCell>
+                            <TableCell>{log.resourceType ?? "—"}</TableCell>
+                            <TableCell>
+                              <Badge variant="outline">{log.action}</Badge>
+                            </TableCell>
+                            <TableCell className="font-mono text-xs">
+                              {log.actorId?.slice(0, 8) ?? "—"}
+                            </TableCell>
+                            <TableCell className="font-mono text-xs">
+                              {log.resourceId?.slice(0, 8) ?? "—"}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
 
         {/* Quick Links Footer */}
         <Card>
           <CardContent className="pt-6">
-            <div className="flex flex-wrap gap-4 justify-center">
+            <div className="flex flex-wrap justify-center gap-4">
               <Button variant="outline" onClick={() => navigate("/audit")}>
-                <FileText className="mr-2 h-4 w-4" /> Audit Logs
+                <FileText className="mr-2 h-4 w-4" /> {t("systemHealth.quickLinksAudit")}
               </Button>
               <Button variant="outline" onClick={() => navigate("/settings")}>
-                <Settings className="mr-2 h-4 w-4" /> System Settings
+                <Settings className="mr-2 h-4 w-4" /> {t("systemHealth.quickLinksSettings")}
               </Button>
               <Button variant="outline" onClick={() => navigate("/escrow")}>
-                <Wallet className="mr-2 h-4 w-4" /> Escrow Dashboard
+                <Wallet className="mr-2 h-4 w-4" /> {t("systemHealth.quickLinksEscrow")}
               </Button>
             </div>
           </CardContent>
@@ -510,32 +642,39 @@ export default function SystemHealth() {
         <Dialog open={isAcknowledgeModalOpen} onOpenChange={setIsAcknowledgeModalOpen}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Acknowledge Alert</DialogTitle>
-              <DialogDescription>
-                Acknowledging this alert will mark it as reviewed. Please add a note.
-              </DialogDescription>
+              <DialogTitle>{t("systemHealth.acknowledgeTitle")}</DialogTitle>
+              <DialogDescription>{t("systemHealth.acknowledgeDesc")}</DialogDescription>
             </DialogHeader>
             {selectedAlert && (
               <div className="space-y-4">
-                <div className="p-3 rounded-lg bg-muted text-sm space-y-1">
-                  <div><strong>Alert:</strong> {selectedAlert.type}</div>
-                  <div><strong>Component:</strong> {selectedAlert.component}</div>
-                  <div><strong>Severity:</strong> {selectedAlert.severity}</div>
+                <div className="space-y-1 rounded-lg bg-muted p-3 text-sm">
+                  <div>
+                    <strong>Alert:</strong> {selectedAlert.type}
+                  </div>
+                  <div>
+                    <strong>Component:</strong> {selectedAlert.component}
+                  </div>
+                  <div>
+                    <strong>Severity:</strong> {selectedAlert.severity}
+                  </div>
                 </div>
                 <div className="space-y-2">
-                  <Label>Acknowledgement Note *</Label>
+                  <Label>{t("systemHealth.acknowledgeNote")}</Label>
                   <Textarea
                     value={acknowledgeNote}
                     onChange={(e) => setAcknowledgeNote(e.target.value)}
-                    placeholder="Describe the action taken or reason for acknowledgement..."
                     rows={3}
                   />
                 </div>
               </div>
             )}
             <DialogFooter>
-              <Button variant="outline" onClick={() => setIsAcknowledgeModalOpen(false)}>Cancel</Button>
-              <Button onClick={handleAcknowledgeAlert} disabled={!acknowledgeNote.trim()}>Acknowledge</Button>
+              <Button variant="outline" onClick={() => setIsAcknowledgeModalOpen(false)}>
+                {t("systemHealth.cancel")}
+              </Button>
+              <Button onClick={handleAcknowledgeAlert} disabled={!acknowledgeNote.trim()}>
+                {t("systemHealth.acknowledge")}
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>

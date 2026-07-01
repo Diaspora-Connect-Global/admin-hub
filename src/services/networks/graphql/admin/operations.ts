@@ -2249,6 +2249,7 @@ export interface SystemHealthService {
   status: "healthy" | "up" | "warning" | "degraded" | "down";
   latencyMs?: number;
   error?: string;
+  category?: string;
 }
 
 export interface SystemHealth {
@@ -2300,6 +2301,7 @@ export const GET_SYSTEM_HEALTH = gql`
         status
         latencyMs
         error
+        category
       }
       checkedAt
     }

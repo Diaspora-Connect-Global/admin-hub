@@ -45,7 +45,10 @@ export function useGetDashboardStats() {
 }
 
 export function useGetSystemHealth() {
-  return useQuery<{ getSystemHealth: SystemHealth }>(GET_SYSTEM_HEALTH);
+  return useQuery<{ getSystemHealth: SystemHealth }>(GET_SYSTEM_HEALTH, {
+    pollInterval: 30000,
+    fetchPolicy: "cache-and-network",
+  });
 }
 
 export function useGetPlatformAnalytics(
