@@ -238,6 +238,8 @@
       "selectType": "Seleccione el tipo de comunidad",
       "selectCountries": "Seleccione uno o más países",
       "logoBanner": "Logo / Imagen de banner",
+      "logo": "Logotipo",
+      "banner": "Banner",
       "uploadImage": "Haga clic para subir",
       "acceptedFormats": "JPG, PNG (máx. 1 archivo)",
       "rulesGuidelines": "Reglas / Directrices de la comunidad",
