@@ -9,6 +9,8 @@ import { clearSession } from "@/stores/session";
 /** Roles that can use this admin portal (system-wide or scoped to a community / association). */
 const SCOPED_PORTAL_ROLES = new Set(["COMMUNITY_ADMIN", "ASSOCIATION_ADMIN", "MODERATOR"]);
 
+export type ScopedPortalRole = "COMMUNITY_ADMIN" | "ASSOCIATION_ADMIN" | "MODERATOR";
+
 export function useAdminAuth() {
   const sessionId = useSessionStore((s) => s.sessionId);
   const userEmail = useSessionStore((s) => s.userEmail);
@@ -21,6 +23,8 @@ export function useAdminAuth() {
   const isAssociationAdmin = roleName === "ASSOCIATION_ADMIN";
   const isModerator = roleName === "MODERATOR";
   const isScopedPortalAdmin = !!roleName && SCOPED_PORTAL_ROLES.has(roleName);
+  const scopedRole =
+    roleName && SCOPED_PORTAL_ROLES.has(roleName) ? (roleName as ScopedPortalRole) : null;
 
   const logout = () => {
     clearSession();
@@ -36,6 +40,8 @@ export function useAdminAuth() {
     isAssociationAdmin,
     isModerator,
     isScopedPortalAdmin,
+    /** The scoped portal role name, or null for system-wide (or unrecognized) roles. */
+    scopedRole,
     isAuthenticated: !!sessionId,
     logout,
   };

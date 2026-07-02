@@ -2,10 +2,24 @@ import { Link, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { LayoutDashboard, Users, Wallet, AlertTriangle, BarChart3, Settings, Bell, FileText, HeadphonesIcon, Shield, Store, Key, Activity, ChevronLeft, ChevronRight, LogOut, MessageSquare, Calendar, Briefcase, Landmark, ClipboardList, WalletCards, Banknote } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { isNavItemVisible, type NavVisibilityRules } from "@/lib/navVisibility";
 import logo from "@/assets/logo.svg";
 import { useAdminAuth, getPortalRoleTranslationKey } from "@/hooks/auth/useAdminAuth";
 
-const navItems = [
+/**
+ * Sidebar entries. Visibility follows the backend role guards: pages whose
+ * admin APIs are `@Roles('SUPER_ADMIN','SYSTEM_ADMIN')` declare no
+ * `scopedRoles` and are hidden from community / association admins and
+ * moderators (see `isNavItemVisible`).
+ */
+const navItems: Array<{
+  id: string;
+  titleKey: string;
+  icon: typeof LayoutDashboard;
+  path: string;
+} & NavVisibilityRules> = [
+  // Dashboard stats/health/analytics APIs are system-admin-only; scoped
+  // admins are redirected from "/" to their home page (see pages/Index.tsx).
   { id: "dashboard", titleKey: "nav.dashboard", icon: LayoutDashboard, path: "/" },
   { id: "user_management", titleKey: "nav.users", icon: Users, path: "/users" },
   { id: "chat_management", titleKey: "nav.chat", icon: MessageSquare, path: "/chats" },
@@ -14,10 +28,10 @@ const navItems = [
   { id: "wallet_ledger", titleKey: "nav.wallet", icon: WalletCards, path: "/wallet", systemAdminOnly: true },
   { id: "payouts", titleKey: "nav.payouts", icon: Banknote, path: "/payouts", systemAdminOnly: true },
   { id: "disputes", titleKey: "nav.disputes", icon: AlertTriangle, path: "/disputes" },
-  { id: "communities", titleKey: "nav.communities", icon: Users, path: "/communities" },
-  { id: "associations", titleKey: "nav.associations", icon: Landmark, path: "/associations" },
-  { id: "events", titleKey: "nav.events", icon: Calendar, path: "/events" },
-  { id: "opportunities", titleKey: "nav.opportunities", icon: Briefcase, path: "/opportunities" },
+  { id: "communities", titleKey: "nav.communities", icon: Users, path: "/communities", scopedRoles: ["COMMUNITY_ADMIN", "MODERATOR"] },
+  { id: "associations", titleKey: "nav.associations", icon: Landmark, path: "/associations", scopedRoles: ["ASSOCIATION_ADMIN"] },
+  { id: "events", titleKey: "nav.events", icon: Calendar, path: "/events", scopedRoles: ["COMMUNITY_ADMIN", "ASSOCIATION_ADMIN", "MODERATOR"] },
+  { id: "opportunities", titleKey: "nav.opportunities", icon: Briefcase, path: "/opportunities", scopedRoles: ["COMMUNITY_ADMIN", "ASSOCIATION_ADMIN", "MODERATOR"] },
   { id: "reports_analytics", titleKey: "nav.reports", icon: BarChart3, path: "/reports" },
   { id: "system_settings", titleKey: "nav.settings", icon: Settings, path: "/settings" },
   { id: "notifications", titleKey: "nav.notifications", icon: Bell, path: "/notifications" },
@@ -46,10 +60,10 @@ interface SidebarContentProps {
 function SidebarContent({ collapsed = false, onToggleCollapse, onNavigate }: SidebarContentProps) {
   const location = useLocation();
   const { t } = useTranslation();
-  const { userEmail, adminProfile, isSystemAdmin, logout } = useAdminAuth();
+  const { userEmail, adminProfile, isSystemAdmin, scopedRole, logout } = useAdminAuth();
   const roleTitleKey = getPortalRoleTranslationKey(adminProfile?.role?.name);
 
-  const visibleNavItems = navItems.filter((item) => !item.systemAdminOnly || isSystemAdmin);
+  const visibleNavItems = navItems.filter((item) => isNavItemVisible(item, { isSystemAdmin, scopedRole }));
 
   const isActive = (path: string) => {
     if (path === "/") return location.pathname === "/";

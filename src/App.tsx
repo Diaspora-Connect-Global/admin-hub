@@ -8,6 +8,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
 import { adminClient } from "@/services/networks/graphql/admin";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+import { RequireSystemAdmin } from "@/components/auth/RequireSystemAdmin";
 import { TokenExpiryMonitor } from "@/components/auth/TokenExpiryMonitor";
 import "@/i18n";
 // Eager: small, needed immediately
@@ -65,32 +66,36 @@ const App = () => (
               <Route path="/login" element={<Login />} />
               <Route element={<ProtectedRoute />}>
                 <Route path="/" element={<Index />} />
-                <Route path="/users" element={<UserManagement />} />
-                <Route path="/chats" element={<ChatManagement />} />
-                <Route path="/escrow" element={<EscrowManagement />} />
-                {/* Escrow Wallet / Ledger / Payout (escrow-service) */}
-                <Route path="/wallet" element={<WalletLedger />} />
-                <Route path="/payouts" element={<Payouts />} />
-                <Route path="/disputes" element={<DisputesResolution />} />
+                {/* Pages scoped portal admins can use (per backend role guards) */}
                 <Route path="/communities" element={<Communities />} />
                 <Route path="/communities/:id" element={<CommunityDetail />} />
                 <Route path="/events" element={<Events />} />
                 <Route path="/opportunities" element={<Opportunities />} />
                 <Route path="/associations" element={<Associations />} />
                 <Route path="/associations/:id" element={<AssociationDetail />} />
-                <Route path="/reports" element={<Reports />} />
-                <Route path="/settings" element={<SystemSettings />} />
-                <Route path="/settings/ai" element={<AiConfiguration />} />
-                <Route path="/settings/payment-keys" element={<PaymentProviderKeys />} />
-                <Route path="/settings/kyc-keys" element={<KycProviderKeys />} />
-                <Route path="/notifications" element={<NotificationsBroadcasts />} />
-                <Route path="/audit" element={<AuditLogs />} />
-                <Route path="/support" element={<SupportTicketing />} />
-                <Route path="/support/case-types" element={<CaseTypeConfig />} />
-                <Route path="/moderation" element={<ContentModeration />} />
-                <Route path="/vendors" element={<VendorManagement />} />
-                <Route path="/roles" element={<RolesPermissions />} />
-                <Route path="/health" element={<SystemHealth />} />
+                {/* System-admin-only pages — their APIs reject scoped roles */}
+                <Route element={<RequireSystemAdmin />}>
+                  <Route path="/users" element={<UserManagement />} />
+                  <Route path="/chats" element={<ChatManagement />} />
+                  <Route path="/escrow" element={<EscrowManagement />} />
+                  {/* Escrow Wallet / Ledger / Payout (escrow-service) */}
+                  <Route path="/wallet" element={<WalletLedger />} />
+                  <Route path="/payouts" element={<Payouts />} />
+                  <Route path="/disputes" element={<DisputesResolution />} />
+                  <Route path="/reports" element={<Reports />} />
+                  <Route path="/settings" element={<SystemSettings />} />
+                  <Route path="/settings/ai" element={<AiConfiguration />} />
+                  <Route path="/settings/payment-keys" element={<PaymentProviderKeys />} />
+                  <Route path="/settings/kyc-keys" element={<KycProviderKeys />} />
+                  <Route path="/notifications" element={<NotificationsBroadcasts />} />
+                  <Route path="/audit" element={<AuditLogs />} />
+                  <Route path="/support" element={<SupportTicketing />} />
+                  <Route path="/support/case-types" element={<CaseTypeConfig />} />
+                  <Route path="/moderation" element={<ContentModeration />} />
+                  <Route path="/vendors" element={<VendorManagement />} />
+                  <Route path="/roles" element={<RolesPermissions />} />
+                  <Route path="/health" element={<SystemHealth />} />
+                </Route>
               </Route>
               <Route path="*" element={<NotFound />} />
             </Routes>
