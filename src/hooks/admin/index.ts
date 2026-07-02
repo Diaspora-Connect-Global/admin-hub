@@ -467,6 +467,10 @@ export {
   useListInAppNotifications,
   useListNotificationTemplates,
   useGetNotificationAnalytics,
+  useCreateInAppNotification,
+  useCreateNotificationTemplate,
+  type CreateInAppNotificationInput,
+  type CreateNotificationTemplateInput,
 } from "./useNotificationListing";
 
 export {

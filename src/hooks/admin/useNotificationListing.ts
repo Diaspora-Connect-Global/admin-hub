@@ -1,14 +1,22 @@
-import { useQuery } from "@apollo/client/react";
+import { useQuery, useMutation } from "@apollo/client/react";
 import {
   LIST_PUSH_NOTIFICATIONS,
   LIST_IN_APP_NOTIFICATIONS,
   LIST_NOTIFICATION_TEMPLATES,
   GET_NOTIFICATION_ANALYTICS,
+  CREATE_IN_APP_NOTIFICATION,
+  CREATE_NOTIFICATION_TEMPLATE,
   type AdminPushNotificationListResponse,
   type AdminInAppNotificationListResponse,
   type AdminNotificationTemplateListResponse,
+  type AdminInAppNotificationItem,
+  type AdminNotificationTemplateItem,
   type NotificationAnalyticsData,
+  type CreateInAppNotificationInput,
+  type CreateNotificationTemplateInput,
 } from "@/services/networks/graphql/admin";
+
+export type { CreateInAppNotificationInput, CreateNotificationTemplateInput };
 
 // ─── Push Notifications ────────────────────────────────────────────────────
 
@@ -116,4 +124,30 @@ export function useGetNotificationAnalytics(period = "last_7_days") {
       notifyOnNetworkStatusChange: true,
     },
   );
+}
+
+// ─── Create In-App Notification ────────────────────────────────────────────
+
+interface CreateInAppNotificationResponse {
+  createInAppNotification: AdminInAppNotificationItem;
+}
+
+export function useCreateInAppNotification() {
+  return useMutation<
+    CreateInAppNotificationResponse,
+    { input: CreateInAppNotificationInput }
+  >(CREATE_IN_APP_NOTIFICATION);
+}
+
+// ─── Create Notification Template ──────────────────────────────────────────
+
+interface CreateNotificationTemplateResponse {
+  createNotificationTemplate: AdminNotificationTemplateItem;
+}
+
+export function useCreateNotificationTemplate() {
+  return useMutation<
+    CreateNotificationTemplateResponse,
+    { input: CreateNotificationTemplateInput }
+  >(CREATE_NOTIFICATION_TEMPLATE);
 }

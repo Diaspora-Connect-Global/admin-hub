@@ -21,10 +21,11 @@ export function useGetBroadcastCampaigns(options: { page?: number; limit?: numbe
 }
 
 export function useSendBroadcast() {
+  // No hard-coded refetchQueries: the previous { page: 1, limit: 20 } never matched
+  // the page's active query (limit: 50) and refreshed nothing. Callers refresh the
+  // visible list explicitly (NotificationsBroadcasts calls refetchBroadcasts()).
   return useMutation<
     { sendBroadcast: BroadcastCampaign },
     { input: SendBroadcastInput }
-  >(SEND_BROADCAST, {
-    refetchQueries: [{ query: GET_BROADCAST_CAMPAIGNS, variables: { page: 1, limit: 20 } }],
-  });
+  >(SEND_BROADCAST);
 }

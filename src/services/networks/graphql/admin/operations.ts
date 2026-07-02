@@ -2404,11 +2404,15 @@ export interface BroadcastCampaign {
   title: string;
   body: string;
   targetAudience: "ALL_USERS" | "VENDORS" | "SPECIFIC_USERS";
-  status: "DRAFT" | "SENT" | "FAILED";
+  status: "DRAFT" | "SENT" | "FAILED" | "SCHEDULED";
   sentBy?: string;
   recipientCount?: number;
   createdAt: string;
   sentAt?: string;
+  /** Channels the campaign was/will be delivered on (PUSH, IN_APP, EMAIL). Nullable in output. */
+  channels?: string[] | null;
+  /** ISO timestamp for a scheduled send; null/absent = sent immediately. */
+  scheduledAt?: string | null;
 }
 
 export interface SendBroadcastInput {
@@ -2416,6 +2420,10 @@ export interface SendBroadcastInput {
   body: string;
   targetAudience: "ALL_USERS" | "VENDORS" | "SPECIFIC_USERS";
   targetUserIds?: string[];
+  /** Delivery channels; values from "PUSH","IN_APP","EMAIL". Default ["PUSH","IN_APP"]. */
+  channels?: string[];
+  /** ISO timestamp; null/absent = send now. */
+  scheduledAt?: string | null;
 }
 
 export const GET_BROADCAST_CAMPAIGNS = gql`
@@ -2431,6 +2439,8 @@ export const GET_BROADCAST_CAMPAIGNS = gql`
         recipientCount
         createdAt
         sentAt
+        channels
+        scheduledAt
       }
       total
     }
@@ -2448,6 +2458,57 @@ export const SEND_BROADCAST = gql`
       sentBy
       recipientCount
       createdAt
+      sentAt
+      channels
+      scheduledAt
+    }
+  }
+`;
+
+// ─── Admin Notification Creation (create in-app alert + template) ─────────────
+
+export interface CreateInAppNotificationInput {
+  title: string;
+  body: string;
+  type: string;
+  priority: string;
+  targetAudience: string;
+  active: boolean;
+}
+
+export const CREATE_IN_APP_NOTIFICATION = gql`
+  mutation CreateInAppNotification($input: CreateInAppNotificationInput!) {
+    createInAppNotification(input: $input) {
+      id
+      title
+      type
+      priority
+      targetAudience
+      active
+      viewCount
+      createdAt
+    }
+  }
+`;
+
+export interface CreateNotificationTemplateInput {
+  name: string;
+  type: string;
+  category: string;
+  titleTemplate?: string;
+  bodyTemplate: string;
+}
+
+export const CREATE_NOTIFICATION_TEMPLATE = gql`
+  mutation CreateNotificationTemplate($input: CreateNotificationTemplateInput!) {
+    createNotificationTemplate(input: $input) {
+      id
+      name
+      type
+      category
+      usageCount
+      status
+      lastUpdatedAt
     }
   }
 `;
