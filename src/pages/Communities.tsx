@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { AdminLayout } from "@/components/layout/AdminLayout";
@@ -19,9 +19,11 @@ import { MultiSelect } from "@/components/ui/multi-select";
 import { Search, Plus, MoreHorizontal, Eye, Edit, Link2, Pause, ChevronDown, Download, FileJson, BarChart3, Trash2, Upload, Globe, Loader2, X } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { friendlyErrorMessage } from "@/lib/graphqlErrors";
-import { useCreateCommunity, useDiscoverAssociations, useGetUsers, useListCommunities } from "@/hooks/admin";
+import { useCreateCommunity, useDiscoverAssociations, useGetUsers, useListCommunities, useGetPlatformSettings } from "@/hooks/admin";
 import { useListCommunityTypes } from "@/hooks/admin/useEntityTypes";
 import type { CreateCommunityInput, Community, CommunityType } from "@/services/networks/graphql/admin";
+import { ServiceCheckboxGrid } from "@/components/services/ServiceCheckboxGrid";
+import { ALL_SERVICE_KEYS, parseServiceKeys, sortServiceKeys } from "@/constants/communityServices";
 import {
   countriesServedLabelsToIso2,
   groupCreationUiToApi,
@@ -118,6 +120,7 @@ interface CreateFormData {
   website: string;
   embassyCountry: string;
   locationCountry: string;
+  enabledServices: string[];
 }
 
 const initialFormData: CreateFormData = {
@@ -143,6 +146,7 @@ const initialFormData: CreateFormData = {
   website: "",
   embassyCountry: "",
   locationCountry: "",
+  enabledServices: [...ALL_SERVICE_KEYS],
 };
 
 const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
@@ -151,6 +155,14 @@ export default function Communities() {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const [createCommunityMutation, { loading: creating }] = useCreateCommunity();
+  const { data: platformSettingsData } = useGetPlatformSettings();
+  /** Saved platform default for community services (falls back to the full catalog). */
+  const defaultCommunityServices = useMemo(() => {
+    const raw = platformSettingsData?.getPlatformSettings?.find(
+      (s) => s.key === "default_community_services",
+    )?.value;
+    return parseServiceKeys(raw) ?? [...ALL_SERVICE_KEYS];
+  }, [platformSettingsData]);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [countryFilter, setCountryFilter] = useState("all");
@@ -253,6 +265,12 @@ export default function Communities() {
     }
   };
 
+  const openCreateModal = () => {
+    // Seed the services checkboxes from the saved platform default (else all).
+    setFormData({ ...initialFormData, enabledServices: [...defaultCommunityServices] });
+    setCreateModalOpen(true);
+  };
+
   const handleCreateCommunity = async () => {
     if (!formData.communityName.trim()) {
       toast({ title: t('communities.validationError'), description: t('communities.fillRequired'), variant: "destructive" });
@@ -315,6 +333,7 @@ export default function Communities() {
       address: formData.address.trim() || "",
       embassyCountry: isEmbassy ? singleCountryLabelToIso2(formData.embassyCountry) : null,
       locationCountry: isEmbassy ? singleCountryLabelToIso2(formData.locationCountry) : null,
+      enabledServices: sortServiceKeys(formData.enabledServices),
     };
     if (formData.communityAdmins.length > 0) {
       input.communityAdmins = formData.communityAdmins;
@@ -426,7 +445,7 @@ export default function Communities() {
             <Button variant="outline" size="sm">
               <Download className="mr-2 h-4 w-4" /> {t('communities.exportCommunities')}
             </Button>
-            <Button onClick={() => setCreateModalOpen(true)}>
+            <Button onClick={openCreateModal}>
               <Plus className="mr-2 h-4 w-4" /> {t('communities.createCommunity')}
             </Button>
           </div>
@@ -911,6 +930,25 @@ export default function Communities() {
                       ))}
                     </div>
                   )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label>{t('services.sectionTitle')}</Label>
+                  <p className="text-xs text-muted-foreground">{t('services.createHint')}</p>
+                  <ServiceCheckboxGrid
+                    idPrefix="create-community-service"
+                    selected={formData.enabledServices}
+                    onToggle={(key) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        enabledServices: prev.enabledServices.includes(key)
+                          ? prev.enabledServices.filter((k) => k !== key)
+                          : [...prev.enabledServices, key],
+                      }))
+                    }
+                    onSelectAll={() => setFormData((prev) => ({ ...prev, enabledServices: [...ALL_SERVICE_KEYS] }))}
+                    onClearAll={() => setFormData((prev) => ({ ...prev, enabledServices: [] }))}
+                  />
                 </div>
               </div>
 

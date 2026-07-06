@@ -509,6 +509,8 @@ export {
   useGetCommunityAvatarUploadUrl,
   useGetCommunityCoverUploadUrl,
   useDeleteEntityImage,
+  useUpdateCommunityServices,
+  useUpdateAssociationServices,
 } from "./useAssociation";
 
 export {

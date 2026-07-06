@@ -39,6 +39,9 @@ import {
   GET_COMMUNITY_AVATAR_UPLOAD_URL,
   GET_COMMUNITY_COVER_UPLOAD_URL,
   DELETE_ENTITY_IMAGE,
+  GET_COMMUNITY,
+  UPDATE_COMMUNITY_SERVICES,
+  UPDATE_ASSOCIATION_SERVICES,
   type Association,
   type CreateAssociationInput,
   type UpdateAssociationInput,
@@ -47,6 +50,8 @@ import {
   type UpdateCommunityInput,
   type UpdateCommunityVisibilityInput,
   type UpdateCommunityJoinPolicyInput,
+  type UpdateCommunityServicesInput,
+  type UpdateAssociationServicesInput,
   type AssignAdminInput,
   type AssignAdminPayload,
   type CommunityMutationPayload,
@@ -251,6 +256,31 @@ export function useAssociationStats(associationId: string | null) {
   return useQuery<AssociationStatsResult>(GET_ASSOCIATION_STATS, {
     variables: { associationId: associationId ?? "" },
     skip: !associationId,
+  });
+}
+
+// ─── Services (enabled member-facing services) Hooks ─────────────────────────
+
+/** updateCommunityServices — replaces the community's enabled service list. */
+export function useUpdateCommunityServices() {
+  return useMutation<
+    { updateCommunityServices: { id: string; enabledServices: string[] | null } },
+    { input: UpdateCommunityServicesInput }
+  >(UPDATE_COMMUNITY_SERVICES, {
+    /** Refetch detail so the editor reflects the saved server state. */
+    refetchQueries: [GET_COMMUNITY],
+    awaitRefetchQueries: true,
+  });
+}
+
+/** updateAssociationServices — replaces the association's enabled service list. */
+export function useUpdateAssociationServices() {
+  return useMutation<
+    { updateAssociationServices: { id: string; enabledServices: string[] | null } },
+    { input: UpdateAssociationServicesInput }
+  >(UPDATE_ASSOCIATION_SERVICES, {
+    refetchQueries: [GET_ASSOCIATION],
+    awaitRefetchQueries: true,
   });
 }
 

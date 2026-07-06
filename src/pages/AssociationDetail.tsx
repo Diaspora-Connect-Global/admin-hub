@@ -39,6 +39,7 @@ import {
   Trash2, Flag, MessageSquare, Globe, Mail, Phone, MapPin, Calendar,
   Building2, Shield, AlertTriangle,
 } from "lucide-react";
+import { AssociationServicesTab } from "@/components/association/AssociationServicesTab";
 
 const getStatusBadge = (status: string) => {
   const styles: Record<string, string> = {
@@ -373,6 +374,7 @@ export default function AssociationDetail() {
               <TabsTrigger value="opportunities">Opportunities</TabsTrigger>
               <TabsTrigger value="vendor">Vendor</TabsTrigger>
               <TabsTrigger value="documents">Documents</TabsTrigger>
+              <TabsTrigger value="services">Services</TabsTrigger>
               <TabsTrigger value="settings">Settings</TabsTrigger>
               <TabsTrigger value="audit">Audit Log</TabsTrigger>
             </TabsList>
@@ -808,6 +810,14 @@ export default function AssociationDetail() {
               </CardContent>
             </Card>
           </TabsContent>
+
+          {/* Services Tab */}
+          {association && (
+            <AssociationServicesTab
+              associationId={association.id}
+              enabledServices={association.enabledServices}
+            />
+          )}
         </Tabs>
       </div>
 

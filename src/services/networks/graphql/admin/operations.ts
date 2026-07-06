@@ -660,6 +660,8 @@ export interface Community {
   updatedAt?: string;
   website?: string;
   whoCanPost?: string;
+  /** Member-facing services enabled for this community. Null/undefined on legacy records. */
+  enabledServices?: string[] | null;
 }
 
 /** CommunityListResponse (listCommunities). */
@@ -726,6 +728,8 @@ export interface CreateCommunityInput {
     email: string;
     password: string;
   }>;
+  /** Member-facing services enabled at creation. Defaults applied by the create dialog. */
+  enabledServices?: string[];
 }
 
 /** getCommunity(id: ID!): Community! */
@@ -769,6 +773,7 @@ export const GET_COMMUNITY = gql`
       updatedAt
       website
       whoCanPost
+      enabledServices
     }
   }
 `;
@@ -795,6 +800,7 @@ export interface CreateCommunityMutationResult {
     address?: string;
     embassyCountry?: string | null;
     locationCountry?: string | null;
+    enabledServices?: string[] | null;
     createdAt: string;
   };
 }
@@ -822,6 +828,7 @@ export const CREATE_COMMUNITY = gql`
       address
       embassyCountry
       locationCountry
+      enabledServices
       createdAt
     }
   }
@@ -875,6 +882,8 @@ export interface Association {
   countriesServed?: string[];
   createdAt?: string;
   updatedAt?: string;
+  /** Member-facing services enabled for this association. Null/undefined on legacy records. */
+  enabledServices?: string[] | null;
 }
 
 /** discoverAssociations(limit, offset, searchTerm). */
@@ -927,6 +936,8 @@ export interface CreateAssociationInput {
   adminEmail?: string;
   adminPassword?: string;
   associationAdmins?: { email: string; password: string }[];
+  /** Member-facing services enabled at creation. Defaults applied by the create dialog. */
+  enabledServices?: string[];
 }
 
 export interface UpdateAssociationInput {
@@ -968,6 +979,36 @@ export const CREATE_ASSOCIATION = gql`
       joinPolicy
       visibility
       createdAt
+    }
+  }
+`;
+
+/** updateCommunityServices(input: { communityId, services }): Community */
+export interface UpdateCommunityServicesInput {
+  communityId: string;
+  services: string[];
+}
+
+export const UPDATE_COMMUNITY_SERVICES = gql`
+  mutation UpdateCommunityServices($input: UpdateCommunityServicesInput!) {
+    updateCommunityServices(input: $input) {
+      id
+      enabledServices
+    }
+  }
+`;
+
+/** updateAssociationServices(input: { associationId, services }): Association */
+export interface UpdateAssociationServicesInput {
+  associationId: string;
+  services: string[];
+}
+
+export const UPDATE_ASSOCIATION_SERVICES = gql`
+  mutation UpdateAssociationServices($input: UpdateAssociationServicesInput!) {
+    updateAssociationServices(input: $input) {
+      id
+      enabledServices
     }
   }
 `;
@@ -1240,6 +1281,7 @@ export const GET_ASSOCIATION = gql`
       website
       address
       countriesServed
+      enabledServices
       defaultGroupId
       associationType {
         id

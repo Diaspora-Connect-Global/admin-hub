@@ -62,6 +62,7 @@ import { CommunityPostsTab } from "@/components/community/CommunityPostsTab";
 import { CommunityEventsTab } from "@/components/community/CommunityEventsTab";
 import { CommunityOpportunitiesTab } from "@/components/community/CommunityOpportunitiesTab";
 import { CommunityVendorTab } from "@/components/community/CommunityVendorTab";
+import { CommunityServicesTab } from "@/components/community/CommunityServicesTab";
 import { CommunityAuditTab } from "@/components/community/CommunityAuditTab";
 import { EditCommunityDialog } from "@/components/community/EditCommunityDialog";
 import { LinkAssociationDialog, AssignAdminDialog } from "@/components/community/CommunityAdminDialogs";
@@ -868,6 +869,7 @@ export default function CommunityDetail() {
               <TabsTrigger value="events">Events</TabsTrigger>
               <TabsTrigger value="opportunities">Opportunities</TabsTrigger>
               <TabsTrigger value="vendor">Vendor</TabsTrigger>
+              <TabsTrigger value="services">{t("services.sectionTitle")}</TabsTrigger>
               <TabsTrigger value="audit">Audit Log</TabsTrigger>
             </TabsList>
           </ScrollArea>
@@ -915,6 +917,12 @@ export default function CommunityDetail() {
           <CommunityVendorTab
             communityProducts={communityProducts}
             communityProductsLoading={communityProductsLoading}
+          />
+
+          {/* Services Tab */}
+          <CommunityServicesTab
+            communityId={community.id}
+            enabledServices={community.enabledServices}
           />
 
           {/* Audit Tab */}

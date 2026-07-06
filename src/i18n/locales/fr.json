@@ -939,5 +939,64 @@
     "requestSuccessTitle": "Versement demandé",
     "requestSuccessDesc": "La demande de versement a été soumise.",
     "actionFailed": "Échec de l'action"
+  },
+  "services": {
+    "defaultServices": "Default Services",
+    "defaultServicesDesc": "Choose which member-facing services are enabled by default when creating a new community or association. Admins can still adjust these per entity.",
+    "communitiesDefaults": "Community Defaults",
+    "communitiesDefaultsDesc": "Services pre-selected when creating a new community.",
+    "associationsDefaults": "Association Defaults",
+    "associationsDefaultsDesc": "Services pre-selected when creating a new association.",
+    "saveCommunityDefaults": "Save Community Defaults",
+    "saveAssociationDefaults": "Save Association Defaults",
+    "sectionTitle": "Services",
+    "sectionDesc": "Select which services members can access. Unchecking a service only hides it from members; existing data is preserved.",
+    "createHint": "These services will be available to members. You can change them later from the detail page.",
+    "save": "Save Services",
+    "saved": "Services updated",
+    "selectAll": "Select all",
+    "clearAll": "Clear all",
+    "items": {
+      "posts": {
+        "label": "Posts & Feed",
+        "description": "Community feed where members share posts and updates."
+      },
+      "events": {
+        "label": "Events",
+        "description": "Create, publish and manage events members can attend."
+      },
+      "opportunities": {
+        "label": "Opportunities",
+        "description": "Jobs, grants and other opportunities shared with members."
+      },
+      "marketplace": {
+        "label": "Marketplace / Vendor",
+        "description": "Vendor listings and marketplace for products and services."
+      },
+      "groups": {
+        "label": "Groups",
+        "description": "Sub-groups members can join for focused discussion."
+      },
+      "support": {
+        "label": "Support Cases",
+        "description": "Member support cases and help requests."
+      },
+      "service_requests": {
+        "label": "Service Requests",
+        "description": "Requests members submit for community-provided services."
+      },
+      "resources": {
+        "label": "Resources & Documents",
+        "description": "Shared documents, guides and downloadable resources."
+      },
+      "directory": {
+        "label": "Directory",
+        "description": "Searchable directory of members and contacts."
+      },
+      "registry": {
+        "label": "Membership Registry",
+        "description": "Official registry of members and their status."
+      }
+    }
   }
 }

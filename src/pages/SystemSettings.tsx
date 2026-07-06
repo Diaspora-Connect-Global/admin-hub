@@ -48,6 +48,7 @@ import {
   Trash2,
   MoreHorizontal,
   Loader2,
+  Boxes,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useTheme } from "next-themes";
@@ -66,6 +67,12 @@ import { CreateCommunityTypeModal } from "@/components/admin/CreateCommunityType
 import { CreateAssociationTypeModal } from "@/components/admin/CreateAssociationTypeModal";
 import type { CommunityType, AssociationType } from "@/services/networks/graphql/admin";
 import { friendlyErrorMessage } from "@/lib/graphqlErrors";
+import { ServiceCheckboxGrid } from "@/components/services/ServiceCheckboxGrid";
+import {
+  ALL_SERVICE_KEYS,
+  parseServiceKeys,
+  sortServiceKeys,
+} from "@/constants/communityServices";
 
 // Language options
 const languages = [
@@ -152,6 +159,15 @@ export default function SystemSettings() {
     seo_bing_site_verification: string;
   }>({ seo_google_site_verification: "", seo_bing_site_verification: "" });
 
+  // Default member-facing services (stored as JSON string arrays in platform settings).
+  // Fallback to the full catalog when unset/invalid so admins start from "all enabled".
+  const [defaultCommunityServices, setDefaultCommunityServices] = useState<string[]>(
+    [...ALL_SERVICE_KEYS],
+  );
+  const [defaultAssociationServices, setDefaultAssociationServices] = useState<string[]>(
+    [...ALL_SERVICE_KEYS],
+  );
+
   // Seed local state once platform settings are fetched
   useEffect(() => {
     if (platformSettings.length === 0) return;
@@ -180,6 +196,14 @@ export default function SystemSettings() {
       seo_google_site_verification: getSetting("seo_google_site_verification"),
       seo_bing_site_verification: getSetting("seo_bing_site_verification"),
     });
+
+    // Default services — parse stored JSON arrays, fall back to full catalog.
+    setDefaultCommunityServices(
+      parseServiceKeys(getSetting("default_community_services")) ?? [...ALL_SERVICE_KEYS],
+    );
+    setDefaultAssociationServices(
+      parseServiceKeys(getSetting("default_association_services")) ?? [...ALL_SERVICE_KEYS],
+    );
 
     // General — Platform Info card
     setGeneralSettings({
@@ -370,6 +394,10 @@ export default function SystemSettings() {
             <TabsTrigger value="entity-types" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <Globe className="w-4 h-4" />
               Entity Types
+            </TabsTrigger>
+            <TabsTrigger value="default-services" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              <Boxes className="w-4 h-4" />
+              {t('services.defaultServices')}
             </TabsTrigger>
             <TabsTrigger value="payments" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <CreditCard className="w-4 h-4" />
@@ -1377,6 +1405,101 @@ export default function SystemSettings() {
                 )}
               </CardContent>
             </Card>
+          </TabsContent>
+
+          {/* Default Services Tab */}
+          <TabsContent value="default-services" className="space-y-6">
+            <div>
+              <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
+                {t('services.defaultServices')}
+                {platformSettingsLoading && <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />}
+              </h2>
+              <p className="text-sm text-muted-foreground mt-1">{t('services.defaultServicesDesc')}</p>
+            </div>
+
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+              {/* Community defaults */}
+              <Card className="bg-card border-border">
+                <CardHeader>
+                  <CardTitle className="text-lg">{t('services.communitiesDefaults')}</CardTitle>
+                  <CardDescription>{t('services.communitiesDefaultsDesc')}</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <ServiceCheckboxGrid
+                    idPrefix="default-community-service"
+                    selected={defaultCommunityServices}
+                    onToggle={(key) =>
+                      setDefaultCommunityServices((prev) =>
+                        prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key],
+                      )
+                    }
+                    onSelectAll={() => setDefaultCommunityServices([...ALL_SERVICE_KEYS])}
+                    onClearAll={() => setDefaultCommunityServices([])}
+                    disabled={platformSettingsLoading || savingPlatformSetting}
+                  />
+                  <div className="flex justify-end pt-4 border-t border-border">
+                    <Button
+                      onClick={() =>
+                        savePlatformSetting(
+                          "default_community_services",
+                          JSON.stringify(sortServiceKeys(defaultCommunityServices)),
+                        )
+                      }
+                      disabled={platformSettingsLoading || savingPlatformSetting}
+                      className="gap-2"
+                    >
+                      {savingPlatformSetting ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Save className="w-4 h-4" />
+                      )}
+                      {t('services.saveCommunityDefaults')}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Association defaults */}
+              <Card className="bg-card border-border">
+                <CardHeader>
+                  <CardTitle className="text-lg">{t('services.associationsDefaults')}</CardTitle>
+                  <CardDescription>{t('services.associationsDefaultsDesc')}</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <ServiceCheckboxGrid
+                    idPrefix="default-association-service"
+                    selected={defaultAssociationServices}
+                    onToggle={(key) =>
+                      setDefaultAssociationServices((prev) =>
+                        prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key],
+                      )
+                    }
+                    onSelectAll={() => setDefaultAssociationServices([...ALL_SERVICE_KEYS])}
+                    onClearAll={() => setDefaultAssociationServices([])}
+                    disabled={platformSettingsLoading || savingPlatformSetting}
+                  />
+                  <div className="flex justify-end pt-4 border-t border-border">
+                    <Button
+                      onClick={() =>
+                        savePlatformSetting(
+                          "default_association_services",
+                          JSON.stringify(sortServiceKeys(defaultAssociationServices)),
+                        )
+                      }
+                      disabled={platformSettingsLoading || savingPlatformSetting}
+                      className="gap-2"
+                    >
+                      {savingPlatformSetting ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Save className="w-4 h-4" />
+                      )}
+                      {t('services.saveAssociationDefaults')}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
         </Tabs>
 

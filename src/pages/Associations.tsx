@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { AdminLayout } from "@/components/layout/AdminLayout";
@@ -36,7 +36,10 @@ import {
 import { uploadAssociationAvatar, uploadAssociationCover } from "@/lib/associationImageUpload";
 import { useListAssociationTypes } from "@/hooks/admin/useEntityTypes";
 import { useListAdmins } from "@/hooks/admin/useAdminAccounts";
+import { useGetPlatformSettings } from "@/hooks/admin";
 import { iso2OrLabelToDisplayName } from "@/lib/countriesServedIso";
+import { ServiceCheckboxGrid } from "@/components/services/ServiceCheckboxGrid";
+import { ALL_SERVICE_KEYS, parseServiceKeys, sortServiceKeys } from "@/constants/communityServices";
 
 // Complete list of all countries
 const allCountries = [
@@ -84,6 +87,7 @@ interface CreateFormData {
   contactEmail: string;
   contactPhone: string;
   website: string;
+  enabledServices: string[];
 }
 
 interface AssociationRow {
@@ -136,6 +140,7 @@ const initialFormData: CreateFormData = {
   contactEmail: "",
   contactPhone: "",
   website: "",
+  enabledServices: [...ALL_SERVICE_KEYS],
 };
 
 export default function Associations() {
@@ -185,6 +190,14 @@ export default function Associations() {
   const [getCoverUploadUrl] = useGetAssociationCoverUploadUrl();
   const [linkAssociationMutation] = useLinkAssociation();
   const [assignAssociationAdminMutation, { loading: assignAssocAdminLoading }] = useAssignAssociationAdmin();
+  const { data: platformSettingsData } = useGetPlatformSettings();
+  /** Saved platform default for association services (falls back to the full catalog). */
+  const defaultAssociationServices = useMemo(() => {
+    const raw = platformSettingsData?.getPlatformSettings?.find(
+      (s) => s.key === "default_association_services",
+    )?.value;
+    return parseServiceKeys(raw) ?? [...ALL_SERVICE_KEYS];
+  }, [platformSettingsData]);
   const { data: assocTypesData } = useListAssociationTypes();
   const { data: communitiesData } = useSearchCommunitiesAdvanced({ limit: 200, offset: 0 });
   const { data: adminsData } = useListAdmins(200, 0, "ACTIVE", "ASSOCIATION_ADMIN");
@@ -461,6 +474,7 @@ export default function Associations() {
             address: formData.address || undefined,
             adminEmail: formData.adminEmail || undefined,
             adminPassword: formData.adminPassword || undefined,
+            enabledServices: sortServiceKeys(formData.enabledServices),
           },
         },
       });
@@ -484,7 +498,8 @@ export default function Associations() {
   const openCreateAssociationModal = () => {
     setEditingAssociationId(null);
     setSelectedAssociation(null);
-    setFormData(initialFormData);
+    // Seed the services checkboxes from the saved platform default (else all).
+    setFormData({ ...initialFormData, enabledServices: [...defaultAssociationServices] });
     setCreateModalOpen(true);
   };
 
@@ -1037,6 +1052,28 @@ export default function Associations() {
                   </div>
                 </div>
               </div>
+
+              {/* Services (create only — edit services from the detail page) */}
+              {!editingAssociationId && (
+                <div className="space-y-2">
+                  <h3 className="font-semibold text-foreground">{t('services.sectionTitle')}</h3>
+                  <p className="text-sm text-muted-foreground">{t('services.createHint')}</p>
+                  <ServiceCheckboxGrid
+                    idPrefix="create-association-service"
+                    selected={formData.enabledServices}
+                    onToggle={(key) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        enabledServices: prev.enabledServices.includes(key)
+                          ? prev.enabledServices.filter((k) => k !== key)
+                          : [...prev.enabledServices, key],
+                      }))
+                    }
+                    onSelectAll={() => setFormData((prev) => ({ ...prev, enabledServices: [...ALL_SERVICE_KEYS] }))}
+                    onClearAll={() => setFormData((prev) => ({ ...prev, enabledServices: [] }))}
+                  />
+                </div>
+              )}
 
               {/* Payment / Monetization */}
               <div className="space-y-4">
