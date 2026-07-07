@@ -20,6 +20,8 @@ import { Search, Plus, MoreHorizontal, Eye, Edit, Link2, Pause, ChevronDown, Dow
 import { toast } from "@/hooks/use-toast";
 import { friendlyErrorMessage } from "@/lib/graphqlErrors";
 import { useCreateCommunity, useDiscoverAssociations, useGetUsers, useListCommunities, useGetPlatformSettings } from "@/hooks/admin";
+import { useGetCommunityAvatarUploadUrl, useGetCommunityCoverUploadUrl } from "@/hooks/admin";
+import { uploadCommunityAvatar, uploadCommunityCover } from "@/lib/communityImageUpload";
 import { useListCommunityTypes } from "@/hooks/admin/useEntityTypes";
 import type { CreateCommunityInput, Community, CommunityType } from "@/services/networks/graphql/admin";
 import { ServiceCheckboxGrid } from "@/components/services/ServiceCheckboxGrid";
@@ -105,9 +107,9 @@ interface CreateFormData {
   paymentType: "NONE" | "ONE_TIME" | "SUBSCRIPTION";
   priceAmount: string;
   priceCurrency: string;
-  // Legacy form fields (kept for future / not sent to createCommunity)
   countriesServed: string[];
-  logoBanner: File | null;
+  avatarFile: File | null;
+  bannerFile: File | null;
   rules: string;
   whoCanPost: "ADMIN_ONLY" | "ALL_MEMBERS";
   groupCreationPermission: string;
@@ -133,7 +135,8 @@ const initialFormData: CreateFormData = {
   priceAmount: "",
   priceCurrency: "EUR",
   countriesServed: [],
-  logoBanner: null,
+  avatarFile: null,
+  bannerFile: null,
   rules: "",
   whoCanPost: "ADMIN_ONLY",
   groupCreationPermission: "Admins Only",
@@ -155,6 +158,8 @@ export default function Communities() {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const [createCommunityMutation, { loading: creating }] = useCreateCommunity();
+  const [getAvatarUploadUrl] = useGetCommunityAvatarUploadUrl();
+  const [getCoverUploadUrl] = useGetCommunityCoverUploadUrl();
   const { data: platformSettingsData } = useGetPlatformSettings();
   /** Saved platform default for community services (falls back to the full catalog). */
   const defaultCommunityServices = useMemo(() => {
@@ -350,7 +355,27 @@ export default function Communities() {
 
     try {
       const result = await createCommunityMutation({ variables: { input } });
-      if (result.data?.createCommunity) {
+      const newCommunityId = result.data?.createCommunity?.id;
+      if (newCommunityId) {
+        // Upload avatar/banner now that the community id exists for the presigned URL.
+        try {
+          if (formData.avatarFile) {
+            await uploadCommunityAvatar(newCommunityId, formData.avatarFile, getAvatarUploadUrl);
+          }
+          if (formData.bannerFile) {
+            await uploadCommunityCover(newCommunityId, formData.bannerFile, getCoverUploadUrl);
+          }
+        } catch (imgErr) {
+          toast({
+            title: t('communities.communityCreated'),
+            description: friendlyErrorMessage(imgErr, "Community created, but the images could not be uploaded."),
+            variant: "destructive",
+          });
+          setCreateModalOpen(false);
+          setFormData(initialFormData);
+          refetchCommunities();
+          return;
+        }
         toast({ title: t('communities.communityCreated'), description: t('communities.communityCreatedDesc', { name: formData.communityName }) });
         setCreateModalOpen(false);
         setFormData(initialFormData);
@@ -409,16 +434,21 @@ export default function Communities() {
     }));
   };
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = (
+    e: React.ChangeEvent<HTMLInputElement>,
+    field: "avatarFile" | "bannerFile",
+  ) => {
     const file = e.target.files?.[0];
     if (file) {
-      const validTypes = ['image/jpeg', 'image/png'];
+      const validTypes = ['image/jpeg', 'image/png', 'image/webp'];
       if (!validTypes.includes(file.type)) {
         toast({ title: t('communities.validationError'), description: t('communities.invalidFileType'), variant: "destructive" });
         return;
       }
-      setFormData(prev => ({ ...prev, logoBanner: file }));
+      setFormData(prev => ({ ...prev, [field]: file }));
     }
+    // Allow re-selecting the same file after removing it.
+    e.target.value = "";
   };
 
   return (
@@ -789,25 +819,55 @@ export default function Communities() {
 
                 <div className="space-y-2">
                   <Label>{t('communities.form.logoBanner')}</Label>
-                  <div className="border-2 border-dashed border-border rounded-md p-4 text-center hover:border-primary/50 transition-colors">
-                    <input
-                      type="file"
-                      accept=".jpg,.jpeg,.png"
-                      onChange={handleFileUpload}
-                      className="hidden"
-                      id="logo-upload"
-                    />
-                    <label htmlFor="logo-upload" className="cursor-pointer flex flex-col items-center gap-2">
-                      <Upload className="h-8 w-8 text-muted-foreground" />
-                      <span className="text-sm text-muted-foreground">{t('communities.form.uploadImage')}</span>
-                      <span className="text-xs text-muted-foreground">{t('communities.form.acceptedFormats')}</span>
-                    </label>
-                    {formData.logoBanner && (
-                      <div className="mt-2 flex items-center justify-center gap-2">
-                        <Badge variant="secondary">{formData.logoBanner.name}</Badge>
-                        <X className="h-4 w-4 cursor-pointer text-muted-foreground hover:text-destructive" onClick={() => setFormData({ ...formData, logoBanner: null })} />
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    {/* Avatar / logo */}
+                    <div className="space-y-2">
+                      <Label className="text-xs text-muted-foreground">{t('communities.form.logo')}</Label>
+                      <div className="border-2 border-dashed border-border rounded-md p-4 text-center hover:border-primary/50 transition-colors">
+                        <input
+                          type="file"
+                          accept="image/jpeg,image/png,image/webp"
+                          onChange={(e) => handleImageUpload(e, "avatarFile")}
+                          className="hidden"
+                          id="create-avatar-upload"
+                        />
+                        <label htmlFor="create-avatar-upload" className="cursor-pointer flex flex-col items-center gap-2">
+                          <Upload className="h-8 w-8 text-muted-foreground" />
+                          <span className="text-sm text-muted-foreground">{t('communities.form.uploadImage')}</span>
+                          <span className="text-xs text-muted-foreground">{t('communities.form.acceptedFormats')}</span>
+                        </label>
+                        {formData.avatarFile && (
+                          <div className="mt-2 flex items-center justify-center gap-2">
+                            <Badge variant="secondary" className="max-w-[180px] truncate">{formData.avatarFile.name}</Badge>
+                            <X className="h-4 w-4 cursor-pointer text-muted-foreground hover:text-destructive" onClick={() => setFormData({ ...formData, avatarFile: null })} />
+                          </div>
+                        )}
                       </div>
-                    )}
+                    </div>
+                    {/* Banner / cover */}
+                    <div className="space-y-2">
+                      <Label className="text-xs text-muted-foreground">{t('communities.form.banner')}</Label>
+                      <div className="border-2 border-dashed border-border rounded-md p-4 text-center hover:border-primary/50 transition-colors">
+                        <input
+                          type="file"
+                          accept="image/jpeg,image/png,image/webp"
+                          onChange={(e) => handleImageUpload(e, "bannerFile")}
+                          className="hidden"
+                          id="create-banner-upload"
+                        />
+                        <label htmlFor="create-banner-upload" className="cursor-pointer flex flex-col items-center gap-2">
+                          <Upload className="h-8 w-8 text-muted-foreground" />
+                          <span className="text-sm text-muted-foreground">{t('communities.form.uploadImage')}</span>
+                          <span className="text-xs text-muted-foreground">{t('communities.form.acceptedFormats')}</span>
+                        </label>
+                        {formData.bannerFile && (
+                          <div className="mt-2 flex items-center justify-center gap-2">
+                            <Badge variant="secondary" className="max-w-[180px] truncate">{formData.bannerFile.name}</Badge>
+                            <X className="h-4 w-4 cursor-pointer text-muted-foreground hover:text-destructive" onClick={() => setFormData({ ...formData, bannerFile: null })} />
+                          </div>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 </div>
 
