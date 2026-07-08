@@ -1439,20 +1439,36 @@ export const GET_PENDING_MEMBERSHIP_REQUESTS = gql`
 `;
 
 export const GET_ASSOCIATION_AVATAR_UPLOAD_URL = gql`
-  mutation GetAssociationAvatarUploadUrl($associationId: ID!) {
-    getAssociationAvatarUploadUrl(associationId: $associationId) {
+  mutation GetAssociationAvatarUploadUrl(
+    $associationId: ID!
+    $filename: String!
+    $contentType: String!
+  ) {
+    getAssociationAvatarUploadUrl(
+      associationId: $associationId
+      filename: $filename
+      contentType: $contentType
+    ) {
       uploadUrl
-      fileKey
+      fileUrl
     }
   }
 `;
 
-/** Banner / cover image; mirrors avatar upload shape (`uploadUrl` + `fileKey`). */
+/** Banner / cover image; mirrors avatar upload shape (`uploadUrl` + `fileUrl`). */
 export const GET_ASSOCIATION_COVER_UPLOAD_URL = gql`
-  mutation GetAssociationCoverUploadUrl($associationId: ID!) {
-    getAssociationCoverUploadUrl(associationId: $associationId) {
+  mutation GetAssociationCoverUploadUrl(
+    $associationId: ID!
+    $filename: String!
+    $contentType: String!
+  ) {
+    getAssociationCoverUploadUrl(
+      associationId: $associationId
+      filename: $filename
+      contentType: $contentType
+    ) {
       uploadUrl
-      fileKey
+      fileUrl
     }
   }
 `;

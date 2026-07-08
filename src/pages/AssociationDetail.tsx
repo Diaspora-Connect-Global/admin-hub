@@ -239,14 +239,14 @@ export default function AssociationDetail() {
       return;
     }
     try {
-      let avatarKey: string | undefined;
-      let coverKey: string | undefined;
+      // Avatar/banner uploads persist server-side (the upload handler stores the
+      // final URL on the association), so we only need to fire the uploads here.
       if (editLogoFile) {
-        avatarKey = await uploadAssociationAvatar(id, editLogoFile, (opts) => getAvatarUploadUrl(opts));
+        await uploadAssociationAvatar(id, editLogoFile, (opts) => getAvatarUploadUrl(opts));
       }
       if (editBannerFile) {
         try {
-          coverKey = await uploadAssociationCover(id, editBannerFile, (opts) => getCoverUploadUrl(opts));
+          await uploadAssociationCover(id, editBannerFile, (opts) => getCoverUploadUrl(opts));
         } catch (coverErr) {
           toast({
             title: "Banner upload failed",
@@ -267,8 +267,6 @@ export default function AssociationDetail() {
             contactPhone: editForm.contactPhone.trim() || undefined,
             website: editForm.website.trim() || undefined,
             address: editForm.address.trim() || undefined,
-            ...(avatarKey != null ? { avatarKey } : {}),
-            ...(coverKey != null ? { coverKey } : {}),
           },
         },
       });

@@ -21,18 +21,18 @@ export async function putFileToPresignedUrl(uploadUrl: string, file: File): Prom
 }
 
 type AvatarUploadMutation = (options: {
-  variables: { associationId: string };
+  variables: { associationId: string; filename: string; contentType: string };
 }) => Promise<{
   data?: {
-    getAssociationAvatarUploadUrl: { uploadUrl: string; fileKey: string };
+    getAssociationAvatarUploadUrl: { uploadUrl: string; fileUrl: string };
   } | null;
 }>;
 
 type CoverUploadMutation = (options: {
-  variables: { associationId: string };
+  variables: { associationId: string; filename: string; contentType: string };
 }) => Promise<{
   data?: {
-    getAssociationCoverUploadUrl: { uploadUrl: string; fileKey: string };
+    getAssociationCoverUploadUrl: { uploadUrl: string; fileUrl: string };
   } | null;
 }>;
 
@@ -44,13 +44,19 @@ export async function uploadAssociationAvatar(
   if (file.size > ASSOCIATION_IMAGE_MAX_BYTES) {
     throw new Error("Image must be 5MB or smaller.");
   }
-  const { data } = await getAvatarUploadUrl({ variables: { associationId } });
+  const { data } = await getAvatarUploadUrl({
+    variables: {
+      associationId,
+      filename: file.name,
+      contentType: file.type || "application/octet-stream",
+    },
+  });
   const payload = data?.getAssociationAvatarUploadUrl;
-  if (!payload?.uploadUrl || !payload.fileKey) {
+  if (!payload?.uploadUrl || !payload.fileUrl) {
     throw new Error("Could not get logo upload URL.");
   }
   await putFileToPresignedUrl(payload.uploadUrl, file);
-  return payload.fileKey;
+  return payload.fileUrl;
 }
 
 /** Wide / banner image; requires `getAssociationCoverUploadUrl` on the API. */
@@ -62,11 +68,17 @@ export async function uploadAssociationCover(
   if (file.size > ASSOCIATION_IMAGE_MAX_BYTES) {
     throw new Error("Image must be 5MB or smaller.");
   }
-  const { data } = await getCoverUploadUrl({ variables: { associationId } });
+  const { data } = await getCoverUploadUrl({
+    variables: {
+      associationId,
+      filename: file.name,
+      contentType: file.type || "application/octet-stream",
+    },
+  });
   const payload = data?.getAssociationCoverUploadUrl;
-  if (!payload?.uploadUrl || !payload.fileKey) {
+  if (!payload?.uploadUrl || !payload.fileUrl) {
     throw new Error("Could not get banner upload URL.");
   }
   await putFileToPresignedUrl(payload.uploadUrl, file);
-  return payload.fileKey;
+  return payload.fileUrl;
 }

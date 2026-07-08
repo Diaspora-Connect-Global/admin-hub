@@ -383,18 +383,13 @@ export default function Associations() {
    * Runs after create/update so the association id exists for the presigned URL.
    */
   const persistAssociationImages = async (associationId: string) => {
-    let avatarKey: string | undefined;
-    let coverKey: string | undefined;
+    // Avatar/banner uploads persist server-side (the upload handler stores the
+    // final URL on the association), so we only need to fire the uploads here.
     if (formData.logoFile) {
-      avatarKey = await uploadAssociationAvatar(associationId, formData.logoFile, getAvatarUploadUrl);
+      await uploadAssociationAvatar(associationId, formData.logoFile, getAvatarUploadUrl);
     }
     if (formData.bannerFile) {
-      coverKey = await uploadAssociationCover(associationId, formData.bannerFile, getCoverUploadUrl);
-    }
-    if (avatarKey || coverKey) {
-      await updateAssociationMutation({
-        variables: { input: { id: associationId, avatarKey, coverKey } },
-      });
+      await uploadAssociationCover(associationId, formData.bannerFile, getCoverUploadUrl);
     }
   };
 
