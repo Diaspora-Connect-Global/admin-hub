@@ -440,8 +440,8 @@ export default function Communities() {
   ) => {
     const file = e.target.files?.[0];
     if (file) {
-      const validTypes = ['image/jpeg', 'image/png', 'image/webp'];
-      if (!validTypes.includes(file.type)) {
+      // Allow any image type. Non-images are rejected with a clear message.
+      if (!file.type.startsWith('image/')) {
         toast({ title: t('communities.validationError'), description: t('communities.invalidFileType'), variant: "destructive" });
         return;
       }
@@ -826,7 +826,7 @@ export default function Communities() {
                       <div className="border-2 border-dashed border-border rounded-md p-4 text-center hover:border-primary/50 transition-colors">
                         <input
                           type="file"
-                          accept="image/jpeg,image/png,image/webp"
+                          accept="image/*"
                           onChange={(e) => handleImageUpload(e, "avatarFile")}
                           className="hidden"
                           id="create-avatar-upload"
@@ -850,7 +850,7 @@ export default function Communities() {
                       <div className="border-2 border-dashed border-border rounded-md p-4 text-center hover:border-primary/50 transition-colors">
                         <input
                           type="file"
-                          accept="image/jpeg,image/png,image/webp"
+                          accept="image/*"
                           onChange={(e) => handleImageUpload(e, "bannerFile")}
                           className="hidden"
                           id="create-banner-upload"

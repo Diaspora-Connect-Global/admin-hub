@@ -228,7 +228,7 @@ export function EditCommunityDialog({
                     <div className="space-y-2">
                       <Label className="text-xs text-muted-foreground">{t("communities.form.logo")}</Label>
                       <div className="border-2 border-dashed border-border rounded-md p-4 text-center hover:border-primary/50 transition-colors">
-                        <input type="file" accept="image/jpeg,image/png,image/webp" onChange={handleEditAvatarUpload} className="hidden" id="edit-avatar-upload" />
+                        <input type="file" accept="image/*" onChange={handleEditAvatarUpload} className="hidden" id="edit-avatar-upload" />
                         <label htmlFor="edit-avatar-upload" className="cursor-pointer flex flex-col items-center gap-2">
                           <Upload className="h-8 w-8 text-muted-foreground" />
                           <span className="text-sm text-muted-foreground">{t("communities.form.uploadImage")}</span>
@@ -258,7 +258,7 @@ export function EditCommunityDialog({
                     <div className="space-y-2">
                       <Label className="text-xs text-muted-foreground">{t("communities.form.banner")}</Label>
                       <div className="border-2 border-dashed border-border rounded-md p-4 text-center hover:border-primary/50 transition-colors">
-                        <input type="file" accept="image/jpeg,image/png,image/webp" onChange={handleEditBannerUpload} className="hidden" id="edit-banner-upload" />
+                        <input type="file" accept="image/*" onChange={handleEditBannerUpload} className="hidden" id="edit-banner-upload" />
                         <label htmlFor="edit-banner-upload" className="cursor-pointer flex flex-col items-center gap-2">
                           <Upload className="h-8 w-8 text-muted-foreground" />
                           <span className="text-sm text-muted-foreground">{t("communities.form.uploadImage")}</span>

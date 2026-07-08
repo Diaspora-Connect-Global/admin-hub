@@ -890,7 +890,7 @@ export default function Associations() {
                     <div className="border-2 border-dashed border-border rounded-lg p-4 text-center hover:border-primary/50 transition-colors">
                       <input
                         type="file"
-                        accept="image/jpeg,image/png,image/webp"
+                        accept="image/*"
                         className="hidden"
                         id="assoc-create-logo"
                         onChange={(e) => {
@@ -931,7 +931,7 @@ export default function Associations() {
                     <div className="border-2 border-dashed border-border rounded-lg p-4 text-center hover:border-primary/50 transition-colors">
                       <input
                         type="file"
-                        accept="image/jpeg,image/png,image/webp"
+                        accept="image/*"
                         className="hidden"
                         id="assoc-create-banner"
                         onChange={(e) => {
