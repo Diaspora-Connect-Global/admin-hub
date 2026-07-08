@@ -4,6 +4,7 @@ import { useLocation, useParams, useNavigate } from "react-router-dom";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -808,6 +809,13 @@ export default function CommunityDetail() {
     );
   }
 
+  const communityInitials = (community.name ?? "")
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((word) => word[0]?.toUpperCase() ?? "")
+    .join("") || "?";
+
   const countryLabel = community.countriesServed?.length
     ? countriesServedIsoCodesToDisplayList(community.countriesServed)
     : (() => {
@@ -831,12 +839,27 @@ export default function CommunityDetail() {
           </BreadcrumbList>
         </Breadcrumb>
 
+        {/* Banner / cover */}
+        {community.coverImageUrl && (
+          <div className="overflow-hidden rounded-lg border border-border">
+            <img
+              src={community.coverImageUrl}
+              alt={`${community.name} banner`}
+              className="h-40 w-full object-cover sm:h-52"
+            />
+          </div>
+        )}
+
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Button variant="ghost" size="icon" aria-label="Back to communities" onClick={() => navigate("/communities")}>
               <ArrowLeft className="h-5 w-5" />
             </Button>
+            <Avatar className="h-14 w-14 rounded-lg border border-border">
+              {community.avatarUrl && <AvatarImage src={community.avatarUrl} alt={community.name} className="rounded-lg object-cover" />}
+              <AvatarFallback className="rounded-lg bg-muted text-base font-semibold">{communityInitials}</AvatarFallback>
+            </Avatar>
             <div>
               <div className="flex items-center gap-3">
                 <h1 className="text-2xl font-semibold text-foreground">{community.name}</h1>
