@@ -152,6 +152,14 @@ export default function SystemSettings() {
     max_upload_size_mb: string;
   }>({ maintenance_mode: "", max_upload_size_mb: "" });
 
+  // Issue reporter (floating "Report an issue" button on the public web app).
+  // `enabled` toggles the button live; `form_id` points it at a Google Form.
+  // Both are read by the public app via the public settings gateway.
+  const [issueReporterSettings, setIssueReporterSettings] = useState<{
+    issue_reporter_enabled: string;
+    issue_reporter_form_id: string;
+  }>({ issue_reporter_enabled: "", issue_reporter_form_id: "" });
+
   // SEO search-engine site-verification tokens. Read by the public web app
   // (getPublicSeoSettings) and rendered into the <head> for domain verification.
   const [seoSettings, setSeoSettings] = useState<{
@@ -189,6 +197,12 @@ export default function SystemSettings() {
     setSystemPlatformSettings({
       maintenance_mode: getSetting("maintenance_mode") || "false",
       max_upload_size_mb: getSetting("max_upload_size_mb") || "50",
+    });
+
+    // Issue reporter toggle + form id (defaults to off / empty)
+    setIssueReporterSettings({
+      issue_reporter_enabled: getSetting("issue_reporter_enabled") || "false",
+      issue_reporter_form_id: getSetting("issue_reporter_form_id"),
     });
 
     // SEO verification tokens
@@ -523,6 +537,68 @@ export default function SystemSettings() {
                     <p className="text-xs text-muted-foreground">
                       From Bing Webmaster Tools → HTML meta tag. Paste only the
                       <code className="mx-1">content</code> value.
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Issue reporter — floating "Report an issue" button on the public app */}
+            <Card className="bg-card border-border">
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  Issue Reporter
+                  {platformSettingsLoading && <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />}
+                </CardTitle>
+                <CardDescription>
+                  Controls the floating &quot;Report an issue&quot; button on the public web app. Reports are
+                  collected in the linked Google Form. Changes apply live (cached up to 1 hour).
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <Label>Show report button</Label>
+                    <div className="flex items-center justify-between rounded-md border border-border bg-secondary px-3 h-10">
+                      <span className="text-sm text-muted-foreground">
+                        {issueReporterSettings.issue_reporter_enabled === "true"
+                          ? "Button is visible to users"
+                          : "Button is hidden"}
+                      </span>
+                      <Switch
+                        checked={issueReporterSettings.issue_reporter_enabled === "true"}
+                        onCheckedChange={(checked) => {
+                          const value = checked ? "true" : "false";
+                          setIssueReporterSettings((prev) => ({ ...prev, issue_reporter_enabled: value }));
+                          savePlatformSetting("issue_reporter_enabled", value);
+                        }}
+                        disabled={platformSettingsLoading || savingPlatformSetting}
+                      />
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      When on, users see a floating button to report issues. The button also requires a
+                      form to be configured on the app.
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="issue_reporter_form_id">Google Form ID (optional)</Label>
+                    <Input
+                      id="issue_reporter_form_id"
+                      placeholder="e.g. 1FAIpQLSc...long id"
+                      value={issueReporterSettings.issue_reporter_form_id}
+                      onChange={(e) =>
+                        setIssueReporterSettings((prev) => ({ ...prev, issue_reporter_form_id: e.target.value }))
+                      }
+                      onBlur={() =>
+                        savePlatformSetting("issue_reporter_form_id", issueReporterSettings.issue_reporter_form_id)
+                      }
+                      className="bg-secondary border-border"
+                      disabled={platformSettingsLoading}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      From the form URL: docs.google.com/forms/d/e/<strong>&lt;FORM_ID&gt;</strong>/viewform. Leave
+                      blank to use the app&apos;s built-in default. Saves on blur.
                     </p>
                   </div>
                 </div>
