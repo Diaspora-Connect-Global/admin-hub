@@ -25,6 +25,13 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -50,6 +57,7 @@ import {
   useListAdmins,
   useRevokeAdminRole,
   useGetRoleDefinitions,
+  useCreateRoleDefinition,
   useUpdateRoleDefinition,
   useDeleteRoleDefinition,
 } from "@/hooks/admin/useAdminAccounts";
@@ -123,6 +131,14 @@ export default function RolesPermissions() {
   // Controlled inputs for the Edit Role dialog
   const [editRoleName, setEditRoleName] = useState("");
   const [editRoleDescription, setEditRoleDescription] = useState("");
+  // Controlled inputs for the Create Role dialog
+  const [createRoleOpen, setCreateRoleOpen] = useState(false);
+  const [createRoleName, setCreateRoleName] = useState("");
+  const [createRoleDescription, setCreateRoleDescription] = useState("");
+  const [createRoleScope, setCreateRoleScope] = useState<
+    "GLOBAL" | "COMMUNITY" | "ASSOCIATION"
+  >("GLOBAL");
+  const [createRoleScopeId, setCreateRoleScopeId] = useState("");
 
   // Role definitions from backend
   const { data: roleDefsData, loading: roleDefsLoading, refetch: refetchRoles } = useGetRoleDefinitions();
@@ -140,8 +156,62 @@ export default function RolesPermissions() {
   const admins = adminsData?.listAdmins?.admins ?? [];
 
   const [revokeRoleMutation] = useRevokeAdminRole();
+  const [createRoleDefinition, { loading: creatingRole }] = useCreateRoleDefinition();
   const [updateRoleDefinition, { loading: updatingRole }] = useUpdateRoleDefinition();
   const [deleteRoleDefinition, { loading: deletingRole }] = useDeleteRoleDefinition();
+
+  const resetCreateRoleForm = () => {
+    setCreateRoleName("");
+    setCreateRoleDescription("");
+    setCreateRoleScope("GLOBAL");
+    setCreateRoleScopeId("");
+  };
+
+  const handleCreateRole = async () => {
+    const name = createRoleName.trim();
+    if (!name) return;
+    // COMMUNITY / ASSOCIATION roles are bound to a specific entity; GLOBAL is platform-wide.
+    const scopeId = createRoleScope === "GLOBAL" ? "" : createRoleScopeId.trim();
+    try {
+      const result = await createRoleDefinition({
+        variables: {
+          input: {
+            name,
+            description: createRoleDescription.trim() || undefined,
+            scopeType: createRoleScope,
+            scopeId,
+            permissions: [],
+          },
+        },
+      });
+      if (result.data?.createRoleDefinition?.success) {
+        toast({
+          title: "Role created",
+          description: `"${name}" was created. Set its permissions below.`,
+        });
+        setCreateRoleOpen(false);
+        resetCreateRoleForm();
+        // Refetch, then jump straight into the permission matrix for the new role.
+        const refetched = await refetchRoles();
+        const created = refetched.data?.getRoleDefinitions?.roles?.find(
+          (r) => r.name === name && r.scopeType === createRoleScope
+        );
+        if (created) selectRole(created);
+      } else {
+        toast({
+          title: "Error",
+          description: result.data?.createRoleDefinition?.message || "Failed to create role",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: friendlyErrorMessage(error),
+        variant: "destructive",
+      });
+    }
+  };
 
   const selectRole = (role: RoleDefinition) => {
     setSelectedRole(role);
@@ -319,6 +389,27 @@ export default function RolesPermissions() {
 
           {/* Roles Tab */}
           <TabsContent value="roles" className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="relative max-w-sm">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search roles..."
+                  value={searchFilter}
+                  onChange={(e) => setSearchFilter(e.target.value)}
+                  className="pl-10 bg-secondary border-border"
+                />
+              </div>
+              <Button
+                className="gap-2 bg-primary text-primary-foreground hover:bg-primary/90"
+                onClick={() => {
+                  resetCreateRoleForm();
+                  setCreateRoleOpen(true);
+                }}
+              >
+                <Plus className="w-4 h-4" />
+                {t("roles.createRole")}
+              </Button>
+            </div>
             <div className="table-container overflow-x-auto">
               <Table>
                 <TableHeader>
@@ -741,6 +832,99 @@ export default function RolesPermissions() {
             )}
           </TabsContent>
         </Tabs>
+
+        {/* Create Role Dialog */}
+        <Dialog
+          open={createRoleOpen}
+          onOpenChange={(open) => {
+            setCreateRoleOpen(open);
+            if (!open) resetCreateRoleForm();
+          }}
+        >
+          <DialogContent className="bg-card border-border">
+            <DialogHeader>
+              <DialogTitle>{t("roles.createRole")}</DialogTitle>
+              <DialogDescription>
+                Create a new role, then set its permissions in the matrix.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label>Role Name</Label>
+                <Input
+                  value={createRoleName}
+                  onChange={(e) => setCreateRoleName(e.target.value)}
+                  placeholder="e.g. Finance Reviewer"
+                  className="bg-secondary border-border"
+                  disabled={creatingRole}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Description</Label>
+                <Input
+                  value={createRoleDescription}
+                  onChange={(e) => setCreateRoleDescription(e.target.value)}
+                  placeholder="Optional"
+                  className="bg-secondary border-border"
+                  disabled={creatingRole}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Scope</Label>
+                <Select
+                  value={createRoleScope}
+                  onValueChange={(v) =>
+                    setCreateRoleScope(v as "GLOBAL" | "COMMUNITY" | "ASSOCIATION")
+                  }
+                  disabled={creatingRole}
+                >
+                  <SelectTrigger className="bg-secondary border-border">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="GLOBAL">Global (platform-wide)</SelectItem>
+                    <SelectItem value="COMMUNITY">Community</SelectItem>
+                    <SelectItem value="ASSOCIATION">Association</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              {createRoleScope !== "GLOBAL" && (
+                <div className="space-y-2">
+                  <Label>
+                    {createRoleScope === "COMMUNITY" ? "Community" : "Association"} ID
+                  </Label>
+                  <Input
+                    value={createRoleScopeId}
+                    onChange={(e) => setCreateRoleScopeId(e.target.value)}
+                    placeholder={`ID of the ${createRoleScope.toLowerCase()} this role applies to`}
+                    className="bg-secondary border-border"
+                    disabled={creatingRole}
+                  />
+                </div>
+              )}
+            </div>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setCreateRoleOpen(false)}
+                disabled={creatingRole}
+              >
+                Cancel
+              </Button>
+              <Button
+                disabled={
+                  creatingRole ||
+                  !createRoleName.trim() ||
+                  (createRoleScope !== "GLOBAL" && !createRoleScopeId.trim())
+                }
+                onClick={handleCreateRole}
+              >
+                {creatingRole && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {t("roles.createRole")}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         {/* Edit Role Dialog */}
         <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
