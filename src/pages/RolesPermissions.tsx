@@ -25,13 +25,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -131,14 +124,13 @@ export default function RolesPermissions() {
   // Controlled inputs for the Edit Role dialog
   const [editRoleName, setEditRoleName] = useState("");
   const [editRoleDescription, setEditRoleDescription] = useState("");
-  // Controlled inputs for the Create Role dialog
+  // Controlled inputs for the Create Role dialog.
+  // This is the SYSTEM_ADMIN console (route guarded by RequireSystemAdmin), so
+  // every role created here is platform-wide (GLOBAL). Scope is a domain binding,
+  // not an RBAC choice, so it is not surfaced as an option here.
   const [createRoleOpen, setCreateRoleOpen] = useState(false);
   const [createRoleName, setCreateRoleName] = useState("");
   const [createRoleDescription, setCreateRoleDescription] = useState("");
-  const [createRoleScope, setCreateRoleScope] = useState<
-    "GLOBAL" | "COMMUNITY" | "ASSOCIATION"
-  >("GLOBAL");
-  const [createRoleScopeId, setCreateRoleScopeId] = useState("");
 
   // Role definitions from backend
   const { data: roleDefsData, loading: roleDefsLoading, refetch: refetchRoles } = useGetRoleDefinitions();
@@ -163,23 +155,20 @@ export default function RolesPermissions() {
   const resetCreateRoleForm = () => {
     setCreateRoleName("");
     setCreateRoleDescription("");
-    setCreateRoleScope("GLOBAL");
-    setCreateRoleScopeId("");
   };
 
   const handleCreateRole = async () => {
     const name = createRoleName.trim();
     if (!name) return;
-    // COMMUNITY / ASSOCIATION roles are bound to a specific entity; GLOBAL is platform-wide.
-    const scopeId = createRoleScope === "GLOBAL" ? "" : createRoleScopeId.trim();
     try {
       const result = await createRoleDefinition({
         variables: {
           input: {
             name,
             description: createRoleDescription.trim() || undefined,
-            scopeType: createRoleScope,
-            scopeId,
+            // System-admin console → roles are always platform-wide.
+            scopeType: "GLOBAL",
+            scopeId: "",
             permissions: [],
           },
         },
@@ -194,7 +183,7 @@ export default function RolesPermissions() {
         // Refetch, then jump straight into the permission matrix for the new role.
         const refetched = await refetchRoles();
         const created = refetched.data?.getRoleDefinitions?.roles?.find(
-          (r) => r.name === name && r.scopeType === createRoleScope
+          (r) => r.name === name && r.scopeType === "GLOBAL"
         );
         if (created) selectRole(created);
       } else {
@@ -871,37 +860,14 @@ export default function RolesPermissions() {
               </div>
               <div className="space-y-2">
                 <Label>Scope</Label>
-                <Select
-                  value={createRoleScope}
-                  onValueChange={(v) =>
-                    setCreateRoleScope(v as "GLOBAL" | "COMMUNITY" | "ASSOCIATION")
-                  }
-                  disabled={creatingRole}
-                >
-                  <SelectTrigger className="bg-secondary border-border">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="GLOBAL">Global (platform-wide)</SelectItem>
-                    <SelectItem value="COMMUNITY">Community</SelectItem>
-                    <SelectItem value="ASSOCIATION">Association</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              {createRoleScope !== "GLOBAL" && (
-                <div className="space-y-2">
-                  <Label>
-                    {createRoleScope === "COMMUNITY" ? "Community" : "Association"} ID
-                  </Label>
-                  <Input
-                    value={createRoleScopeId}
-                    onChange={(e) => setCreateRoleScopeId(e.target.value)}
-                    placeholder={`ID of the ${createRoleScope.toLowerCase()} this role applies to`}
-                    className="bg-secondary border-border"
-                    disabled={creatingRole}
-                  />
+                <div className="flex items-center gap-2 rounded-md border border-border bg-secondary/50 px-3 py-2">
+                  <Shield className="w-4 h-4 text-muted-foreground" />
+                  <span className="text-sm text-foreground">Platform-wide</span>
+                  <span className="text-xs text-muted-foreground">
+                    (applies across the entire platform)
+                  </span>
                 </div>
-              )}
+              </div>
             </div>
             <DialogFooter>
               <Button
@@ -912,11 +878,7 @@ export default function RolesPermissions() {
                 Cancel
               </Button>
               <Button
-                disabled={
-                  creatingRole ||
-                  !createRoleName.trim() ||
-                  (createRoleScope !== "GLOBAL" && !createRoleScopeId.trim())
-                }
+                disabled={creatingRole || !createRoleName.trim()}
                 onClick={handleCreateRole}
               >
                 {creatingRole && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
