@@ -95,6 +95,25 @@
     "communityEngagement": "Community-Engagement"
   },
   "users": {
+    "legalHold": {
+      "apply": "Rechtliche Sperre setzen",
+      "release": "Rechtliche Sperre aufheben",
+      "applyTitle": "Rechtliche Sperre setzen?",
+      "releaseTitle": "Rechtliche Sperre aufheben?",
+      "applyDescription": "Das Konto von {{name}} wird vor der geplanten Datenlöschung geschützt. Falls eine Löschung beantragt wurde, wird sie aufgeschoben — nicht abgebrochen — und nach Aufhebung der Sperre abgeschlossen.",
+      "releaseDescription": "Das Konto von {{name}} ist nicht mehr vor der geplanten Datenlöschung geschützt. Falls eine Löschung aussteht, kann sie bereits heute Nacht erfolgen.",
+      "reasonLabel": "Grund für die Sperre",
+      "reasonPlaceholder": "z. B. Behördenanfrage, laufender Rechtsstreit, offener Streitfall der Gegenseite",
+      "reasonRequiredTitle": "Grund erforderlich",
+      "reasonRequired": "Eine Sperre ohne Grund ist später nicht von einem Fehler zu unterscheiden. Bitte dokumentieren Sie den Grund.",
+      "confirmApply": "Sperre setzen",
+      "confirmRelease": "Sperre aufheben",
+      "appliedTitle": "Rechtliche Sperre gesetzt",
+      "releasedTitle": "Rechtliche Sperre aufgehoben",
+      "applied": "Die Daten von {{name}} sind vor Löschung geschützt.",
+      "released": "Die Daten von {{name}} sind nicht mehr vor Löschung geschützt.",
+      "failed": "Die rechtliche Sperre konnte nicht aktualisiert werden."
+    },
     "title": "Benutzerverwaltung",
     "searchPlaceholder": "Benutzer nach Name oder E-Mail suchen...",
     "addUser": "Benutzer hinzufügen",

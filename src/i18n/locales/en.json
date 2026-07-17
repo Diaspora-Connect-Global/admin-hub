@@ -95,6 +95,25 @@
     "communityEngagement": "Community Engagement"
   },
   "users": {
+    "legalHold": {
+      "apply": "Apply legal hold",
+      "release": "Release legal hold",
+      "applyTitle": "Apply a legal hold?",
+      "releaseTitle": "Release the legal hold?",
+      "applyDescription": "{{name}}'s account will be protected from the scheduled data purge. If they have asked to be deleted, the deletion is postponed — not cancelled — and will complete once the hold is released.",
+      "releaseDescription": "{{name}}'s account will no longer be protected from the scheduled data purge. If a deletion is pending, it may complete as early as tonight.",
+      "reasonLabel": "Reason for the hold",
+      "reasonPlaceholder": "e.g. regulator request, active litigation, open counterparty dispute",
+      "reasonRequiredTitle": "Reason required",
+      "reasonRequired": "A hold with no reason is indistinguishable from a mistake later. Please record why.",
+      "confirmApply": "Apply hold",
+      "confirmRelease": "Release hold",
+      "appliedTitle": "Legal hold applied",
+      "releasedTitle": "Legal hold released",
+      "applied": "{{name}}'s data is protected from deletion.",
+      "released": "{{name}}'s data is no longer protected from deletion.",
+      "failed": "Could not update the legal hold."
+    },
     "title": "User Management",
     "searchPlaceholder": "Search users by name or email...",
     "addUser": "Add User",

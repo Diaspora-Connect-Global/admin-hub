@@ -7,6 +7,7 @@ import {
   ASSIGN_ADMIN_ROLE_MUTATION,
   REVOKE_ADMIN_ROLE_MUTATION,
   ADMIN_BAN_USER,
+  SET_USER_LEGAL_HOLD,
   ADMIN_UNBAN_USER,
   ADMIN_BAN_VENDOR,
   ADMIN_REMOVE_CONTENT,
@@ -109,6 +110,27 @@ export function useAdminUnbanUser() {
     { adminUnbanUser: { success: boolean; message?: string } },
     { userId: string; reason?: string }
   >(ADMIN_UNBAN_USER);
+}
+
+/**
+ * Pin/release an account against the GDPR retention purge.
+ *
+ * Not an enforcement action like ban: a hold does not restrict the user at all,
+ * it only stops their data being erased while a claim is live.
+ */
+export function useSetUserLegalHold() {
+  return useMutation<
+    {
+      setUserLegalHold: {
+        success: boolean;
+        message?: string;
+        legalHold: boolean;
+        legalHoldReason?: string;
+        legalHoldSetAt?: string;
+      };
+    },
+    { userId: string; hold: boolean; reason?: string }
+  >(SET_USER_LEGAL_HOLD);
 }
 
 export function useAdminBanVendor() {

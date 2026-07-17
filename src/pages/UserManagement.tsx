@@ -12,6 +12,7 @@ import {
   useGetUserTransactions,
   useAdminBanUser,
   useAdminUnbanUser,
+  useSetUserLegalHold,
 } from "@/hooks/admin";
 import { useApolloClient } from "@apollo/client/react";
 import { Input } from "@/components/ui/input";
@@ -33,7 +34,7 @@ import { useToast } from "@/hooks/use-toast";
 import {
   Search, UserPlus, Download, ChevronDown, Eye, Pause, MoreHorizontal,
   Key, FileJson, Mail, Phone, Calendar, MapPin, Building2, Users,
-  Ban, ShieldOff, Loader2
+  Ban, ShieldOff, Loader2, Gavel
 } from "lucide-react";
 
 /** Table row shape for the users table (mapped from backend Profile). */
@@ -124,6 +125,57 @@ export default function UserManagement() {
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Failed to ban user.";
       toast({ title: "Error", description: msg, variant: "destructive" });
+    }
+  };
+
+  // Legal hold (GDPR Art. 17(3)(e)) — pins an account against the nightly
+  // retention purge. NOT an enforcement action: it does not restrict the user at
+  // all, it only stops their data being erased while a claim is live. A hold
+  // DEFERS a deletion; the purge runs on the first night after it is released.
+  const [legalHoldDialogOpen, setLegalHoldDialogOpen] = useState(false);
+  const [legalHoldReason, setLegalHoldReason] = useState("");
+  const [legalHoldTarget, setLegalHoldTarget] = useState<UserTableRow | null>(null);
+  const [legalHoldRelease, setLegalHoldRelease] = useState(false);
+  const [setUserLegalHold, { loading: legalHoldLoading }] = useSetUserLegalHold();
+
+  const openLegalHoldDialog = (user: UserTableRow, release: boolean) => {
+    setLegalHoldTarget(user);
+    setLegalHoldRelease(release);
+    setLegalHoldReason("");
+    setLegalHoldDialogOpen(true);
+  };
+
+  const handleSetLegalHold = async () => {
+    if (!legalHoldTarget) return;
+    const hold = !legalHoldRelease;
+    // The server rejects a hold without a reason; check here too so the admin
+    // gets an inline nudge instead of a round-trip error.
+    if (hold && !legalHoldReason.trim()) {
+      toast({
+        title: t("users.legalHold.reasonRequiredTitle"),
+        description: t("users.legalHold.reasonRequired"),
+        variant: "destructive",
+      });
+      return;
+    }
+    try {
+      await setUserLegalHold({
+        variables: {
+          userId: legalHoldTarget.id,
+          hold,
+          reason: legalHoldReason.trim() || undefined,
+        },
+      });
+      toast({
+        title: hold ? t("users.legalHold.appliedTitle") : t("users.legalHold.releasedTitle"),
+        description: hold
+          ? t("users.legalHold.applied", { name: legalHoldTarget.name })
+          : t("users.legalHold.released", { name: legalHoldTarget.name }),
+      });
+      setLegalHoldDialogOpen(false);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : t("users.legalHold.failed");
+      toast({ title: t("common.errorTitle"), description: msg, variant: "destructive" });
     }
   };
 
@@ -338,6 +390,13 @@ export default function UserManagement() {
                                   </DropdownMenuItem>
                                   <DropdownMenuItem onClick={() => openUnbanDialog(user)}>
                                     <ShieldOff className="mr-2 h-4 w-4" /> Unban User
+                                  </DropdownMenuItem>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem onClick={() => openLegalHoldDialog(user, false)}>
+                                    <Gavel className="mr-2 h-4 w-4" /> {t("users.legalHold.apply")}
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => openLegalHoldDialog(user, true)}>
+                                    <Gavel className="mr-2 h-4 w-4" /> {t("users.legalHold.release")}
                                   </DropdownMenuItem>
                                   <DropdownMenuSeparator />
                                   <DropdownMenuItem onClick={() => { setSelectedUser(user); setResetPasswordOpen(true); }}><Key className="mr-2 h-4 w-4" /> Reset Password</DropdownMenuItem>
@@ -736,6 +795,52 @@ export default function UserManagement() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <Dialog open={legalHoldDialogOpen} onOpenChange={setLegalHoldDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {legalHoldRelease
+                ? t("users.legalHold.releaseTitle")
+                : t("users.legalHold.applyTitle")}
+            </DialogTitle>
+            <DialogDescription>
+              {legalHoldRelease
+                ? t("users.legalHold.releaseDescription", { name: legalHoldTarget?.name ?? "" })
+                : t("users.legalHold.applyDescription", { name: legalHoldTarget?.name ?? "" })}
+            </DialogDescription>
+          </DialogHeader>
+
+          {!legalHoldRelease && (
+            <div className="space-y-2">
+              <Label htmlFor="legal-hold-reason">{t("users.legalHold.reasonLabel")}</Label>
+              <Textarea
+                id="legal-hold-reason"
+                value={legalHoldReason}
+                onChange={(e) => setLegalHoldReason(e.target.value)}
+                placeholder={t("users.legalHold.reasonPlaceholder")}
+                disabled={legalHoldLoading}
+              />
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setLegalHoldDialogOpen(false)}
+              disabled={legalHoldLoading}
+            >
+              {t("common.cancel")}
+            </Button>
+            <Button onClick={handleSetLegalHold} disabled={legalHoldLoading}>
+              {legalHoldLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {legalHoldRelease
+                ? t("users.legalHold.confirmRelease")
+                : t("users.legalHold.confirmApply")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
     </AdminLayout>
   );
 }

@@ -95,6 +95,25 @@
     "communityEngagement": "Participación comunitaria"
   },
   "users": {
+    "legalHold": {
+      "apply": "Aplicar retención legal",
+      "release": "Levantar la retención legal",
+      "applyTitle": "¿Aplicar una retención legal?",
+      "releaseTitle": "¿Levantar la retención legal?",
+      "applyDescription": "La cuenta de {{name}} quedará protegida frente al borrado de datos programado. Si ha solicitado su eliminación, esta se pospone — no se cancela — y se completará una vez levantada la retención.",
+      "releaseDescription": "La cuenta de {{name}} dejará de estar protegida frente al borrado de datos programado. Si hay una eliminación pendiente, podría completarse esta misma noche.",
+      "reasonLabel": "Motivo de la retención",
+      "reasonPlaceholder": "p. ej. requerimiento del regulador, litigio activo, disputa abierta de la contraparte",
+      "reasonRequiredTitle": "Motivo obligatorio",
+      "reasonRequired": "Una retención sin motivo será indistinguible de un error más adelante. Indique el porqué.",
+      "confirmApply": "Aplicar retención",
+      "confirmRelease": "Levantar retención",
+      "appliedTitle": "Retención legal aplicada",
+      "releasedTitle": "Retención legal levantada",
+      "applied": "Los datos de {{name}} están protegidos frente a la eliminación.",
+      "released": "Los datos de {{name}} ya no están protegidos frente a la eliminación.",
+      "failed": "No se pudo actualizar la retención legal."
+    },
     "title": "Gestión de usuarios",
     "searchPlaceholder": "Buscar usuarios por nombre o correo...",
     "addUser": "Añadir usuario",

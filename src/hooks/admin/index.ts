@@ -451,6 +451,7 @@ export {
   useAssignAdminRole as useAssignAdminRoleMutation,
   useRevokeAdminRole as useRevokeAdminRoleMutation,
   useAdminBanUser,
+  useSetUserLegalHold,
   useAdminUnbanUser,
   useAdminBanVendor,
   useAdminRemoveContent,

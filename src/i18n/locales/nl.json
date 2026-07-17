@@ -95,6 +95,25 @@
     "communityEngagement": "Community betrokkenheid"
   },
   "users": {
+    "legalHold": {
+      "apply": "Juridische bewaarplicht instellen",
+      "release": "Juridische bewaarplicht opheffen",
+      "applyTitle": "Juridische bewaarplicht instellen?",
+      "releaseTitle": "Juridische bewaarplicht opheffen?",
+      "applyDescription": "Het account van {{name}} wordt beschermd tegen de geplande gegevensverwijdering. Als er om verwijdering is gevraagd, wordt deze uitgesteld — niet geannuleerd — en voltooid zodra de bewaarplicht wordt opgeheven.",
+      "releaseDescription": "Het account van {{name}} is niet langer beschermd tegen de geplande gegevensverwijdering. Als er een verwijdering openstaat, kan die al vannacht worden voltooid.",
+      "reasonLabel": "Reden voor de bewaarplicht",
+      "reasonPlaceholder": "bijv. verzoek toezichthouder, lopende rechtszaak, open geschil van de tegenpartij",
+      "reasonRequiredTitle": "Reden verplicht",
+      "reasonRequired": "Een bewaarplicht zonder reden is later niet te onderscheiden van een vergissing. Leg vast waarom.",
+      "confirmApply": "Bewaarplicht instellen",
+      "confirmRelease": "Bewaarplicht opheffen",
+      "appliedTitle": "Juridische bewaarplicht ingesteld",
+      "releasedTitle": "Juridische bewaarplicht opgeheven",
+      "applied": "De gegevens van {{name}} zijn beschermd tegen verwijdering.",
+      "released": "De gegevens van {{name}} zijn niet langer beschermd tegen verwijdering.",
+      "failed": "Kon de juridische bewaarplicht niet bijwerken."
+    },
     "title": "Gebruikersbeheer",
     "searchPlaceholder": "Zoek gebruikers op naam of e-mail...",
     "addUser": "Gebruiker toevoegen",

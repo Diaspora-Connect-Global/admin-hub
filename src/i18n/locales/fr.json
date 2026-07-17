@@ -95,6 +95,25 @@
     "communityEngagement": "Engagement communauté"
   },
   "users": {
+    "legalHold": {
+      "apply": "Appliquer une conservation légale",
+      "release": "Lever la conservation légale",
+      "applyTitle": "Appliquer une conservation légale ?",
+      "releaseTitle": "Lever la conservation légale ?",
+      "applyDescription": "Le compte de {{name}} sera protégé de la purge de données programmée. S'il a demandé sa suppression, celle-ci est reportée — et non annulée — et s'achèvera une fois la conservation levée.",
+      "releaseDescription": "Le compte de {{name}} ne sera plus protégé de la purge de données programmée. Si une suppression est en attente, elle peut aboutir dès ce soir.",
+      "reasonLabel": "Motif de la conservation",
+      "reasonPlaceholder": "ex. demande d'un régulateur, litige en cours, litige ouvert avec une contrepartie",
+      "reasonRequiredTitle": "Motif requis",
+      "reasonRequired": "Une conservation sans motif sera indiscernable d'une erreur par la suite. Veuillez indiquer pourquoi.",
+      "confirmApply": "Appliquer la conservation",
+      "confirmRelease": "Lever la conservation",
+      "appliedTitle": "Conservation légale appliquée",
+      "releasedTitle": "Conservation légale levée",
+      "applied": "Les données de {{name}} sont protégées contre la suppression.",
+      "released": "Les données de {{name}} ne sont plus protégées contre la suppression.",
+      "failed": "Impossible de mettre à jour la conservation légale."
+    },
     "title": "Gestion des utilisateurs",
     "searchPlaceholder": "Rechercher par nom ou e-mail...",
     "addUser": "Ajouter utilisateur",

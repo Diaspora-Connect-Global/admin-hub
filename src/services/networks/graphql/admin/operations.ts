@@ -1485,6 +1485,25 @@ export const ADMIN_BAN_USER = gql`
   }
 `;
 
+/**
+ * Set / clear a MANUAL legal hold on a user account (GDPR Art. 17(3)(e)).
+ *
+ * A held account is skipped by the nightly retention purge and re-evaluated the
+ * next night, so a hold DEFERS a deletion — it never cancels it. `reason` is
+ * required by the server when `hold` is true; it is what the audit ledger keeps.
+ */
+export const SET_USER_LEGAL_HOLD = gql`
+  mutation SetUserLegalHold($userId: ID!, $hold: Boolean!, $reason: String) {
+    setUserLegalHold(userId: $userId, hold: $hold, reason: $reason) {
+      success
+      message
+      legalHold
+      legalHoldReason
+      legalHoldSetAt
+    }
+  }
+`;
+
 export const ADMIN_BAN_VENDOR = gql`
   mutation AdminBanVendor($vendorId: String!, $reason: String!, $permanent: Boolean) {
     adminBanVendor(vendorId: $vendorId, reason: $reason, permanent: $permanent) {
