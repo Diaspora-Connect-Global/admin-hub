@@ -66,8 +66,6 @@
     "systemHealth": "Systemstatus",
     "settings": "Systemeinstellungen",
     "aiConfig": "KI-Konfiguration",
-    "paymentKeys": "Zahlungsanbieter-Schlüssel",
-    "kycKeys": "KYC-Anbieter-Schlüssel",
     "openMenu": "Menü öffnen",
     "collapseSidebar": "Seitenleiste einklappen",
     "expandSidebar": "Seitenleiste ausklappen"

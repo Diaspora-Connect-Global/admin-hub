@@ -66,8 +66,6 @@
     "systemHealth": "System Health",
     "settings": "System Settings",
     "aiConfig": "AI Configuration",
-    "paymentKeys": "Payment Provider Keys",
-    "kycKeys": "KYC Provider Keys",
     "openMenu": "Open menu",
     "collapseSidebar": "Collapse sidebar",
     "expandSidebar": "Expand sidebar"

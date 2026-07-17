@@ -66,8 +66,6 @@
     "systemHealth": "État du système",
     "settings": "Paramètres système",
     "aiConfig": "Configuration IA",
-    "paymentKeys": "Clés des fournisseurs de paiement",
-    "kycKeys": "Clés des fournisseurs KYC",
     "openMenu": "Ouvrir le menu",
     "collapseSidebar": "Réduire la barre latérale",
     "expandSidebar": "Développer la barre latérale"

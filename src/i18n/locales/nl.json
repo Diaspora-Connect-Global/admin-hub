@@ -66,8 +66,6 @@
     "systemHealth": "Systeemstatus",
     "settings": "Systeeminstellingen",
     "aiConfig": "AI-configuratie",
-    "paymentKeys": "Betaalprovider-sleutels",
-    "kycKeys": "KYC-provider-sleutels",
     "openMenu": "Menu openen",
     "collapseSidebar": "Zijbalk inklappen",
     "expandSidebar": "Zijbalk uitklappen"

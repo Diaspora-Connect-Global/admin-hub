@@ -6,9 +6,9 @@ import { useAdminAuth } from "@/hooks/auth/useAdminAuth";
 
 /**
  * Shared sub-navigation for the Settings section. Rendered at the top of each
- * settings page (SystemSettings, AiConfiguration, PaymentProviderKeys,
- * KycProviderKeys) so the four routes read as one tabbed area. The provider-key
- * / AI tabs are system-admin only, mirroring the sidebar gating.
+ * settings page (SystemSettings, AiConfiguration) so the routes read as one
+ * tabbed area. The AI tab is system-admin only, mirroring the sidebar gating.
+ * (Provider-key tabs were removed — provider keys now live in Secret Manager.)
  */
 const SETTINGS_TABS = [
   { titleKey: "nav.settings", icon: Settings, path: "/settings", exact: true },
