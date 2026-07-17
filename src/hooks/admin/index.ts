@@ -593,15 +593,6 @@ export {
   type RotatePaymentProviderCredentialInput,
 } from "./usePaymentProviderKeys";
 
-export {
-  useKycProviderKeysList,
-  useKycUpsertProviderKey,
-  useKycRevokeProviderKey,
-  type KycProviderCredential,
-  type KycProviderType,
-  type UpsertKycProviderCredentialInput,
-} from "./useKycProviderKeys";
-
 // ===== Escrow Wallet / Ledger / Payout (escrow-service) =====
 export {
   useGetWalletBalance,

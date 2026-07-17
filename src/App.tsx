@@ -39,7 +39,6 @@ const Reports = lazy(() => import("./pages/Reports"));
 const ChatManagement = lazy(() => import("./pages/ChatManagement"));
 const AiConfiguration = lazy(() => import("./pages/AiConfiguration"));
 const PaymentProviderKeys = lazy(() => import("./pages/PaymentProviderKeys"));
-const KycProviderKeys = lazy(() => import("./pages/KycProviderKeys"));
 // Escrow Wallet / Ledger / Payout (escrow-service)
 const WalletLedger = lazy(() => import("./pages/WalletLedger"));
 const Payouts = lazy(() => import("./pages/Payouts"));
@@ -86,7 +85,6 @@ const App = () => (
                   <Route path="/settings" element={<SystemSettings />} />
                   <Route path="/settings/ai" element={<AiConfiguration />} />
                   <Route path="/settings/payment-keys" element={<PaymentProviderKeys />} />
-                  <Route path="/settings/kyc-keys" element={<KycProviderKeys />} />
                   <Route path="/notifications" element={<NotificationsBroadcasts />} />
                   <Route path="/audit" element={<AuditLogs />} />
                   <Route path="/support" element={<SupportTicketing />} />

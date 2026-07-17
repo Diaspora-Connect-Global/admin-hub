@@ -1,6 +1,6 @@
 import { Link, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { Settings, Brain, CreditCard, ShieldCheck } from "lucide-react";
+import { Settings, Brain, CreditCard } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAdminAuth } from "@/hooks/auth/useAdminAuth";
 
@@ -14,7 +14,6 @@ const SETTINGS_TABS = [
   { titleKey: "nav.settings", icon: Settings, path: "/settings", exact: true },
   { titleKey: "nav.aiConfig", icon: Brain, path: "/settings/ai", systemAdminOnly: true },
   { titleKey: "nav.paymentKeys", icon: CreditCard, path: "/settings/payment-keys", systemAdminOnly: true },
-  { titleKey: "nav.kycKeys", icon: ShieldCheck, path: "/settings/kyc-keys", systemAdminOnly: true },
 ];
 
 export function SettingsTabs() {
