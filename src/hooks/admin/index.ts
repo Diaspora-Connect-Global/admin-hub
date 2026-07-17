@@ -581,17 +581,6 @@ export {
   type AiProviderType,
 } from "./useAiConfig";
 
-export {
-  usePaymentProviderKeysList,
-  usePaymentUpsertProviderKey,
-  usePaymentRotateProviderKey,
-  usePaymentDisableProviderKey,
-  usePaymentEnableProviderKey,
-  type PaymentProviderCredential,
-  type PaymentProviderType,
-  type UpsertPaymentProviderCredentialInput,
-  type RotatePaymentProviderCredentialInput,
-} from "./usePaymentProviderKeys";
 
 // ===== Escrow Wallet / Ledger / Payout (escrow-service) =====
 export {
