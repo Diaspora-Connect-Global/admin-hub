@@ -62,17 +62,13 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useAdminAuth } from "@/hooks/auth/useAdminAuth";
 import {
-  useAiListProviderCredentials,
   useAiGetClassifierConfig,
-  useAiRevokeProviderCredential,
   useAiSetPrimaryProvider,
   useAiStartBackfill,
   useAiGetBackfillJob,
   useAiClassifyPost,
-  type AiProviderCredential,
   type AiProviderType,
 } from "@/hooks/admin";
-import { AiProviderCredentialModal } from "@/components/admin/AiProviderCredentialModal";
 import { AiClassifierConfigModal } from "@/components/admin/AiClassifierConfigModal";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { friendlyErrorMessage } from "@/lib/graphqlErrors";
@@ -107,47 +103,6 @@ export default function AiConfiguration() {
   // never break the rules-of-hooks order between renders.
   const shouldRedirect = isAuthenticated && !isSystemAdmin;
 
-  // ── Provider credentials ─────────────────────────────────────────────────
-  const {
-    data: credentialsData,
-    loading: credentialsLoading,
-    refetch: refetchCredentials,
-  } = useAiListProviderCredentials();
-  const credentials = credentialsData?.aiListProviderCredentials ?? [];
-
-  const [credentialModalOpen, setCredentialModalOpen] = useState(false);
-  const [editingCredential, setEditingCredential] = useState<AiProviderCredential | null>(null);
-  const [revokeTarget, setRevokeTarget] = useState<AiProviderCredential | null>(null);
-
-  const [revokeMutation, { loading: revoking }] = useAiRevokeProviderCredential();
-
-  const handleAddCredential = () => {
-    setEditingCredential(null);
-    setCredentialModalOpen(true);
-  };
-
-  const handleEditCredential = (cred: AiProviderCredential) => {
-    setEditingCredential(cred);
-    setCredentialModalOpen(true);
-  };
-
-  const handleRevoke = async () => {
-    if (!revokeTarget) return;
-    try {
-      await revokeMutation({ variables: { id: revokeTarget.id } });
-      toast({
-        title: "Credential revoked",
-        description: `${revokeTarget.label} can no longer be used for classification.`,
-      });
-      setRevokeTarget(null);
-    } catch (err) {
-      toast({
-        title: "Error",
-        description: friendlyErrorMessage(err),
-        variant: "destructive",
-      });
-    }
-  };
 
   // ── Classifier config ────────────────────────────────────────────────────
   const {
@@ -276,7 +231,7 @@ export default function AiConfiguration() {
               AI Configuration
             </h1>
             <p className="text-sm text-muted-foreground mt-1">
-              Manage LLM provider credentials, the active classifier, and post-categorization backfills.
+              Manage the active classifier and post-categorization backfills. Provider API keys come from Secret Manager.
             </p>
           </div>
         </div>
@@ -357,109 +312,6 @@ export default function AiConfiguration() {
             <p className="text-xs text-muted-foreground">
               Free providers (Groq, OpenRouter, Hugging Face) don't require a credit card. OpenAI requires a paid account.
             </p>
-          </CardContent>
-        </Card>
-
-        {/* Provider Credentials */}
-        <Card className="bg-card border-border">
-          <CardHeader>
-            <div className="flex items-start justify-between">
-              <div>
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <KeyRound className="w-4 h-4 text-primary" />
-                  Provider Credentials
-                </CardTitle>
-                <CardDescription>
-                  Encrypted-at-rest API keys. Only the masked preview (e.g. <code>sk-...XYZ4</code>) is ever displayed.
-                </CardDescription>
-              </div>
-              <Button onClick={handleAddCredential} className="gap-2">
-                <Plus className="w-4 h-4" />
-                Add Provider
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {credentialsLoading && credentials.length === 0 ? (
-              <div className="space-y-2">
-                <Skeleton className="h-10 w-full" />
-                <Skeleton className="h-10 w-full" />
-                <Skeleton className="h-10 w-full" />
-              </div>
-            ) : credentials.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-8">
-                No provider credentials yet. Add one to enable post classification.
-              </p>
-            ) : (
-              <div className="table-container overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="border-border">
-                      <TableHead>Provider</TableHead>
-                      <TableHead>Label</TableHead>
-                      <TableHead>Default Model</TableHead>
-                      <TableHead>Key Preview</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Priority</TableHead>
-                      <TableHead>Last Rotated</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {credentials.map((cred) => (
-                      <TableRow key={cred.id} className="border-border">
-                        <TableCell className="font-medium">
-                          {PROVIDER_LABELS[cred.provider] ?? cred.provider}
-                        </TableCell>
-                        <TableCell>{cred.label}</TableCell>
-                        <TableCell className="text-muted-foreground">
-                          {cred.modelDefault || "—"}
-                        </TableCell>
-                        <TableCell>
-                          <code className="text-xs bg-secondary px-2 py-0.5 rounded">
-                            {cred.keyPreview}
-                          </code>
-                        </TableCell>
-                        <TableCell>
-                          {cred.isActive ? (
-                            <StatusBadge variant="active">Active</StatusBadge>
-                          ) : (
-                            <StatusBadge variant="inactive">Inactive</StatusBadge>
-                          )}
-                        </TableCell>
-                        <TableCell>{cred.priority}</TableCell>
-                        <TableCell className="text-muted-foreground text-sm">
-                          {formatDate(cred.lastRotatedAt ?? cred.updatedAt)}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Credential actions">
-                                <MoreHorizontal className="w-4 h-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="bg-popover border-border">
-                              <DropdownMenuItem
-                                className="gap-2"
-                                onClick={() => handleEditCredential(cred)}
-                              >
-                                <Pencil className="w-4 h-4" /> Edit / Rotate
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                className="gap-2 text-destructive"
-                                onClick={() => setRevokeTarget(cred)}
-                              >
-                                <Trash2 className="w-4 h-4" /> Revoke
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            )}
           </CardContent>
         </Card>
 
@@ -840,15 +692,6 @@ export default function AiConfiguration() {
       </div>
 
       {/* Modals */}
-      <AiProviderCredentialModal
-        isOpen={credentialModalOpen}
-        onClose={() => {
-          setCredentialModalOpen(false);
-          setEditingCredential(null);
-          refetchCredentials();
-        }}
-        editing={editingCredential}
-      />
 
       <AiClassifierConfigModal
         isOpen={configModalOpen}
@@ -859,37 +702,6 @@ export default function AiConfiguration() {
         current={classifierConfig}
       />
 
-      {/* Revoke confirm */}
-      <AlertDialog
-        open={!!revokeTarget}
-        onOpenChange={(open) => !open && setRevokeTarget(null)}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Revoke credential?</AlertDialogTitle>
-            <AlertDialogDescription>
-              <span className="block">
-                <span className="font-medium">{revokeTarget?.label}</span> ({revokeTarget && PROVIDER_LABELS[revokeTarget.provider]})
-                will be removed from the active provider chain immediately.
-              </span>
-              <span className="block mt-2 text-xs">
-                Classification will fall through to the next active provider in the chain. This action cannot be undone.
-              </span>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={revoking}>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleRevoke}
-              disabled={revoking}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {revoking && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
-              Revoke
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
 
       {/* Primary provider switch confirm */}
       <AlertDialog

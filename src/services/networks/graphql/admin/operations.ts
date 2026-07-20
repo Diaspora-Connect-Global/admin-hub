@@ -1645,8 +1645,6 @@ export interface UpdateCommunityInput {
   communityTypeId?: string;
 }
 
-
-
 export interface CommunityMutationPayload {
   success: boolean;
   community?: {
@@ -3251,10 +3249,6 @@ export const GET_COMMUNITY_PRODUCTS_ADMIN = gql`
 // gated to `SYSTEM_ADMIN` / `SUPER_ADMIN`; the admin hub re-gates client-side
 // via the route's role check so non-system admins never see the page.
 //
-// SECURITY: `apiKey` on `UpsertProviderCredentialInput` is INPUT-ONLY — the
-// `ProviderCredential` read type carries `keyPreview` (e.g. `sk-...XYZ4`) and
-// never echoes the plaintext back. UI must clear the field on success and
-// never persist it to local/session storage.
 
 export type AiProviderType = "OPENAI" | "GROQ" | "OPENROUTER" | "HUGGINGFACE";
 
@@ -3263,32 +3257,6 @@ export type AiBackfillJobStatus =
   | "COMPLETED"
   | "FAILED"
   | "CANCELLED";
-
-export interface ProviderCredential {
-  id: string;
-  provider: AiProviderType;
-  label: string;
-  modelDefault?: string | null;
-  endpointUrl?: string | null;
-  isActive: boolean;
-  priority: number;
-  keyPreview: string;
-  createdAt: string;
-  updatedAt: string;
-  createdBy?: string | null;
-  lastRotatedAt?: string | null;
-}
-
-export interface UpsertProviderCredentialInput {
-  id?: string;
-  provider: AiProviderType;
-  label: string;
-  apiKey: string;
-  modelDefault?: string;
-  endpointUrl?: string;
-  isActive: boolean;
-  priority: number;
-}
 
 export interface ClassifierConfig {
   id: string;
@@ -3345,23 +3313,6 @@ export interface StartBackfillInput {
   dryRun?: boolean;
 }
 
-export const AI_PROVIDER_CREDENTIAL_FIELDS = gql`
-  fragment AiProviderCredentialFields on ProviderCredential {
-    id
-    provider
-    label
-    modelDefault
-    endpointUrl
-    isActive
-    priority
-    keyPreview
-    createdAt
-    updatedAt
-    createdBy
-    lastRotatedAt
-  }
-`;
-
 export const AI_CLASSIFIER_CONFIG_FIELDS = gql`
   fragment AiClassifierConfigFields on ClassifierConfig {
     id
@@ -3405,15 +3356,6 @@ export const AI_BACKFILL_JOB_FIELDS = gql`
   }
 `;
 
-export const AI_LIST_PROVIDER_CREDENTIALS = gql`
-  ${AI_PROVIDER_CREDENTIAL_FIELDS}
-  query AiListProviderCredentials {
-    aiListProviderCredentials {
-      ...AiProviderCredentialFields
-    }
-  }
-`;
-
 export const AI_GET_CLASSIFIER_CONFIG = gql`
   ${AI_CLASSIFIER_CONFIG_FIELDS}
   query AiGetClassifierConfig {
@@ -3438,21 +3380,6 @@ export const AI_GET_BACKFILL_JOB = gql`
     aiGetBackfillJob(jobId: $jobId) {
       ...AiBackfillJobFields
     }
-  }
-`;
-
-export const AI_UPSERT_PROVIDER_CREDENTIAL = gql`
-  ${AI_PROVIDER_CREDENTIAL_FIELDS}
-  mutation AiUpsertProviderCredential($input: UpsertProviderCredentialInput!) {
-    aiUpsertProviderCredential(input: $input) {
-      ...AiProviderCredentialFields
-    }
-  }
-`;
-
-export const AI_REVOKE_PROVIDER_CREDENTIAL = gql`
-  mutation AiRevokeProviderCredential($id: ID!) {
-    aiRevokeProviderCredential(id: $id)
   }
 `;
 
@@ -3500,206 +3427,10 @@ export const AI_START_BACKFILL = gql`
 // admins never see the page.
 //
 // SECURITY: `apiKey` / `apiSecret` / `webhookSecret` on the input types are
-// INPUT-ONLY — the `PaymentProviderCredential` read type carries only
-// `keyPreview` (e.g. `sk_...XYZ4`) and never echoes any plaintext secret back.
-// UI must clear secret fields on success and never persist them to
-// local/session storage. Editing reuses the Rotate mutation for new secrets;
-// an empty secret means "keep the existing one".
 
 export type PaymentProviderType = "STRIPE" | "PAYPAL" | "PAYSTACK";
 
-export interface PaymentProviderCredential {
-  id: string;
-  provider: PaymentProviderType;
-  environment: string;
-  keyPreview: string;
-  isActive: boolean;
-  enabledCountries: string[];
-  createdBy?: string | null;
-  createdAt?: string | null;
-  updatedAt?: string | null;
-  lastRotatedAt?: string | null;
-  expiresAt?: string | null;
-}
-
-export interface UpsertPaymentProviderCredentialInput {
-  provider: PaymentProviderType;
-  environment: string;
-  apiKey: string;
-  apiSecret?: string;
-  webhookSecret?: string;
-  additionalConfigJson?: string;
-  enabledCountries?: string[];
-  expiresAt?: string;
-}
-
-export interface RotatePaymentProviderCredentialInput {
-  id: string;
-  apiKey: string;
-  apiSecret?: string;
-  webhookSecret?: string;
-  expiresAt?: string;
-}
-
-export const PAYMENT_PROVIDER_CREDENTIAL_FIELDS = gql`
-  fragment PaymentProviderCredentialFields on PaymentProviderCredential {
-    id
-    provider
-    environment
-    keyPreview
-    isActive
-    enabledCountries
-    createdBy
-    createdAt
-    updatedAt
-    lastRotatedAt
-    expiresAt
-  }
-`;
-
-export const PAYMENT_LIST_PROVIDER_CREDENTIALS = gql`
-  ${PAYMENT_PROVIDER_CREDENTIAL_FIELDS}
-  query PaymentListProviderCredentials(
-    $provider: String
-    $environment: String
-    $onlyActive: Boolean
-  ) {
-    paymentListProviderCredentials(
-      provider: $provider
-      environment: $environment
-      onlyActive: $onlyActive
-    ) {
-      ...PaymentProviderCredentialFields
-    }
-  }
-`;
-
-export const PAYMENT_UPSERT_PROVIDER_CREDENTIAL = gql`
-  ${PAYMENT_PROVIDER_CREDENTIAL_FIELDS}
-  mutation PaymentUpsertProviderCredential(
-    $input: UpsertPaymentProviderCredentialInput!
-  ) {
-    paymentUpsertProviderCredential(input: $input) {
-      ...PaymentProviderCredentialFields
-    }
-  }
-`;
-
-export const PAYMENT_ROTATE_PROVIDER_CREDENTIAL = gql`
-  ${PAYMENT_PROVIDER_CREDENTIAL_FIELDS}
-  mutation PaymentRotateProviderCredential(
-    $input: RotatePaymentProviderCredentialInput!
-  ) {
-    paymentRotateProviderCredential(input: $input) {
-      ...PaymentProviderCredentialFields
-    }
-  }
-`;
-
-export const PAYMENT_DISABLE_PROVIDER_CREDENTIAL = gql`
-  mutation PaymentDisableProviderCredential($id: ID!) {
-    paymentDisableProviderCredential(id: $id)
-  }
-`;
-
-export const PAYMENT_ENABLE_PROVIDER_CREDENTIAL = gql`
-  mutation PaymentEnableProviderCredential($id: ID!) {
-    paymentEnableProviderCredential(id: $id)
-  }
-`;
-
-// ─────────────────────────────────────────────────────────────────────────────
-// KYC Provider Credentials (admin-managed, encrypted)
-// ─────────────────────────────────────────────────────────────────────────────
-// Backed by api-gateway's KYC-provider-credential admin operations. Every
-// mutation/query below is server-side gated to `SYSTEM_ADMIN` / `SUPER_ADMIN`;
-// the admin hub re-gates client-side via the route's role check so non-system
-// admins never see the page.
-//
-// SECURITY: `apiKey` / `apiSecret` / `webhookSecret` on the input type are
-// INPUT-ONLY — the `KycProviderCredential` read type carries only `keyPreview`
-// (e.g. `tok_...XYZ4`) plus boolean `hasApiSecret` / `hasWebhookSecret` flags and
-// never echoes any plaintext secret back. UI must clear secret fields on success
-// and never persist them. Each provider keeps a SINGLE active credential — the
-// single-upsert model (like the AI vertical); an empty secret on edit means
-// "keep the existing one". `configJson` carries the non-secret per-provider
-// config (region / redirectUri / environment / baseUrl / levelName) as a JSON
-// string.
-
 export type KycProviderType = "ONFIDO" | "ITSME" | "SUMSUB";
-
-export interface KycProviderCredential {
-  id: string;
-  provider: KycProviderType;
-  keyPreview: string;
-  isActive: boolean;
-  region?: string | null;
-  environment?: string | null;
-  redirectUri?: string | null;
-  baseUrl?: string | null;
-  levelName?: string | null;
-  hasApiSecret: boolean;
-  hasWebhookSecret: boolean;
-  createdBy?: string | null;
-  createdAt?: string | null;
-  updatedAt?: string | null;
-  lastRotatedAt?: string | null;
-}
-
-export interface UpsertKycProviderCredentialInput {
-  provider: KycProviderType;
-  apiKey?: string;
-  apiSecret?: string;
-  webhookSecret?: string;
-  /** JSON string of the non-secret provider config (region / redirectUri / etc.). */
-  configJson?: string;
-}
-
-export const KYC_PROVIDER_CREDENTIAL_FIELDS = gql`
-  fragment KycProviderCredentialFields on KycProviderCredential {
-    id
-    provider
-    keyPreview
-    isActive
-    region
-    environment
-    redirectUri
-    baseUrl
-    levelName
-    hasApiSecret
-    hasWebhookSecret
-    createdBy
-    createdAt
-    updatedAt
-    lastRotatedAt
-  }
-`;
-
-export const KYC_LIST_PROVIDER_CREDENTIALS = gql`
-  ${KYC_PROVIDER_CREDENTIAL_FIELDS}
-  query KycListProviderCredentials($provider: String, $onlyActive: Boolean) {
-    kycListProviderCredentials(provider: $provider, onlyActive: $onlyActive) {
-      ...KycProviderCredentialFields
-    }
-  }
-`;
-
-export const KYC_UPSERT_PROVIDER_CREDENTIAL = gql`
-  ${KYC_PROVIDER_CREDENTIAL_FIELDS}
-  mutation KycUpsertProviderCredential(
-    $input: UpsertKycProviderCredentialInput!
-  ) {
-    kycUpsertProviderCredential(input: $input) {
-      ...KycProviderCredentialFields
-    }
-  }
-`;
-
-export const KYC_REVOKE_PROVIDER_CREDENTIAL = gql`
-  mutation KycRevokeProviderCredential($provider: String!) {
-    kycRevokeProviderCredential(provider: $provider)
-  }
-`;
 
 // ===== Support Cases (support-service) =====
 //

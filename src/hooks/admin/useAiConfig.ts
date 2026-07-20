@@ -9,43 +9,29 @@
 
 import { useMutation, useQuery } from "@apollo/client/react";
 import {
-  AI_LIST_PROVIDER_CREDENTIALS,
   AI_GET_CLASSIFIER_CONFIG,
   AI_GET_POST_CLASSIFICATION,
   AI_GET_BACKFILL_JOB,
-  AI_UPSERT_PROVIDER_CREDENTIAL,
-  AI_REVOKE_PROVIDER_CREDENTIAL,
   AI_UPDATE_CLASSIFIER_CONFIG,
   AI_SET_PRIMARY_PROVIDER,
   AI_CLASSIFY_POST,
   AI_START_BACKFILL,
-  type ProviderCredential,
   type ClassifierConfig,
   type PostClassification,
   type BackfillJob,
-  type UpsertProviderCredentialInput,
   type UpdateClassifierConfigInput,
   type StartBackfillInput,
   type AiProviderType,
 } from "@/services/networks/graphql/admin";
 
 export type {
-  ProviderCredential,
   ClassifierConfig,
   PostClassification,
   BackfillJob,
-  UpsertProviderCredentialInput,
   UpdateClassifierConfigInput,
   StartBackfillInput,
   AiProviderType,
 };
-
-export function useAiListProviderCredentials() {
-  return useQuery<{ aiListProviderCredentials: ProviderCredential[] }>(
-    AI_LIST_PROVIDER_CREDENTIALS,
-    { fetchPolicy: "cache-and-network" },
-  );
-}
 
 export function useAiGetClassifierConfig() {
   return useQuery<{ aiGetClassifierConfig: ClassifierConfig | null }>(
@@ -89,26 +75,6 @@ export function useAiGetBackfillJob(jobId: string | null, pollMs = 5000) {
   }
 
   return query;
-}
-
-export function useAiUpsertProviderCredential() {
-  return useMutation<
-    { aiUpsertProviderCredential: ProviderCredential },
-    { input: UpsertProviderCredentialInput }
-  >(AI_UPSERT_PROVIDER_CREDENTIAL, {
-    refetchQueries: [{ query: AI_LIST_PROVIDER_CREDENTIALS }],
-    awaitRefetchQueries: true,
-  });
-}
-
-export function useAiRevokeProviderCredential() {
-  return useMutation<{ aiRevokeProviderCredential: boolean }, { id: string }>(
-    AI_REVOKE_PROVIDER_CREDENTIAL,
-    {
-      refetchQueries: [{ query: AI_LIST_PROVIDER_CREDENTIALS }],
-      awaitRefetchQueries: true,
-    },
-  );
 }
 
 export function useAiUpdateClassifierConfig() {
