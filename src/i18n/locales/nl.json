@@ -45,6 +45,7 @@
   "nav": {
     "dashboard": "Dashboard",
     "users": "Gebruikersbeheer",
+    "deletionRequests": "Verwijderingsverzoeken",
     "vendors": "Verkopersbeheer",
     "communities": "Gemeenschappen",
     "events": "Evenementen",
@@ -127,6 +128,29 @@
     "verification": "Verificatiestatus",
     "verified": "Geverifieerd",
     "unverified": "Niet geverifieerd"
+  },
+  "deletionRequests": {
+    "title": "Verwijderingsverzoeken",
+    "subtitle": "Gebruikers die verwijdering van hun account hebben aangevraagd",
+    "columns": {
+      "userId": "Gebruikers-ID",
+      "email": "E-mail",
+      "requestedDate": "Aangevraagd",
+      "status": "Status",
+      "legalHold": "Juridische blokkering",
+      "reason": "Reden"
+    },
+    "status": {
+      "PENDING_DELETION": "Verwijdering in behandeling",
+      "PURGING": "Wordt gewist"
+    },
+    "legalHoldBadge": "Juridische blokkering",
+    "loading": "Verwijderingsverzoeken laden...",
+    "empty": "Geen verwijderingsverzoeken gevonden.",
+    "error": "Kan verwijderingsverzoeken niet laden.",
+    "showing": "Toont {{from}}-{{to}} van {{total}}",
+    "previous": "Vorige",
+    "next": "Volgende"
   },
   "vendors": {
     "title": "Verkopersbeheer",

@@ -45,6 +45,7 @@
   "nav": {
     "dashboard": "Dashboard",
     "users": "Benutzerverwaltung",
+    "deletionRequests": "Löschanfragen",
     "vendors": "Verkäuferverwaltung",
     "communities": "Gemeinschaften",
     "events": "Veranstaltungen",
@@ -127,6 +128,29 @@
     "verification": "Verifizierungsstatus",
     "verified": "Verifiziert",
     "unverified": "Nicht verifiziert"
+  },
+  "deletionRequests": {
+    "title": "Löschanfragen",
+    "subtitle": "Benutzer, die die Löschung ihres Kontos beantragt haben",
+    "columns": {
+      "userId": "Benutzer-ID",
+      "email": "E-Mail",
+      "requestedDate": "Beantragt",
+      "status": "Status",
+      "legalHold": "Rechtliche Sperre",
+      "reason": "Grund"
+    },
+    "status": {
+      "PENDING_DELETION": "Löschung ausstehend",
+      "PURGING": "Wird gelöscht"
+    },
+    "legalHoldBadge": "Rechtliche Sperre",
+    "loading": "Löschanfragen werden geladen...",
+    "empty": "Keine Löschanfragen gefunden.",
+    "error": "Löschanfragen konnten nicht geladen werden.",
+    "showing": "Zeige {{from}}-{{to}} von {{total}}",
+    "previous": "Zurück",
+    "next": "Weiter"
   },
   "vendors": {
     "title": "Verkäuferverwaltung",

@@ -464,6 +464,12 @@ export {
 } from "./useAdminAccounts";
 
 export {
+  useAdminListDeletionRequests,
+  type DeletionRequestItem,
+  type AdminListDeletionRequestsData,
+} from "./useDeletionRequests";
+
+export {
   useListPushNotifications,
   useListInAppNotifications,
   useListNotificationTemplates,

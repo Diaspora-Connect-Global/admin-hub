@@ -45,6 +45,7 @@
   "nav": {
     "dashboard": "Panel de control",
     "users": "Gestión de usuarios",
+    "deletionRequests": "Solicitudes de eliminación",
     "vendors": "Gestión de vendedores",
     "communities": "Comunidades",
     "events": "Eventos",
@@ -127,6 +128,29 @@
     "verification": "Estado de verificación",
     "verified": "Verificado",
     "unverified": "No verificado"
+  },
+  "deletionRequests": {
+    "title": "Solicitudes de eliminación",
+    "subtitle": "Usuarios que han solicitado la eliminación de su cuenta",
+    "columns": {
+      "userId": "ID de usuario",
+      "email": "Correo electrónico",
+      "requestedDate": "Solicitado",
+      "status": "Estado",
+      "legalHold": "Retención legal",
+      "reason": "Motivo"
+    },
+    "status": {
+      "PENDING_DELETION": "Eliminación pendiente",
+      "PURGING": "Depurando"
+    },
+    "legalHoldBadge": "Retención legal",
+    "loading": "Cargando solicitudes de eliminación...",
+    "empty": "No se encontraron solicitudes de eliminación.",
+    "error": "Error al cargar las solicitudes de eliminación.",
+    "showing": "Mostrando {{from}}-{{to}} de {{total}}",
+    "previous": "Anterior",
+    "next": "Siguiente"
   },
   "vendors": {
     "title": "Gestión de vendedores",

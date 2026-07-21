@@ -1,6 +1,6 @@
 import { Link, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { LayoutDashboard, Users, Wallet, AlertTriangle, BarChart3, Settings, Bell, FileText, HeadphonesIcon, Shield, Store, Key, Activity, ChevronLeft, ChevronRight, LogOut, MessageSquare, Calendar, Briefcase, Landmark, ClipboardList, WalletCards, Banknote } from "lucide-react";
+import { LayoutDashboard, Users, Wallet, AlertTriangle, BarChart3, Settings, Bell, FileText, HeadphonesIcon, Shield, Store, Key, Activity, ChevronLeft, ChevronRight, LogOut, MessageSquare, Calendar, Briefcase, Landmark, ClipboardList, WalletCards, Banknote, UserX } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { isNavItemVisible, type NavVisibilityRules } from "@/lib/navVisibility";
 import logo from "@/assets/logo.svg";
@@ -22,6 +22,7 @@ const navItems: Array<{
   // admins are redirected from "/" to their home page (see pages/Index.tsx).
   { id: "dashboard", titleKey: "nav.dashboard", icon: LayoutDashboard, path: "/" },
   { id: "user_management", titleKey: "nav.users", icon: Users, path: "/users" },
+  { id: "deletion_requests", titleKey: "nav.deletionRequests", icon: UserX, path: "/deletion-requests", systemAdminOnly: true },
   { id: "chat_management", titleKey: "nav.chat", icon: MessageSquare, path: "/chats" },
   { id: "escrow_management", titleKey: "nav.escrow", icon: Wallet, path: "/escrow" },
   // Escrow Wallet / Ledger / Payout (escrow-service) — admin-only.

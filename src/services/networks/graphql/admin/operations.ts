@@ -1504,6 +1504,32 @@ export const SET_USER_LEGAL_HOLD = gql`
   }
 `;
 
+/**
+ * Lists users who have requested account deletion (GDPR "delete my account").
+ * `status` filters by deletion lifecycle stage: PENDING_DELETION (in the 30-day
+ * reversible grace window) or PURGING (window expired, cascade erase in flight).
+ * Dates are ISO strings; `legalHold` true means a hold is deferring the purge.
+ */
+export const ADMIN_LIST_DELETION_REQUESTS = gql`
+  query AdminListDeletionRequests($limit: Int, $offset: Int, $status: String) {
+    adminListDeletionRequests(limit: $limit, offset: $offset, status: $status) {
+      items {
+        userId
+        email
+        deletionStatus
+        deletionScheduledAt
+        purgeAfter
+        daysRemaining
+        deletionReason
+        legalHold
+        legalHoldReason
+      }
+      total
+      hasMore
+    }
+  }
+`;
+
 export const ADMIN_BAN_VENDOR = gql`
   mutation AdminBanVendor($vendorId: String!, $reason: String!, $permanent: Boolean) {
     adminBanVendor(vendorId: $vendorId, reason: $reason, permanent: $permanent) {

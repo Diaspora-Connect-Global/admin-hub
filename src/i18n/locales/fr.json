@@ -45,6 +45,7 @@
   "nav": {
     "dashboard": "Tableau de bord",
     "users": "Gestion des utilisateurs",
+    "deletionRequests": "Demandes de suppression",
     "vendors": "Gestion des vendeurs",
     "communities": "Communautés",
     "events": "Événements",
@@ -127,6 +128,29 @@
     "verification": "Statut de vérification",
     "verified": "Vérifié",
     "unverified": "Non vérifié"
+  },
+  "deletionRequests": {
+    "title": "Demandes de suppression",
+    "subtitle": "Utilisateurs ayant demandé la suppression de leur compte",
+    "columns": {
+      "userId": "ID utilisateur",
+      "email": "E-mail",
+      "requestedDate": "Demandé le",
+      "status": "Statut",
+      "legalHold": "Blocage juridique",
+      "reason": "Motif"
+    },
+    "status": {
+      "PENDING_DELETION": "Suppression en attente",
+      "PURGING": "Purge en cours"
+    },
+    "legalHoldBadge": "Blocage juridique",
+    "loading": "Chargement des demandes de suppression...",
+    "empty": "Aucune demande de suppression trouvée.",
+    "error": "Échec du chargement des demandes de suppression.",
+    "showing": "Affichage de {{from}} à {{to}} sur {{total}}",
+    "previous": "Précédent",
+    "next": "Suivant"
   },
   "vendors": {
     "title": "Gestion des vendeurs",

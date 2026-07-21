@@ -45,6 +45,7 @@
   "nav": {
     "dashboard": "Dashboard",
     "users": "User Management",
+    "deletionRequests": "Deletion Requests",
     "vendors": "Vendor Management",
     "communities": "Communities",
     "events": "Events",
@@ -127,6 +128,29 @@
     "verification": "Verification Status",
     "verified": "Verified",
     "unverified": "Unverified"
+  },
+  "deletionRequests": {
+    "title": "Deletion Requests",
+    "subtitle": "Users who have requested account deletion",
+    "columns": {
+      "userId": "User ID",
+      "email": "Email",
+      "requestedDate": "Requested",
+      "status": "Status",
+      "legalHold": "Legal hold",
+      "reason": "Reason"
+    },
+    "status": {
+      "PENDING_DELETION": "Pending deletion",
+      "PURGING": "Purging"
+    },
+    "legalHoldBadge": "Legal hold",
+    "loading": "Loading deletion requests...",
+    "empty": "No deletion requests found.",
+    "error": "Failed to load deletion requests.",
+    "showing": "Showing {{from}}-{{to}} of {{total}}",
+    "previous": "Previous",
+    "next": "Next"
   },
   "vendors": {
     "title": "Vendor Management",
