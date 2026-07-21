@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { JoinPolicyBanner } from "@/components/JoinPolicyBanner";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
@@ -133,8 +134,10 @@ export default function AssociationDetail() {
   const handleRejectMembership = async (userId: string) => {
     if (!id) return;
     try {
-      await rejectMembership({ variables: { input: { entityId: id, entityType: "ASSOCIATION", userId } } });
-      toast({ title: "Membership rejected" });
+      await rejectMembership({
+        variables: { input: { entityId: id, entityType: "ASSOCIATION", userId, reason: "Declined by admin" } },
+      });
+      toast({ title: "Request declined" });
       refetchPending();
     } catch (err) {
       toast({ title: "Error", description: err instanceof Error ? err.message : "Failed", variant: "destructive" });
@@ -179,6 +182,7 @@ export default function AssociationDetail() {
 
   // ── Invite member handler ──────────────────────────────────────────────────
   const [inviteUserId, setInviteUserId] = useState("");
+  const [inviteSearch, setInviteSearch] = useState("");
 
   const handleInviteMember = async () => {
     if (!id || !inviteUserId) return;
@@ -186,6 +190,7 @@ export default function AssociationDetail() {
       await inviteMemberMutation({ variables: { input: { entityId: id, entityType: "ASSOCIATION", userId: inviteUserId } } });
       toast({ title: "Invitation sent" });
       setInviteUserId("");
+      setInviteSearch("");
       setInviteMemberOpen(false);
     } catch (err) {
       toast({ title: "Error", description: err instanceof Error ? err.message : "Failed", variant: "destructive" });
@@ -522,15 +527,21 @@ export default function AssociationDetail() {
                 </div>
               </CardHeader>
 
+              <CardContent className="pb-0">
+                <JoinPolicyBanner joinPolicy={association.joinPolicy} entityLabel="association" />
+              </CardContent>
+
               {pendingRequests.length > 0 && (
-                <CardContent className="pb-0">
+                <CardContent className="pb-0 pt-3">
                   <p className="text-sm font-medium mb-2">Pending Requests ({pendingRequests.length})</p>
                   <div className="space-y-2 mb-4">
-                    {pendingRequests.map((req) => (
+                    {pendingRequests.map((req) => {
+                      const u = userById.get(req.userId);
+                      return (
                       <div key={req.userId} className="flex items-center justify-between p-3 rounded-lg bg-warning/10 border border-warning/20">
                         <div>
-                          <p className="font-mono text-xs">{req.userId}</p>
-                          <p className="text-xs text-muted-foreground">{new Date(req.requestedAt).toLocaleDateString()}</p>
+                          <p className="text-sm font-medium">{u?.displayName || "Unknown user"}</p>
+                          <p className="text-xs text-muted-foreground">{u?.email || req.userId} · {new Date(req.requestedAt).toLocaleDateString()}</p>
                         </div>
                         <div className="flex gap-2">
                           <Button size="sm" variant="outline" className="text-success" onClick={() => handleApproveMembership(req.userId)}>
@@ -541,7 +552,8 @@ export default function AssociationDetail() {
                           </Button>
                         </div>
                       </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </CardContent>
               )}
@@ -1099,16 +1111,41 @@ export default function AssociationDetail() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Invite Member</DialogTitle>
-            <DialogDescription>Enter the User ID to invite to this association.</DialogDescription>
+            <DialogDescription>Pick the person to invite to this association.</DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-4">
+          <div className="space-y-3 py-4">
             <div className="space-y-2">
-              <Label>User ID</Label>
+              <Label>Find a user</Label>
               <Input
-                placeholder="Enter user UUID..."
-                value={inviteUserId}
-                onChange={(e) => setInviteUserId(e.target.value)}
+                placeholder="Search by name or email"
+                value={inviteSearch}
+                onChange={(e) => setInviteSearch(e.target.value)}
               />
+            </div>
+            <div className="max-h-56 overflow-y-auto rounded-md border border-border/50 divide-y divide-border/40">
+              {users
+                .filter((u) => {
+                  const q = inviteSearch.trim().toLowerCase();
+                  if (!q) return true;
+                  return (u.displayName ?? "").toLowerCase().includes(q) || u.email.toLowerCase().includes(q);
+                })
+                .slice(0, 50)
+                .map((u) => (
+                  <button
+                    key={u.id}
+                    type="button"
+                    onClick={() => setInviteUserId(u.id)}
+                    className={`flex w-full flex-col items-start px-3 py-2 text-left text-sm hover:bg-muted/50 ${
+                      inviteUserId === u.id ? "bg-primary/10" : ""
+                    }`}
+                  >
+                    <span className="font-medium">{u.displayName || "(no name)"}</span>
+                    <span className="text-xs text-muted-foreground">{u.email}</span>
+                  </button>
+                ))}
+              {users.length === 0 && (
+                <p className="px-3 py-4 text-sm text-muted-foreground">No users available.</p>
+              )}
             </div>
           </div>
           <DialogFooter>

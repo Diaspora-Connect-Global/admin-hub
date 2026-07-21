@@ -39,7 +39,14 @@ import {
 import { useListAdmins, useAssignAdminRole } from "@/hooks/admin/useAdminAccounts";
 import { useListCommunityTypes } from "@/hooks/admin/useEntityTypes";
 import type { CommunityType } from "@/services/networks/graphql/admin";
-import { useLinkAssociation, useUnlinkAssociation } from "@/hooks/admin/useAssociation";
+import {
+  useLinkAssociation,
+  useUnlinkAssociation,
+  useApproveMembership,
+  useRejectMembership,
+  useInviteMember,
+  useGetPendingMembershipRequests,
+} from "@/hooks/admin/useAssociation";
 import type { CommunityAdminListItem } from "@/hooks/admin/useAssociation";
 import {
   countriesServedLabelsToIso2,
@@ -148,7 +155,57 @@ export default function CommunityDetail() {
   const [removingAvatar, setRemovingAvatar] = useState(false);
   const [removingBanner, setRemovingBanner] = useState(false);
   const community = data?.getCommunity;
-  const { data: membersData } = useListCommunityMembers(id ?? null, 50, 0);
+  const { data: membersData, refetch: refetchMembers } = useListCommunityMembers(id ?? null, 50, 0);
+
+  // Pending join requests (APPROVAL / PAID policies surface requests here).
+  const { data: pendingData, refetch: refetchPending } = useGetPendingMembershipRequests(id ?? null, "COMMUNITY");
+  const pendingRequests = pendingData?.getPendingMembershipRequests.requests ?? [];
+
+  const [approveMembership] = useApproveMembership();
+  const [rejectMembership] = useRejectMembership();
+  const [inviteMemberMutation] = useInviteMember();
+
+  const handleApproveMembership = async (userId: string) => {
+    if (!id) return;
+    try {
+      await approveMembership({ variables: { input: { entityId: id, entityType: "COMMUNITY", userId } } });
+      toast({ title: "Membership approved" });
+      refetchMembers();
+      refetchPending();
+    } catch (err) {
+      toast({ title: "Error", description: err instanceof Error ? err.message : "Failed", variant: "destructive" });
+    }
+  };
+
+  const handleRejectMembership = async (userId: string) => {
+    if (!id) return;
+    try {
+      await rejectMembership({
+        variables: { input: { entityId: id, entityType: "COMMUNITY", userId, reason: "Declined by admin" } },
+      });
+      toast({ title: "Request declined" });
+      refetchPending();
+    } catch (err) {
+      toast({ title: "Error", description: err instanceof Error ? err.message : "Failed", variant: "destructive" });
+    }
+  };
+
+  const [inviteUserId, setInviteUserId] = useState("");
+  const [inviteSearch, setInviteSearch] = useState("");
+  const handleInviteMember = async () => {
+    if (!id || !inviteUserId) return;
+    try {
+      await inviteMemberMutation({
+        variables: { input: { entityId: id, entityType: "COMMUNITY", userId: inviteUserId } },
+      });
+      toast({ title: "Invitation sent" });
+      setInviteUserId("");
+      setInviteSearch("");
+      setInviteMemberOpen(false);
+    } catch (err) {
+      toast({ title: "Error", description: err instanceof Error ? err.message : "Failed", variant: "destructive" });
+    }
+  };
   const {
     data: communityAdminsData,
     loading: communityAdminsLoading,
@@ -932,6 +989,14 @@ export default function CommunityDetail() {
           <CommunityMembersTab
             communityMemberRows={communityMemberRows}
             setInviteMemberOpen={setInviteMemberOpen}
+            joinPolicy={community.joinPolicy}
+            pendingRequests={pendingRequests}
+            onApprove={handleApproveMembership}
+            onReject={handleRejectMembership}
+            resolveUser={(uid) => {
+              const u = userById.get(uid);
+              return { name: u?.displayName || "Unknown user", email: u?.email || uid };
+            }}
           />
 
           {/* Posts Tab */}
@@ -1101,15 +1166,52 @@ export default function CommunityDetail() {
           <DialogHeader>
             <DialogTitle>Invite Member</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 py-4">
+          <div className="space-y-3 py-4">
             <div className="space-y-2">
-              <Label>Email Address</Label>
-              <Input type="email" placeholder="member@example.com" />
+              <Label>Find a user</Label>
+              <Input
+                placeholder="Search by name or email"
+                value={inviteSearch}
+                onChange={(e) => setInviteSearch(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">
+                Pick the person to invite. They must accept before joining.
+              </p>
+            </div>
+            <div className="max-h-56 overflow-y-auto rounded-md border border-border/50 divide-y divide-border/40">
+              {users
+                .filter((u) => {
+                  const q = inviteSearch.trim().toLowerCase();
+                  if (!q) return true;
+                  return (
+                    (u.displayName ?? "").toLowerCase().includes(q) ||
+                    u.email.toLowerCase().includes(q)
+                  );
+                })
+                .slice(0, 50)
+                .map((u) => (
+                  <button
+                    key={u.id}
+                    type="button"
+                    onClick={() => setInviteUserId(u.id)}
+                    className={`flex w-full flex-col items-start px-3 py-2 text-left text-sm hover:bg-muted/50 ${
+                      inviteUserId === u.id ? "bg-primary/10" : ""
+                    }`}
+                  >
+                    <span className="font-medium">{u.displayName || "(no name)"}</span>
+                    <span className="text-xs text-muted-foreground">{u.email}</span>
+                  </button>
+                ))}
+              {users.length === 0 && (
+                <p className="px-3 py-4 text-sm text-muted-foreground">No users available.</p>
+              )}
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setInviteMemberOpen(false)}>Cancel</Button>
-            <Button onClick={() => { toast({ title: "Invitation Sent" }); setInviteMemberOpen(false); }}>Send Invite</Button>
+            <Button onClick={handleInviteMember} disabled={!inviteUserId}>
+              {inviteUserId ? `Invite ${userById.get(inviteUserId)?.displayName || userById.get(inviteUserId)?.email || "user"}` : "Send Invite"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
