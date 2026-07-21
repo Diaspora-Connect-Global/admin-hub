@@ -122,7 +122,7 @@ export default function AssociationDetail() {
   const handleApproveMembership = async (userId: string) => {
     if (!id) return;
     try {
-      await approveMembership({ variables: { input: { entityId: id, entityType: "ASSOCIATION", userId } } });
+      await approveMembership({ variables: { input: { entityId: id, entityType: "ASSOCIATION", startUserId: userId } } });
       toast({ title: "Membership approved" });
       refetchMembers();
       refetchPending();
@@ -135,7 +135,7 @@ export default function AssociationDetail() {
     if (!id) return;
     try {
       await rejectMembership({
-        variables: { input: { entityId: id, entityType: "ASSOCIATION", userId, reason: "Declined by admin" } },
+        variables: { input: { entityId: id, entityType: "ASSOCIATION", targetUserId: userId, reason: "Declined by admin" } },
       });
       toast({ title: "Request declined" });
       refetchPending();

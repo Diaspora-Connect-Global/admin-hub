@@ -970,6 +970,22 @@ export interface MembershipActionInput {
   reason?: string;
 }
 
+// The gateway's ApproveMembershipInput/RejectMembershipInput use DIFFERENT id
+// field names (startUserId vs targetUserId) — not `userId`. These match the
+// GraphQL schema exactly so the mutation variables validate.
+export interface ApproveMembershipActionInput {
+  entityId: string;
+  entityType: "COMMUNITY" | "ASSOCIATION";
+  startUserId: string;
+}
+
+export interface RejectMembershipActionInput {
+  entityId: string;
+  entityType: "COMMUNITY" | "ASSOCIATION";
+  targetUserId: string;
+  reason?: string;
+}
+
 export const CREATE_ASSOCIATION = gql`
   mutation CreateAssociation($input: CreateAssociationInput!) {
     createAssociation(input: $input) {

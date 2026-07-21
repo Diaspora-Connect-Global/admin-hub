@@ -168,7 +168,7 @@ export default function CommunityDetail() {
   const handleApproveMembership = async (userId: string) => {
     if (!id) return;
     try {
-      await approveMembership({ variables: { input: { entityId: id, entityType: "COMMUNITY", userId } } });
+      await approveMembership({ variables: { input: { entityId: id, entityType: "COMMUNITY", startUserId: userId } } });
       toast({ title: "Membership approved" });
       refetchMembers();
       refetchPending();
@@ -181,7 +181,7 @@ export default function CommunityDetail() {
     if (!id) return;
     try {
       await rejectMembership({
-        variables: { input: { entityId: id, entityType: "COMMUNITY", userId, reason: "Declined by admin" } },
+        variables: { input: { entityId: id, entityType: "COMMUNITY", targetUserId: userId, reason: "Declined by admin" } },
       });
       toast({ title: "Request declined" });
       refetchPending();

@@ -47,6 +47,8 @@ import {
   type UpdateAssociationInput,
   type AssociationMember,
   type MembershipActionInput,
+  type ApproveMembershipActionInput,
+  type RejectMembershipActionInput,
   type UpdateCommunityInput,
   type UpdateCommunityVisibilityInput,
   type UpdateCommunityJoinPolicyInput,
@@ -190,14 +192,14 @@ export function useUnlinkAssociation() {
 export function useApproveMembership() {
   return useMutation<
     { approveMembership: MutationSuccessResult },
-    { input: MembershipActionInput }
+    { input: ApproveMembershipActionInput }
   >(APPROVE_MEMBERSHIP);
 }
 
 export function useRejectMembership() {
   return useMutation<
     { rejectMembership: MutationSuccessResult },
-    { input: MembershipActionInput }
+    { input: RejectMembershipActionInput }
   >(REJECT_MEMBERSHIP);
 }
 
