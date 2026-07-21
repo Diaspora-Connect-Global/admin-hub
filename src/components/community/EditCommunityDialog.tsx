@@ -17,7 +17,7 @@ export interface EditForm {
   description: string;
   communityType: string;
   visibility: "PUBLIC" | "PRIVATE";
-  joinPolicy: "FREE" | "PAID";
+  joinPolicy: "OPEN" | "APPROVAL" | "INVITE_ONLY" | "PAID";
   paymentType: "NONE" | "ONE_TIME" | "SUBSCRIPTION";
   priceAmount: string;
   priceCurrency: string;
@@ -148,14 +148,16 @@ export function EditCommunityDialog({
                     <Label>Join policy <span className="text-destructive">*</span></Label>
                     <Select
                       value={editForm.joinPolicy}
-                      onValueChange={(v: "FREE" | "PAID") => setEditForm((prev) => ({ ...prev, joinPolicy: v }))}
+                      onValueChange={(v: "OPEN" | "APPROVAL" | "INVITE_ONLY" | "PAID") => setEditForm((prev) => ({ ...prev, joinPolicy: v }))}
                     >
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent className="bg-popover border-border">
-                        <SelectItem value="FREE">Free</SelectItem>
-                        <SelectItem value="PAID">Paid</SelectItem>
+                        <SelectItem value="OPEN">Open — anyone can join</SelectItem>
+                        <SelectItem value="APPROVAL">Approval required — admin approves each request</SelectItem>
+                        <SelectItem value="INVITE_ONLY">Invite only — join by invitation</SelectItem>
+                        <SelectItem value="PAID">Paid — payment required to join</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>

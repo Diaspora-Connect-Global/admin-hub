@@ -207,7 +207,9 @@ export default function AssociationDetail() {
   const [editForm, setEditForm] = useState({
     name: "",
     description: "",
-    joinPolicy: "OPEN" as "OPEN" | "REQUEST" | "INVITE_ONLY",
+    // "PAID" is carried as a read-only sentinel so this form (which has no price
+    // fields) never silently strips paid status; it's excluded from the update below.
+    joinPolicy: "OPEN" as "OPEN" | "APPROVAL" | "INVITE_ONLY" | "PAID",
     visibility: "PUBLIC" as "PUBLIC" | "PRIVATE",
     contactEmail: "",
     contactPhone: "",
@@ -221,7 +223,9 @@ export default function AssociationDetail() {
       name: association.name ?? "",
       description: association.description ?? "",
       joinPolicy:
-        association.joinPolicy === "REQUEST" || association.joinPolicy === "INVITE_ONLY"
+        association.joinPolicy === "APPROVAL" ||
+        association.joinPolicy === "INVITE_ONLY" ||
+        association.joinPolicy === "PAID"
           ? association.joinPolicy
           : "OPEN",
       visibility: association.visibility === "PRIVATE" ? "PRIVATE" : "PUBLIC",
@@ -261,7 +265,10 @@ export default function AssociationDetail() {
             id,
             name: editForm.name.trim(),
             description: editForm.description.trim() || undefined,
-            joinPolicy: editForm.joinPolicy,
+            // Don't send joinPolicy for a paid association — this form can't set a
+            // price, so overwriting it would silently drop paid status. Payment is
+            // managed from the Associations list.
+            joinPolicy: editForm.joinPolicy === "PAID" ? undefined : editForm.joinPolicy,
             visibility: editForm.visibility,
             contactEmail: editForm.contactEmail.trim() || undefined,
             contactPhone: editForm.contactPhone.trim() || undefined,
@@ -882,15 +889,19 @@ export default function AssociationDetail() {
                     <Label>Join Policy</Label>
                     <Select
                       value={editForm.joinPolicy}
-                      onValueChange={(v: "OPEN" | "REQUEST" | "INVITE_ONLY") =>
+                      onValueChange={(v: "OPEN" | "APPROVAL" | "INVITE_ONLY" | "PAID") =>
                         setEditForm((prev) => ({ ...prev, joinPolicy: v }))
                       }
                     >
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="OPEN">Open</SelectItem>
-                        <SelectItem value="REQUEST">Approval Required</SelectItem>
+                        <SelectItem value="APPROVAL">Approval Required</SelectItem>
                         <SelectItem value="INVITE_ONLY">Invite Only</SelectItem>
+                        {/* Shown only for an already-paid association; price is managed in the Associations list. */}
+                        {editForm.joinPolicy === "PAID" && (
+                          <SelectItem value="PAID" disabled>Paid (managed in Associations list)</SelectItem>
+                        )}
                       </SelectContent>
                     </Select>
                   </div>

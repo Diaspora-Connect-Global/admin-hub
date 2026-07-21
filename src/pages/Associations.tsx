@@ -418,7 +418,12 @@ export default function Associations() {
       });
       return;
     }
-    const paidPolicy = formData.isPaid ? "PAID" : "OPEN";
+    // Paid overrides the access policy (a single backend enum can't be both PAID
+    // and APPROVAL). Otherwise the chosen access policy stands: OPEN / APPROVAL /
+    // INVITE_ONLY — all valid backend values (the old "REQUEST" was rejected).
+    const effectiveJoinPolicy = formData.isPaid
+      ? "PAID"
+      : (["OPEN", "APPROVAL", "INVITE_ONLY"].includes(formData.joinPolicy) ? formData.joinPolicy : "OPEN");
     const paymentType = formData.isPaid ? mapUiPaymentTypeToApi(formData.paymentType) : "NONE";
     const paymentAmount = formData.isPaid ? Number(formData.paymentAmount) : undefined;
     const paymentCurrency = formData.isPaid ? formData.paymentCurrency : undefined;
@@ -432,7 +437,7 @@ export default function Associations() {
               id: editingAssociationId,
               name: formData.name,
               description: formData.description || undefined,
-              joinPolicy: paidPolicy,
+              joinPolicy: effectiveJoinPolicy,
               visibility: formData.visibility as "PUBLIC" | "PRIVATE",
               contactEmail: formData.contactEmail || undefined,
               contactPhone: formData.contactPhone || undefined,
@@ -456,7 +461,7 @@ export default function Associations() {
             name: formData.name,
             description: formData.description || undefined,
             associationTypeId: formData.associationTypeId,
-            joinPolicy: paidPolicy,
+            joinPolicy: effectiveJoinPolicy,
             visibility: formData.visibility as "PUBLIC" | "PRIVATE",
             paymentType,
             priceAmount: paymentAmount,
@@ -508,7 +513,7 @@ export default function Associations() {
       associationTypeId: assoc.associationTypeId,
       visibility: assoc.visibility || "PUBLIC",
       countriesServed: [...assoc.countriesServed],
-      joinPolicy: ["OPEN", "REQUEST", "INVITE_ONLY"].includes(assoc.joinPolicy) ? assoc.joinPolicy : "OPEN",
+      joinPolicy: ["OPEN", "APPROVAL", "INVITE_ONLY"].includes(assoc.joinPolicy) ? assoc.joinPolicy : "OPEN",
       whoCanPost: assoc.whoCanPost || "Admins Only",
       isPaid: assoc.isPaid,
       paymentType: assoc.paymentType ?? "Monthly",
@@ -980,10 +985,11 @@ export default function Associations() {
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="OPEN">{t('associations.form.joinOpen')}</SelectItem>
-                        <SelectItem value="REQUEST">{t('associations.form.joinApproval')}</SelectItem>
-                        <SelectItem value="INVITE_ONLY">Invite Only</SelectItem>
+                        <SelectItem value="APPROVAL">{t('associations.form.joinApproval')}</SelectItem>
+                        <SelectItem value="INVITE_ONLY">{t('associations.form.joinInvite')}</SelectItem>
                       </SelectContent>
                     </Select>
+                    <p className="text-xs text-muted-foreground">{t('associations.form.joinPolicyPaidNote')}</p>
                   </div>
                   <div className="space-y-2">
                     <Label>Visibility <span className="text-destructive">*</span></Label>

@@ -95,12 +95,23 @@ const allCountries = [
 
 const countryOptions = allCountries.map((country) => ({ label: country, value: country }));
 
-function joinPolicyToApi(joinUi: "FREE" | "PAID"): string {
-  return joinUi === "FREE" ? "OPEN" : "PAID";
+type JoinPolicyUi = "OPEN" | "APPROVAL" | "INVITE_ONLY" | "PAID";
+
+function joinPolicyToApi(joinUi: JoinPolicyUi): string {
+  // The UI values are already the backend enum verbatim.
+  return joinUi;
 }
 
-function joinPolicyFromCommunity(joinPolicy: string | undefined): "FREE" | "PAID" {
-  return joinPolicy === "PAID" ? "PAID" : "FREE";
+function joinPolicyFromCommunity(joinPolicy: string | undefined): JoinPolicyUi {
+  switch (joinPolicy) {
+    case "APPROVAL":
+    case "INVITE_ONLY":
+    case "PAID":
+      return joinPolicy;
+    // Legacy "FREE" and anything unrecognised map to OPEN (the backend default).
+    default:
+      return "OPEN";
+  }
 }
 
 function groupCreationApiToUi(api: string | undefined): string {
@@ -303,7 +314,7 @@ export default function CommunityDetail() {
     description: "",
     communityType: "",
     visibility: "PUBLIC" as "PUBLIC" | "PRIVATE",
-    joinPolicy: "FREE" as "FREE" | "PAID",
+    joinPolicy: "OPEN" as JoinPolicyUi,
     paymentType: "NONE" as "NONE" | "ONE_TIME" | "SUBSCRIPTION",
     priceAmount: "",
     priceCurrency: "EUR",

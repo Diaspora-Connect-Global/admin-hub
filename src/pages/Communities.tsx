@@ -103,7 +103,7 @@ interface CreateFormData {
   description: string;
   communityType: string; // -> communityTypeId
   visibility: "PUBLIC" | "PRIVATE";
-  joinPolicy: "FREE" | "PAID";
+  joinPolicy: "OPEN" | "APPROVAL" | "INVITE_ONLY" | "PAID";
   paymentType: "NONE" | "ONE_TIME" | "SUBSCRIPTION";
   priceAmount: string;
   priceCurrency: string;
@@ -130,7 +130,7 @@ const initialFormData: CreateFormData = {
   description: "",
   communityType: "",
   visibility: "PUBLIC",
-  joinPolicy: "FREE",
+  joinPolicy: "OPEN",
   paymentType: "NONE",
   priceAmount: "",
   priceCurrency: "EUR",
@@ -315,10 +315,11 @@ export default function Communities() {
       }
     }
 
-    const joinPolicyApi: CreateCommunityInput["joinPolicy"] =
-      formData.joinPolicy === "FREE" ? "OPEN" : "PAID";
+    // joinPolicy now maps 1:1 to the backend enum (OPEN/APPROVAL/INVITE_ONLY/PAID).
+    // Only PAID carries a payment type; every other policy forces NONE.
+    const joinPolicyApi: CreateCommunityInput["joinPolicy"] = formData.joinPolicy;
     const paymentTypeApi: CreateCommunityInput["paymentType"] =
-      formData.joinPolicy === "FREE" ? "NONE" : formData.paymentType;
+      formData.joinPolicy === "PAID" ? formData.paymentType : "NONE";
 
     const input: CreateCommunityInput = {
       name: formData.communityName.trim(),
@@ -756,11 +757,13 @@ export default function Communities() {
                   </div>
                   <div className="space-y-2">
                     <Label>Join policy <span className="text-destructive">*</span></Label>
-                    <Select value={formData.joinPolicy} onValueChange={(v: "FREE" | "PAID") => setFormData({ ...formData, joinPolicy: v })}>
+                    <Select value={formData.joinPolicy} onValueChange={(v: "OPEN" | "APPROVAL" | "INVITE_ONLY" | "PAID") => setFormData({ ...formData, joinPolicy: v })}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent className="bg-popover border-border">
-                        <SelectItem value="FREE">Free</SelectItem>
-                        <SelectItem value="PAID">Paid</SelectItem>
+                        <SelectItem value="OPEN">Open — anyone can join</SelectItem>
+                        <SelectItem value="APPROVAL">Approval required — admin approves each request</SelectItem>
+                        <SelectItem value="INVITE_ONLY">Invite only — join by invitation</SelectItem>
+                        <SelectItem value="PAID">Paid — payment required to join</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
