@@ -33,6 +33,7 @@ import {
 import { uploadAssociationAvatar, uploadAssociationCover } from "@/lib/associationImageUpload";
 import { iso2OrLabelToDisplayName } from "@/lib/countriesServedIso";
 import { useGetUsers } from "@/hooks/admin";
+import { ListPager } from "@/components/community/ListPager";
 import { Loader2 } from "lucide-react";
 import { 
   ArrowLeft, Edit, Check, X, Link2, UserPlus, Users, FileText, 
@@ -74,9 +75,16 @@ export default function AssociationDetail() {
   const associationTypeLabel =
     association?.associationType?.name ?? association?.associationTypeId ?? "—";
 
+  // Members list — page-based (server caps a page at 200; page smaller here).
+  const MEMBERS_PAGE_SIZE = 50;
+  const [membersPage, setMembersPage] = useState(1);
   const { data: membersData, loading: membersLoading, refetch: refetchMembers } =
-    useGetAssociationMembers(id ?? null);
+    useGetAssociationMembers(id ?? null, { page: membersPage, limit: MEMBERS_PAGE_SIZE });
   const liveMembers = membersData?.getAssociationMembers.members ?? [];
+  const membersTotal = membersData?.getAssociationMembers.total ?? liveMembers.length;
+  const membersOffset = (membersPage - 1) * MEMBERS_PAGE_SIZE;
+  const membersHasMore =
+    membersData?.getAssociationMembers.hasMore ?? membersOffset + liveMembers.length < membersTotal;
   const { data: usersData } = useGetUsers({ limit: 500, offset: 0, skip: false });
   const users = (
     usersData as { getUsers?: { items?: Array<{ id: string; email: string; displayName?: string | null }> } } | undefined
@@ -102,9 +110,17 @@ export default function AssociationDetail() {
       };
     });
 
+  // Pending requests — offset-paged (server caps a page at 200).
+  const PENDING_PAGE_SIZE = 20;
+  const [pendingOffset, setPendingOffset] = useState(0);
   const { data: pendingData, refetch: refetchPending } =
-    useGetPendingMembershipRequests(id ?? null, "ASSOCIATION");
+    useGetPendingMembershipRequests(id ?? null, "ASSOCIATION", {
+      limit: PENDING_PAGE_SIZE,
+      offset: pendingOffset,
+    });
   const pendingRequests = pendingData?.getPendingMembershipRequests.requests ?? [];
+  const pendingTotal = pendingData?.getPendingMembershipRequests.total ?? pendingRequests.length;
+  const pendingHasMore = pendingData?.getPendingMembershipRequests.hasMore ?? false;
 
   // ── Mutations ──────────────────────────────────────────────────────────────
   const [approveMembership] = useApproveMembership();
@@ -513,7 +529,7 @@ export default function AssociationDetail() {
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div>
-                    <CardTitle className="text-base">Members ({membersData?.getAssociationMembers.total ?? liveMembers.length})</CardTitle>
+                    <CardTitle className="text-base">Members ({membersTotal})</CardTitle>
                     <CardDescription>Active association members.</CardDescription>
                   </div>
                   <div className="flex gap-2">
@@ -533,7 +549,7 @@ export default function AssociationDetail() {
 
               {pendingRequests.length > 0 && (
                 <CardContent className="pb-0 pt-3">
-                  <p className="text-sm font-medium mb-2">Pending Requests ({pendingRequests.length})</p>
+                  <p className="text-sm font-medium mb-2">Pending Requests ({pendingTotal || pendingRequests.length})</p>
                   <div className="space-y-2 mb-4">
                     {pendingRequests.map((req) => {
                       const u = userById.get(req.userId);
@@ -555,6 +571,15 @@ export default function AssociationDetail() {
                       );
                     })}
                   </div>
+                  <ListPager
+                    offset={pendingOffset}
+                    count={pendingRequests.length}
+                    total={pendingTotal}
+                    hasMore={pendingHasMore}
+                    onPrev={() => setPendingOffset((o) => Math.max(0, o - PENDING_PAGE_SIZE))}
+                    onNext={() => setPendingOffset((o) => o + PENDING_PAGE_SIZE)}
+                    rangeKey="communities.pendingPaginationRange"
+                  />
                 </CardContent>
               )}
 
@@ -597,6 +622,17 @@ export default function AssociationDetail() {
                 </Table>
                 </div>
                 )}
+                <div className="px-4 pb-2">
+                  <ListPager
+                    offset={membersOffset}
+                    count={liveMembers.length}
+                    total={membersTotal}
+                    hasMore={membersHasMore}
+                    onPrev={() => setMembersPage((p) => Math.max(1, p - 1))}
+                    onNext={() => setMembersPage((p) => p + 1)}
+                    rangeKey="communities.membersPaginationRange"
+                  />
+                </div>
               </CardContent>
             </Card>
           </TabsContent>

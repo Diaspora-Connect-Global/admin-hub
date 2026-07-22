@@ -106,6 +106,8 @@ interface GetAssociationMembersResult {
   getAssociationMembers: {
     members: AssociationMember[];
     total: number;
+    /** True when more rows exist past this page (server caps a page at 200). */
+    hasMore?: boolean;
     page: number;
   };
 }
@@ -114,6 +116,8 @@ interface GetPendingRequestsResult {
   getPendingMembershipRequests: {
     requests: { userId: string; requestedAt: string; message?: string }[];
     total: number;
+    /** True when more pending requests exist past this page. */
+    hasMore?: boolean;
   };
 }
 
@@ -219,13 +223,14 @@ export function useInviteMember() {
 
 export function useGetAssociationMembers(
   associationId: string | null,
-  options?: { page?: number; limit?: number; status?: string },
+  options?: { page?: number; limit?: number; offset?: number; status?: string },
 ) {
   return useQuery<GetAssociationMembersResult>(GET_ASSOCIATION_MEMBERS, {
     variables: {
       associationId: associationId ?? "",
       page: options?.page ?? 1,
       limit: options?.limit ?? 20,
+      offset: options?.offset ?? undefined,
       status: options?.status ?? undefined,
     },
     skip: !associationId,
@@ -235,9 +240,15 @@ export function useGetAssociationMembers(
 export function useGetPendingMembershipRequests(
   entityId: string | null,
   entityType: "COMMUNITY" | "ASSOCIATION",
+  options?: { limit?: number; offset?: number },
 ) {
   return useQuery<GetPendingRequestsResult>(GET_PENDING_MEMBERSHIP_REQUESTS, {
-    variables: { entityId: entityId ?? "", entityType },
+    variables: {
+      entityId: entityId ?? "",
+      entityType,
+      limit: options?.limit ?? undefined,
+      offset: options?.offset ?? undefined,
+    },
     skip: !entityId,
   });
 }
@@ -436,6 +447,8 @@ export function useListCommunityMembers(communityId: string | null, limit = 20, 
     listCommunityMembers: {
       members: Array<{ userId: string; role: string; status: string; joinedAt: string }>;
       total: number;
+      /** True when more members exist past this page (server caps a page at 200). */
+      hasMore?: boolean;
     };
   }>(LIST_COMMUNITY_MEMBERS, {
     variables: { communityId: communityId ?? "", limit, offset },
@@ -490,6 +503,8 @@ export function useListAssociationMembers(associationId: string | null, limit = 
     listAssociationMembers: {
       members: Array<{ userId: string; role: string; status: string; joinedAt: string }>;
       total: number;
+      /** True when more members exist past this page (server caps a page at 200). */
+      hasMore?: boolean;
     };
   }>(LIST_ASSOCIATION_MEMBERS, {
     variables: { associationId: associationId ?? "", limit, offset },
