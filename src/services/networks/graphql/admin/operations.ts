@@ -1421,12 +1421,14 @@ export const GET_ASSOCIATION_MEMBERS = gql`
     $associationId: ID!
     $page: Int
     $limit: Int
+    $offset: Int
     $status: String
   ) {
     getAssociationMembers(
       associationId: $associationId
       page: $page
       limit: $limit
+      offset: $offset
       status: $status
     ) {
       members {
@@ -1436,20 +1438,32 @@ export const GET_ASSOCIATION_MEMBERS = gql`
         joinedAt
       }
       total
+      hasMore
       page
     }
   }
 `;
 
 export const GET_PENDING_MEMBERSHIP_REQUESTS = gql`
-  query GetPendingMembershipRequests($entityId: ID!, $entityType: String!) {
-    getPendingMembershipRequests(entityId: $entityId, entityType: $entityType) {
+  query GetPendingMembershipRequests(
+    $entityId: ID!
+    $entityType: String!
+    $limit: Int
+    $offset: Int
+  ) {
+    getPendingMembershipRequests(
+      entityId: $entityId
+      entityType: $entityType
+      limit: $limit
+      offset: $offset
+    ) {
       requests {
         userId
         requestedAt
         message
       }
       total
+      hasMore
     }
   }
 `;
@@ -1934,6 +1948,12 @@ export const GET_MODERATION_LOGS = gql`
   }
 `;
 
+/**
+ * NOTE: getBannedUsers returns a BARE ARRAY ([BannedUser!]!) with a hard 200-row
+ * server cap and NO pagination wrapper — no `total`, no `hasMore`. Do not add
+ * limit/offset/hasMore here; there is nothing on the schema to select. If ban
+ * lists ever need paging, the gateway must first wrap this in a response type.
+ */
 export const GET_BANNED_USERS_LIST = gql`
   query GetBannedUsers($entityId: ID!, $entityType: String!) {
     getBannedUsers(entityId: $entityId, entityType: $entityType) {
@@ -1945,6 +1965,11 @@ export const GET_BANNED_USERS_LIST = gql`
   }
 `;
 
+/**
+ * NOTE: getSuspendedUsers returns a BARE ARRAY ([SuspendedUser!]!) with a hard
+ * 200-row server cap and NO pagination wrapper — same as getBannedUsers above.
+ * No `hasMore`/`total` to select; left un-paginated by design.
+ */
 export const GET_SUSPENDED_USERS_LIST = gql`
   query GetSuspendedUsers($entityId: ID!, $entityType: String!) {
     getSuspendedUsers(entityId: $entityId, entityType: $entityType) {
@@ -1966,6 +1991,7 @@ export const LIST_COMMUNITY_MEMBERS = gql`
         joinedAt
       }
       total
+      hasMore
     }
   }
 `;
@@ -2012,6 +2038,7 @@ export const LIST_ASSOCIATION_MEMBERS = gql`
         joinedAt
       }
       total
+      hasMore
     }
   }
 `;

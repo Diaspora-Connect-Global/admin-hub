@@ -6,6 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Check, Download, UserPlus, X } from "lucide-react";
 import { getStatusBadge } from "./statusBadge";
 import { JoinPolicyBanner, type JoinPolicyValue } from "@/components/JoinPolicyBanner";
+import { ListPager } from "./ListPager";
 
 interface CommunityMemberRow {
   id: string;
@@ -30,6 +31,18 @@ interface CommunityMembersTabProps {
   onReject: (userId: string) => void;
   /** Resolve a userId to a display name + email for the pending list. */
   resolveUser: (userId: string) => { name: string; email: string };
+  /** Members pagination (offset-based; server caps a page at 200). */
+  membersTotal: number;
+  membersOffset: number;
+  membersHasMore: boolean;
+  onMembersPrev: () => void;
+  onMembersNext: () => void;
+  /** Pending-requests pagination. */
+  pendingTotal: number;
+  pendingOffset: number;
+  pendingHasMore: boolean;
+  onPendingPrev: () => void;
+  onPendingNext: () => void;
 }
 
 export function CommunityMembersTab({
@@ -40,6 +53,16 @@ export function CommunityMembersTab({
   onApprove,
   onReject,
   resolveUser,
+  membersTotal,
+  membersOffset,
+  membersHasMore,
+  onMembersPrev,
+  onMembersNext,
+  pendingTotal,
+  pendingOffset,
+  pendingHasMore,
+  onPendingPrev,
+  onPendingNext,
 }: CommunityMembersTabProps) {
   return (
     <TabsContent value="members" className="space-y-4">
@@ -48,7 +71,7 @@ export function CommunityMembersTab({
       {pendingRequests.length > 0 && (
         <Card className="glass border-warning/30">
           <CardHeader>
-            <CardTitle className="text-base">Pending join requests ({pendingRequests.length})</CardTitle>
+            <CardTitle className="text-base">Pending join requests ({pendingTotal || pendingRequests.length})</CardTitle>
             <CardDescription>Review each request and approve or decline it.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-2">
@@ -77,6 +100,15 @@ export function CommunityMembersTab({
               </div>
               );
             })}
+            <ListPager
+              offset={pendingOffset}
+              count={pendingRequests.length}
+              total={pendingTotal}
+              hasMore={pendingHasMore}
+              onPrev={onPendingPrev}
+              onNext={onPendingNext}
+              rangeKey="communities.pendingPaginationRange"
+            />
           </CardContent>
         </Card>
       )}
@@ -85,7 +117,7 @@ export function CommunityMembersTab({
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle className="text-base">Members ({communityMemberRows.length})</CardTitle>
+              <CardTitle className="text-base">Members ({membersTotal || communityMemberRows.length})</CardTitle>
               <CardDescription>Community members and their roles.</CardDescription>
             </div>
             <div className="flex gap-2">
@@ -127,6 +159,17 @@ export function CommunityMembersTab({
               ))}
             </TableBody>
           </Table>
+          </div>
+          <div className="px-4">
+            <ListPager
+              offset={membersOffset}
+              count={communityMemberRows.length}
+              total={membersTotal}
+              hasMore={membersHasMore}
+              onPrev={onMembersPrev}
+              onNext={onMembersNext}
+              rangeKey="communities.membersPaginationRange"
+            />
           </div>
         </CardContent>
       </Card>

@@ -155,11 +155,27 @@ export default function CommunityDetail() {
   const [removingAvatar, setRemovingAvatar] = useState(false);
   const [removingBanner, setRemovingBanner] = useState(false);
   const community = data?.getCommunity;
-  const { data: membersData, refetch: refetchMembers } = useListCommunityMembers(id ?? null, 50, 0);
 
-  // Pending join requests (APPROVAL / PAID policies surface requests here).
-  const { data: pendingData, refetch: refetchPending } = useGetPendingMembershipRequests(id ?? null, "COMMUNITY");
+  // Members list — offset-paged (server caps a page at 200; page smaller here).
+  const MEMBERS_PAGE_SIZE = 50;
+  const [membersOffset, setMembersOffset] = useState(0);
+  const { data: membersData, refetch: refetchMembers } = useListCommunityMembers(
+    id ?? null,
+    MEMBERS_PAGE_SIZE,
+    membersOffset,
+  );
+
+  // Pending join requests (APPROVAL / PAID policies surface requests here) — offset-paged.
+  const PENDING_PAGE_SIZE = 20;
+  const [pendingOffset, setPendingOffset] = useState(0);
+  const { data: pendingData, refetch: refetchPending } = useGetPendingMembershipRequests(
+    id ?? null,
+    "COMMUNITY",
+    { limit: PENDING_PAGE_SIZE, offset: pendingOffset },
+  );
   const pendingRequests = pendingData?.getPendingMembershipRequests.requests ?? [];
+  const pendingTotal = pendingData?.getPendingMembershipRequests.total ?? pendingRequests.length;
+  const pendingHasMore = pendingData?.getPendingMembershipRequests.hasMore ?? false;
 
   const [approveMembership] = useApproveMembership();
   const [rejectMembership] = useRejectMembership();
@@ -257,6 +273,8 @@ export default function CommunityDetail() {
   )?.getUsers?.items ?? [];
   const userById = new Map(users.map((u) => [u.id, u]));
   const communityMembers = membersData?.listCommunityMembers?.members ?? [];
+  const membersTotal = membersData?.listCommunityMembers?.total ?? communityMembers.length;
+  const membersHasMore = membersData?.listCommunityMembers?.hasMore ?? false;
   const communityMemberRows = communityMembers.map((member) => {
     const user = userById.get(member.userId);
     return {
@@ -997,6 +1015,16 @@ export default function CommunityDetail() {
               const u = userById.get(uid);
               return { name: u?.displayName || "Unknown user", email: u?.email || uid };
             }}
+            membersTotal={membersTotal}
+            membersOffset={membersOffset}
+            membersHasMore={membersHasMore}
+            onMembersPrev={() => setMembersOffset((o) => Math.max(0, o - MEMBERS_PAGE_SIZE))}
+            onMembersNext={() => setMembersOffset((o) => o + MEMBERS_PAGE_SIZE)}
+            pendingTotal={pendingTotal}
+            pendingOffset={pendingOffset}
+            pendingHasMore={pendingHasMore}
+            onPendingPrev={() => setPendingOffset((o) => Math.max(0, o - PENDING_PAGE_SIZE))}
+            onPendingNext={() => setPendingOffset((o) => o + PENDING_PAGE_SIZE)}
           />
 
           {/* Posts Tab */}
