@@ -6,7 +6,8 @@ import {
   useGetSystemAlerts,
   useAcknowledgeAlert,
   useGetPerformanceMetrics,
-  useGetAuditLogs,
+  useGetRequestMetrics,
+  useGetSystemEvents,
   type SystemAlert,
 } from "@/hooks/admin";
 import type { SystemHealthService } from "@/services/networks/graphql/admin";
@@ -74,16 +75,6 @@ import {
   Activity,
   Eye,
 } from "lucide-react";
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  Legend,
-} from "recharts";
 
 /** Maps backend category strings to translation keys. */
 const CATEGORY_KEYS: Record<string, string> = {
@@ -120,7 +111,8 @@ export default function SystemHealth() {
   } = useGetSystemHealth();
   const { data: alertsData, loading: alertsLoading, refetch: refetchAlerts } = useGetSystemAlerts();
   const { data: metricsData } = useGetPerformanceMetrics();
-  const { data: auditData } = useGetAuditLogs({ limit: 10 });
+  const { data: requestMetricsData } = useGetRequestMetrics();
+  const { data: eventsData } = useGetSystemEvents(50);
 
   const [acknowledgeAlert] = useAcknowledgeAlert();
 
@@ -128,7 +120,16 @@ export default function SystemHealth() {
   const liveServices = systemHealth?.services ?? [];
   const alerts = alertsData?.getSystemAlerts ?? [];
   const metrics = metricsData?.getPerformanceMetrics ?? [];
-  const auditLogs = auditData?.getAuditLogs?.items ?? [];
+  const requestMetrics = requestMetricsData?.getRequestMetrics;
+  const systemEvents = eventsData?.getSystemEvents ?? [];
+
+  // Split the performance snapshot into per-container CPU / memory (cAdvisor)
+  // and host gauges (node-exporter). `host`/request rows are pulled out separately.
+  const cpuByContainer = metrics.filter((m) => m.kind === "cpu" && m.component !== "host");
+  const memByContainer = metrics.filter((m) => m.kind === "memory" && m.component !== "host");
+  const hostCpu = metrics.find((m) => m.kind === "cpu" && m.component === "host");
+  const hostMem = metrics.find((m) => m.kind === "memory" && m.component === "host");
+  const maxMemMb = Math.max(1, ...memByContainer.map((m) => m.value));
 
   const filteredServices = liveServices.filter((svc) => {
     const matchesSearch =
@@ -173,32 +174,6 @@ export default function SystemHealth() {
     totalServices > 0
       ? Math.round((healthyCount / totalServices) * 10000) / 100
       : 0;
-
-  // Build a single "Now" chart data point from live metrics + pad with historical context
-  const performanceData = useMemo(() => {
-    const cpuMetric = metrics.find((m) => m.label === "cpu_usage");
-    const memMetric = metrics.find((m) => m.label === "memory_usage");
-    const reqMetric = metrics.find((m) => m.label === "requests_per_min");
-    const nowPoint = {
-      time: "Now",
-      cpu: cpuMetric ? Math.round(cpuMetric.value) : null,
-      memory: memMetric ? Math.round(memMetric.value) : null,
-      requests: reqMetric ? Math.round(reqMetric.value) : null,
-    };
-    // Fill chart with historical placeholders so "Now" isn't lonely
-    const slots = ["00:00", "04:00", "08:00", "12:00", "16:00", "20:00"];
-    return [
-      ...slots.map(
-        (time): { time: string; cpu: number | null; memory: number | null; requests: number | null } => ({
-          time,
-          cpu: null,
-          memory: null,
-          requests: null,
-        }),
-      ),
-      nowPoint,
-    ];
-  }, [metrics]);
 
   const getStatusIcon = (status: string) => {
     if (isHealthy(status)) return <CheckCircle className="h-5 w-5 text-success" />;
@@ -514,58 +489,141 @@ export default function SystemHealth() {
                 </CardTitle>
                 <CardDescription>{t("systemHealth.performanceSubtitle")}</CardDescription>
               </CardHeader>
-              <CardContent>
-                {metrics.length === 0 ? (
+              <CardContent className="space-y-6">
+                {metrics.length === 0 && !requestMetrics?.available ? (
                   <EmptyState title={t("systemHealth.performanceUnavailable")} />
                 ) : (
-                <div className="h-[300px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={performanceData}>
-                      <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                      <XAxis dataKey="time" className="text-xs" />
-                      <YAxis className="text-xs" />
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: "hsl(var(--card))",
-                          border: "1px solid hsl(var(--border))",
-                          borderRadius: "8px",
-                        }}
-                      />
-                      <Legend />
-                      <Line
-                        type="monotone"
-                        dataKey="cpu"
-                        name="CPU %"
-                        stroke="hsl(var(--primary))"
-                        strokeWidth={2}
-                        dot={(props) => (props.payload.cpu !== null ? <circle {...props} r={4} /> : <g />)}
-                        connectNulls={false}
-                      />
-                      <Line
-                        type="monotone"
-                        dataKey="memory"
-                        name="Memory %"
-                        stroke="#22c55e"
-                        strokeWidth={2}
-                        dot={(props) =>
-                          props.payload.memory !== null ? <circle {...props} r={4} /> : <g />
-                        }
-                        connectNulls={false}
-                      />
-                      <Line
-                        type="monotone"
-                        dataKey="requests"
-                        name="Req/min"
-                        stroke="#f59e0b"
-                        strokeWidth={2}
-                        dot={(props) =>
-                          props.payload.requests !== null ? <circle {...props} r={4} /> : <g />
-                        }
-                        connectNulls={false}
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
+                  <>
+                    {/* Request throughput KPI tiles (gateway histograms) */}
+                    <div>
+                      <h3 className="mb-3 text-sm font-semibold text-muted-foreground">
+                        {t("systemHealth.perfRequestsHeading")}
+                      </h3>
+                      {requestMetrics?.available ? (
+                        <div className="grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
+                          <MetricCard
+                            label={t("systemHealth.perfReqPerMin")}
+                            value={String(Math.round(requestMetrics.requestsPerMinute))}
+                            icon={<Activity className="h-5 w-5" />}
+                          />
+                          <MetricCard
+                            label={t("systemHealth.perfErrorRate")}
+                            value={`${requestMetrics.errorRatePct}%`}
+                            icon={<AlertTriangle className="h-5 w-5" />}
+                          />
+                          <MetricCard
+                            label={t("systemHealth.perfP50")}
+                            value={`${Math.round(requestMetrics.p50LatencyMs)}ms`}
+                            icon={<Gauge className="h-5 w-5" />}
+                          />
+                          <MetricCard
+                            label={t("systemHealth.perfP95")}
+                            value={`${Math.round(requestMetrics.p95LatencyMs)}ms`}
+                            icon={<Gauge className="h-5 w-5" />}
+                          />
+                          <MetricCard
+                            label={t("systemHealth.perfP99")}
+                            value={`${Math.round(requestMetrics.p99LatencyMs)}ms`}
+                            icon={<Gauge className="h-5 w-5" />}
+                          />
+                        </div>
+                      ) : (
+                        <p className="text-sm text-muted-foreground">
+                          {t("systemHealth.performanceUnavailable")}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Host gauges (node-exporter) */}
+                    {(hostCpu || hostMem) && (
+                      <div className="grid gap-4 md:grid-cols-2">
+                        {hostCpu && (
+                          <div className="glass rounded-xl p-4">
+                            <div className="flex items-center justify-between text-sm font-medium">
+                              <span>{t("systemHealth.perfHostCpu")}</span>
+                              <span>{hostCpu.value}%</span>
+                            </div>
+                            <Progress value={Math.min(100, hostCpu.value)} className="mt-2 h-2" />
+                          </div>
+                        )}
+                        {hostMem && (
+                          <div className="glass rounded-xl p-4">
+                            <div className="flex items-center justify-between text-sm font-medium">
+                              <span>{t("systemHealth.perfHostMemory")}</span>
+                              <span>{hostMem.value}%</span>
+                            </div>
+                            <Progress value={Math.min(100, hostMem.value)} className="mt-2 h-2" />
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Per-container CPU + memory (cAdvisor) */}
+                    {cpuByContainer.length > 0 && (
+                      <div>
+                        <h3 className="mb-3 text-sm font-semibold text-muted-foreground">
+                          {t("systemHealth.perfContainersHeading")}
+                        </h3>
+                        <div className="overflow-x-auto">
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead>{t("systemHealth.perfService")}</TableHead>
+                                <TableHead>{t("systemHealth.perfCpu")}</TableHead>
+                                <TableHead>{t("systemHealth.perfMemory")}</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {cpuByContainer
+                                .slice()
+                                .sort((a, b) => b.value - a.value)
+                                .map((cpu) => {
+                                  const mem = memByContainer.find(
+                                    (m) => m.component === cpu.component,
+                                  );
+                                  return (
+                                    <TableRow key={cpu.component}>
+                                      <TableCell className="font-medium">
+                                        <span className="inline-flex items-center gap-2">
+                                          <Server className="h-4 w-4 text-muted-foreground" />
+                                          {cpu.component}
+                                        </span>
+                                      </TableCell>
+                                      <TableCell>
+                                        <div className="flex items-center gap-2">
+                                          <Progress
+                                            value={Math.min(100, cpu.value)}
+                                            className="h-2 w-24"
+                                          />
+                                          <span className="text-xs text-muted-foreground">
+                                            {cpu.value}%
+                                          </span>
+                                        </div>
+                                      </TableCell>
+                                      <TableCell>
+                                        {mem ? (
+                                          <div className="flex items-center gap-2">
+                                            <Progress
+                                              value={Math.min(100, (mem.value / maxMemMb) * 100)}
+                                              className="h-2 w-24"
+                                            />
+                                            <span className="text-xs text-muted-foreground">
+                                              {mem.value} MB
+                                            </span>
+                                          </div>
+                                        ) : (
+                                          <span className="text-xs text-muted-foreground">—</span>
+                                        )}
+                                      </TableCell>
+                                    </TableRow>
+                                  );
+                                })}
+                            </TableBody>
+                          </Table>
+                        </div>
+                      </div>
+                    )}
+                  </>
                 )}
               </CardContent>
             </Card>
@@ -582,7 +640,7 @@ export default function SystemHealth() {
                 <CardDescription>{t("systemHealth.eventsSubtitle")}</CardDescription>
               </CardHeader>
               <CardContent>
-                {auditLogs.length === 0 ? (
+                {systemEvents.length === 0 ? (
                   <p className="py-4 text-center text-sm text-muted-foreground">
                     {t("systemHealth.eventsEmpty")}
                   </p>
@@ -591,28 +649,40 @@ export default function SystemHealth() {
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead>Timestamp</TableHead>
-                          <TableHead>Resource Type</TableHead>
-                          <TableHead>Action</TableHead>
-                          <TableHead>Actor</TableHead>
-                          <TableHead>Resource ID</TableHead>
+                          <TableHead>{t("systemHealth.eventTimestamp")}</TableHead>
+                          <TableHead>{t("systemHealth.eventType")}</TableHead>
+                          <TableHead>{t("systemHealth.eventSource")}</TableHead>
+                          <TableHead>{t("systemHealth.eventMessage")}</TableHead>
+                          <TableHead>{t("systemHealth.eventSeverity")}</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {auditLogs.map((log) => (
-                          <TableRow key={log.id}>
+                        {systemEvents.map((ev) => (
+                          <TableRow key={ev.id}>
                             <TableCell className="text-sm">
-                              {log.createdAt ? new Date(log.createdAt).toLocaleString() : "—"}
+                              {ev.timestamp ? new Date(ev.timestamp).toLocaleString() : "—"}
                             </TableCell>
-                            <TableCell>{log.resourceType ?? "—"}</TableCell>
                             <TableCell>
-                              <Badge variant="outline">{log.action}</Badge>
+                              <Badge variant={ev.type === "HEALTH" ? "secondary" : "outline"}>
+                                {ev.type}
+                              </Badge>
                             </TableCell>
-                            <TableCell className="font-mono text-xs">
-                              {log.actorId?.slice(0, 8) ?? "—"}
+                            <TableCell className="text-sm">{ev.source}</TableCell>
+                            <TableCell className="max-w-md truncate text-sm" title={ev.message}>
+                              {ev.message}
                             </TableCell>
-                            <TableCell className="font-mono text-xs">
-                              {log.resourceId?.slice(0, 8) ?? "—"}
+                            <TableCell>
+                              <StatusBadge
+                                variant={
+                                  ev.severity === "critical"
+                                    ? "error"
+                                    : ev.severity === "warning"
+                                      ? "warning"
+                                      : "inactive"
+                                }
+                              >
+                                {ev.severity}
+                              </StatusBadge>
                             </TableCell>
                           </TableRow>
                         ))}

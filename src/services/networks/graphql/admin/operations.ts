@@ -2280,6 +2280,10 @@ export interface PerformanceMetricPoint {
   value: number;
   unit?: string;
   timestamp?: string;
+  /** Container/host the sample belongs to, e.g. 'api-gateway', 'host'. */
+  component?: string;
+  /** Metric family for grouping: 'cpu' | 'memory' | 'request'. */
+  kind?: string;
 }
 
 export const GET_PERFORMANCE_METRICS = gql`
@@ -2288,6 +2292,60 @@ export const GET_PERFORMANCE_METRICS = gql`
       label
       value
       unit
+      timestamp
+      component
+      kind
+    }
+  }
+`;
+
+// ─── Request Metrics (gateway throughput KPIs from Prometheus) ───────────────
+
+export interface RequestMetrics {
+  requestsPerMinute: number;
+  errorRatePct: number;
+  p50LatencyMs: number;
+  p95LatencyMs: number;
+  p99LatencyMs: number;
+  windowSeconds: number;
+  available: boolean;
+  generatedAt: string;
+}
+
+export const GET_REQUEST_METRICS = gql`
+  query GetRequestMetrics {
+    getRequestMetrics {
+      requestsPerMinute
+      errorRatePct
+      p50LatencyMs
+      p95LatencyMs
+      p99LatencyMs
+      windowSeconds
+      available
+      generatedAt
+    }
+  }
+`;
+
+// ─── System Events (audit actions + health transitions timeline) ─────────────
+
+export interface SystemEvent {
+  id: string;
+  type: string;
+  source: string;
+  message: string;
+  severity: string;
+  timestamp: string;
+}
+
+export const GET_SYSTEM_EVENTS = gql`
+  query GetSystemEvents($limit: Int) {
+    getSystemEvents(limit: $limit) {
+      id
+      type
+      source
+      message
+      severity
       timestamp
     }
   }

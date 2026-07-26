@@ -355,6 +355,8 @@ export {
   useGetSystemAlerts,
   useAcknowledgeAlert,
   useGetPerformanceMetrics,
+  useGetRequestMetrics,
+  useGetSystemEvents,
   type DashboardStats,
   type SystemHealth,
   type PlatformAnalytics,
@@ -362,6 +364,8 @@ export {
   type AdminEscrow,
   type SystemAlert,
   type PerformanceMetricPoint,
+  type RequestMetrics,
+  type SystemEvent,
 } from "./useDashboard";
 
 export {

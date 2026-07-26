@@ -12,6 +12,8 @@ import {
   GET_SYSTEM_ALERTS,
   ACKNOWLEDGE_ALERT,
   GET_PERFORMANCE_METRICS,
+  GET_REQUEST_METRICS,
+  GET_SYSTEM_EVENTS,
   type DashboardStats,
   type SystemHealth,
   type PlatformAnalytics,
@@ -19,9 +21,11 @@ import {
   type AdminEscrow,
   type SystemAlert,
   type PerformanceMetricPoint,
+  type RequestMetrics,
+  type SystemEvent,
 } from "@/services/networks/graphql/admin";
 
-export type { DashboardStats, SystemHealth, PlatformAnalytics, AdminDispute, AdminEscrow, SystemAlert, PerformanceMetricPoint };
+export type { DashboardStats, SystemHealth, PlatformAnalytics, AdminDispute, AdminEscrow, SystemAlert, PerformanceMetricPoint, RequestMetrics, SystemEvent };
 
 /** Maps Dashboard date-range control values to `getPlatformAnalytics(period)` API strings. */
 export function dashboardDateRangeToAnalyticsPeriod(
@@ -122,5 +126,18 @@ export function useAcknowledgeAlert() {
 export function useGetPerformanceMetrics() {
   return useQuery<{ getPerformanceMetrics: PerformanceMetricPoint[] }>(GET_PERFORMANCE_METRICS, {
     pollInterval: 30000,
+  });
+}
+
+export function useGetRequestMetrics() {
+  return useQuery<{ getRequestMetrics: RequestMetrics }>(GET_REQUEST_METRICS, {
+    pollInterval: 30000,
+  });
+}
+
+export function useGetSystemEvents(limit = 50) {
+  return useQuery<{ getSystemEvents: SystemEvent[] }>(GET_SYSTEM_EVENTS, {
+    variables: { limit },
+    pollInterval: 60000,
   });
 }
