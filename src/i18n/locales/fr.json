@@ -113,6 +113,76 @@
       "released": "Les données de {{name}} ne sont plus protégées contre la suppression.",
       "failed": "Impossible de mettre à jour la conservation légale."
     },
+    "accountStatus": {
+      "ACTIVE": "Actif",
+      "SUSPENDED": "Suspendu",
+      "BANNED": "Banni",
+      "unknown": "Inconnu",
+      "unknownHint": "La passerelle n'a indiqué aucun statut pour ce compte. Ce n'est pas équivalent à « actif » — actualisez la page ou vérifiez que la passerelle est joignable.",
+      "until": "Jusqu'au {{date}}",
+      "reason": "Motif : {{reason}}"
+    },
+    "suspend": {
+      "action": "Suspendre l'utilisateur",
+      "title": "Suspendre ce compte ?",
+      "description": "{{name}} ne pourra plus se connecter ni effectuer la moindre action tant que la suspension n'est pas levée. Son compte et ses données sont conservés.",
+      "reasonLabel": "Motif",
+      "reasonPlaceholder": "Pourquoi ce compte est-il suspendu ?",
+      "reasonRequiredTitle": "Motif requis",
+      "reasonRequired": "Une suspension sans motif ne pourra pas être réexaminée par la suite. Veuillez indiquer pourquoi.",
+      "durationLabel": "Durée (jours)",
+      "durationPlaceholder": "Laissez vide pour une suspension indéfinie",
+      "durationHint": "Jours entiers. Si le champ reste vide, la suspension dure jusqu'à ce qu'un administrateur la lève.",
+      "durationInvalidTitle": "Durée invalide",
+      "durationInvalid": "La durée doit être un nombre entier de jours, au minimum 1. Laissez le champ vide pour une suspension indéfinie.",
+      "confirm": "Suspendre",
+      "successTitle": "Utilisateur suspendu",
+      "success": "Le compte de {{name}} est désormais suspendu.",
+      "failed": "Impossible de suspendre le compte."
+    },
+    "unsuspend": {
+      "action": "Lever la suspension",
+      "title": "Lever cette suspension ?",
+      "description": "{{name}} retrouve immédiatement l'accès à la plateforme.",
+      "reasonLabel": "Motif (facultatif)",
+      "reasonPlaceholder": "Pourquoi la suspension est-elle levée ?",
+      "confirm": "Lever la suspension",
+      "successTitle": "Suspension levée",
+      "success": "{{name}} peut de nouveau utiliser la plateforme.",
+      "failed": "Impossible de lever la suspension."
+    },
+    "ban": {
+      "action": "Bannir l'utilisateur",
+      "title": "Bannir ce compte ?",
+      "description": "{{name}} sera banni de la plateforme et perdra immédiatement l'accès.",
+      "reasonLabel": "Motif",
+      "reasonPlaceholder": "Pourquoi ce compte est-il banni ?",
+      "confirm": "Bannir l'utilisateur",
+      "successTitle": "Utilisateur banni",
+      "success": "{{name}} a été banni.",
+      "failed": "Impossible de bannir le compte."
+    },
+    "unban": {
+      "action": "Lever le bannissement",
+      "title": "Lever ce bannissement ?",
+      "description": "{{name}} retrouve l'accès à la plateforme.",
+      "confirm": "Confirmer la levée",
+      "successTitle": "Bannissement levé",
+      "success": "Le bannissement de {{name}} a été levé.",
+      "failed": "Impossible de lever le bannissement."
+    },
+    "resetPassword": {
+      "action": "Envoyer l'e-mail de réinitialisation",
+      "title": "Envoyer un e-mail de réinitialisation du mot de passe ?",
+      "description": "Un lien de réinitialisation du mot de passe sera envoyé à {{name}}.",
+      "confirmBody": "Vous ne voyez ni ne définissez jamais le mot de passe — l'utilisateur suit le lien reçu par e-mail. Son mot de passe actuel reste valable jusque-là.",
+      "confirm": "Envoyer l'e-mail",
+      "successTitle": "E-mail de réinitialisation envoyé",
+      "sentTo": "Envoyé à {{email}}",
+      "sentNoAddress": "L'e-mail a été envoyé. Le serveur n'a pas renvoyé l'adresse de destination.",
+      "failed": "Impossible d'envoyer l'e-mail de réinitialisation.",
+      "done": "Terminé"
+    },
     "title": "Gestion des utilisateurs",
     "searchPlaceholder": "Rechercher par nom ou e-mail...",
     "addUser": "Ajouter utilisateur",
@@ -127,7 +197,85 @@
     "lastActive": "Dernière activité",
     "verification": "Statut de vérification",
     "verified": "Vérifié",
-    "unverified": "Non vérifié"
+    "unverified": "Non vérifié",
+    "detail": {
+      "breadcrumbRoot": "Administration système",
+      "breadcrumbUsers": "Utilisateurs",
+      "back": "Retour aux utilisateurs",
+      "unnamed": "Utilisateur sans nom",
+      "loadFailed": "Impossible de charger cet utilisateur",
+      "notFound": "Utilisateur introuvable",
+      "notFoundHint": "Ce compte a peut-être été supprimé, ou l'identifiant dans l'adresse est incorrect.",
+      "paginationRange": "{{start}}–{{end}} sur {{total}}",
+      "community": "Communauté",
+      "tabs": {
+        "overview": "Aperçu",
+        "posts": "Publications et réactions",
+        "groups": "Groupes",
+        "opportunities": "Opportunités",
+        "transactions": "Transactions",
+        "enforcement": "Historique des sanctions"
+      },
+      "overview": {
+        "basicInfo": "Informations de base",
+        "profile": "Profil",
+        "joined": "Inscrit le",
+        "roleUnavailable": "Aucune API ne renvoie encore le rôle de cet utilisateur sur la plateforme.",
+        "headline": "Accroche",
+        "gender": "Genre",
+        "location": "Localisation",
+        "city": "Ville",
+        "residenceCountry": "Pays de résidence",
+        "countryOfOrigin": "Pays d'origine",
+        "bio": "Biographie",
+        "memberships": "Adhésions aux communautés et associations",
+        "membershipsUnavailable": "Aucune API n'expose encore les adhésions d'un utilisateur ; elles ne peuvent donc pas être affichées ici. Ouvrez une communauté ou une association pour consulter sa liste de membres."
+      },
+      "posts": {
+        "title": "Publications et réactions",
+        "description": "Publications de cet utilisateur dans toutes les communautés.",
+        "content": "Contenu",
+        "likes": "J'aime",
+        "comments": "Commentaires",
+        "postedAt": "Publié le",
+        "empty": "Aucune publication pour cet utilisateur"
+      },
+      "groups": {
+        "title": "Groupes",
+        "description": "Groupes rejoints par cet utilisateur.",
+        "name": "Groupe",
+        "members": "Membres",
+        "role": "Rôle",
+        "joinedAt": "Rejoint le",
+        "empty": "Aucun groupe pour cet utilisateur"
+      },
+      "opportunities": {
+        "title": "Opportunités",
+        "description": "Opportunités publiées par cet utilisateur ou auxquelles il a postulé.",
+        "titleColumn": "Titre",
+        "applicants": "Candidats",
+        "postedAt": "Publié le",
+        "empty": "Aucune opportunité pour cet utilisateur"
+      },
+      "transactions": {
+        "title": "Transactions",
+        "description": "Transactions d'entiercement et de plateforme auxquelles cet utilisateur a participé.",
+        "id": "ID",
+        "currency": "Devise",
+        "empty": "Aucune transaction pour cet utilisateur"
+      },
+      "enforcement": {
+        "title": "Historique des sanctions",
+        "description": "Actions d'administration visant ce compte : bannissements, levées de bannissement et suspensions.",
+        "action": "Action",
+        "admin": "Administrateur",
+        "reason": "Motif",
+        "empty": "Aucune sanction enregistrée",
+        "emptyHint": "Aucune sanction n'a visé ce compte, ou l'historique n'est pas encore disponible.",
+        "exportCsv": "Exporter en CSV",
+        "exportEmpty": "Il n'y a encore rien à exporter."
+      }
+    }
   },
   "deletionRequests": {
     "title": "Demandes de suppression",

@@ -24,6 +24,7 @@ const CommunityDetail = lazy(() => import("./pages/CommunityDetail"));
 const Events = lazy(() => import("./pages/Events"));
 const Opportunities = lazy(() => import("./pages/Opportunities"));
 const UserManagement = lazy(() => import("./pages/UserManagement"));
+const UserDetail = lazy(() => import("./pages/UserDetail"));
 const DeletionRequests = lazy(() => import("./pages/DeletionRequests"));
 const Associations = lazy(() => import("./pages/Associations"));
 const AssociationDetail = lazy(() => import("./pages/AssociationDetail"));
@@ -75,6 +76,7 @@ const App = () => (
                 {/* System-admin-only pages — their APIs reject scoped roles */}
                 <Route element={<RequireSystemAdmin />}>
                   <Route path="/users" element={<UserManagement />} />
+                  <Route path="/users/:id" element={<UserDetail />} />
                   <Route path="/deletion-requests" element={<DeletionRequests />} />
                   <Route path="/chats" element={<ChatManagement />} />
                   <Route path="/escrow" element={<EscrowManagement />} />

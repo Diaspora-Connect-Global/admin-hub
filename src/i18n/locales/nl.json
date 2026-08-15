@@ -113,6 +113,76 @@
       "released": "De gegevens van {{name}} zijn niet langer beschermd tegen verwijdering.",
       "failed": "Kon de juridische bewaarplicht niet bijwerken."
     },
+    "accountStatus": {
+      "ACTIVE": "Actief",
+      "SUSPENDED": "Geschorst",
+      "BANNED": "Geblokkeerd",
+      "unknown": "Onbekend",
+      "unknownHint": "De gateway heeft geen status voor dit account gemeld. Dat is niet hetzelfde als „actief” — ververs de pagina of controleer of de gateway bereikbaar is.",
+      "until": "Tot {{date}}",
+      "reason": "Reden: {{reason}}"
+    },
+    "suspend": {
+      "action": "Gebruiker schorsen",
+      "title": "Dit account schorsen?",
+      "description": "{{name}} kan niet meer inloggen en is van alle activiteit uitgesloten totdat de schorsing wordt opgeheven. Het account en de gegevens blijven bewaard.",
+      "reasonLabel": "Reden",
+      "reasonPlaceholder": "Waarom wordt dit account geschorst?",
+      "reasonRequiredTitle": "Reden verplicht",
+      "reasonRequired": "Een schorsing zonder reden is later niet meer te beoordelen. Leg vast waarom.",
+      "durationLabel": "Duur (dagen)",
+      "durationPlaceholder": "Laat leeg voor een schorsing voor onbepaalde tijd",
+      "durationHint": "Hele dagen. Blijft het veld leeg, dan duurt de schorsing tot een beheerder deze opheft.",
+      "durationInvalidTitle": "Ongeldige duur",
+      "durationInvalid": "De duur moet een heel aantal dagen zijn, minimaal 1. Laat het veld leeg voor een schorsing voor onbepaalde tijd.",
+      "confirm": "Schorsen",
+      "successTitle": "Gebruiker geschorst",
+      "success": "Het account van {{name}} is nu geschorst.",
+      "failed": "Kon het account niet schorsen."
+    },
+    "unsuspend": {
+      "action": "Schorsing opheffen",
+      "title": "Deze schorsing opheffen?",
+      "description": "{{name}} krijgt direct weer toegang tot het platform.",
+      "reasonLabel": "Reden (optioneel)",
+      "reasonPlaceholder": "Waarom wordt de schorsing opgeheven?",
+      "confirm": "Schorsing opheffen",
+      "successTitle": "Schorsing opgeheven",
+      "success": "{{name}} kan het platform weer gebruiken.",
+      "failed": "Kon de schorsing niet opheffen."
+    },
+    "ban": {
+      "action": "Gebruiker blokkeren",
+      "title": "Dit account blokkeren?",
+      "description": "{{name}} wordt van het platform geblokkeerd en verliest direct de toegang.",
+      "reasonLabel": "Reden",
+      "reasonPlaceholder": "Waarom wordt dit account geblokkeerd?",
+      "confirm": "Gebruiker blokkeren",
+      "successTitle": "Gebruiker geblokkeerd",
+      "success": "{{name}} is geblokkeerd.",
+      "failed": "Kon het account niet blokkeren."
+    },
+    "unban": {
+      "action": "Blokkering opheffen",
+      "title": "Deze blokkering opheffen?",
+      "description": "{{name}} krijgt weer toegang tot het platform.",
+      "confirm": "Blokkering opheffen",
+      "successTitle": "Blokkering opgeheven",
+      "success": "De blokkering van {{name}} is opgeheven.",
+      "failed": "Kon de blokkering niet opheffen."
+    },
+    "resetPassword": {
+      "action": "Wachtwoordherstel-e-mail sturen",
+      "title": "Een e-mail voor wachtwoordherstel sturen?",
+      "description": "Er wordt een herstellink naar {{name}} gestuurd.",
+      "confirmBody": "U ziet of stelt het wachtwoord nooit in — de gebruiker volgt de link uit de e-mail. Tot die tijd blijft het huidige wachtwoord werken.",
+      "confirm": "E-mail sturen",
+      "successTitle": "Herstel-e-mail verstuurd",
+      "sentTo": "Verstuurd naar {{email}}",
+      "sentNoAddress": "De e-mail is verstuurd. De server heeft het afleveradres niet teruggegeven.",
+      "failed": "Kon de wachtwoordherstel-e-mail niet versturen.",
+      "done": "Klaar"
+    },
     "title": "Gebruikersbeheer",
     "searchPlaceholder": "Zoek gebruikers op naam of e-mail...",
     "addUser": "Gebruiker toevoegen",
@@ -127,7 +197,85 @@
     "lastActive": "Laatst actief",
     "verification": "Verificatiestatus",
     "verified": "Geverifieerd",
-    "unverified": "Niet geverifieerd"
+    "unverified": "Niet geverifieerd",
+    "detail": {
+      "breadcrumbRoot": "Systeembeheer",
+      "breadcrumbUsers": "Gebruikers",
+      "back": "Terug naar gebruikers",
+      "unnamed": "Gebruiker zonder naam",
+      "loadFailed": "Deze gebruiker kon niet worden geladen",
+      "notFound": "Gebruiker niet gevonden",
+      "notFoundHint": "Dit account is mogelijk verwijderd, of het id in het adres klopt niet.",
+      "paginationRange": "{{start}}–{{end}} van {{total}}",
+      "community": "Community",
+      "tabs": {
+        "overview": "Overzicht",
+        "posts": "Berichten en reacties",
+        "groups": "Groepen",
+        "opportunities": "Kansen",
+        "transactions": "Transacties",
+        "enforcement": "Handhavingsgeschiedenis"
+      },
+      "overview": {
+        "basicInfo": "Basisgegevens",
+        "profile": "Profiel",
+        "joined": "Lid sinds",
+        "roleUnavailable": "Nog geen enkele API geeft de platformrol van deze gebruiker terug.",
+        "headline": "Kopregel",
+        "gender": "Geslacht",
+        "location": "Locatie",
+        "city": "Stad",
+        "residenceCountry": "Land van verblijf",
+        "countryOfOrigin": "Land van herkomst",
+        "bio": "Biografie",
+        "memberships": "Lidmaatschappen van community's en verenigingen",
+        "membershipsUnavailable": "Er is nog geen API die de lidmaatschappen van een gebruiker beschikbaar maakt, dus die kunnen hier niet worden getoond. Open een community of vereniging om de ledenlijst te bekijken."
+      },
+      "posts": {
+        "title": "Berichten en reacties",
+        "description": "Berichten van deze gebruiker in alle community's.",
+        "content": "Inhoud",
+        "likes": "Likes",
+        "comments": "Reacties",
+        "postedAt": "Geplaatst op",
+        "empty": "Geen berichten voor deze gebruiker"
+      },
+      "groups": {
+        "title": "Groepen",
+        "description": "Groepen waar deze gebruiker lid van is.",
+        "name": "Groep",
+        "members": "Leden",
+        "role": "Rol",
+        "joinedAt": "Lid sinds",
+        "empty": "Geen groepen voor deze gebruiker"
+      },
+      "opportunities": {
+        "title": "Kansen",
+        "description": "Kansen die deze gebruiker heeft geplaatst of waarop hij heeft gereageerd.",
+        "titleColumn": "Titel",
+        "applicants": "Kandidaten",
+        "postedAt": "Geplaatst op",
+        "empty": "Geen kansen voor deze gebruiker"
+      },
+      "transactions": {
+        "title": "Transacties",
+        "description": "Escrow- en platformtransacties waaraan deze gebruiker heeft deelgenomen.",
+        "id": "ID",
+        "currency": "Valuta",
+        "empty": "Geen transacties voor deze gebruiker"
+      },
+      "enforcement": {
+        "title": "Handhavingsgeschiedenis",
+        "description": "Beheeracties tegen dit account: verbanningen, opheffingen en schorsingen.",
+        "action": "Actie",
+        "admin": "Beheerder",
+        "reason": "Reden",
+        "empty": "Geen handhavingsacties geregistreerd",
+        "emptyHint": "Er is niets tegen dit account ondernomen, of de registratie is nog niet beschikbaar.",
+        "exportCsv": "CSV exporteren",
+        "exportEmpty": "Er valt nog niets te exporteren."
+      }
+    }
   },
   "deletionRequests": {
     "title": "Verwijderingsverzoeken",

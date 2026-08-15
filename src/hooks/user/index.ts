@@ -5,8 +5,51 @@
 import { useQuery, useMutation } from "@apollo/client/react";
 import { GET_PROFILE, GET_USERS, SEARCH_USERS, VERIFY_PROFILE, REJECT_VERIFICATION } from "@/services/networks/graphql/user";
 
+/**
+ * Profile as selected by GET_PROFILE. Everything except the identifiers is
+ * optional — the profile service returns sparse records for users who never
+ * filled anything in, so the UI must render "—" rather than assume a value.
+ */
+export interface AdminUserProfile {
+  id?: string;
+  userId?: string;
+  firstName?: string | null;
+  middleName?: string | null;
+  lastName?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  profilePicture?: string | null;
+  coverPhoto?: string | null;
+  headline?: string | null;
+  bio?: string | null;
+  location?: string | null;
+  city?: string | null;
+  residenceCountry?: string | null;
+  countryOfOrigin?: string | null;
+  gender?: string | null;
+  dateOfBirth?: string | null;
+  isVerified?: boolean | null;
+  createdAt?: string | null;
+  /**
+   * Enforcement state. Populated only by the admin `getUsers` query today —
+   * `getProfile` returns null. Null means UNKNOWN, never ACTIVE.
+   */
+  accountStatus?: string | null;
+  statusReason?: string | null;
+  suspendedUntil?: string | null;
+}
+
+export interface GetProfileData {
+  getProfile?: {
+    success: boolean;
+    profile?: AdminUserProfile | null;
+    connectionStatus?: string | null;
+    connectionId?: string | null;
+  };
+}
+
 export function useGetProfile(userId: string | null) {
-  return useQuery(GET_PROFILE, {
+  return useQuery<GetProfileData>(GET_PROFILE, {
     variables: { userId: userId ?? "" },
     skip: !userId,
   });
@@ -26,6 +69,14 @@ export interface GetUsersItem {
   lastName?: string;
   phone?: string;
   createdAt?: string;
+  /**
+   * "ACTIVE" | "SUSPENDED" | "BANNED", or null/undefined when the gateway did
+   * not report one. Null means UNKNOWN — do not collapse it to "ACTIVE".
+   */
+  accountStatus?: string | null;
+  statusReason?: string | null;
+  /** ISO date the suspension lapses; null for an indefinite suspension. */
+  suspendedUntil?: string | null;
 }
 
 export interface GetUsersData {

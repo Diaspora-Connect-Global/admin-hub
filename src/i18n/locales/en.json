@@ -113,6 +113,76 @@
       "released": "{{name}}'s data is no longer protected from deletion.",
       "failed": "Could not update the legal hold."
     },
+    "accountStatus": {
+      "ACTIVE": "Active",
+      "SUSPENDED": "Suspended",
+      "BANNED": "Banned",
+      "unknown": "Unknown",
+      "unknownHint": "The gateway did not report a status for this account. That is not the same as active — refresh, or check that the gateway is reachable.",
+      "until": "Until {{date}}",
+      "reason": "Reason: {{reason}}"
+    },
+    "suspend": {
+      "action": "Suspend user",
+      "title": "Suspend this account?",
+      "description": "{{name}} will be blocked from signing in and from all activity until the suspension is lifted. Their account and data are kept.",
+      "reasonLabel": "Reason",
+      "reasonPlaceholder": "Why is this account being suspended?",
+      "reasonRequiredTitle": "Reason required",
+      "reasonRequired": "A suspension with no reason cannot be reviewed later. Please record why.",
+      "durationLabel": "Duration (days)",
+      "durationPlaceholder": "Leave empty for an indefinite suspension",
+      "durationHint": "Whole days. Leave it empty and the suspension lasts until an admin lifts it.",
+      "durationInvalidTitle": "Invalid duration",
+      "durationInvalid": "Duration must be a whole number of days, at least 1. Leave it empty for an indefinite suspension.",
+      "confirm": "Suspend",
+      "successTitle": "User suspended",
+      "success": "{{name}}'s account is now suspended.",
+      "failed": "Could not suspend the account."
+    },
+    "unsuspend": {
+      "action": "Lift suspension",
+      "title": "Lift this suspension?",
+      "description": "{{name}} regains access to the platform immediately.",
+      "reasonLabel": "Reason (optional)",
+      "reasonPlaceholder": "Why is the suspension being lifted?",
+      "confirm": "Lift suspension",
+      "successTitle": "Suspension lifted",
+      "success": "{{name}} can use the platform again.",
+      "failed": "Could not lift the suspension."
+    },
+    "ban": {
+      "action": "Ban user",
+      "title": "Ban this account?",
+      "description": "{{name}} will be banned from the platform and loses access immediately.",
+      "reasonLabel": "Reason",
+      "reasonPlaceholder": "Why is this account being banned?",
+      "confirm": "Ban user",
+      "successTitle": "User banned",
+      "success": "{{name}} has been banned.",
+      "failed": "Could not ban the account."
+    },
+    "unban": {
+      "action": "Unban user",
+      "title": "Lift this ban?",
+      "description": "{{name}} regains access to the platform.",
+      "confirm": "Confirm unban",
+      "successTitle": "User unbanned",
+      "success": "{{name}} has been unbanned.",
+      "failed": "Could not unban the account."
+    },
+    "resetPassword": {
+      "action": "Send password reset email",
+      "title": "Send a password reset email?",
+      "description": "A password reset link will be emailed to {{name}}.",
+      "confirmBody": "You never see or set the password — the user follows the emailed link. Their current password keeps working until they do.",
+      "confirm": "Send email",
+      "successTitle": "Reset email sent",
+      "sentTo": "Sent to {{email}}",
+      "sentNoAddress": "The email was sent. The server did not return the address it went to.",
+      "failed": "Could not send the password reset email.",
+      "done": "Done"
+    },
     "title": "User Management",
     "searchPlaceholder": "Search users by name or email...",
     "addUser": "Add User",
@@ -127,7 +197,85 @@
     "lastActive": "Last Active",
     "verification": "Verification Status",
     "verified": "Verified",
-    "unverified": "Unverified"
+    "unverified": "Unverified",
+    "detail": {
+      "breadcrumbRoot": "System Admin",
+      "breadcrumbUsers": "Users",
+      "back": "Back to users",
+      "unnamed": "Unnamed user",
+      "loadFailed": "Could not load this user",
+      "notFound": "User not found",
+      "notFoundHint": "This account may have been deleted, or the id in the address is wrong.",
+      "paginationRange": "{{start}}–{{end}} of {{total}}",
+      "community": "Community",
+      "tabs": {
+        "overview": "Overview",
+        "posts": "Posts & reactions",
+        "groups": "Groups",
+        "opportunities": "Opportunities",
+        "transactions": "Transactions",
+        "enforcement": "Enforcement history"
+      },
+      "overview": {
+        "basicInfo": "Basic info",
+        "profile": "Profile",
+        "joined": "Joined",
+        "roleUnavailable": "No API returns this user's platform role yet.",
+        "headline": "Headline",
+        "gender": "Gender",
+        "location": "Location",
+        "city": "City",
+        "residenceCountry": "Country of residence",
+        "countryOfOrigin": "Country of origin",
+        "bio": "Bio",
+        "memberships": "Community & association memberships",
+        "membershipsUnavailable": "No API exposes a user's memberships yet, so none can be shown here. Open a community or association to see its member list."
+      },
+      "posts": {
+        "title": "Posts & reactions",
+        "description": "Posts by this user across all communities.",
+        "content": "Content",
+        "likes": "Likes",
+        "comments": "Comments",
+        "postedAt": "Posted at",
+        "empty": "No posts for this user"
+      },
+      "groups": {
+        "title": "Groups",
+        "description": "Groups this user has joined.",
+        "name": "Group",
+        "members": "Members",
+        "role": "Role",
+        "joinedAt": "Joined at",
+        "empty": "No groups for this user"
+      },
+      "opportunities": {
+        "title": "Opportunities",
+        "description": "Opportunities this user posted or applied to.",
+        "titleColumn": "Title",
+        "applicants": "Applicants",
+        "postedAt": "Posted at",
+        "empty": "No opportunities for this user"
+      },
+      "transactions": {
+        "title": "Transactions",
+        "description": "Escrow and platform transactions this user took part in.",
+        "id": "ID",
+        "currency": "Currency",
+        "empty": "No transactions for this user"
+      },
+      "enforcement": {
+        "title": "Enforcement history",
+        "description": "Admin actions taken against this account — bans, unbans and suspensions.",
+        "action": "Action",
+        "admin": "Admin",
+        "reason": "Reason",
+        "empty": "No enforcement actions recorded",
+        "emptyHint": "Nothing has been enforced against this account, or the record is not available yet.",
+        "exportCsv": "Export CSV",
+        "exportEmpty": "There is nothing to export yet."
+      }
+    }
   },
   "deletionRequests": {
     "title": "Deletion Requests",

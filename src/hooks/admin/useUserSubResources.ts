@@ -35,30 +35,36 @@ export type {
   CommunityProductListResponse,
 };
 
-export function useGetUserPosts(userId: string | null, limit = 20) {
+/*
+ * All four take an `offset` so the user-detail tabs can page. They keep their
+ * `skip: !userId` guard: without it, a missing user id would query the whole
+ * platform's posts / groups / opportunities / transactions.
+ */
+
+export function useGetUserPosts(userId: string | null, limit = 20, offset = 0) {
   return useQuery<{ getUserPosts: UserPostListResponse }>(GET_USER_POSTS, {
-    variables: { userId: userId ?? "", limit, offset: 0 },
+    variables: { userId: userId ?? "", limit, offset },
     skip: !userId,
   });
 }
 
-export function useGetUserGroups(userId: string | null, limit = 20) {
+export function useGetUserGroups(userId: string | null, limit = 20, offset = 0) {
   return useQuery<{ getUserGroups: UserGroupListResponse }>(GET_USER_GROUPS, {
-    variables: { userId: userId ?? "", limit, offset: 0 },
+    variables: { userId: userId ?? "", limit, offset },
     skip: !userId,
   });
 }
 
-export function useGetUserOpportunities(userId: string | null, limit = 20) {
+export function useGetUserOpportunities(userId: string | null, limit = 20, offset = 0) {
   return useQuery<{ getUserOpportunities: UserOpportunityListResponse }>(GET_USER_OPPORTUNITIES, {
-    variables: { userId: userId ?? "", limit, offset: 0 },
+    variables: { userId: userId ?? "", limit, offset },
     skip: !userId,
   });
 }
 
-export function useGetUserTransactions(userId: string | null, limit = 20) {
+export function useGetUserTransactions(userId: string | null, limit = 20, offset = 0) {
   return useQuery<{ getUserTransactions: UserTransactionListResponse }>(GET_USER_TRANSACTIONS, {
-    variables: { userId: userId ?? "", limit, offset: 0 },
+    variables: { userId: userId ?? "", limit, offset },
     skip: !userId,
   });
 }
