@@ -113,6 +113,76 @@
       "released": "Die Daten von {{name}} sind nicht mehr vor Löschung geschützt.",
       "failed": "Die rechtliche Sperre konnte nicht aktualisiert werden."
     },
+    "accountStatus": {
+      "ACTIVE": "Aktiv",
+      "SUSPENDED": "Suspendiert",
+      "BANNED": "Gesperrt",
+      "unknown": "Unbekannt",
+      "unknownHint": "Das Gateway hat für dieses Konto keinen Status gemeldet. Das ist nicht dasselbe wie „aktiv“ — laden Sie neu oder prüfen Sie, ob das Gateway erreichbar ist.",
+      "until": "Bis {{date}}",
+      "reason": "Grund: {{reason}}"
+    },
+    "suspend": {
+      "action": "Nutzer suspendieren",
+      "title": "Dieses Konto suspendieren?",
+      "description": "{{name}} kann sich nicht mehr anmelden und ist von jeder Aktivität ausgeschlossen, bis die Suspendierung aufgehoben wird. Konto und Daten bleiben erhalten.",
+      "reasonLabel": "Grund",
+      "reasonPlaceholder": "Warum wird dieses Konto suspendiert?",
+      "reasonRequiredTitle": "Grund erforderlich",
+      "reasonRequired": "Eine Suspendierung ohne Grund lässt sich später nicht mehr beurteilen. Bitte halten Sie fest, warum.",
+      "durationLabel": "Dauer (Tage)",
+      "durationPlaceholder": "Für eine unbefristete Suspendierung leer lassen",
+      "durationHint": "Ganze Tage. Bleibt das Feld leer, gilt die Suspendierung, bis ein Administrator sie aufhebt.",
+      "durationInvalidTitle": "Ungültige Dauer",
+      "durationInvalid": "Die Dauer muss eine ganze Zahl von mindestens 1 Tag sein. Für eine unbefristete Suspendierung lassen Sie das Feld leer.",
+      "confirm": "Suspendieren",
+      "successTitle": "Nutzer suspendiert",
+      "success": "Das Konto von {{name}} ist jetzt suspendiert.",
+      "failed": "Das Konto konnte nicht suspendiert werden."
+    },
+    "unsuspend": {
+      "action": "Suspendierung aufheben",
+      "title": "Diese Suspendierung aufheben?",
+      "description": "{{name}} erhält sofort wieder Zugriff auf die Plattform.",
+      "reasonLabel": "Grund (optional)",
+      "reasonPlaceholder": "Warum wird die Suspendierung aufgehoben?",
+      "confirm": "Suspendierung aufheben",
+      "successTitle": "Suspendierung aufgehoben",
+      "success": "{{name}} kann die Plattform wieder nutzen.",
+      "failed": "Die Suspendierung konnte nicht aufgehoben werden."
+    },
+    "ban": {
+      "action": "Nutzer sperren",
+      "title": "Dieses Konto sperren?",
+      "description": "{{name}} wird von der Plattform gesperrt und verliert sofort den Zugriff.",
+      "reasonLabel": "Grund",
+      "reasonPlaceholder": "Warum wird dieses Konto gesperrt?",
+      "confirm": "Nutzer sperren",
+      "successTitle": "Nutzer gesperrt",
+      "success": "{{name}} wurde gesperrt.",
+      "failed": "Das Konto konnte nicht gesperrt werden."
+    },
+    "unban": {
+      "action": "Sperre aufheben",
+      "title": "Diese Sperre aufheben?",
+      "description": "{{name}} erhält wieder Zugriff auf die Plattform.",
+      "confirm": "Sperre aufheben",
+      "successTitle": "Sperre aufgehoben",
+      "success": "Die Sperre für {{name}} wurde aufgehoben.",
+      "failed": "Die Sperre konnte nicht aufgehoben werden."
+    },
+    "resetPassword": {
+      "action": "Passwort-Reset-E-Mail senden",
+      "title": "Eine Passwort-Reset-E-Mail senden?",
+      "description": "An {{name}} wird ein Link zum Zurücksetzen des Passworts geschickt.",
+      "confirmBody": "Sie sehen oder setzen das Passwort nie — der Nutzer folgt dem zugesandten Link. Bis dahin bleibt das bisherige Passwort gültig.",
+      "confirm": "E-Mail senden",
+      "successTitle": "Reset-E-Mail gesendet",
+      "sentTo": "Gesendet an {{email}}",
+      "sentNoAddress": "Die E-Mail wurde gesendet. Der Server hat die Zieladresse nicht zurückgegeben.",
+      "failed": "Die Passwort-Reset-E-Mail konnte nicht gesendet werden.",
+      "done": "Fertig"
+    },
     "title": "Benutzerverwaltung",
     "searchPlaceholder": "Benutzer nach Name oder E-Mail suchen...",
     "addUser": "Benutzer hinzufügen",
@@ -127,7 +197,85 @@
     "lastActive": "Zuletzt aktiv",
     "verification": "Verifizierungsstatus",
     "verified": "Verifiziert",
-    "unverified": "Nicht verifiziert"
+    "unverified": "Nicht verifiziert",
+    "detail": {
+      "breadcrumbRoot": "Systemadministration",
+      "breadcrumbUsers": "Benutzer",
+      "back": "Zurück zu den Benutzern",
+      "unnamed": "Benutzer ohne Namen",
+      "loadFailed": "Dieser Benutzer konnte nicht geladen werden",
+      "notFound": "Benutzer nicht gefunden",
+      "notFoundHint": "Dieses Konto wurde möglicherweise gelöscht, oder die ID in der Adresse ist falsch.",
+      "paginationRange": "{{start}}–{{end}} von {{total}}",
+      "community": "Community",
+      "tabs": {
+        "overview": "Übersicht",
+        "posts": "Beiträge & Reaktionen",
+        "groups": "Gruppen",
+        "opportunities": "Chancen",
+        "transactions": "Transaktionen",
+        "enforcement": "Verlauf der Maßnahmen"
+      },
+      "overview": {
+        "basicInfo": "Basisdaten",
+        "profile": "Profil",
+        "joined": "Beigetreten",
+        "roleUnavailable": "Keine API liefert bisher die Plattformrolle dieses Benutzers.",
+        "headline": "Kurzbeschreibung",
+        "gender": "Geschlecht",
+        "location": "Ort",
+        "city": "Stadt",
+        "residenceCountry": "Wohnsitzland",
+        "countryOfOrigin": "Herkunftsland",
+        "bio": "Über mich",
+        "memberships": "Mitgliedschaften in Communities & Verbänden",
+        "membershipsUnavailable": "Bisher liefert keine API die Mitgliedschaften eines Benutzers, daher können hier keine angezeigt werden. Öffnen Sie eine Community oder einen Verband, um deren Mitgliederliste zu sehen."
+      },
+      "posts": {
+        "title": "Beiträge & Reaktionen",
+        "description": "Beiträge dieses Benutzers in allen Communities.",
+        "content": "Inhalt",
+        "likes": "Likes",
+        "comments": "Kommentare",
+        "postedAt": "Veröffentlicht am",
+        "empty": "Keine Beiträge für diesen Benutzer"
+      },
+      "groups": {
+        "title": "Gruppen",
+        "description": "Gruppen, denen dieser Benutzer beigetreten ist.",
+        "name": "Gruppe",
+        "members": "Mitglieder",
+        "role": "Rolle",
+        "joinedAt": "Beigetreten am",
+        "empty": "Keine Gruppen für diesen Benutzer"
+      },
+      "opportunities": {
+        "title": "Chancen",
+        "description": "Chancen, die dieser Benutzer veröffentlicht hat oder auf die er sich beworben hat.",
+        "titleColumn": "Titel",
+        "applicants": "Bewerbungen",
+        "postedAt": "Veröffentlicht am",
+        "empty": "Keine Chancen für diesen Benutzer"
+      },
+      "transactions": {
+        "title": "Transaktionen",
+        "description": "Treuhand- und Plattformtransaktionen, an denen dieser Benutzer beteiligt war.",
+        "id": "ID",
+        "currency": "Währung",
+        "empty": "Keine Transaktionen für diesen Benutzer"
+      },
+      "enforcement": {
+        "title": "Verlauf der Maßnahmen",
+        "description": "Administrative Maßnahmen gegen dieses Konto – Sperren, Entsperren und Suspendierungen.",
+        "action": "Maßnahme",
+        "admin": "Administrator",
+        "reason": "Grund",
+        "empty": "Keine Maßnahmen erfasst",
+        "emptyHint": "Gegen dieses Konto wurde nichts unternommen, oder die Aufzeichnung ist noch nicht verfügbar.",
+        "exportCsv": "CSV exportieren",
+        "exportEmpty": "Es gibt noch nichts zu exportieren."
+      }
+    }
   },
   "deletionRequests": {
     "title": "Löschanfragen",

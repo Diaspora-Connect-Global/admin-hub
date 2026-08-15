@@ -121,6 +121,37 @@ export function useGetAdminRoles(variables: {
   });
 }
 
+export interface ModerationActionItem {
+  id: string;
+  adminId?: string | null;
+  adminRole?: string | null;
+  actionType?: string | null;
+  targetType?: string | null;
+  targetId?: string | null;
+  reason?: string | null;
+  metadata?: string | null;
+  createdAt?: string | null;
+  scopeType?: string | null;
+  scopeId?: string | null;
+  relatedReportId?: string | null;
+}
+
+export interface GetModerationActionsResponse {
+  getModerationActions: {
+    items: ModerationActionItem[];
+    total: number;
+  };
+}
+
+/**
+ * `skip` matters here: every filter argument is nullable, so a call made before
+ * its target id is known drops the filters and returns the PLATFORM-WIDE
+ * moderation log. Anything scoping to a single target must pass
+ * `skip: !targetId`.
+ *
+ * `errorPolicy: "all"` because the target-scoped backend is still landing — the
+ * tab that uses this should degrade to an empty list, not blow up the page.
+ */
 export function useGetModerationActions(options: {
   adminId?: string | null;
   actionType?: string | null;
@@ -128,8 +159,9 @@ export function useGetModerationActions(options: {
   targetId?: string | null;
   limit?: number;
   offset?: number;
+  skip?: boolean;
 }) {
-  return useQuery(GET_MODERATION_ACTIONS, {
+  return useQuery<GetModerationActionsResponse>(GET_MODERATION_ACTIONS, {
     variables: {
       adminId: options.adminId ?? undefined,
       actionType: options.actionType ?? undefined,
@@ -138,6 +170,8 @@ export function useGetModerationActions(options: {
       limit: options.limit ?? 20,
       offset: options.offset ?? 0,
     },
+    skip: options.skip ?? false,
+    errorPolicy: "all",
   });
 }
 
@@ -186,6 +220,12 @@ export interface GetAuditLogsResponse {
   };
 }
 
+/**
+ * `skip` is not optional in spirit: every filter is nullable, so calling this
+ * with `actorId: null` (e.g. before a user is selected) silently returns the
+ * GLOBAL audit log rather than nothing. Any scoped caller must pass
+ * `skip: !<the id it filters on>`.
+ */
 export function useGetAuditLogs(options: {
   actorId?: string | null;
   action?: string | null;
@@ -195,8 +235,10 @@ export function useGetAuditLogs(options: {
   toDate?: string | null;
   limit?: number;
   offset?: number;
+  skip?: boolean;
 }) {
   return useQuery<GetAuditLogsResponse>(GET_AUDIT_LOGS, {
+    skip: options.skip ?? false,
     variables: {
       actorId: options.actorId ?? undefined,
       action: options.action ?? undefined,
@@ -453,6 +495,10 @@ export {
   useAdminBanUser,
   useSetUserLegalHold,
   useAdminUnbanUser,
+  useAdminSuspendUser,
+  useAdminUnsuspendUser,
+  useAdminSendPasswordResetEmail,
+  type AccountStatusResponse,
   useAdminBanVendor,
   useAdminRemoveContent,
   useBulkBanUsers,

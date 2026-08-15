@@ -45,6 +45,17 @@ export const GET_PROFILE = gql`
         gender
         dateOfBirth
         isVerified
+        createdAt
+        # Enforcement state. These fields live on the shared Profile type —
+        # the same type getUsers.items returns — but only the admin getUsers
+        # query populates them today; getProfile leaves them null. Selecting
+        # them here is schema-valid now and lights up the user-detail header the
+        # moment the gateway starts filling them in. Until then the detail page
+        # falls back to the status handed over by the users list, and otherwise
+        # renders "unknown". Null is never to be shown as ACTIVE.
+        accountStatus
+        statusReason
+        suspendedUntil
       }
       connectionStatus
       connectionId
@@ -55,6 +66,10 @@ export const GET_PROFILE = gql`
 /**
  * List users (admin). Backend must expose this query.
  * Variables: limit, offset, search (optional).
+ *
+ * `accountStatus` ("ACTIVE" | "SUSPENDED" | "BANNED") is nullable — a degraded
+ * gateway, or one deployed before the enforcement rpcs landed, returns null.
+ * Callers must render that as "unknown", never as "active".
  */
 export const GET_USERS = gql`
   query GetUsers($limit: Int, $offset: Int, $search: String) {
@@ -67,6 +82,9 @@ export const GET_USERS = gql`
         lastName
         phone
         createdAt
+        accountStatus
+        statusReason
+        suspendedUntil
       }
       total
       hasMore

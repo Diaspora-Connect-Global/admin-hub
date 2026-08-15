@@ -7,6 +7,9 @@ import {
   ASSIGN_ADMIN_ROLE_MUTATION,
   REVOKE_ADMIN_ROLE_MUTATION,
   ADMIN_BAN_USER,
+  ADMIN_SUSPEND_USER,
+  ADMIN_UNSUSPEND_USER,
+  ADMIN_SEND_PASSWORD_RESET_EMAIL,
   SET_USER_LEGAL_HOLD,
   ADMIN_UNBAN_USER,
   ADMIN_BAN_VENDOR,
@@ -110,6 +113,59 @@ export function useAdminUnbanUser() {
     { adminUnbanUser: { success: boolean; message?: string } },
     { userId: string; reason?: string }
   >(ADMIN_UNBAN_USER);
+}
+
+/**
+ * Account-status payload shared by suspend / unsuspend.
+ *
+ * Everything but `success` is nullable: a gateway that could not read back the
+ * new state still reports whether the write landed. Treat a missing `status` as
+ * "unknown", never as "active".
+ */
+export interface AccountStatusResponse {
+  success: boolean;
+  message?: string | null;
+  /** "ACTIVE" | "SUSPENDED" | "BANNED" — a bare string on the wire. */
+  status?: string | null;
+  statusReason?: string | null;
+  statusSetAt?: string | null;
+  /** ISO date the suspension lapses; null for an indefinite suspension. */
+  suspendedUntil?: string | null;
+}
+
+/** Suspend an account. Omit `durationDays` for an indefinite suspension. */
+export function useAdminSuspendUser() {
+  return useMutation<
+    { adminSuspendUser: AccountStatusResponse },
+    { userId: string; reason: string; durationDays?: number }
+  >(ADMIN_SUSPEND_USER);
+}
+
+/** Lift a suspension. `reason` is optional and only feeds the audit trail. */
+export function useAdminUnsuspendUser() {
+  return useMutation<
+    { adminUnsuspendUser: AccountStatusResponse },
+    { userId: string; reason?: string }
+  >(ADMIN_UNSUSPEND_USER);
+}
+
+/**
+ * Mail the user a password-reset link.
+ *
+ * Returns only a masked address — the admin confirms the destination without
+ * the console re-displaying the full email.
+ */
+export function useAdminSendPasswordResetEmail() {
+  return useMutation<
+    {
+      adminSendPasswordResetEmail: {
+        success: boolean;
+        message?: string | null;
+        sentToEmailMasked?: string | null;
+      };
+    },
+    { userId: string }
+  >(ADMIN_SEND_PASSWORD_RESET_EMAIL);
 }
 
 /**

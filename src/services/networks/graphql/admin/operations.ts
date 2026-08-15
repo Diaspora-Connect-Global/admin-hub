@@ -1516,6 +1516,58 @@ export const ADMIN_BAN_USER = gql`
 `;
 
 /**
+ * Suspend a user account — reversible enforcement, weaker than a ban.
+ *
+ * `durationDays` is optional: omit it for an indefinite suspension that ends
+ * only when an admin lifts it. When set, the server returns `suspendedUntil`
+ * so the console can show the expiry instead of implying it is permanent.
+ */
+export const ADMIN_SUSPEND_USER = gql`
+  mutation AdminSuspendUser($userId: ID!, $reason: String!, $durationDays: Int) {
+    adminSuspendUser(userId: $userId, reason: $reason, durationDays: $durationDays) {
+      success
+      message
+      status
+      statusReason
+      statusSetAt
+      suspendedUntil
+    }
+  }
+`;
+
+/** Lift a suspension. `reason` is optional and is kept for the audit trail. */
+export const ADMIN_UNSUSPEND_USER = gql`
+  mutation AdminUnsuspendUser($userId: ID!, $reason: String) {
+    adminUnsuspendUser(userId: $userId, reason: $reason) {
+      success
+      message
+      status
+      statusReason
+      statusSetAt
+      suspendedUntil
+    }
+  }
+`;
+
+/**
+ * Trigger the platform's password-reset email for a user.
+ *
+ * The admin never sees or sets the password: the server mails a reset link and
+ * returns only a MASKED address (`j***@example.com`), enough to confirm the
+ * mail went to the intended account without the console echoing the full
+ * address back into an admin screenshot.
+ */
+export const ADMIN_SEND_PASSWORD_RESET_EMAIL = gql`
+  mutation AdminSendPasswordResetEmail($userId: ID!) {
+    adminSendPasswordResetEmail(userId: $userId) {
+      success
+      message
+      sentToEmailMasked
+    }
+  }
+`;
+
+/**
  * Set / clear a MANUAL legal hold on a user account (GDPR Art. 17(3)(e)).
  *
  * A held account is skipped by the nightly retention purge and re-evaluated the
