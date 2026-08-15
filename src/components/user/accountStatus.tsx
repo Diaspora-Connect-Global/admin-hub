@@ -79,20 +79,101 @@ export function AccountStatusBadge({
 }
 
 /**
+ * label → variant for every content/transaction state this console renders.
+ *
+ * The title-case keys are the display strings the older tabs pass straight
+ * through. The SCREAMING_CASE keys are backend enums that arrive unmapped —
+ * post-feed-service's five post statuses, which the admin `getUserPosts` view
+ * now returns in full (it used to be silently narrowed to public+PUBLISHED, so
+ * DRAFT / HIDDEN / FLAGGED / REMOVED had never reached this map before).
+ */
+export const CONTENT_STATUS_VARIANT: Record<string, StatusBadgeVariant> = {
+  Active: "active",
+  Inactive: "warning",
+  Suspended: "error",
+  Published: "active",
+  Applied: "info",
+  Completed: "active",
+  Held: "warning",
+  Pending: "pending",
+  Accepted: "active",
+  // post-feed-service PostStatusType
+  PUBLISHED: "active",
+  DRAFT: "inactive",
+  HIDDEN: "warning",
+  FLAGGED: "pending",
+  REMOVED: "error",
+};
+
+/**
  * Generic content/transaction status pill (post published, order completed …).
  * Unknown labels fall back to the neutral variant rather than guessing.
+ *
+ * `label` overrides the rendered text without changing the variant lookup, so a
+ * caller with a translation for a backend enum can show "Draft" while the map
+ * still keys on `DRAFT`.
  */
-export function ContentStatusBadge({ status }: { status: string }) {
-  const variants: Record<string, StatusBadgeVariant> = {
-    Active: "active",
-    Inactive: "warning",
-    Suspended: "error",
-    Published: "active",
-    Applied: "info",
-    Completed: "active",
-    Held: "warning",
-    Pending: "pending",
-    Accepted: "active",
-  };
-  return <StatusBadge variant={variants[status] ?? "inactive"}>{status}</StatusBadge>;
+export function ContentStatusBadge({ status, label }: { status: string; label?: string }) {
+  return (
+    <StatusBadge variant={CONTENT_STATUS_VARIANT[status] ?? "inactive"}>
+      {label ?? status}
+    </StatusBadge>
+  );
+}
+
+/**
+ * post-feed-service `VisibilityType`. `PUBLIC` is an accepted alias of
+ * `EVERYONE` on the backend, so it is normalised to it here too.
+ */
+export const POST_VISIBILITIES = [
+  "EVERYONE",
+  "FRIENDS",
+  "ONLY_ME",
+  "COMMUNITY",
+  "ASSOCIATION",
+] as const;
+export type PostVisibility = (typeof POST_VISIBILITIES)[number];
+
+/**
+ * Colour by how far the post travels: public is informational, the restricted
+ * ones escalate. `ONLY_ME` gets the destructive variant deliberately — it is
+ * the post an admin most needs to notice they are looking at.
+ */
+export const POST_VISIBILITY_VARIANT: Record<PostVisibility, StatusBadgeVariant> = {
+  EVERYONE: "info",
+  COMMUNITY: "inactive",
+  ASSOCIATION: "inactive",
+  FRIENDS: "warning",
+  ONLY_ME: "error",
+};
+
+export function normalizePostVisibility(raw: string | null | undefined): PostVisibility | null {
+  if (!raw) return null;
+  const upper = raw.toUpperCase();
+  if (upper === "PUBLIC") return "EVERYONE";
+  return (POST_VISIBILITIES as readonly string[]).includes(upper) ? (upper as PostVisibility) : null;
+}
+
+/**
+ * Who could see a post.
+ *
+ * An unreported visibility renders as a neutral "Unknown" pill with a tooltip,
+ * exactly like `AccountStatusBadge` does — NOT as "Public". The admin post list
+ * returns posts at every visibility but does not yet say which, and on a
+ * moderation screen "we were not told" and "anyone can see this" are opposite
+ * facts. Guessing the permissive one is the dangerous direction to guess in.
+ */
+export function PostVisibilityBadge({ visibility }: { visibility: string | null | undefined }) {
+  const { t } = useTranslation();
+  const value = normalizePostVisibility(visibility);
+  return (
+    <StatusBadge
+      variant={value ? POST_VISIBILITY_VARIANT[value] : "inactive"}
+      title={value ? undefined : t("users.detail.posts.visibilityUnknownHint")}
+    >
+      {value
+        ? t(`users.detail.posts.visibility.${value}`)
+        : t("users.detail.posts.visibilityUnknown")}
+    </StatusBadge>
+  );
 }

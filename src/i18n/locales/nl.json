@@ -238,7 +238,52 @@
         "likes": "Likes",
         "comments": "Reacties",
         "postedAt": "Geplaatst op",
-        "empty": "Geen berichten voor deze gebruiker"
+        "empty": "Geen berichten voor deze gebruiker",
+        "shares": "Gedeeld",
+        "savesPrivate": "Opgeslagen (privébladwijzer)",
+        "savesPrivateHint": "Opslaan is een privébladwijzer — de auteur verwacht niet dat dit openbaar is. Wordt hier uitsluitend voor moderatie getoond.",
+        "visibilityColumn": "Zichtbaarheid",
+        "visibilityUnknown": "Onbekend",
+        "visibilityUnknownHint": "De gateway meldt de zichtbaarheid van een bericht nog niet. Dat is niet hetzelfde als openbaar — deze lijst bevat wel degelijk privéberichten en berichten die alleen voor vrienden of leden zichtbaar zijn.",
+        "visibility": {
+          "EVERYONE": "Openbaar",
+          "FRIENDS": "Alleen vrienden",
+          "ONLY_ME": "Alleen de auteur",
+          "COMMUNITY": "Community-leden",
+          "ASSOCIATION": "Verenigingsleden"
+        },
+        "status": {
+          "DRAFT": "Concept",
+          "PUBLISHED": "Gepubliceerd",
+          "HIDDEN": "Verborgen",
+          "FLAGGED": "Gemeld",
+          "REMOVED": "Verwijderd"
+        },
+        "openDetail": "Volledig bericht en de interacties openen",
+        "noContent": "Dit bericht bevat geen tekst.",
+        "detailTitle": "Berichtdetails",
+        "detailDescription": "Het volledige bericht, de interactietotalen en iedereen die erop heeft gereageerd.",
+        "postId": "Bericht-ID: {{id}}",
+        "engagementTitle": "Interactie",
+        "engagementError": "De interactietotalen konden niet worden geladen",
+        "reactionsTitle": "Wie heeft gereageerd",
+        "reactionsDescription": "Eén regel per interactie — wie, wat en wanneer.",
+        "reactionsError": "De interacties konden niet worden geladen",
+        "reactionsEmpty": "Geen interacties",
+        "reactionsEmptyHint": "Niemand heeft met het geselecteerde type op dit bericht gereageerd.",
+        "reactionTypeFilter": "Type interactie",
+        "reactionType": {
+          "ALL": "Alle typen",
+          "LIKE": "Like",
+          "SHARE": "Delen",
+          "SAVE": "Opgeslagen (privébladwijzer)"
+        },
+        "reactor": "Gereageerd door",
+        "reactionColumn": "Interactie",
+        "reactedAt": "Gereageerd op",
+        "reactorUnresolved": "Naam niet beschikbaar — account-ID wordt getoond",
+        "reactorDetailUnavailable": "Details per interactie niet beschikbaar",
+        "reactorDetailUnavailableHint": "De backend meldt dat de afzonderlijke regels achter deze totalen op dit moment niet kunnen worden gelezen. De totalen hierboven kloppen nog steeds — dit betekent niet dat niemand heeft gereageerd."
       },
       "groups": {
         "title": "Groepen",

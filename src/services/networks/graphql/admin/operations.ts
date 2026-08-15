@@ -3162,6 +3162,90 @@ export const GET_USER_TRANSACTIONS = gql`
   }
 `;
 
+// ─── Admin post moderation: engagement breakdown + who reacted ───────────────
+
+/**
+ * Aggregate reaction counts for one post. `getUserPosts` carries only
+ * likeCount/commentCount and drops shares and saves on the floor; this carries
+ * all four, so the post-detail view can show the full picture.
+ *
+ * SUPER_ADMIN / SYSTEM_ADMIN only on the gateway.
+ */
+export const ADMIN_GET_POST_ENGAGEMENT = gql`
+  query AdminGetPostEngagement($postId: ID!) {
+    adminGetPostEngagement(postId: $postId) {
+      postId
+      likes
+      shares
+      saves
+      comments
+      reactorDetailAvailable
+    }
+  }
+`;
+
+/**
+ * WHO reacted to a post — one row per reaction, paginated.
+ *
+ * PRIVACY: `type` may be SAVE, which post-feed-service treats as a PRIVATE
+ * bookmark. Showing it to a platform admin investigating a post is the intended
+ * use; it must never be surfaced on a non-admin screen. Label it as private
+ * wherever it is rendered.
+ *
+ * `type` is validated server-side — an unknown value comes back as
+ * INVALID_ARGUMENT rather than silently returning every reaction, so only pass
+ * LIKE / SHARE / SAVE or omit it. `limit` is clamped to 100 by the backend and
+ * the applied limit/offset are echoed back on the response.
+ *
+ * The list field is `items` (NOT `reactions`) — taken from the gateway's
+ * `AdminPostReactionList` object type, which also carries `avatarUrl`.
+ */
+export const ADMIN_LIST_POST_REACTIONS = gql`
+  query AdminListPostReactions($postId: ID!, $type: String, $limit: Int, $offset: Int) {
+    adminListPostReactions(postId: $postId, type: $type, limit: $limit, offset: $offset) {
+      items {
+        userId
+        type
+        createdAt
+        displayName
+        avatarUrl
+      }
+      total
+      limit
+      offset
+    }
+  }
+`;
+
+export interface AdminPostEngagementBreakdown {
+  postId: string;
+  likes: number;
+  shares: number;
+  saves: number;
+  comments: number;
+  /** Whether per-reactor rows are reachable at all. Permanently true today. */
+  reactorDetailAvailable: boolean;
+}
+
+export interface AdminPostReaction {
+  userId: string;
+  /** LIKE | SHARE | SAVE */
+  type: string;
+  createdAt: string;
+  /** Null for a GDPR-erased or unresolvable account — render the id instead. */
+  displayName?: string | null;
+  avatarUrl?: string | null;
+}
+
+export interface AdminPostReactionList {
+  items: AdminPostReaction[];
+  /** Total matching the filter, not the page length. */
+  total: number;
+  /** Echoed back as the server applied them (limit is clamped to 100). */
+  limit: number;
+  offset: number;
+}
+
 // TypeScript interfaces for user sub-resource responses
 
 export interface UserPost {
@@ -3173,7 +3257,20 @@ export interface UserPost {
   likeCount: number;
   commentCount: number;
   createdAt: string;
+  /** DRAFT | PUBLISHED | HIDDEN | FLAGGED | REMOVED — the admin view returns all five. */
   status?: string;
+  /**
+   * EVERYONE | FRIENDS | ONLY_ME | COMMUNITY | ASSOCIATION.
+   *
+   * NOT SELECTED BY `GET_USER_POSTS`, and therefore always undefined today: the
+   * gateway's `UserPost` object type exposes no `visibility` field — verified
+   * against the deployed schema, where selecting it fails validation and would
+   * take the whole Posts tab down with it. The admin query now *returns* posts
+   * at every visibility, it just does not say which one. Declared here so the
+   * UI renders the real value the moment the gateway adds the field; until then
+   * the UI shows an explicit "unknown" rather than implying the post is public.
+   */
+  visibility?: string;
 }
 
 export interface UserPostListResponse {

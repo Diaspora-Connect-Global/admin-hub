@@ -238,7 +238,52 @@
         "likes": "Likes",
         "comments": "Comments",
         "postedAt": "Posted at",
-        "empty": "No posts for this user"
+        "empty": "No posts for this user",
+        "shares": "Shares",
+        "savesPrivate": "Saved (private bookmark)",
+        "savesPrivateHint": "Saves are private bookmarks — the author does not expect them to be public. Shown here for moderation only.",
+        "visibilityColumn": "Visibility",
+        "visibilityUnknown": "Unknown",
+        "visibilityUnknownHint": "The gateway does not report a post's visibility yet. That is not the same as public — this list does include private, friends-only and members-only posts.",
+        "visibility": {
+          "EVERYONE": "Public",
+          "FRIENDS": "Friends only",
+          "ONLY_ME": "Only the author",
+          "COMMUNITY": "Community members",
+          "ASSOCIATION": "Association members"
+        },
+        "status": {
+          "DRAFT": "Draft",
+          "PUBLISHED": "Published",
+          "HIDDEN": "Hidden",
+          "FLAGGED": "Flagged",
+          "REMOVED": "Removed"
+        },
+        "openDetail": "Open the full post and its reactions",
+        "noContent": "This post has no text content.",
+        "detailTitle": "Post detail",
+        "detailDescription": "The full post, its engagement totals and everyone who reacted to it.",
+        "postId": "Post ID: {{id}}",
+        "engagementTitle": "Engagement",
+        "engagementError": "Could not load the engagement totals",
+        "reactionsTitle": "Who reacted",
+        "reactionsDescription": "One row per reaction — who, what and when.",
+        "reactionsError": "Could not load the reactions",
+        "reactionsEmpty": "No reactions",
+        "reactionsEmptyHint": "Nobody has reacted to this post with the selected type.",
+        "reactionTypeFilter": "Reaction type",
+        "reactionType": {
+          "ALL": "All types",
+          "LIKE": "Like",
+          "SHARE": "Share",
+          "SAVE": "Saved (private bookmark)"
+        },
+        "reactor": "Reactor",
+        "reactionColumn": "Reaction",
+        "reactedAt": "Reacted at",
+        "reactorUnresolved": "Name unavailable — showing the account ID",
+        "reactorDetailUnavailable": "Reactor detail unavailable",
+        "reactorDetailUnavailableHint": "The backend reports that the per-reactor rows behind these counts cannot be read right now. The totals above are still accurate — this is not the same as nobody having reacted."
       },
       "groups": {
         "title": "Groups",

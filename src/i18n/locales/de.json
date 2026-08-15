@@ -238,7 +238,52 @@
         "likes": "Likes",
         "comments": "Kommentare",
         "postedAt": "Veröffentlicht am",
-        "empty": "Keine Beiträge für diesen Benutzer"
+        "empty": "Keine Beiträge für diesen Benutzer",
+        "shares": "Geteilt",
+        "savesPrivate": "Gespeichert (privates Lesezeichen)",
+        "savesPrivateHint": "Speicherungen sind private Lesezeichen – der Autor erwartet nicht, dass sie öffentlich sind. Hier ausschließlich zu Moderationszwecken sichtbar.",
+        "visibilityColumn": "Sichtbarkeit",
+        "visibilityUnknown": "Unbekannt",
+        "visibilityUnknownHint": "Das Gateway meldet die Sichtbarkeit eines Beitrags noch nicht. Das ist nicht dasselbe wie öffentlich – diese Liste enthält auch private, nur für Freunde und nur für Mitglieder sichtbare Beiträge.",
+        "visibility": {
+          "EVERYONE": "Öffentlich",
+          "FRIENDS": "Nur Freunde",
+          "ONLY_ME": "Nur der Autor",
+          "COMMUNITY": "Community-Mitglieder",
+          "ASSOCIATION": "Verbandsmitglieder"
+        },
+        "status": {
+          "DRAFT": "Entwurf",
+          "PUBLISHED": "Veröffentlicht",
+          "HIDDEN": "Ausgeblendet",
+          "FLAGGED": "Gemeldet",
+          "REMOVED": "Entfernt"
+        },
+        "openDetail": "Vollständigen Beitrag und seine Reaktionen öffnen",
+        "noContent": "Dieser Beitrag enthält keinen Text.",
+        "detailTitle": "Beitragsdetails",
+        "detailDescription": "Der vollständige Beitrag, seine Interaktionszahlen und alle, die darauf reagiert haben.",
+        "postId": "Beitrags-ID: {{id}}",
+        "engagementTitle": "Interaktionen",
+        "engagementError": "Interaktionszahlen konnten nicht geladen werden",
+        "reactionsTitle": "Wer reagiert hat",
+        "reactionsDescription": "Eine Zeile pro Reaktion – wer, was und wann.",
+        "reactionsError": "Reaktionen konnten nicht geladen werden",
+        "reactionsEmpty": "Keine Reaktionen",
+        "reactionsEmptyHint": "Niemand hat mit dem ausgewählten Typ auf diesen Beitrag reagiert.",
+        "reactionTypeFilter": "Reaktionstyp",
+        "reactionType": {
+          "ALL": "Alle Typen",
+          "LIKE": "Like",
+          "SHARE": "Geteilt",
+          "SAVE": "Gespeichert (privates Lesezeichen)"
+        },
+        "reactor": "Reagiert von",
+        "reactionColumn": "Reaktion",
+        "reactedAt": "Reagiert am",
+        "reactorUnresolved": "Name nicht verfügbar – Konto-ID wird angezeigt",
+        "reactorDetailUnavailable": "Details zu den Reagierenden nicht verfügbar",
+        "reactorDetailUnavailableHint": "Das Backend meldet, dass die einzelnen Reaktionszeilen hinter diesen Zahlen derzeit nicht gelesen werden können. Die Summen oben stimmen weiterhin – das bedeutet nicht, dass niemand reagiert hat."
       },
       "groups": {
         "title": "Gruppen",

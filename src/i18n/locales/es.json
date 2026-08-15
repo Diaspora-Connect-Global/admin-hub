@@ -238,7 +238,52 @@
         "likes": "Me gusta",
         "comments": "Comentarios",
         "postedAt": "Publicado el",
-        "empty": "Este usuario no tiene publicaciones"
+        "empty": "Este usuario no tiene publicaciones",
+        "shares": "Compartidos",
+        "savesPrivate": "Guardados (marcador privado)",
+        "savesPrivateHint": "Los guardados son marcadores privados: el autor no espera que sean públicos. Se muestran aquí únicamente con fines de moderación.",
+        "visibilityColumn": "Visibilidad",
+        "visibilityUnknown": "Desconocida",
+        "visibilityUnknownHint": "La pasarela aún no informa de la visibilidad de una publicación. Eso no es lo mismo que pública: esta lista sí incluye publicaciones privadas, solo para amigos y solo para miembros.",
+        "visibility": {
+          "EVERYONE": "Pública",
+          "FRIENDS": "Solo amigos",
+          "ONLY_ME": "Solo el autor",
+          "COMMUNITY": "Miembros de la comunidad",
+          "ASSOCIATION": "Miembros de la asociación"
+        },
+        "status": {
+          "DRAFT": "Borrador",
+          "PUBLISHED": "Publicada",
+          "HIDDEN": "Oculta",
+          "FLAGGED": "Denunciada",
+          "REMOVED": "Eliminada"
+        },
+        "openDetail": "Abrir la publicación completa y sus reacciones",
+        "noContent": "Esta publicación no tiene texto.",
+        "detailTitle": "Detalle de la publicación",
+        "detailDescription": "La publicación completa, sus totales de interacción y todas las personas que reaccionaron.",
+        "postId": "ID de la publicación: {{id}}",
+        "engagementTitle": "Interacción",
+        "engagementError": "No se pudieron cargar los totales de interacción",
+        "reactionsTitle": "Quién reaccionó",
+        "reactionsDescription": "Una fila por reacción: quién, qué y cuándo.",
+        "reactionsError": "No se pudieron cargar las reacciones",
+        "reactionsEmpty": "Sin reacciones",
+        "reactionsEmptyHint": "Nadie ha reaccionado a esta publicación con el tipo seleccionado.",
+        "reactionTypeFilter": "Tipo de reacción",
+        "reactionType": {
+          "ALL": "Todos los tipos",
+          "LIKE": "Me gusta",
+          "SHARE": "Compartir",
+          "SAVE": "Guardado (marcador privado)"
+        },
+        "reactor": "Autor de la reacción",
+        "reactionColumn": "Reacción",
+        "reactedAt": "Fecha de la reacción",
+        "reactorUnresolved": "Nombre no disponible: se muestra el ID de la cuenta",
+        "reactorDetailUnavailable": "Detalle de reacciones no disponible",
+        "reactorDetailUnavailableHint": "El backend informa de que ahora mismo no se pueden leer las filas individuales que hay detrás de estos totales. Los totales de arriba siguen siendo correctos: esto no significa que nadie haya reaccionado."
       },
       "groups": {
         "title": "Grupos",

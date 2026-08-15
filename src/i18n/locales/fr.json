@@ -238,7 +238,52 @@
         "likes": "J'aime",
         "comments": "Commentaires",
         "postedAt": "Publié le",
-        "empty": "Aucune publication pour cet utilisateur"
+        "empty": "Aucune publication pour cet utilisateur",
+        "shares": "Partages",
+        "savesPrivate": "Enregistrements (favori privé)",
+        "savesPrivateHint": "Les enregistrements sont des favoris privés : l'auteur ne s'attend pas à ce qu'ils soient publics. Affichés ici uniquement à des fins de modération.",
+        "visibilityColumn": "Visibilité",
+        "visibilityUnknown": "Inconnue",
+        "visibilityUnknownHint": "La passerelle ne communique pas encore la visibilité d'une publication. Ce n'est pas la même chose que « publique » : cette liste inclut bien les publications privées, réservées aux amis et réservées aux membres.",
+        "visibility": {
+          "EVERYONE": "Publique",
+          "FRIENDS": "Amis uniquement",
+          "ONLY_ME": "L'auteur uniquement",
+          "COMMUNITY": "Membres de la communauté",
+          "ASSOCIATION": "Membres de l'association"
+        },
+        "status": {
+          "DRAFT": "Brouillon",
+          "PUBLISHED": "Publiée",
+          "HIDDEN": "Masquée",
+          "FLAGGED": "Signalée",
+          "REMOVED": "Supprimée"
+        },
+        "openDetail": "Ouvrir la publication complète et ses réactions",
+        "noContent": "Cette publication ne contient aucun texte.",
+        "detailTitle": "Détail de la publication",
+        "detailDescription": "La publication complète, ses totaux d'interaction et toutes les personnes qui y ont réagi.",
+        "postId": "ID de la publication : {{id}}",
+        "engagementTitle": "Interactions",
+        "engagementError": "Impossible de charger les totaux d'interaction",
+        "reactionsTitle": "Qui a réagi",
+        "reactionsDescription": "Une ligne par réaction : qui, quoi et quand.",
+        "reactionsError": "Impossible de charger les réactions",
+        "reactionsEmpty": "Aucune réaction",
+        "reactionsEmptyHint": "Personne n'a réagi à cette publication avec le type sélectionné.",
+        "reactionTypeFilter": "Type de réaction",
+        "reactionType": {
+          "ALL": "Tous les types",
+          "LIKE": "J'aime",
+          "SHARE": "Partage",
+          "SAVE": "Enregistrement (favori privé)"
+        },
+        "reactor": "Auteur de la réaction",
+        "reactionColumn": "Réaction",
+        "reactedAt": "Réaction le",
+        "reactorUnresolved": "Nom indisponible : l'identifiant du compte est affiché",
+        "reactorDetailUnavailable": "Détail des réactions indisponible",
+        "reactorDetailUnavailableHint": "Le backend signale que les lignes individuelles derrière ces totaux ne peuvent pas être lues pour le moment. Les totaux ci-dessus restent exacts : cela ne signifie pas que personne n'a réagi."
       },
       "groups": {
         "title": "Groupes",

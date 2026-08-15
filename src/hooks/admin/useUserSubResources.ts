@@ -6,6 +6,11 @@ import {
   GET_USER_TRANSACTIONS,
   GET_COMMUNITY_POSTS_ADMIN,
   GET_COMMUNITY_PRODUCTS_ADMIN,
+  ADMIN_GET_POST_ENGAGEMENT,
+  ADMIN_LIST_POST_REACTIONS,
+  type AdminPostEngagementBreakdown,
+  type AdminPostReaction,
+  type AdminPostReactionList,
   type UserPost,
   type UserPostListResponse,
   type UserGroup,
@@ -21,6 +26,9 @@ import {
 } from "@/services/networks/graphql/admin";
 
 export type {
+  AdminPostEngagementBreakdown,
+  AdminPostReaction,
+  AdminPostReactionList,
   UserPost,
   UserPostListResponse,
   UserGroup,
@@ -66,6 +74,54 @@ export function useGetUserTransactions(userId: string | null, limit = 20, offset
   return useQuery<{ getUserTransactions: UserTransactionListResponse }>(GET_USER_TRANSACTIONS, {
     variables: { userId: userId ?? "", limit, offset },
     skip: !userId,
+  });
+}
+
+/** The only reaction types post-feed-service accepts; anything else is INVALID_ARGUMENT. */
+export const POST_REACTION_TYPES = ["LIKE", "SHARE", "SAVE"] as const;
+export type PostReactionType = (typeof POST_REACTION_TYPES)[number];
+
+/**
+ * Aggregate reaction counts for one post (likes / shares / saves / comments).
+ *
+ * `skip: !postId` is not optional: `postId` is non-nullable in the schema, so a
+ * call made before a post is selected would fire a guaranteed-failing query and
+ * paint the detail view as broken.
+ *
+ * No `errorPolicy: "all"` on purpose — a failure here must surface as an error,
+ * never as four zeroes, which an admin would read as "nobody engaged".
+ */
+export function useAdminGetPostEngagement(postId: string | null) {
+  return useQuery<{ adminGetPostEngagement: AdminPostEngagementBreakdown }>(
+    ADMIN_GET_POST_ENGAGEMENT,
+    {
+      variables: { postId: postId ?? "" },
+      skip: !postId,
+      fetchPolicy: "cache-and-network",
+    },
+  );
+}
+
+/**
+ * WHO reacted to a post, paginated and optionally filtered by reaction type.
+ *
+ * `type` is omitted (not sent as null/"") when unfiltered — the backend rejects
+ * an unknown value rather than silently returning everything, so an empty
+ * string must never reach the wire.
+ *
+ * Again no `errorPolicy: "all"`: an empty reaction list and a failed query are
+ * different facts and must not render identically.
+ */
+export function useAdminListPostReactions(
+  postId: string | null,
+  type: PostReactionType | null,
+  limit = 20,
+  offset = 0,
+) {
+  return useQuery<{ adminListPostReactions: AdminPostReactionList }>(ADMIN_LIST_POST_REACTIONS, {
+    variables: { postId: postId ?? "", type: type ?? undefined, limit, offset },
+    skip: !postId,
+    fetchPolicy: "cache-and-network",
   });
 }
 
