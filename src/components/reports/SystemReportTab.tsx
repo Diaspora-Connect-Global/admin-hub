@@ -33,9 +33,13 @@ interface ServiceRow {
 interface AuditItem {
   id: string;
   actorId?: string;
+  actorEmail?: string | null;
+  actorLabel?: string | null;
   action: string;
   resourceType?: string;
   resourceId?: string;
+  resourceName?: string | null;
+  resourceLabel?: string | null;
   createdAt: string;
 }
 
@@ -132,7 +136,7 @@ export function SystemReportTab({ systemHealthPieData, services, auditItems }: S
               <TableHead>Actor</TableHead>
               <TableHead>Action</TableHead>
               <TableHead>Resource Type</TableHead>
-              <TableHead>Resource ID</TableHead>
+              <TableHead>Resource</TableHead>
               <TableHead>Timestamp</TableHead>
             </TableRow>
           </TableHeader>
@@ -144,18 +148,20 @@ export function SystemReportTab({ systemHealthPieData, services, auditItems }: S
                 </TableCell>
               </TableRow>
             ) : (
-              auditItems.map((ev: { id: string; actorId?: string; action: string; resourceType?: string; resourceId?: string; createdAt: string }) => (
+              auditItems.map((ev: AuditItem) => (
                 <TableRow key={ev.id} className="border-border/50">
                   <TableCell className="font-mono text-sm">{truncateId(ev.id)}</TableCell>
-                  <TableCell className="font-mono text-sm">{ev.actorId ? truncateId(ev.actorId) : "—"}</TableCell>
+                  <TableCell className="text-sm" title={ev.actorId}>
+                    {ev.actorLabel || ev.actorEmail || (ev.actorId ? truncateId(ev.actorId) : "—")}
+                  </TableCell>
                   <TableCell>
                     <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 font-mono text-xs">
                       {ev.action}
                     </Badge>
                   </TableCell>
                   <TableCell className="text-muted-foreground">{ev.resourceType ?? "—"}</TableCell>
-                  <TableCell className="font-mono text-sm text-muted-foreground">
-                    {ev.resourceId ? truncateId(ev.resourceId) : "—"}
+                  <TableCell className="text-sm text-muted-foreground" title={ev.resourceId}>
+                    {ev.resourceLabel || ev.resourceName || (ev.resourceId ? truncateId(ev.resourceId) : "—")}
                   </TableCell>
                   <TableCell className="text-muted-foreground">
                     {new Date(ev.createdAt).toLocaleString()}

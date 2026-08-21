@@ -223,10 +223,18 @@ export const GET_AUDIT_LOGS = gql`
     ) {
       items {
         id
+        # actorId / resourceId are the durable uuids the audit trail is built on
+        # and what this query FILTERS by — keep them for deep links, but render
+        # actorLabel / resourceLabel. The gateway resolves both per page.
         actorId
+        actorName
+        actorEmail
+        actorLabel
         action
         resourceType
         resourceId
+        resourceName
+        resourceLabel
         createdAt
         ipAddress
       }

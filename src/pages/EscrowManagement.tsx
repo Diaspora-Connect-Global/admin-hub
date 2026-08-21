@@ -623,14 +623,14 @@ export default function EscrowManagement() {
                         {(escrowAuditData?.getAuditLogs?.items ?? []).length === 0 ? (
                           <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground py-6">No audit events found for this escrow</TableCell></TableRow>
                         ) : (
-                          (escrowAuditData?.getAuditLogs?.items ?? []).map((entry: { id: string; actorId?: string; action: string; createdAt: string; ipAddress?: string }) => (
+                          (escrowAuditData?.getAuditLogs?.items ?? []).map((entry: { id: string; actorId?: string; actorEmail?: string; actorLabel?: string; action: string; createdAt: string; ipAddress?: string }) => (
                             <TableRow key={entry.id} className="border-border">
                               <TableCell className="text-muted-foreground text-sm">
                                 {new Date(entry.createdAt).toLocaleString()}
                               </TableCell>
                               <TableCell className="text-foreground">{entry.action}</TableCell>
-                              <TableCell className="text-muted-foreground">
-                                {entry.actorId ? entry.actorId.slice(0, 8) + "…" : "System"}
+                              <TableCell className="text-muted-foreground" title={entry.actorId}>
+                                {entry.actorLabel || entry.actorEmail || (entry.actorId ? entry.actorId.slice(0, 8) + "…" : "System")}
                               </TableCell>
                               <TableCell className="text-muted-foreground text-sm">
                                 {entry.ipAddress ?? "—"}

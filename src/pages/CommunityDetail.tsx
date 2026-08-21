@@ -134,10 +134,14 @@ function groupCreationApiToUi(api: string | undefined): string {
 interface AuditLogItem {
   resourceType?: string | null;
   resourceId?: string | null;
+  resourceName?: string | null;
+  resourceLabel?: string | null;
   ipAddress?: string | null;
   createdAt?: string;
   action?: string;
   actorId?: string | null;
+  actorEmail?: string | null;
+  actorLabel?: string | null;
 }
 
 export default function CommunityDetail() {
@@ -323,16 +327,20 @@ export default function CommunityDetail() {
   const auditLogs = (
     (auditData as { getAuditLogs?: { items?: AuditLogItem[] } } | undefined)?.getAuditLogs?.items ?? []
   ).map((log) => {
+    // `resourceLabel` already folds the type into readable text ("Community:
+    // Accra Diaspora"), so it replaces the old "TYPE: uuid" concatenation.
     const resource =
-      log.resourceType && log.resourceId
-        ? `${log.resourceType}: ${log.resourceId}`
-        : log.resourceType || log.resourceId || "";
+      log.resourceLabel ||
+      log.resourceName ||
+      log.resourceType ||
+      log.resourceId ||
+      "";
     const ip = log.ipAddress ? `IP ${log.ipAddress}` : "";
     const notes = [resource, ip].filter(Boolean).join(" · ") || "—";
     return {
       timestamp: log.createdAt,
       action: log.action,
-      performedBy: log.actorId || "System",
+      performedBy: log.actorLabel || log.actorEmail || log.actorId || "System",
       notes,
     };
   });
