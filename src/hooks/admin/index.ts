@@ -205,10 +205,30 @@ export function useGetAssociationStats(associationId: string | null) {
 
 export interface AuditLogItem {
   id: string;
+  /** Durable uuid — what `getAuditLogs(actorId:)` filters on. Do NOT render it. */
   actorId: string;
+  /** Profile name, when the admin also has a platform profile. */
+  actorName?: string | null;
+  /** `admin_accounts.email`. Empty only if that account has been deleted. */
+  actorEmail?: string | null;
+  /**
+   * Ready-to-render actor: `Full Name (email)`, degrading to name alone, email
+   * alone, then the raw id. Non-null — always safe to render directly.
+   */
+  actorLabel: string;
   action: string;
   resourceType: string;
+  /** Durable uuid — a filter/deep-link reference, not a display value. */
   resourceId: string;
+  /** `target.name` when the writer recorded one; usually empty. */
+  resourceName?: string | null;
+  /**
+   * Ready-to-render target, in words: the user's name and email, a post
+   * excerpt, a community/vendor name, or "Admin session". Degrades to
+   * `<Type> #<short ref>` when the entity is deleted or its service is down —
+   * never to a bare uuid. Non-null.
+   */
+  resourceLabel: string;
   createdAt: string;
   ipAddress?: string | null;
 }

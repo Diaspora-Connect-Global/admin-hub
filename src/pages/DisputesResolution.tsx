@@ -536,14 +536,16 @@ export default function DisputesResolution() {
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {((disputeAuditData as { getAuditLogs?: { items?: { id: string; actorId?: string; action: string; createdAt: string; ipAddress?: string }[] } } | undefined)?.getAuditLogs?.items ?? []).length === 0 ? (
+                          {((disputeAuditData as { getAuditLogs?: { items?: { id: string; actorId?: string; actorEmail?: string; actorLabel?: string; action: string; createdAt: string; ipAddress?: string }[] } } | undefined)?.getAuditLogs?.items ?? []).length === 0 ? (
                             <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground py-6">No audit events found for this dispute</TableCell></TableRow>
                           ) : (
-                            ((disputeAuditData as { getAuditLogs?: { items?: { id: string; actorId?: string; action: string; createdAt: string; ipAddress?: string }[] } } | undefined)?.getAuditLogs?.items ?? []).map((log) => (
+                            ((disputeAuditData as { getAuditLogs?: { items?: { id: string; actorId?: string; actorEmail?: string; actorLabel?: string; action: string; createdAt: string; ipAddress?: string }[] } } | undefined)?.getAuditLogs?.items ?? []).map((log) => (
                               <TableRow key={log.id}>
                                 <TableCell className="text-sm">{new Date(log.createdAt).toLocaleString()}</TableCell>
                                 <TableCell>{log.action}</TableCell>
-                                <TableCell className="font-mono text-xs">{log.actorId ? log.actorId.slice(0, 8) + "…" : "System"}</TableCell>
+                                <TableCell className="text-xs" title={log.actorId}>
+                                  {log.actorLabel || log.actorEmail || (log.actorId ? log.actorId.slice(0, 8) + "…" : "System")}
+                                </TableCell>
                                 <TableCell className="max-w-xs truncate text-muted-foreground">{log.ipAddress ?? "—"}</TableCell>
                               </TableRow>
                             ))

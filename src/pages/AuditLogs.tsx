@@ -52,15 +52,34 @@ import { useToast } from "@/hooks/use-toast";
 
 const logger_ = logger.child("AuditLogs");
 
+/**
+ * The row this page renders. `actorLabel` / `resourceLabel` are what the table
+ * SHOWS; `actorId` / `resourceId` are kept only because they are the durable
+ * references — used for the copy-able detail panel and for filtering.
+ *
+ * Both labels are non-null from the gateway, but the fallbacks below still
+ * treat them as possibly-missing: a stale Apollo cache entry written before
+ * this field existed would otherwise render `undefined` into the table.
+ */
 interface AuditLogEntry {
   id: string;
   actorId: string;
+  actorName?: string | null;
+  actorEmail?: string | null;
+  actorLabel?: string | null;
   action: string;
   resourceType: string;
   resourceId: string;
+  resourceName?: string | null;
+  resourceLabel?: string | null;
   createdAt: string;
   ipAddress?: string | null;
 }
+
+/** Never render a raw uuid: fall back through the label, then the id. */
+const actorOf = (e: AuditLogEntry) => e.actorLabel || e.actorEmail || e.actorId || "—";
+const resourceOf = (e: AuditLogEntry) =>
+  e.resourceLabel || e.resourceName || e.resourceType || "—";
 
 const getActionBadge = (action: string) => {
   const styles: Record<string, string> = {
@@ -118,10 +137,16 @@ export default function AuditLogs() {
   const filteredLogs = useMemo(() => {
     if (!searchQuery) return auditLogs;
     const q = searchQuery.toLowerCase();
+    // Search the NAMES as well as the ids — "Search by user, action, entity"
+    // promised name search while only ever matching uuids, so typing a
+    // colleague's name returned nothing.
     return auditLogs.filter(l =>
+      actorOf(l).toLowerCase().includes(q) ||
+      (l.actorEmail ?? "").toLowerCase().includes(q) ||
       l.actorId.toLowerCase().includes(q) ||
       l.action.toLowerCase().includes(q) ||
       l.resourceType.toLowerCase().includes(q) ||
+      resourceOf(l).toLowerCase().includes(q) ||
       l.resourceId.toLowerCase().includes(q)
     );
   }, [auditLogs, searchQuery]);
@@ -141,7 +166,19 @@ export default function AuditLogs() {
     const entries = filteredLogs;
     logger_.info("Exporting CSV", { count: entries.length });
 
-    const headers = ["timestamp", "actor", "action", "resourceType", "resourceId", "details"];
+    // Names lead; the uuids stay as trailing columns so an exported sheet is
+    // still joinable against the databases.
+    const headers = [
+      "timestamp",
+      "actor",
+      "actorEmail",
+      "action",
+      "resourceType",
+      "resource",
+      "ipAddress",
+      "actorId",
+      "resourceId",
+    ];
     const escape = (val: string | null | undefined) => {
       const s = val ?? "";
       return s.includes(",") || s.includes('"') || s.includes("\n")
@@ -151,11 +188,14 @@ export default function AuditLogs() {
     const rows = entries.map((e) =>
       [
         escape(format(new Date(e.createdAt), "yyyy-MM-dd HH:mm:ss")),
-        escape(e.actorId),
+        escape(actorOf(e)),
+        escape(e.actorEmail ?? ""),
         escape(e.action),
         escape(e.resourceType),
-        escape(e.resourceId),
+        escape(resourceOf(e)),
         escape(e.ipAddress ?? ""),
+        escape(e.actorId),
+        escape(e.resourceId),
       ].join(",")
     );
     const csv = [headers.join(","), ...rows].join("\n");
@@ -285,32 +325,31 @@ export default function AuditLogs() {
             <TableHeader>
               <TableRow className="border-border hover:bg-transparent bg-muted/50">
                 <TableHead className="w-8"></TableHead>
-                <TableHead className="text-muted-foreground">Timestamp</TableHead>
-                <TableHead className="text-muted-foreground">Actor ID</TableHead>
-                <TableHead className="text-muted-foreground">Action</TableHead>
-                <TableHead className="text-muted-foreground">Resource Type</TableHead>
-                <TableHead className="text-muted-foreground">Resource ID</TableHead>
-                <TableHead className="text-muted-foreground">IP Address</TableHead>
+                <TableHead className="text-muted-foreground">{t('audit.timestamp')}</TableHead>
+                <TableHead className="text-muted-foreground">{t('audit.user')}</TableHead>
+                <TableHead className="text-muted-foreground">{t('audit.action')}</TableHead>
+                <TableHead className="text-muted-foreground">{t('audit.resource')}</TableHead>
+                <TableHead className="text-muted-foreground">{t('audit.ipAddress')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading && (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                     {t("common.loading")}
                   </TableCell>
                 </TableRow>
               )}
               {!loading && error && (
                 <TableRow>
-                  <TableCell colSpan={7} className="py-8">
+                  <TableCell colSpan={6} className="py-8">
                     <ErrorState onRetry={() => refetch()} className="border-0 bg-transparent p-0" />
                   </TableCell>
                 </TableRow>
               )}
               {!loading && !error && filteredLogs.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                     No audit logs found.
                   </TableCell>
                 </TableRow>
@@ -333,17 +372,25 @@ export default function AuditLogs() {
                         <TableCell className="font-mono text-xs text-muted-foreground">
                           {format(new Date(entry.createdAt), "yyyy-MM-dd HH:mm:ss")}
                         </TableCell>
-                        <TableCell className="font-mono text-xs text-muted-foreground max-w-[140px] truncate">
-                          {entry.actorId}
+                        <TableCell className="text-sm max-w-[240px]">
+                          <span className="block truncate" title={actorOf(entry)}>
+                            {entry.actorName || actorOf(entry)}
+                          </span>
+                          {entry.actorName && entry.actorEmail && (
+                            <span className="block truncate text-xs text-muted-foreground">
+                              {entry.actorEmail}
+                            </span>
+                          )}
                         </TableCell>
                         <TableCell>
                           <Badge variant="outline" className={cn("text-xs", getActionBadge(entry.action))}>
                             {entry.action}
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-sm">{entry.resourceType}</TableCell>
-                        <TableCell className="font-mono text-xs text-muted-foreground max-w-[120px] truncate">
-                          {entry.resourceId}
+                        <TableCell className="text-sm max-w-[280px]">
+                          <span className="block truncate" title={resourceOf(entry)}>
+                            {resourceOf(entry)}
+                          </span>
                         </TableCell>
                         <TableCell className="font-mono text-xs text-muted-foreground">
                           {entry.ipAddress ?? "—"}
@@ -352,8 +399,23 @@ export default function AuditLogs() {
                     </CollapsibleTrigger>
                     <CollapsibleContent asChild>
                       <TableRow className="bg-muted/30 border-border hover:bg-muted/30">
-                        <TableCell colSpan={7} className="p-4">
+                        <TableCell colSpan={6} className="p-4">
+                          {/* The uuids live HERE, not in the table: an admin
+                              chasing a specific record still needs them, but
+                              they should cost a click rather than a column. */}
                           <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
+                            <div>
+                              <span className="text-muted-foreground block text-xs mb-1">{t('audit.user')}</span>
+                              <span className="text-xs break-all">{actorOf(entry)}</span>
+                            </div>
+                            <div>
+                              <span className="text-muted-foreground block text-xs mb-1">{t('audit.resource')}</span>
+                              <span className="text-xs break-all">{resourceOf(entry)}</span>
+                            </div>
+                            <div>
+                              <span className="text-muted-foreground block text-xs mb-1">Resource Type</span>
+                              <span className="text-xs">{entry.resourceType || "—"}</span>
+                            </div>
                             <div>
                               <span className="text-muted-foreground block text-xs mb-1">Full Actor ID</span>
                               <span className="font-mono text-xs break-all">{entry.actorId}</span>
@@ -363,7 +425,7 @@ export default function AuditLogs() {
                               <span className="font-mono text-xs break-all">{entry.resourceId}</span>
                             </div>
                             <div>
-                              <span className="text-muted-foreground block text-xs mb-1">IP Address</span>
+                              <span className="text-muted-foreground block text-xs mb-1">{t('audit.ipAddress')}</span>
                               <span className="font-mono">{entry.ipAddress ?? "—"}</span>
                             </div>
                           </div>
@@ -417,19 +479,22 @@ export default function AuditLogs() {
                     </Badge>
                   </div>
                   <div className="col-span-2">
-                    <span className="text-muted-foreground block text-xs mb-1">Actor ID</span>
-                    <span className="font-mono text-xs break-all">{selectedLog.actorId}</span>
+                    <span className="text-muted-foreground block text-xs mb-1">{t('audit.user')}</span>
+                    <span className="text-sm break-all">{actorOf(selectedLog)}</span>
+                    <span className="font-mono text-[11px] text-muted-foreground block break-all mt-0.5">
+                      {selectedLog.actorId}
+                    </span>
+                  </div>
+                  <div className="col-span-2">
+                    <span className="text-muted-foreground block text-xs mb-1">{t('audit.resource')}</span>
+                    <span className="text-sm break-all">{resourceOf(selectedLog)}</span>
+                    <span className="font-mono text-[11px] text-muted-foreground block break-all mt-0.5">
+                      {selectedLog.resourceType}
+                      {selectedLog.resourceId ? ` · ${selectedLog.resourceId}` : ""}
+                    </span>
                   </div>
                   <div>
-                    <span className="text-muted-foreground block text-xs mb-1">Resource Type</span>
-                    <span>{selectedLog.resourceType}</span>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground block text-xs mb-1">Resource ID</span>
-                    <span className="font-mono text-xs break-all">{selectedLog.resourceId}</span>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground block text-xs mb-1">IP Address</span>
+                    <span className="text-muted-foreground block text-xs mb-1">{t('audit.ipAddress')}</span>
                     <span className="font-mono">{selectedLog.ipAddress ?? "—"}</span>
                   </div>
                 </div>

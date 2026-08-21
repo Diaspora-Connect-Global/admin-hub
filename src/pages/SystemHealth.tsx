@@ -595,7 +595,7 @@ export default function SystemHealth() {
                           <TableHead>Resource Type</TableHead>
                           <TableHead>Action</TableHead>
                           <TableHead>Actor</TableHead>
-                          <TableHead>Resource ID</TableHead>
+                          <TableHead>Resource</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -608,11 +608,13 @@ export default function SystemHealth() {
                             <TableCell>
                               <Badge variant="outline">{log.action}</Badge>
                             </TableCell>
-                            <TableCell className="font-mono text-xs">
-                              {log.actorId?.slice(0, 8) ?? "—"}
+                            {/* The gateway resolves these per page; the id
+                                fallbacks only fire on a pre-upgrade cache. */}
+                            <TableCell className="text-xs" title={log.actorId ?? undefined}>
+                              {log.actorLabel || log.actorEmail || log.actorId?.slice(0, 8) || "—"}
                             </TableCell>
-                            <TableCell className="font-mono text-xs">
-                              {log.resourceId?.slice(0, 8) ?? "—"}
+                            <TableCell className="text-xs" title={log.resourceId ?? undefined}>
+                              {log.resourceLabel || log.resourceName || log.resourceId?.slice(0, 8) || "—"}
                             </TableCell>
                           </TableRow>
                         ))}
