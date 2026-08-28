@@ -2,6 +2,10 @@ import { TabsContent } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { Mail, Phone, Calendar } from "lucide-react";
+import {
+  RegistrationMethodBadge,
+  normalizeRegistrationMethod,
+} from "@/components/user/registrationMethod";
 import type { AdminUserProfile } from "@/hooks/user";
 
 interface UserOverviewTabProps {
@@ -68,6 +72,14 @@ export function UserOverviewTab({ profile, createdAt, t }: UserOverviewTabProps)
             <StatusBadge variant={profile?.isVerified ? "active" : "inactive"}>
               {profile?.isVerified ? t("users.verified") : t("users.unverified")}
             </StatusBadge>
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground">
+              {t("users.registrationMethod.label")}
+            </p>
+            <RegistrationMethodBadge
+              method={normalizeRegistrationMethod(profile?.registrationMethod)}
+            />
           </div>
           <div>
             <p className="text-xs text-muted-foreground">{t("users.role")}</p>

@@ -57,6 +57,7 @@ export const GET_PROFILE = gql`
         accountStatus
         statusReason
         suspendedUntil
+        registrationMethod
       }
       connectionStatus
       connectionId
