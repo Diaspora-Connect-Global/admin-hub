@@ -122,6 +122,15 @@
       "until": "Jusqu'au {{date}}",
       "reason": "Motif : {{reason}}"
     },
+    "registrationMethod": {
+      "label": "Méthode d'inscription",
+      "PASSWORD": "E-mail et mot de passe",
+      "GOOGLE": "Google",
+      "FACEBOOK": "Facebook",
+      "TWITTER": "X (Twitter)",
+      "unknown": "Inconnue",
+      "unknownHint": "La passerelle n'a pas indiqué comment ce compte a été créé. Actualisez la page ou vérifiez que la passerelle est accessible."
+    },
     "suspend": {
       "action": "Suspendre l'utilisateur",
       "title": "Suspendre ce compte ?",

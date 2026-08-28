@@ -122,6 +122,15 @@
       "until": "Until {{date}}",
       "reason": "Reason: {{reason}}"
     },
+    "registrationMethod": {
+      "label": "Signup method",
+      "PASSWORD": "Email & password",
+      "GOOGLE": "Google",
+      "FACEBOOK": "Facebook",
+      "TWITTER": "X (Twitter)",
+      "unknown": "Unknown",
+      "unknownHint": "The gateway did not report how this account was created. Refresh, or check that the gateway is reachable."
+    },
     "suspend": {
       "action": "Suspend user",
       "title": "Suspend this account?",

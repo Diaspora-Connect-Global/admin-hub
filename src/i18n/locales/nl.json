@@ -122,6 +122,15 @@
       "until": "Tot {{date}}",
       "reason": "Reden: {{reason}}"
     },
+    "registrationMethod": {
+      "label": "Registratiemethode",
+      "PASSWORD": "E-mail en wachtwoord",
+      "GOOGLE": "Google",
+      "FACEBOOK": "Facebook",
+      "TWITTER": "X (Twitter)",
+      "unknown": "Onbekend",
+      "unknownHint": "De gateway heeft niet gemeld hoe dit account is aangemaakt. Vernieuw de pagina of controleer of de gateway bereikbaar is."
+    },
     "suspend": {
       "action": "Gebruiker schorsen",
       "title": "Dit account schorsen?",

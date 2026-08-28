@@ -77,6 +77,12 @@ export interface GetUsersItem {
   statusReason?: string | null;
   /** ISO date the suspension lapses; null for an indefinite suspension. */
   suspendedUntil?: string | null;
+  /**
+   * "PASSWORD" | "GOOGLE" | "FACEBOOK" | "TWITTER" — how the account was
+   * created. Null/undefined means UNKNOWN (non-admin caller, or auth-service
+   * unreachable); do not collapse it to "PASSWORD".
+   */
+  registrationMethod?: string | null;
 }
 
 export interface GetUsersData {
