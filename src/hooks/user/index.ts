@@ -31,12 +31,19 @@ export interface AdminUserProfile {
   isVerified?: boolean | null;
   createdAt?: string | null;
   /**
-   * Enforcement state. Populated only by the admin `getUsers` query today —
-   * `getProfile` returns null. Null means UNKNOWN, never ACTIVE.
+   * Enforcement state. Populated for platform admins by BOTH `getUsers` and
+   * `getProfile` (the gateway runs the same batch rpc in each). Null means
+   * UNKNOWN — a non-admin caller or an unreachable auth-service — never ACTIVE.
    */
   accountStatus?: string | null;
   statusReason?: string | null;
   suspendedUntil?: string | null;
+  /**
+   * "PASSWORD" | "GOOGLE" | "FACEBOOK" | "TWITTER" — how the account was
+   * created, from the same admin-gated lookup. Null means UNKNOWN; do not
+   * collapse it to "PASSWORD".
+   */
+  registrationMethod?: string | null;
 }
 
 export interface GetProfileData {
