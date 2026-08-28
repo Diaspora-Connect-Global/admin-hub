@@ -122,6 +122,15 @@
       "until": "Bis {{date}}",
       "reason": "Grund: {{reason}}"
     },
+    "registrationMethod": {
+      "label": "Registrierungsart",
+      "PASSWORD": "E-Mail & Passwort",
+      "GOOGLE": "Google",
+      "FACEBOOK": "Facebook",
+      "TWITTER": "X (Twitter)",
+      "unknown": "Unbekannt",
+      "unknownHint": "Das Gateway hat nicht gemeldet, wie dieses Konto erstellt wurde. Aktualisieren Sie die Seite oder prüfen Sie, ob das Gateway erreichbar ist."
+    },
     "suspend": {
       "action": "Nutzer suspendieren",
       "title": "Dieses Konto suspendieren?",

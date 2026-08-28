@@ -47,12 +47,13 @@ export const GET_PROFILE = gql`
         isVerified
         createdAt
         # Enforcement state. These fields live on the shared Profile type —
-        # the same type getUsers.items returns — but only the admin getUsers
-        # query populates them today; getProfile leaves them null. Selecting
-        # them here is schema-valid now and lights up the user-detail header the
-        # moment the gateway starts filling them in. Until then the detail page
-        # falls back to the status handed over by the users list, and otherwise
-        # renders "unknown". Null is never to be shown as ACTIVE.
+        # the same type getUsers.items returns — and getProfile now populates
+        # them too (admin callers only), so the user-detail header reads the
+        # real status instead of "unknown". Before that fix a ban applied
+        # correctly and then read back as unknown on refetch, which is
+        # indistinguishable from the ban not having worked.
+        # Still nullable: a degraded auth-service leaves them null, and null is
+        # never to be shown as ACTIVE.
         accountStatus
         statusReason
         suspendedUntil
@@ -85,6 +86,7 @@ export const GET_USERS = gql`
         accountStatus
         statusReason
         suspendedUntil
+        registrationMethod
       }
       total
       hasMore

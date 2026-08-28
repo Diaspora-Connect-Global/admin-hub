@@ -20,6 +20,11 @@ import {
   normalizeAccountStatus,
   type AccountStatus,
 } from "@/components/user/accountStatus";
+import {
+  RegistrationMethodBadge,
+  normalizeRegistrationMethod,
+  type RegistrationMethod,
+} from "@/components/user/registrationMethod";
 import { useUserEnforcement, UserEnforcementDialogs } from "@/components/user/UserEnforcement";
 import {
   Search, UserPlus, Download, ChevronDown, Eye, Pause, Play, MoreHorizontal,
@@ -37,6 +42,7 @@ export type UserTableRow = {
   accountStatus: AccountStatus;
   statusReason: string | null;
   suspendedUntil: string | null;
+  registrationMethod: RegistrationMethod;
 };
 
 function mapApiUserToRow(item: {
@@ -50,6 +56,7 @@ function mapApiUserToRow(item: {
   accountStatus?: string | null;
   statusReason?: string | null;
   suspendedUntil?: string | null;
+  registrationMethod?: string | null;
 }): UserTableRow {
   const id = item.id ?? item.userId ?? "";
   const name = [item.firstName, item.lastName].filter(Boolean).join(" ") || "—";
@@ -63,6 +70,7 @@ function mapApiUserToRow(item: {
     accountStatus: normalizeAccountStatus(item.accountStatus),
     statusReason: item.statusReason ?? null,
     suspendedUntil: item.suspendedUntil ?? null,
+    registrationMethod: normalizeRegistrationMethod(item.registrationMethod),
   };
 }
 
@@ -255,15 +263,16 @@ export default function UserManagement() {
                         <TableHead>Email</TableHead>
                         <TableHead>Phone</TableHead>
                         <TableHead>{t("common.status")}</TableHead>
+                        <TableHead>{t("users.registrationMethod.label")}</TableHead>
                         <TableHead>Created At</TableHead>
                         <TableHead className="w-20">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {loading ? (
-                        <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">Loading users...</TableCell></TableRow>
+                        <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground py-8">Loading users...</TableCell></TableRow>
                       ) : error ? (
-                        <TableRow><TableCell colSpan={7} className="text-center text-destructive py-8">Failed to load users.</TableCell></TableRow>
+                        <TableRow><TableCell colSpan={8} className="text-center text-destructive py-8">Failed to load users.</TableCell></TableRow>
                       ) : (
                       filteredUsers.map((user) => (
                         <TableRow key={user.id} className="border-border/50">
@@ -272,6 +281,7 @@ export default function UserManagement() {
                           <TableCell className="text-muted-foreground">{user.email}</TableCell>
                           <TableCell className="text-muted-foreground">{user.phone}</TableCell>
                           <TableCell><AccountStatusBadge accountStatus={user.accountStatus} statusReason={user.statusReason} suspendedUntil={user.suspendedUntil} /></TableCell>
+                          <TableCell><RegistrationMethodBadge method={user.registrationMethod} /></TableCell>
                           <TableCell className="text-muted-foreground">{user.createdAt}</TableCell>
                           <TableCell>
                             <div className="flex items-center gap-1">
