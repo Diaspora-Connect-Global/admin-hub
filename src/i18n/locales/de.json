@@ -40,7 +40,8 @@
     "logout": "Abmelden",
     "retry": "Erneut versuchen",
     "errorTitle": "Etwas ist schiefgelaufen",
-    "errorLoading": "Daten konnten nicht geladen werden. Bitte versuchen Sie es erneut."
+    "errorLoading": "Daten konnten nicht geladen werden. Bitte versuchen Sie es erneut.",
+    "success": "Erfolg"
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -69,7 +70,8 @@
     "aiConfig": "KI-Konfiguration",
     "openMenu": "Menü öffnen",
     "collapseSidebar": "Seitenleiste einklappen",
-    "expandSidebar": "Seitenleiste ausklappen"
+    "expandSidebar": "Seitenleiste ausklappen",
+    "posts": "Beitragsverwaltung"
   },
   "dashboard": {
     "title": "Admin-Dashboard",
@@ -1249,5 +1251,49 @@
         "description": "Official registry of members and their status."
       }
     }
+  },
+  "posts": {
+    "title": "Beitragsverwaltung",
+    "subtitle": "Alle Beiträge der Plattform und die Kommentare darunter. Umfasst alle Sichtbarkeiten und Status – auch private Beiträge und Entwürfe.",
+    "filters": "Filter",
+    "searchPlaceholder": "Beitragstext durchsuchen...",
+    "authorType": "Autorentyp",
+    "allAuthorTypes": "Alle Autorentypen",
+    "status": "Status",
+    "allStatuses": "Alle Status",
+    "visibility": "Sichtbarkeit",
+    "allVisibilities": "Alle Sichtbarkeiten",
+    "includeDeleted": "Gelöschte einbeziehen",
+    "resultCount": "{{count}} Beiträge",
+    "empty": "Keine Beiträge entsprechen diesen Filtern.",
+    "author": "Autor",
+    "content": "Inhalt",
+    "engagement": "Interaktionen",
+    "created": "Erstellt",
+    "noText": "Kein Text",
+    "unknown": "Unbekannt",
+    "viewComments": "Kommentare anzeigen",
+    "hide": "Ausblenden",
+    "restore": "Wiederherstellen",
+    "remove": "Entfernen",
+    "removeComment": "Kommentar entfernen",
+    "hideTitle": "Diesen Beitrag ausblenden?",
+    "hideDescription": "Der Beitrag verschwindet aus allen Feeds und ist nicht mehr öffentlich lesbar. Es wird nichts gelöscht und Sie können ihn jederzeit wiederherstellen.",
+    "hidePostFailedTitle": "Ausblenden fehlgeschlagen",
+    "hideFailed": "Der Beitrag konnte nicht ausgeblendet werden.",
+    "hidden": "Beitrag ausgeblendet.",
+    "restoreFailed": "Der Beitrag konnte nicht wiederhergestellt werden.",
+    "restored": "Beitrag wiederhergestellt.",
+    "removePostTitle": "Diesen Beitrag entfernen?",
+    "removePostDescription": "Der Beitrag und alle zugehörigen Kommentare, Reaktionen und Feed-Einträge werden gelöscht. Das lässt sich in der Konsole nicht rückgängig machen – blenden Sie den Beitrag stattdessen aus, wenn Sie ihn eventuell zurückhaben möchten.",
+    "removeCommentTitle": "Diesen Kommentar entfernen?",
+    "removeCommentDescription": "Der Kommentar wird gelöscht und erscheint nicht mehr unter dem Beitrag. Das lässt sich in der Konsole nicht rückgängig machen.",
+    "removed": "Inhalt entfernt.",
+    "defaultRemovalReason": "Von der Plattformadministration entfernt",
+    "reason": "Grund",
+    "reasonPlaceholder": "Wird im Moderations-Audit-Log erfasst",
+    "commentsTitle": "Kommentare ({{count}})",
+    "noComments": "Keine Kommentare zu diesem Beitrag.",
+    "deleted": "Gelöscht"
   }
 }

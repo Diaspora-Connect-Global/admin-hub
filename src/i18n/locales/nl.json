@@ -40,7 +40,8 @@
     "logout": "Uitloggen",
     "retry": "Opnieuw proberen",
     "errorTitle": "Er is iets misgegaan",
-    "errorLoading": "Gegevens laden mislukt. Probeer het opnieuw."
+    "errorLoading": "Gegevens laden mislukt. Probeer het opnieuw.",
+    "success": "Gelukt"
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -69,7 +70,8 @@
     "aiConfig": "AI-configuratie",
     "openMenu": "Menu openen",
     "collapseSidebar": "Zijbalk inklappen",
-    "expandSidebar": "Zijbalk uitklappen"
+    "expandSidebar": "Zijbalk uitklappen",
+    "posts": "Berichtenbeheer"
   },
   "dashboard": {
     "title": "Admin Dashboard",
@@ -1249,5 +1251,49 @@
         "description": "Official registry of members and their status."
       }
     }
+  },
+  "posts": {
+    "title": "Berichtenbeheer",
+    "subtitle": "Alle berichten op het platform en de reacties eronder. Omvat alle zichtbaarheden en statussen — ook privéberichten en concepten.",
+    "filters": "Filters",
+    "searchPlaceholder": "Zoeken in berichttekst...",
+    "authorType": "Type auteur",
+    "allAuthorTypes": "Alle typen auteur",
+    "status": "Status",
+    "allStatuses": "Alle statussen",
+    "visibility": "Zichtbaarheid",
+    "allVisibilities": "Alle zichtbaarheden",
+    "includeDeleted": "Verwijderde tonen",
+    "resultCount": "{{count}} berichten",
+    "empty": "Geen berichten voldoen aan deze filters.",
+    "author": "Auteur",
+    "content": "Inhoud",
+    "engagement": "Interacties",
+    "created": "Aangemaakt",
+    "noText": "Geen tekst",
+    "unknown": "Onbekend",
+    "viewComments": "Reacties bekijken",
+    "hide": "Verbergen",
+    "restore": "Herstellen",
+    "remove": "Verwijderen",
+    "removeComment": "Reactie verwijderen",
+    "hideTitle": "Dit bericht verbergen?",
+    "hideDescription": "Het bericht verdwijnt uit alle feeds en is niet meer openbaar leesbaar. Er wordt niets verwijderd en u kunt het altijd herstellen.",
+    "hidePostFailedTitle": "Verbergen mislukt",
+    "hideFailed": "Het bericht kon niet worden verborgen.",
+    "hidden": "Bericht verborgen.",
+    "restoreFailed": "Het bericht kon niet worden hersteld.",
+    "restored": "Bericht hersteld.",
+    "removePostTitle": "Dit bericht verwijderen?",
+    "removePostDescription": "Het bericht en al zijn reacties, reacties-emoji's en feed-vermeldingen worden verwijderd. Dit kan niet ongedaan worden gemaakt vanuit de console — verberg het bericht als u het mogelijk terug wilt.",
+    "removeCommentTitle": "Deze reactie verwijderen?",
+    "removeCommentDescription": "De reactie wordt verwijderd en verschijnt niet meer onder het bericht. Dit kan niet ongedaan worden gemaakt vanuit de console.",
+    "removed": "Inhoud verwijderd.",
+    "defaultRemovalReason": "Verwijderd door platformbeheer",
+    "reason": "Reden",
+    "reasonPlaceholder": "Wordt vastgelegd in het moderatie-auditlogboek",
+    "commentsTitle": "Reacties ({{count}})",
+    "noComments": "Geen reacties op dit bericht.",
+    "deleted": "Verwijderd"
   }
 }

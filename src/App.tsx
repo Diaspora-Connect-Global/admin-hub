@@ -33,6 +33,7 @@ const SupportTicketing = lazy(() => import("./pages/SupportTicketing"));
 const CaseTypeConfig = lazy(() => import("./pages/CaseTypeConfig"));
 const SystemHealth = lazy(() => import("./pages/SystemHealth"));
 const ContentModeration = lazy(() => import("./pages/ContentModeration"));
+const PostManagement = lazy(() => import("./pages/PostManagement"));
 const DisputesResolution = lazy(() => import("./pages/DisputesResolution"));
 const SystemSettings = lazy(() => import("./pages/SystemSettings"));
 const AuditLogs = lazy(() => import("./pages/AuditLogs"));
@@ -92,6 +93,7 @@ const App = () => (
                   <Route path="/support" element={<SupportTicketing />} />
                   <Route path="/support/case-types" element={<CaseTypeConfig />} />
                   <Route path="/moderation" element={<ContentModeration />} />
+                  <Route path="/moderation/posts" element={<PostManagement />} />
                   <Route path="/vendors" element={<VendorManagement />} />
                   <Route path="/roles" element={<RolesPermissions />} />
                   <Route path="/health" element={<SystemHealth />} />

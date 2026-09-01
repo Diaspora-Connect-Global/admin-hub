@@ -3254,6 +3254,167 @@ export interface AdminPostReactionList {
   offset: number;
 }
 
+// ─── Platform-wide post & comment moderation ────────────────────────────────
+
+/**
+ * Every post on the platform, filterable.
+ *
+ * This is the moderation index the console never had: before it, a post was
+ * only reachable through a report someone had filed, or by already knowing
+ * whose profile to open. SUPER_ADMIN / SYSTEM_ADMIN only.
+ *
+ * PRIVACY: spans every visibility (including ONLY_ME and private community
+ * posts) and every status (including DRAFT). Never render this data outside an
+ * admin screen.
+ */
+export const ADMIN_LIST_POSTS = gql`
+  query AdminListPosts($filter: AdminPostFilterInput) {
+    adminListPosts(filter: $filter) {
+      items {
+        id
+        text
+        authorType
+        authorId
+        authorName
+        authorAvatarUrl
+        visibility
+        status
+        likeCount
+        commentCount
+        shareCount
+        saveCount
+        attachmentCount
+        createdAt
+        updatedAt
+      }
+      total
+      limit
+      offset
+    }
+  }
+`;
+
+/**
+ * Every comment under one post, including soft-deleted ones (`isDeleted`).
+ *
+ * Root comments and replies arrive in ONE flat list — a reply carries
+ * `parentId`; nest client-side if you want a thread view.
+ */
+export const ADMIN_LIST_POST_COMMENTS = gql`
+  query AdminListPostComments($postId: ID!, $limit: Int, $offset: Int) {
+    adminListPostComments(postId: $postId, limit: $limit, offset: $offset) {
+      items {
+        id
+        postId
+        authorId
+        authorName
+        authorAvatarUrl
+        text
+        parentId
+        likeCount
+        replyCount
+        isDeleted
+        createdAt
+        updatedAt
+      }
+      total
+      limit
+      offset
+    }
+  }
+`;
+
+/**
+ * Take a post off the feed WITHOUT destroying it (PUBLISHED -> HIDDEN).
+ *
+ * Reversible via ADMIN_RESTORE_POST. Prefer this over ADMIN_REMOVE_CONTENT when
+ * the call is "probably fine, but off the feed while we check" — removal
+ * soft-deletes the post and cascades to its comments, engagement and feed rows,
+ * and there is no console undo for that.
+ */
+export const ADMIN_HIDE_POST = gql`
+  mutation AdminHidePost($postId: ID!, $reason: String) {
+    adminHidePost(postId: $postId, reason: $reason) {
+      success
+      message
+    }
+  }
+`;
+
+/** Undo of ADMIN_HIDE_POST (HIDDEN -> PUBLISHED). */
+export const ADMIN_RESTORE_POST = gql`
+  mutation AdminRestorePost($postId: ID!) {
+    adminRestorePost(postId: $postId) {
+      success
+      message
+    }
+  }
+`;
+
+export interface AdminPostFilterInput {
+  searchTerm?: string;
+  /** USER | COMMUNITY | ASSOCIATION | SYSTEM_ADMIN */
+  authorType?: string;
+  authorId?: string;
+  /** EVERYONE | FRIENDS | ONLY_ME | COMMUNITY | ASSOCIATION */
+  visibility?: string;
+  /** DRAFT | PUBLISHED | HIDDEN | REMOVED | ARCHIVED */
+  status?: string;
+  includeDeleted?: boolean;
+  limit?: number;
+  offset?: number;
+}
+
+export interface AdminPost {
+  id: string;
+  text?: string | null;
+  authorType: string;
+  authorId: string;
+  /** Null for a GDPR-erased or unresolvable account — render the id instead. */
+  authorName?: string | null;
+  authorAvatarUrl?: string | null;
+  visibility?: string | null;
+  status?: string | null;
+  likeCount: number;
+  commentCount: number;
+  shareCount: number;
+  saveCount: number;
+  attachmentCount: number;
+  createdAt: string;
+  updatedAt?: string | null;
+}
+
+export interface AdminPostListResponse {
+  items: AdminPost[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+export interface AdminPostComment {
+  id: string;
+  postId: string;
+  authorId: string;
+  authorName?: string | null;
+  authorAvatarUrl?: string | null;
+  text?: string | null;
+  /** Null for a root comment; the parent's id for a reply. */
+  parentId?: string | null;
+  likeCount: number;
+  replyCount: number;
+  /** Already taken down — shown struck through, not hidden. */
+  isDeleted: boolean;
+  createdAt: string;
+  updatedAt?: string | null;
+}
+
+export interface AdminPostCommentListResponse {
+  items: AdminPostComment[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
 // TypeScript interfaces for user sub-resource responses
 
 export interface UserPost {

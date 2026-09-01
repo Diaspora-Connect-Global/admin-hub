@@ -40,7 +40,8 @@
     "logout": "Cerrar sesión",
     "retry": "Reintentar",
     "errorTitle": "Algo salió mal",
-    "errorLoading": "No se pudieron cargar los datos. Inténtelo de nuevo."
+    "errorLoading": "No se pudieron cargar los datos. Inténtelo de nuevo.",
+    "success": "Correcto"
   },
   "nav": {
     "dashboard": "Panel de control",
@@ -69,7 +70,8 @@
     "aiConfig": "Configuración IA",
     "openMenu": "Abrir menú",
     "collapseSidebar": "Contraer barra lateral",
-    "expandSidebar": "Expandir barra lateral"
+    "expandSidebar": "Expandir barra lateral",
+    "posts": "Gestión de publicaciones"
   },
   "dashboard": {
     "title": "Panel de administración",
@@ -1249,5 +1251,49 @@
         "description": "Official registry of members and their status."
       }
     }
+  },
+  "posts": {
+    "title": "Gestión de publicaciones",
+    "subtitle": "Todas las publicaciones de la plataforma y sus comentarios. Incluye todas las visibilidades y estados, también publicaciones privadas y borradores.",
+    "filters": "Filtros",
+    "searchPlaceholder": "Buscar texto de la publicación...",
+    "authorType": "Tipo de autor",
+    "allAuthorTypes": "Todos los tipos de autor",
+    "status": "Estado",
+    "allStatuses": "Todos los estados",
+    "visibility": "Visibilidad",
+    "allVisibilities": "Todas las visibilidades",
+    "includeDeleted": "Incluir eliminadas",
+    "resultCount": "{{count}} publicaciones",
+    "empty": "Ninguna publicación coincide con estos filtros.",
+    "author": "Autor",
+    "content": "Contenido",
+    "engagement": "Interacciones",
+    "created": "Creada",
+    "noText": "Sin texto",
+    "unknown": "Desconocido",
+    "viewComments": "Ver comentarios",
+    "hide": "Ocultar",
+    "restore": "Restaurar",
+    "remove": "Eliminar",
+    "removeComment": "Eliminar comentario",
+    "hideTitle": "¿Ocultar esta publicación?",
+    "hideDescription": "La publicación desaparece de todos los feeds y deja de ser legible públicamente. No se elimina nada y puede restaurarla en cualquier momento.",
+    "hidePostFailedTitle": "No se pudo ocultar",
+    "hideFailed": "No se pudo ocultar la publicación.",
+    "hidden": "Publicación oculta.",
+    "restoreFailed": "No se pudo restaurar la publicación.",
+    "restored": "Publicación restaurada.",
+    "removePostTitle": "¿Eliminar esta publicación?",
+    "removePostDescription": "Se eliminan la publicación y todos sus comentarios, reacciones y entradas de feed. Esto no se puede deshacer desde la consola: si cree que la necesitará, oculte la publicación en su lugar.",
+    "removeCommentTitle": "¿Eliminar este comentario?",
+    "removeCommentDescription": "El comentario se elimina y deja de aparecer bajo la publicación. Esto no se puede deshacer desde la consola.",
+    "removed": "Contenido eliminado.",
+    "defaultRemovalReason": "Eliminado por la administración de la plataforma",
+    "reason": "Motivo",
+    "reasonPlaceholder": "Se registra en el historial de moderación",
+    "commentsTitle": "Comentarios ({{count}})",
+    "noComments": "Esta publicación no tiene comentarios.",
+    "deleted": "Eliminado"
   }
 }

@@ -612,6 +612,21 @@ export {
 } from "./useUserSubResources";
 
 export {
+  useAdminListPosts,
+  useAdminListPostComments,
+  useAdminHidePost,
+  useAdminRestorePost,
+  POST_STATUSES,
+  POST_VISIBILITIES,
+  POST_AUTHOR_TYPES,
+  type AdminPost,
+  type AdminPostFilterInput,
+  type AdminPostListResponse,
+  type AdminPostComment,
+  type AdminPostCommentListResponse,
+} from "./useAdminPostModeration";
+
+export {
   useGetVendorSalesAnalytics,
   type VendorSalesAnalyticsResponse,
 } from "./useVendorAnalytics";

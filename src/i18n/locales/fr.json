@@ -40,7 +40,8 @@
     "logout": "Se déconnecter",
     "retry": "Réessayer",
     "errorTitle": "Une erreur s'est produite",
-    "errorLoading": "Échec du chargement des données. Veuillez réessayer."
+    "errorLoading": "Échec du chargement des données. Veuillez réessayer.",
+    "success": "Succès"
   },
   "nav": {
     "dashboard": "Tableau de bord",
@@ -69,7 +70,8 @@
     "aiConfig": "Configuration IA",
     "openMenu": "Ouvrir le menu",
     "collapseSidebar": "Réduire la barre latérale",
-    "expandSidebar": "Développer la barre latérale"
+    "expandSidebar": "Développer la barre latérale",
+    "posts": "Gestion des publications"
   },
   "dashboard": {
     "title": "Tableau de bord admin",
@@ -1249,5 +1251,49 @@
         "description": "Official registry of members and their status."
       }
     }
+  },
+  "posts": {
+    "title": "Gestion des publications",
+    "subtitle": "Toutes les publications de la plateforme et les commentaires associés. Couvre toutes les visibilités et tous les statuts, y compris les publications privées et les brouillons.",
+    "filters": "Filtres",
+    "searchPlaceholder": "Rechercher dans le texte des publications...",
+    "authorType": "Type d'auteur",
+    "allAuthorTypes": "Tous les types d'auteur",
+    "status": "Statut",
+    "allStatuses": "Tous les statuts",
+    "visibility": "Visibilité",
+    "allVisibilities": "Toutes les visibilités",
+    "includeDeleted": "Inclure les supprimées",
+    "resultCount": "{{count}} publications",
+    "empty": "Aucune publication ne correspond à ces filtres.",
+    "author": "Auteur",
+    "content": "Contenu",
+    "engagement": "Interactions",
+    "created": "Créée le",
+    "noText": "Aucun texte",
+    "unknown": "Inconnu",
+    "viewComments": "Voir les commentaires",
+    "hide": "Masquer",
+    "restore": "Restaurer",
+    "remove": "Supprimer",
+    "removeComment": "Supprimer le commentaire",
+    "hideTitle": "Masquer cette publication ?",
+    "hideDescription": "La publication disparaît de tous les fils et n'est plus lisible publiquement. Rien n'est supprimé et vous pouvez la restaurer à tout moment.",
+    "hidePostFailedTitle": "Échec du masquage",
+    "hideFailed": "Impossible de masquer la publication.",
+    "hidden": "Publication masquée.",
+    "restoreFailed": "Impossible de restaurer la publication.",
+    "restored": "Publication restaurée.",
+    "removePostTitle": "Supprimer cette publication ?",
+    "removePostDescription": "La publication ainsi que tous ses commentaires, réactions et entrées de fil sont supprimés. Cette action est irréversible depuis la console : masquez plutôt la publication si vous pourriez en avoir besoin.",
+    "removeCommentTitle": "Supprimer ce commentaire ?",
+    "removeCommentDescription": "Le commentaire est supprimé et n'apparaît plus sous la publication. Cette action est irréversible depuis la console.",
+    "removed": "Contenu supprimé.",
+    "defaultRemovalReason": "Supprimé par l'administration de la plateforme",
+    "reason": "Motif",
+    "reasonPlaceholder": "Consigné dans le journal d'audit de modération",
+    "commentsTitle": "Commentaires ({{count}})",
+    "noComments": "Aucun commentaire sur cette publication.",
+    "deleted": "Supprimé"
   }
 }

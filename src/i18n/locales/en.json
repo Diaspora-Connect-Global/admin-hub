@@ -40,7 +40,8 @@
     "logout": "Log out",
     "retry": "Retry",
     "errorTitle": "Something went wrong",
-    "errorLoading": "Failed to load data. Please try again."
+    "errorLoading": "Failed to load data. Please try again.",
+    "success": "Success"
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -69,7 +70,8 @@
     "aiConfig": "AI Configuration",
     "openMenu": "Open menu",
     "collapseSidebar": "Collapse sidebar",
-    "expandSidebar": "Expand sidebar"
+    "expandSidebar": "Expand sidebar",
+    "posts": "Post Management"
   },
   "dashboard": {
     "title": "Admin Dashboard",
@@ -1249,5 +1251,49 @@
         "description": "Official registry of members and their status."
       }
     }
+  },
+  "posts": {
+    "title": "Post Management",
+    "subtitle": "Every post on the platform, and the comments under it. Spans all visibilities and statuses — including private and draft posts.",
+    "filters": "Filters",
+    "searchPlaceholder": "Search post text...",
+    "authorType": "Author type",
+    "allAuthorTypes": "All author types",
+    "status": "Status",
+    "allStatuses": "All statuses",
+    "visibility": "Visibility",
+    "allVisibilities": "All visibilities",
+    "includeDeleted": "Include deleted",
+    "resultCount": "{{count}} posts",
+    "empty": "No posts match these filters.",
+    "author": "Author",
+    "content": "Content",
+    "engagement": "Engagement",
+    "created": "Created",
+    "noText": "No text",
+    "unknown": "Unknown",
+    "viewComments": "View comments",
+    "hide": "Hide",
+    "restore": "Restore",
+    "remove": "Remove",
+    "removeComment": "Remove comment",
+    "hideTitle": "Hide this post?",
+    "hideDescription": "The post leaves every feed and stops being publicly readable. Nothing is deleted and you can restore it at any time.",
+    "hidePostFailedTitle": "Hide failed",
+    "hideFailed": "Could not hide the post.",
+    "hidden": "Post hidden.",
+    "restoreFailed": "Could not restore the post.",
+    "restored": "Post restored.",
+    "removePostTitle": "Remove this post?",
+    "removePostDescription": "The post and all of its comments, reactions and feed entries are deleted. This cannot be undone from the console — hide the post instead if you may want it back.",
+    "removeCommentTitle": "Remove this comment?",
+    "removeCommentDescription": "The comment is deleted and stops appearing under the post. This cannot be undone from the console.",
+    "removed": "Content removed.",
+    "defaultRemovalReason": "Removed by platform admin",
+    "reason": "Reason",
+    "reasonPlaceholder": "Recorded in the moderation audit log",
+    "commentsTitle": "Comments ({{count}})",
+    "noComments": "No comments on this post.",
+    "deleted": "Deleted"
   }
 }
