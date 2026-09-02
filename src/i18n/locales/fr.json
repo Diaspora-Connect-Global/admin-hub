@@ -69,7 +69,10 @@
     "aiConfig": "Configuration IA",
     "openMenu": "Ouvrir le menu",
     "collapseSidebar": "Réduire la barre latérale",
-    "expandSidebar": "Développer la barre latérale"
+    "expandSidebar": "Développer la barre latérale",
+    "circles": "Cercles",
+    "circlePlans": "Forfaits de cercle",
+    "circleSubscriptions": "Abonnements de cercle"
   },
   "dashboard": {
     "title": "Tableau de bord admin",
@@ -1247,6 +1250,237 @@
       "registry": {
         "label": "Membership Registry",
         "description": "Official registry of members and their status."
+      }
+    }
+  },
+  "circles": {
+    "status": {
+      "ACTIVE": "Actif",
+      "DORMANT": "En veille",
+      "SUSPENDED": "Suspendu",
+      "ARCHIVED": "Archivé",
+      "DISSOLVED": "Dissous"
+    },
+    "subscriptionStatus": {
+      "SUBSCRIPTION_ACTIVE": "Actif",
+      "SUBSCRIPTION_PAST_DUE": "En retard de paiement",
+      "SUBSCRIPTION_CANCELLED": "Annulé",
+      "SUBSCRIPTION_EXPIRED": "Expiré"
+    },
+    "interval": {
+      "MONTH": "Mensuel",
+      "YEAR": "Annuel",
+      "ONE_TIME": "Paiement unique",
+      "NONE": "Sans facturation (gratuit)"
+    },
+    "joinMode": {
+      "INVITE_ONLY": "Sur invitation",
+      "REQUEST": "Sur demande"
+    },
+    "list": {
+      "title": "Cercles",
+      "subtitle": "Tous les cercles de la plateforme. Observer, et n'intervenir que si la loi l'exige.",
+      "searchPlaceholder": "Rechercher par nom ou identifiant…",
+      "allStatuses": "Tous les statuts",
+      "loading": "Chargement des cercles…",
+      "loadError": "Impossible de charger les cercles.",
+      "empty": "Aucun cercle ne correspond à ces filtres.",
+      "showing": "Affichage {{from}}–{{to}}",
+      "previousPage": "Page précédente",
+      "nextPage": "Page suivante",
+      "columns": {
+        "circle": "Cercle",
+        "members": "Membres",
+        "joinMode": "Mode d'adhésion",
+        "discoverable": "Visible",
+        "created": "Créé le"
+      }
+    },
+    "plans": {
+      "title": "Forfaits de cercle",
+      "subtitle": "L'échelle des paliers. Créez autant de paliers que nécessaire, nommez-les librement, fixez le prix par devise et par période.",
+      "create": "Créer un forfait",
+      "edit": "Modifier le forfait",
+      "editorHint": "Les prix et les droits se règlent séparément, dans les fenêtres dédiées du forfait.",
+      "code": "Code",
+      "codeHint": "Identifiant technique stable. Il ne peut plus être modifié après la création.",
+      "name": "Nom",
+      "sortOrder": "Position dans l'échelle",
+      "sortOrderHint": "Les nombres les plus bas apparaissent en premier.",
+      "showInactive": "Afficher les forfaits retirés",
+      "active": "Actif",
+      "inactive": "Retiré",
+      "default": "Par défaut",
+      "prices": "Prix",
+      "noPrices": "Aucun prix défini.",
+      "entitlements": "Droits",
+      "noEntitlements": "Aucun droit configuré.",
+      "pricing": "Tarification",
+      "deactivate": "Retirer",
+      "deactivateConfirm": "Retirer le forfait « {{name}} » ? Les cercles qui l'ont déjà conservent tout : leurs droits ont été figés à l'achat.",
+      "deactivateSuccess": "Forfait retiré.",
+      "deactivateError": "Impossible de retirer le forfait.",
+      "createSuccess": "Forfait créé.",
+      "createError": "Impossible de créer le forfait.",
+      "updateSuccess": "Forfait mis à jour.",
+      "updateError": "Impossible de mettre à jour le forfait.",
+      "loadError": "Impossible de charger le catalogue des forfaits.",
+      "emptyTitle": "Aucun forfait pour l'instant",
+      "emptyHint": "Créez le premier palier. Un forfait gratuit reste un forfait : donnez-lui un prix de zéro plutôt que de l'omettre.",
+      "version": "Version {{version}}"
+    },
+    "pricing": {
+      "title": "Tarification — {{plan}}",
+      "hint": "Un prix se fixe délibérément par devise et par période de facturation. Un prix annuel est un nombre à part entière, pas douze fois le mensuel.",
+      "currency": "Devise",
+      "interval": "Période de facturation",
+      "amountMajor": "Montant ({{currency}})",
+      "willSend": "Sera enregistré comme {{minor}} unités mineures — {{formatted}}.",
+      "replaces": "Remplace le prix actuel de {{formatted}}.",
+      "enterAmount": "Saisissez un montant pour voir exactement ce qui sera enregistré.",
+      "editCell": "Modifier le prix {{currency}} {{interval}}",
+      "save": "Enregistrer le prix",
+      "saveSuccess": "Prix enregistré.",
+      "saveError": "Impossible d'enregistrer le prix."
+    },
+    "entitlements": {
+      "title": "Droits — {{plan}}",
+      "hint": "Ce qu'un cercle peut faire à ce palier. Chaque ligne s'enregistre séparément, car l'API fixe un droit par appel.",
+      "enabled": "Activé",
+      "disabled": "Désactivé",
+      "unlimited": "Illimité",
+      "unlimitedHint": "Illimité signifie aucun plafond — ce n'est pas une limite de zéro.",
+      "valueKind": "Type",
+      "kindInt": "Limite numérique",
+      "kindBool": "Interrupteur de capacité",
+      "notConfigured": "Non configuré",
+      "rowHint": "Enregistré séparément — un droit par appel.",
+      "limitPlaceholder": "ex. 20",
+      "limitFor": "Limite pour {{key}}",
+      "invalidLimit": "Saisissez un entier supérieur ou égal à zéro, ou passez la ligne en illimité.",
+      "saveSuccess": "{{key}} enregistré.",
+      "saveError": "Impossible d'enregistrer le droit.",
+      "keys": {
+        "MAX_MEMBERS": "Membres maximum",
+        "MAX_ACTIVE_PROJECTS": "Projets actifs maximum",
+        "MAX_ACTIVE_CHALLENGES": "Défis actifs maximum",
+        "CHAT_HISTORY_DAYS": "Historique de discussion (jours)",
+        "STORAGE_MB": "Stockage (Mo)",
+        "CUSTOM_BRANDING": "Personnalisation graphique"
+      }
+    },
+    "subscriptions": {
+      "title": "Abonnements de cercle",
+      "subtitle": "Quels cercles sont sur quel forfait, et dans quel état.",
+      "grant": "Attribuer un forfait",
+      "grantHint": "Les cercles ne peuvent pas encore être facturés : l'attribution est la voie vers un palier payant.",
+      "grantAction": "Attribuer",
+      "grantSuccess": "Forfait attribué.",
+      "grantError": "Impossible d'attribuer le forfait.",
+      "circleId": "Identifiant du cercle",
+      "plan": "Forfait",
+      "selectPlan": "Choisir un forfait",
+      "expiresAt": "Expire le",
+      "expiresHint": "Laissez vide pour une attribution sans échéance.",
+      "reason": "Motif",
+      "reasonPlaceholder": "Consigné dans le journal d'événements de l'abonnement.",
+      "allStatuses": "Tous les statuts d'abonnement",
+      "allPlans": "Tous les forfaits",
+      "loading": "Chargement des abonnements…",
+      "loadError": "Impossible de charger les abonnements.",
+      "empty": "Aucun abonnement ne correspond à ces filtres.",
+      "showing": "Affichage {{from}}–{{to}}",
+      "planVersion": "Version du forfait {{version}}",
+      "cancelAtPeriodEnd": "Prend fin en fin de période",
+      "cancelAtPeriodEndLabel": "Prend fin en fin de période",
+      "purchasedBy": "Acheté par",
+      "expire": "Forcer l'expiration",
+      "expireHint": "Met fin à l'attribution du forfait {{plan}} et ramène le cercle aux plafonds du forfait gratuit par défaut.",
+      "expireAction": "Forcer l'expiration",
+      "expireSuccess": "Abonnement expiré.",
+      "expireError": "Impossible de faire expirer l'abonnement.",
+      "expireNoEviction": "Rien n'est supprimé : les membres et projets existants sont conservés, seuls les nouveaux sont refusés.",
+      "columns": {
+        "circle": "Cercle",
+        "plan": "Forfait",
+        "amount": "Montant",
+        "interval": "Période de facturation",
+        "periodStart": "Début de période",
+        "periodEnd": "Fin de période"
+      }
+    },
+    "moderation": {
+      "menuLabel": "Intervention de la plateforme",
+      "warning": "Action exceptionnelle, réservée à l'illégalité. Jamais un moyen de trancher un différend interne au cercle — le cercle se gouverne par le vote.",
+      "reason": "Motif",
+      "reasonPlaceholder": "Qu'est-ce qui rend ce cas exceptionnel ?",
+      "reasonHint": "Consigné dans la piste d'audit du cercle.",
+      "confirmName": "Saisissez « {{name}} » pour confirmer",
+      "SUSPEND": {
+        "title": "Suspendre le cercle",
+        "description": "Suspendre {{name}} le gèle et le retire de la découverte.",
+        "action": "Suspendre",
+        "success": "Cercle suspendu.",
+        "error": "Impossible de suspendre le cercle."
+      },
+      "UNSUSPEND": {
+        "title": "Lever la suspension",
+        "description": "Rétablit le fonctionnement normal de {{name}}.",
+        "action": "Lever la suspension",
+        "success": "Suspension levée.",
+        "error": "Impossible de lever la suspension."
+      },
+      "DISSOLVE": {
+        "title": "Dissoudre le cercle",
+        "description": "Dissoudre {{name}} est définitif et irréversible.",
+        "action": "Dissoudre",
+        "success": "Cercle dissous.",
+        "error": "Impossible de dissoudre le cercle."
+      }
+    },
+    "detail": {
+      "loadError": "Impossible de charger ce cercle.",
+      "notFound": "Cercle introuvable",
+      "notFoundHint": "Il a peut-être été dissous, ou l'identifiant est erroné.",
+      "backToList": "Retour aux cercles",
+      "profile": "Profil",
+      "limitsTitle": "Ce que la plateforme ne peut pas faire ici",
+      "limitsHint": "Il n'existe aucun moyen d'ajouter ou de retirer un membre, ni d'ouvrir une motion, d'y voter ou de la contourner. Un cercle se gouverne lui-même ; la plateforme ne fournit que la mécanique.",
+      "subscriptionError": "Impossible de charger l'abonnement.",
+      "noSubscription": "Aucun abonnement renvoyé",
+      "noSubscriptionHint": "Chaque cercle devrait avoir exactement un abonnement actif. Si cela reste vide, la lecture côté circle-service échoue.",
+      "entitlementSnapshot": "Instantané des droits",
+      "entitlementSnapshotHint": "Pris à l'achat : modifier ou retirer le palier ne peut pas réduire ce que ce cercle possède déjà.",
+      "auditSince": "À partir du",
+      "auditRefresh": "Actualiser",
+      "auditError": "Impossible de charger la piste d'audit.",
+      "auditEmpty": "Aucun événement d'audit",
+      "auditEmptyHint": "Rien n'a été enregistré pour ce cercle sur la période choisie.",
+      "chainVerified": "La chaîne de hachage de cette page est vérifiée.",
+      "chainBroken": "La chaîne de hachage de cette page n'est PAS vérifiée. Vous pouvez l'inspecter, mais rien n'y fait preuve.",
+      "tabs": {
+        "overview": "Aperçu",
+        "subscription": "Abonnement",
+        "audit": "Piste d'audit"
+      },
+      "fields": {
+        "id": "Identifiant du cercle",
+        "handle": "Identifiant public",
+        "members": "Membres",
+        "joinMode": "Mode d'adhésion",
+        "discoverable": "Visible",
+        "founder": "Fondateur",
+        "created": "Créé le",
+        "updated": "Mis à jour le",
+        "archived": "Archivé le"
+      },
+      "audit": {
+        "seq": "N°",
+        "event": "Événement",
+        "actor": "Acteur",
+        "subject": "Objet",
+        "occurredAt": "Survenu le",
+        "actorErased": "Effacé"
       }
     }
   }

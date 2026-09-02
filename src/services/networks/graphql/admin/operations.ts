@@ -4341,3 +4341,489 @@ export const ADMIN_REQUEST_PAYOUT = gql`
   }
 `;
 // ===== End Escrow Wallet / Ledger / Payout (escrow-service) =====
+
+// ===== Circles (circle-service) =====
+//
+// Super-admin surface over the api-gateway circle module
+// (`circle-plan.resolver.ts`). Only the `admin*` operations below are gated by
+// `@Roles('SYSTEM_ADMIN','SUPER_ADMIN')`; everything else in that resolver is
+// member/lead-scoped and deliberately NOT reachable from this console — a
+// platform admin cannot vote in a circle, read its chat, or add/remove members.
+//
+// Gateway query/mutation names (from circle-plan.resolver.ts):
+//   Queries:   adminCirclePlans, adminCircles, adminCircle,
+//              adminCircleSubscriptions, adminCircleSubscription,
+//              adminCircleAuditTrail
+//   Mutations: adminCreateCirclePlan, adminUpdateCirclePlan,
+//              adminDeactivateCirclePlan, adminSetCirclePlanPrice,
+//              adminSetCirclePlanEntitlement, adminSuspendCircle,
+//              adminUnsuspendCircle, adminDissolveCircle,
+//              adminGrantCircleSubscription,
+//              adminForceExpireCircleSubscription
+//
+// ── MONEY ───────────────────────────────────────────────────────────────────
+// `amountMinor` is an INTEGER in the currency's lowest denomination (pesewas
+// for GHS, cents for USD) on BOTH directions of this wire. Nothing here ever
+// multiplies or divides by 100 — that happens exactly once at the UI input
+// boundary and once at the UI display boundary (see `@/lib/money`). It is
+// typed `Float` in the schema only because it is an int64 and GraphQL's `Int`
+// caps at 2^31; it is still an integer.
+//
+// ── ENUMS ───────────────────────────────────────────────────────────────────
+// Circle enums are `Circle`-prefixed in the schema and several carry a
+// prefixed MEMBER value too (`SUBSCRIPTION_ACTIVE`, `MEMBERSHIP_ACTIVE`).
+// Send the schema value verbatim — translating it to a bare `ACTIVE` is not
+// this client's job. KNOWN BACKEND BUG (fix in flight, not yet deployed): the
+// gateway forwards these prefixed values to circle-service, which compares
+// against unprefixed domain values, so a status-filtered list can come back
+// EMPTY. That is server-side; do not "compensate" for it here.
+//
+// ── NO TIER NAMES ───────────────────────────────────────────────────────────
+// There are no hardcoded plan names anywhere in this client. Tiers are rows an
+// admin creates. `CircleSubscription.planCode` is for DISPLAY only; the
+// entitlement list is the authority.
+// -----------------------------------------------------------------------------
+
+export type CircleStatus =
+  | "ACTIVE"
+  | "DORMANT"
+  | "SUSPENDED"
+  | "ARCHIVED"
+  | "DISSOLVED";
+
+export type CircleSubscriptionStatus =
+  | "SUBSCRIPTION_ACTIVE"
+  | "SUBSCRIPTION_PAST_DUE"
+  | "SUBSCRIPTION_CANCELLED"
+  | "SUBSCRIPTION_EXPIRED";
+
+export type CirclePriceInterval = "MONTH" | "YEAR" | "ONE_TIME" | "NONE";
+
+export type CircleOwnerType = "CIRCLE";
+
+/**
+ * The complete v1 entitlement vocabulary (schema enum `CircleEntitlementKey`).
+ * Tiers are unlimited and admin-created; these keys are not — adding one costs
+ * a backend code change plus a migration.
+ */
+export type CircleEntitlementKey =
+  | "MAX_MEMBERS"
+  | "MAX_ACTIVE_PROJECTS"
+  | "MAX_ACTIVE_CHALLENGES"
+  | "CHAT_HISTORY_DAYS"
+  | "STORAGE_MB"
+  | "CUSTOM_BRANDING";
+
+export type CircleEntitlementValueKind = "INT" | "BOOL";
+
+/**
+ * One capability on a plan or a subscription snapshot.
+ *
+ * READ `hasIntValue` BEFORE `intValue`: when `valueKind` is INT and
+ * `hasIntValue` is false the entitlement is UNLIMITED, not zero.
+ */
+export interface CircleEntitlement {
+  key: string;
+  valueKind: string;
+  /** int64 as a JS number. Meaningless unless `hasIntValue` is true. */
+  intValue: number;
+  /** false ⇒ `intValue` is UNLIMITED, not zero. */
+  hasIntValue: boolean;
+  boolValue: boolean;
+}
+
+export interface CirclePlanPrice {
+  id: string;
+  planId: string;
+  /** ISO-4217 — GHS / USD / EUR / GBP / NGN / KES. */
+  currency: string;
+  interval: string;
+  /** INTEGER minor units. Divide by 100 only when rendering. */
+  amountMinor: number;
+}
+
+export interface CirclePlan {
+  id: string;
+  code: string;
+  name: string;
+  description?: string | null;
+  ownerKind?: string | null;
+  isDefault: boolean;
+  isActive: boolean;
+  sortOrder: number;
+  version: number;
+  prices: CirclePlanPrice[];
+  entitlements: CircleEntitlement[];
+}
+
+export interface CircleSubscription {
+  id: string;
+  ownerType: string;
+  /** The circle id — subscriptions are keyed on (ownerType, ownerId). */
+  ownerId: string;
+  planId: string;
+  /** DISPLAY only. Never branch on it — read `entitlements`. */
+  planCode?: string | null;
+  planVersion: number;
+  currency?: string | null;
+  /** INTEGER minor units. */
+  amountMinor: number;
+  interval?: string | null;
+  status: string;
+  purchasedByUserId?: string | null;
+  cancelAtPeriodEnd: boolean;
+  currentPeriodStart?: string | null;
+  currentPeriodEnd?: string | null;
+  createdAt?: string | null;
+  /** Snapshotted at purchase — editing the plan cannot reduce these. */
+  entitlements: CircleEntitlement[];
+}
+
+export interface Circle {
+  id: string;
+  circleNumber?: string | null;
+  name: string;
+  handle?: string | null;
+  tagline?: string | null;
+  description?: string | null;
+  avatarUrl?: string | null;
+  bannerUrl?: string | null;
+  brandJson?: string | null;
+  discoverable: boolean;
+  joinMode: string;
+  status: string;
+  founderUserId?: string | null;
+  chatConversationId?: string | null;
+  memberCount: number;
+  createdAt?: string | null;
+  updatedAt?: string | null;
+  archivedAt?: string | null;
+}
+
+/**
+ * One link in a circle's hash-chained audit trail. `actorUserId` is nullable
+ * after a GDPR erasure and the chain still verifies — it sits outside the hash
+ * preimage on purpose.
+ */
+export interface CircleAuditEvent {
+  id: string;
+  circleId: string;
+  /** int64, gap-free per circle — a gap is itself evidence of tampering. */
+  seq: number;
+  eventType: string;
+  actorUserId?: string | null;
+  subjectType?: string | null;
+  subjectId?: string | null;
+  payloadJson?: string | null;
+  hash?: string | null;
+  prevHash?: string | null;
+  occurredAt?: string | null;
+}
+
+export interface CircleAuditTrailPage {
+  events: CircleAuditEvent[];
+  /** false ⇒ the returned links do not hash together. Inspect, never trust. */
+  chainVerified: boolean;
+}
+
+export interface CreateCirclePlanInput {
+  /** Stable machine code. Immutable once created — there is no update for it. */
+  code: string;
+  name: string;
+  description?: string;
+  ownerKind?: CircleOwnerType;
+  sortOrder?: number;
+}
+
+export interface UpdateCirclePlanInput {
+  planId: string;
+  name?: string;
+  description?: string;
+  sortOrder?: number;
+}
+
+export interface SetCirclePlanPriceInput {
+  planId: string;
+  currency: string;
+  interval: CirclePriceInterval;
+  /** INTEGER minor units. A yearly price is its own number, not 12× monthly. */
+  amountMinor: number;
+}
+
+export interface SetCirclePlanEntitlementInput {
+  planId: string;
+  key: CircleEntitlementKey;
+  valueKind: CircleEntitlementValueKind;
+  /** Ignored unless `hasIntValue` is true. */
+  intValue?: number;
+  /** false ⇒ UNLIMITED for an INT entitlement, NOT zero. Always send it. */
+  hasIntValue?: boolean;
+  boolValue?: boolean;
+}
+
+export interface GrantCircleSubscriptionInput {
+  circleId: string;
+  planId: string;
+  reason?: string;
+  /** ISO-8601. Omit for an open-ended grant. */
+  expiresAt?: string;
+}
+
+// --- Fragments ---
+
+export const CIRCLE_ENTITLEMENT_FIELDS = gql`
+  fragment CircleEntitlementFields on CircleEntitlement {
+    key
+    valueKind
+    intValue
+    hasIntValue
+    boolValue
+  }
+`;
+
+export const CIRCLE_PLAN_FIELDS = gql`
+  ${CIRCLE_ENTITLEMENT_FIELDS}
+  fragment CirclePlanFields on CirclePlan {
+    id
+    code
+    name
+    description
+    ownerKind
+    isDefault
+    isActive
+    sortOrder
+    version
+    prices {
+      id
+      planId
+      currency
+      interval
+      amountMinor
+    }
+    entitlements {
+      ...CircleEntitlementFields
+    }
+  }
+`;
+
+export const CIRCLE_SUBSCRIPTION_FIELDS = gql`
+  ${CIRCLE_ENTITLEMENT_FIELDS}
+  fragment CircleSubscriptionFields on CircleSubscription {
+    id
+    ownerType
+    ownerId
+    planId
+    planCode
+    planVersion
+    currency
+    amountMinor
+    interval
+    status
+    purchasedByUserId
+    cancelAtPeriodEnd
+    currentPeriodStart
+    currentPeriodEnd
+    createdAt
+    entitlements {
+      ...CircleEntitlementFields
+    }
+  }
+`;
+
+export const CIRCLE_FIELDS = gql`
+  fragment CircleFields on Circle {
+    id
+    circleNumber
+    name
+    handle
+    tagline
+    description
+    avatarUrl
+    bannerUrl
+    brandJson
+    discoverable
+    joinMode
+    status
+    founderUserId
+    chatConversationId
+    memberCount
+    createdAt
+    updatedAt
+    archivedAt
+  }
+`;
+
+// --- Queries ---
+
+export const ADMIN_CIRCLE_PLANS = gql`
+  ${CIRCLE_PLAN_FIELDS}
+  query AdminCirclePlans($ownerKind: CircleOwnerType, $includeInactive: Boolean) {
+    adminCirclePlans(ownerKind: $ownerKind, includeInactive: $includeInactive) {
+      ...CirclePlanFields
+    }
+  }
+`;
+
+export const ADMIN_CIRCLES = gql`
+  ${CIRCLE_FIELDS}
+  query AdminCircles($status: CircleStatus, $query: String, $limit: Int, $offset: Int) {
+    adminCircles(status: $status, query: $query, limit: $limit, offset: $offset) {
+      ...CircleFields
+    }
+  }
+`;
+
+export const ADMIN_CIRCLE = gql`
+  ${CIRCLE_FIELDS}
+  query AdminCircle($circleId: ID!) {
+    adminCircle(circleId: $circleId) {
+      ...CircleFields
+    }
+  }
+`;
+
+export const ADMIN_CIRCLE_SUBSCRIPTIONS = gql`
+  ${CIRCLE_SUBSCRIPTION_FIELDS}
+  query AdminCircleSubscriptions(
+    $status: CircleSubscriptionStatus
+    $planId: ID
+    $limit: Int
+    $offset: Int
+  ) {
+    adminCircleSubscriptions(
+      status: $status
+      planId: $planId
+      limit: $limit
+      offset: $offset
+    ) {
+      ...CircleSubscriptionFields
+    }
+  }
+`;
+
+export const ADMIN_CIRCLE_SUBSCRIPTION = gql`
+  ${CIRCLE_SUBSCRIPTION_FIELDS}
+  query AdminCircleSubscription($circleId: ID!) {
+    adminCircleSubscription(circleId: $circleId) {
+      ...CircleSubscriptionFields
+    }
+  }
+`;
+
+export const ADMIN_CIRCLE_AUDIT_TRAIL = gql`
+  query AdminCircleAuditTrail($circleId: ID!, $since: String) {
+    adminCircleAuditTrail(circleId: $circleId, since: $since) {
+      chainVerified
+      events {
+        id
+        circleId
+        seq
+        eventType
+        actorUserId
+        subjectType
+        subjectId
+        payloadJson
+        hash
+        prevHash
+        occurredAt
+      }
+    }
+  }
+`;
+
+// --- Plan catalogue mutations ---
+
+export const ADMIN_CREATE_CIRCLE_PLAN = gql`
+  ${CIRCLE_PLAN_FIELDS}
+  mutation AdminCreateCirclePlan($input: CreateCirclePlanInput!) {
+    adminCreateCirclePlan(input: $input) {
+      ...CirclePlanFields
+    }
+  }
+`;
+
+export const ADMIN_UPDATE_CIRCLE_PLAN = gql`
+  ${CIRCLE_PLAN_FIELDS}
+  mutation AdminUpdateCirclePlan($input: UpdateCirclePlanInput!) {
+    adminUpdateCirclePlan(input: $input) {
+      ...CirclePlanFields
+    }
+  }
+`;
+
+export const ADMIN_DEACTIVATE_CIRCLE_PLAN = gql`
+  ${CIRCLE_PLAN_FIELDS}
+  mutation AdminDeactivateCirclePlan($planId: ID!) {
+    adminDeactivateCirclePlan(planId: $planId) {
+      ...CirclePlanFields
+    }
+  }
+`;
+
+export const ADMIN_SET_CIRCLE_PLAN_PRICE = gql`
+  ${CIRCLE_PLAN_FIELDS}
+  mutation AdminSetCirclePlanPrice($input: SetCirclePlanPriceInput!) {
+    adminSetCirclePlanPrice(input: $input) {
+      ...CirclePlanFields
+    }
+  }
+`;
+
+export const ADMIN_SET_CIRCLE_PLAN_ENTITLEMENT = gql`
+  ${CIRCLE_PLAN_FIELDS}
+  mutation AdminSetCirclePlanEntitlement($input: SetCirclePlanEntitlementInput!) {
+    adminSetCirclePlanEntitlement(input: $input) {
+      ...CirclePlanFields
+    }
+  }
+`;
+
+// --- Subscription mutations ---
+
+export const ADMIN_GRANT_CIRCLE_SUBSCRIPTION = gql`
+  ${CIRCLE_SUBSCRIPTION_FIELDS}
+  mutation AdminGrantCircleSubscription($input: GrantCircleSubscriptionInput!) {
+    adminGrantCircleSubscription(input: $input) {
+      ...CircleSubscriptionFields
+    }
+  }
+`;
+
+export const ADMIN_FORCE_EXPIRE_CIRCLE_SUBSCRIPTION = gql`
+  ${CIRCLE_SUBSCRIPTION_FIELDS}
+  mutation AdminForceExpireCircleSubscription($subscriptionId: ID!, $reason: String!) {
+    adminForceExpireCircleSubscription(subscriptionId: $subscriptionId, reason: $reason) {
+      ...CircleSubscriptionFields
+    }
+  }
+`;
+
+// --- Moderation mutations (illegality only — never routine management) ---
+
+export const ADMIN_SUSPEND_CIRCLE = gql`
+  ${CIRCLE_FIELDS}
+  mutation AdminSuspendCircle($circleId: ID!, $reason: String!) {
+    adminSuspendCircle(circleId: $circleId, reason: $reason) {
+      ...CircleFields
+    }
+  }
+`;
+
+export const ADMIN_UNSUSPEND_CIRCLE = gql`
+  ${CIRCLE_FIELDS}
+  mutation AdminUnsuspendCircle($circleId: ID!, $reason: String) {
+    adminUnsuspendCircle(circleId: $circleId, reason: $reason) {
+      ...CircleFields
+    }
+  }
+`;
+
+export const ADMIN_DISSOLVE_CIRCLE = gql`
+  ${CIRCLE_FIELDS}
+  mutation AdminDissolveCircle($circleId: ID!, $reason: String!) {
+    adminDissolveCircle(circleId: $circleId, reason: $reason) {
+      ...CircleFields
+    }
+  }
+`;
+// ===== End Circles (circle-service) =====

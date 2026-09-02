@@ -40,6 +40,11 @@ const RolesPermissions = lazy(() => import("./pages/RolesPermissions"));
 const Reports = lazy(() => import("./pages/Reports"));
 const ChatManagement = lazy(() => import("./pages/ChatManagement"));
 const AiConfiguration = lazy(() => import("./pages/AiConfiguration"));
+// Circles (circle-service) — plan catalogue, oversight, subscriptions
+const Circles = lazy(() => import("./pages/Circles"));
+const CircleDetail = lazy(() => import("./pages/CircleDetail"));
+const CirclePlans = lazy(() => import("./pages/CirclePlans"));
+const CircleSubscriptions = lazy(() => import("./pages/CircleSubscriptions"));
 // Escrow Wallet / Ledger / Payout (escrow-service)
 const WalletLedger = lazy(() => import("./pages/WalletLedger"));
 const Payouts = lazy(() => import("./pages/Payouts"));
@@ -95,6 +100,14 @@ const App = () => (
                   <Route path="/vendors" element={<VendorManagement />} />
                   <Route path="/roles" element={<RolesPermissions />} />
                   <Route path="/health" element={<SystemHealth />} />
+                  {/* Circles — every circle admin API is
+                      @Roles('SYSTEM_ADMIN','SUPER_ADMIN'). The more specific
+                      /circles/* routes come first so they are not swallowed by
+                      the :id detail route. */}
+                  <Route path="/circles/plans" element={<CirclePlans />} />
+                  <Route path="/circles/subscriptions" element={<CircleSubscriptions />} />
+                  <Route path="/circles" element={<Circles />} />
+                  <Route path="/circles/:id" element={<CircleDetail />} />
                 </Route>
               </Route>
               <Route path="*" element={<NotFound />} />
