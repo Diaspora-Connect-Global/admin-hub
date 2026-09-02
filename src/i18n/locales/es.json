@@ -69,7 +69,10 @@
     "aiConfig": "Configuración IA",
     "openMenu": "Abrir menú",
     "collapseSidebar": "Contraer barra lateral",
-    "expandSidebar": "Expandir barra lateral"
+    "expandSidebar": "Expandir barra lateral",
+    "circles": "Círculos",
+    "circlePlans": "Planes de círculo",
+    "circleSubscriptions": "Suscripciones de círculo"
   },
   "dashboard": {
     "title": "Panel de administración",
@@ -1247,6 +1250,237 @@
       "registry": {
         "label": "Membership Registry",
         "description": "Official registry of members and their status."
+      }
+    }
+  },
+  "circles": {
+    "status": {
+      "ACTIVE": "Activo",
+      "DORMANT": "Inactivo",
+      "SUSPENDED": "Suspendido",
+      "ARCHIVED": "Archivado",
+      "DISSOLVED": "Disuelto"
+    },
+    "subscriptionStatus": {
+      "SUBSCRIPTION_ACTIVE": "Activa",
+      "SUBSCRIPTION_PAST_DUE": "Vencida",
+      "SUBSCRIPTION_CANCELLED": "Cancelada",
+      "SUBSCRIPTION_EXPIRED": "Expirada"
+    },
+    "interval": {
+      "MONTH": "Mensual",
+      "YEAR": "Anual",
+      "ONE_TIME": "Pago único",
+      "NONE": "Sin facturación (gratis)"
+    },
+    "joinMode": {
+      "INVITE_ONLY": "Solo por invitación",
+      "REQUEST": "Por solicitud"
+    },
+    "list": {
+      "title": "Círculos",
+      "subtitle": "Todos los círculos de la plataforma. Observar, e intervenir solo cuando la ley lo exija.",
+      "searchPlaceholder": "Buscar por nombre o alias…",
+      "allStatuses": "Todos los estados",
+      "loading": "Cargando círculos…",
+      "loadError": "No se pudieron cargar los círculos.",
+      "empty": "Ningún círculo coincide con estos filtros.",
+      "showing": "Mostrando {{from}}–{{to}}",
+      "previousPage": "Página anterior",
+      "nextPage": "Página siguiente",
+      "columns": {
+        "circle": "Círculo",
+        "members": "Miembros",
+        "joinMode": "Modo de ingreso",
+        "discoverable": "Visible",
+        "created": "Creado"
+      }
+    },
+    "plans": {
+      "title": "Planes de círculo",
+      "subtitle": "La escalera de niveles. Cree tantos niveles como necesite, nómbrelos libremente y fije el precio por moneda y periodo.",
+      "create": "Crear plan",
+      "edit": "Editar plan",
+      "editorHint": "Los precios y las prestaciones se configuran aparte, en los diálogos propios del plan.",
+      "code": "Código",
+      "codeHint": "Identificador técnico estable. No se puede cambiar una vez creado el plan.",
+      "name": "Nombre",
+      "sortOrder": "Posición en la escalera",
+      "sortOrderHint": "Los números más bajos aparecen primero.",
+      "showInactive": "Mostrar planes retirados",
+      "active": "Activo",
+      "inactive": "Retirado",
+      "default": "Predeterminado",
+      "prices": "Precios",
+      "noPrices": "Aún sin precio.",
+      "entitlements": "Prestaciones",
+      "noEntitlements": "Aún sin prestaciones configuradas.",
+      "pricing": "Precios",
+      "deactivate": "Retirar",
+      "deactivateConfirm": "¿Retirar el plan \"{{name}}\"? Los círculos que ya lo tienen conservan todo: sus prestaciones se copiaron al comprar.",
+      "deactivateSuccess": "Plan retirado.",
+      "deactivateError": "No se pudo retirar el plan.",
+      "createSuccess": "Plan creado.",
+      "createError": "No se pudo crear el plan.",
+      "updateSuccess": "Plan actualizado.",
+      "updateError": "No se pudo actualizar el plan.",
+      "loadError": "No se pudo cargar el catálogo de planes.",
+      "emptyTitle": "Todavía no hay planes",
+      "emptyHint": "Cree el primer nivel. Un plan gratuito también es un plan: póngale precio cero en lugar de omitirlo.",
+      "version": "Versión {{version}}"
+    },
+    "pricing": {
+      "title": "Precios — {{plan}}",
+      "hint": "El precio se fija deliberadamente por moneda y por periodo de facturación. El precio anual es su propia cifra, no doce veces el mensual.",
+      "currency": "Moneda",
+      "interval": "Periodo de facturación",
+      "amountMajor": "Importe ({{currency}})",
+      "willSend": "Se guardará como {{minor}} unidades menores — {{formatted}}.",
+      "replaces": "Sustituye al precio actual de {{formatted}}.",
+      "enterAmount": "Introduzca un importe para ver exactamente qué se guardará.",
+      "editCell": "Editar el precio {{currency}} {{interval}}",
+      "save": "Guardar precio",
+      "saveSuccess": "Precio guardado.",
+      "saveError": "No se pudo guardar el precio."
+    },
+    "entitlements": {
+      "title": "Prestaciones — {{plan}}",
+      "hint": "Lo que puede hacer un círculo en este nivel. Cada fila se guarda por separado, porque la API fija una prestación por llamada.",
+      "enabled": "Activada",
+      "disabled": "Desactivada",
+      "unlimited": "Ilimitado",
+      "unlimitedHint": "Ilimitado significa sin tope alguno; no es un límite de cero.",
+      "valueKind": "Tipo",
+      "kindInt": "Límite numérico",
+      "kindBool": "Interruptor de capacidad",
+      "notConfigured": "Sin configurar",
+      "rowHint": "Se guarda por separado: una prestación por llamada.",
+      "limitPlaceholder": "p. ej. 20",
+      "limitFor": "Límite de {{key}}",
+      "invalidLimit": "Introduzca un número entero de cero o más, o cambie la fila a ilimitado.",
+      "saveSuccess": "{{key}} guardado.",
+      "saveError": "No se pudo guardar la prestación.",
+      "keys": {
+        "MAX_MEMBERS": "Miembros máximos",
+        "MAX_ACTIVE_PROJECTS": "Proyectos activos máximos",
+        "MAX_ACTIVE_CHALLENGES": "Retos activos máximos",
+        "CHAT_HISTORY_DAYS": "Historial de chat (días)",
+        "STORAGE_MB": "Almacenamiento (MB)",
+        "CUSTOM_BRANDING": "Marca personalizada"
+      }
+    },
+    "subscriptions": {
+      "title": "Suscripciones de círculo",
+      "subtitle": "Qué círculos están en qué plan, y en qué estado.",
+      "grant": "Conceder plan",
+      "grantHint": "Todavía no se puede cobrar a los círculos, así que la concesión es la vía para un nivel de pago.",
+      "grantAction": "Conceder",
+      "grantSuccess": "Plan concedido.",
+      "grantError": "No se pudo conceder el plan.",
+      "circleId": "ID del círculo",
+      "plan": "Plan",
+      "selectPlan": "Seleccione un plan",
+      "expiresAt": "Expira el",
+      "expiresHint": "Déjelo vacío para una concesión sin fecha de fin.",
+      "reason": "Motivo",
+      "reasonPlaceholder": "Se registra en el libro de eventos de la suscripción.",
+      "allStatuses": "Todos los estados de suscripción",
+      "allPlans": "Todos los planes",
+      "loading": "Cargando suscripciones…",
+      "loadError": "No se pudieron cargar las suscripciones.",
+      "empty": "Ninguna suscripción coincide con estos filtros.",
+      "showing": "Mostrando {{from}}–{{to}}",
+      "planVersion": "Versión del plan {{version}}",
+      "cancelAtPeriodEnd": "Finaliza al terminar el periodo",
+      "cancelAtPeriodEndLabel": "Finaliza al terminar el periodo",
+      "purchasedBy": "Comprado por",
+      "expire": "Forzar expiración",
+      "expireHint": "Termina la concesión del plan {{plan}} y devuelve el círculo a los topes del plan gratuito predeterminado.",
+      "expireAction": "Forzar expiración",
+      "expireSuccess": "Suscripción expirada.",
+      "expireError": "No se pudo expirar la suscripción.",
+      "expireNoEviction": "No se elimina nada: los miembros y proyectos existentes se conservan y solo se rechazan los nuevos.",
+      "columns": {
+        "circle": "Círculo",
+        "plan": "Plan",
+        "amount": "Importe",
+        "interval": "Periodo de facturación",
+        "periodStart": "Inicio del periodo",
+        "periodEnd": "Fin del periodo"
+      }
+    },
+    "moderation": {
+      "menuLabel": "Intervención de la plataforma",
+      "warning": "Acción excepcional, reservada a la ilegalidad. Nunca es la vía para zanjar una disputa interna de un círculo: el círculo se gobierna por votación.",
+      "reason": "Motivo",
+      "reasonPlaceholder": "¿Qué hace de este un caso excepcional?",
+      "reasonHint": "Se registra en el rastro de auditoría del círculo.",
+      "confirmName": "Escriba \"{{name}}\" para confirmar",
+      "SUSPEND": {
+        "title": "Suspender círculo",
+        "description": "Suspender {{name}} lo congela y lo retira de la búsqueda.",
+        "action": "Suspender",
+        "success": "Círculo suspendido.",
+        "error": "No se pudo suspender el círculo."
+      },
+      "UNSUSPEND": {
+        "title": "Levantar la suspensión",
+        "description": "Devuelve {{name}} a su funcionamiento normal.",
+        "action": "Levantar suspensión",
+        "success": "Suspensión levantada.",
+        "error": "No se pudo levantar la suspensión."
+      },
+      "DISSOLVE": {
+        "title": "Disolver círculo",
+        "description": "Disolver {{name}} es definitivo y no se puede deshacer.",
+        "action": "Disolver",
+        "success": "Círculo disuelto.",
+        "error": "No se pudo disolver el círculo."
+      }
+    },
+    "detail": {
+      "loadError": "No se pudo cargar este círculo.",
+      "notFound": "Círculo no encontrado",
+      "notFoundHint": "Puede haber sido disuelto, o el identificador es incorrecto.",
+      "backToList": "Volver a los círculos",
+      "profile": "Perfil",
+      "limitsTitle": "Lo que la plataforma no puede hacer aquí",
+      "limitsHint": "No hay forma de añadir ni de expulsar a un miembro, ni de abrir, votar o anular una moción. El círculo se gobierna solo; la plataforma únicamente aporta el mecanismo.",
+      "subscriptionError": "No se pudo cargar la suscripción.",
+      "noSubscription": "No se devolvió ninguna suscripción",
+      "noSubscriptionHint": "Todo círculo debería tener exactamente una suscripción activa. Si esto sigue vacío, la lectura en circle-service está fallando.",
+      "entitlementSnapshot": "Copia de las prestaciones",
+      "entitlementSnapshotHint": "Tomada al comprar, de modo que editar o retirar el nivel no puede reducir lo que este círculo ya tiene.",
+      "auditSince": "Desde la fecha",
+      "auditRefresh": "Actualizar",
+      "auditError": "No se pudo cargar el rastro de auditoría.",
+      "auditEmpty": "Sin eventos de auditoría",
+      "auditEmptyHint": "No se ha registrado nada para este círculo en el rango elegido.",
+      "chainVerified": "La cadena de hashes de esta página es correcta.",
+      "chainBroken": "La cadena de hashes de esta página NO es correcta. Puede inspeccionarla, pero nada en ella sirve como prueba.",
+      "tabs": {
+        "overview": "Resumen",
+        "subscription": "Suscripción",
+        "audit": "Auditoría"
+      },
+      "fields": {
+        "id": "ID del círculo",
+        "handle": "Alias",
+        "members": "Miembros",
+        "joinMode": "Modo de ingreso",
+        "discoverable": "Visible",
+        "founder": "Fundador",
+        "created": "Creado",
+        "updated": "Actualizado",
+        "archived": "Archivado"
+      },
+      "audit": {
+        "seq": "N.º",
+        "event": "Evento",
+        "actor": "Actor",
+        "subject": "Objeto",
+        "occurredAt": "Ocurrió el",
+        "actorErased": "Borrado"
       }
     }
   }

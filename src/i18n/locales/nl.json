@@ -69,7 +69,10 @@
     "aiConfig": "AI-configuratie",
     "openMenu": "Menu openen",
     "collapseSidebar": "Zijbalk inklappen",
-    "expandSidebar": "Zijbalk uitklappen"
+    "expandSidebar": "Zijbalk uitklappen",
+    "circles": "Circles",
+    "circlePlans": "Circle-abonnementen",
+    "circleSubscriptions": "Circle-abonnementsstatus"
   },
   "dashboard": {
     "title": "Admin Dashboard",
@@ -1247,6 +1250,237 @@
       "registry": {
         "label": "Membership Registry",
         "description": "Official registry of members and their status."
+      }
+    }
+  },
+  "circles": {
+    "status": {
+      "ACTIVE": "Actief",
+      "DORMANT": "Slapend",
+      "SUSPENDED": "Geschorst",
+      "ARCHIVED": "Gearchiveerd",
+      "DISSOLVED": "Ontbonden"
+    },
+    "subscriptionStatus": {
+      "SUBSCRIPTION_ACTIVE": "Actief",
+      "SUBSCRIPTION_PAST_DUE": "Achterstallig",
+      "SUBSCRIPTION_CANCELLED": "Geannuleerd",
+      "SUBSCRIPTION_EXPIRED": "Verlopen"
+    },
+    "interval": {
+      "MONTH": "Maandelijks",
+      "YEAR": "Jaarlijks",
+      "ONE_TIME": "Eenmalig",
+      "NONE": "Geen facturering (gratis)"
+    },
+    "joinMode": {
+      "INVITE_ONLY": "Alleen op uitnodiging",
+      "REQUEST": "Op verzoek"
+    },
+    "list": {
+      "title": "Circles",
+      "subtitle": "Alle circles op het platform. Meekijken, en alleen ingrijpen wanneer de wet dat vraagt.",
+      "searchPlaceholder": "Zoek op naam of handle…",
+      "allStatuses": "Alle statussen",
+      "loading": "Circles laden…",
+      "loadError": "Circles konden niet worden geladen.",
+      "empty": "Geen circles voldoen aan deze filters.",
+      "showing": "Toont {{from}}–{{to}}",
+      "previousPage": "Vorige pagina",
+      "nextPage": "Volgende pagina",
+      "columns": {
+        "circle": "Circle",
+        "members": "Leden",
+        "joinMode": "Toetreding",
+        "discoverable": "Vindbaar",
+        "created": "Aangemaakt"
+      }
+    },
+    "plans": {
+      "title": "Circle-abonnementen",
+      "subtitle": "De abonnementsladder. Maak zoveel niveaus als u wilt, benoem ze vrij en prijs elk per valuta en per periode.",
+      "create": "Abonnement aanmaken",
+      "edit": "Abonnement bewerken",
+      "editorHint": "Prijzen en rechten stelt u apart in, via de eigen dialoogvensters van dit abonnement.",
+      "code": "Code",
+      "codeHint": "Vaste technische aanduiding. Na aanmaken niet meer te wijzigen.",
+      "name": "Naam",
+      "sortOrder": "Positie in de ladder",
+      "sortOrderHint": "Lagere nummers staan vooraan.",
+      "showInactive": "Ingetrokken abonnementen tonen",
+      "active": "Actief",
+      "inactive": "Ingetrokken",
+      "default": "Standaard",
+      "prices": "Prijzen",
+      "noPrices": "Nog geen prijs ingesteld.",
+      "entitlements": "Rechten",
+      "noEntitlements": "Nog geen rechten ingesteld.",
+      "pricing": "Prijzen",
+      "deactivate": "Intrekken",
+      "deactivateConfirm": "Abonnement \"{{name}}\" intrekken? Circles die het al hebben, behouden alles — hun rechten zijn bij aankoop vastgelegd.",
+      "deactivateSuccess": "Abonnement ingetrokken.",
+      "deactivateError": "Abonnement kon niet worden ingetrokken.",
+      "createSuccess": "Abonnement aangemaakt.",
+      "createError": "Abonnement kon niet worden aangemaakt.",
+      "updateSuccess": "Abonnement bijgewerkt.",
+      "updateError": "Abonnement kon niet worden bijgewerkt.",
+      "loadError": "De abonnementscatalogus kon niet worden geladen.",
+      "emptyTitle": "Nog geen abonnementen",
+      "emptyHint": "Maak het eerste niveau aan. Een gratis abonnement is ook een abonnement — geef het prijs nul in plaats van het weg te laten.",
+      "version": "Versie {{version}}"
+    },
+    "pricing": {
+      "title": "Prijzen — {{plan}}",
+      "hint": "Een prijs wordt bewust per valuta en per factuurperiode gezet. Een jaarprijs is een eigen getal, niet twaalf keer de maandprijs.",
+      "currency": "Valuta",
+      "interval": "Factuurperiode",
+      "amountMajor": "Bedrag ({{currency}})",
+      "willSend": "Wordt opgeslagen als {{minor}} kleinste eenheden — {{formatted}}.",
+      "replaces": "Vervangt de huidige prijs van {{formatted}}.",
+      "enterAmount": "Voer een bedrag in om te zien wat er precies wordt opgeslagen.",
+      "editCell": "Prijs voor {{currency}} {{interval}} bewerken",
+      "save": "Prijs opslaan",
+      "saveSuccess": "Prijs opgeslagen.",
+      "saveError": "Prijs kon niet worden opgeslagen."
+    },
+    "entitlements": {
+      "title": "Rechten — {{plan}}",
+      "hint": "Wat een circle op dit niveau mag. Elke regel wordt apart opgeslagen, omdat de API één recht per aanroep zet.",
+      "enabled": "Aan",
+      "disabled": "Uit",
+      "unlimited": "Onbeperkt",
+      "unlimitedHint": "Onbeperkt betekent helemaal geen limiet — het is geen limiet van nul.",
+      "valueKind": "Soort",
+      "kindInt": "Numerieke limiet",
+      "kindBool": "Functieschakelaar",
+      "notConfigured": "Niet ingesteld",
+      "rowHint": "Wordt apart opgeslagen — één recht per aanroep.",
+      "limitPlaceholder": "bijv. 20",
+      "limitFor": "Limiet voor {{key}}",
+      "invalidLimit": "Voer een geheel getal van nul of hoger in, of zet de regel op onbeperkt.",
+      "saveSuccess": "{{key}} opgeslagen.",
+      "saveError": "Recht kon niet worden opgeslagen.",
+      "keys": {
+        "MAX_MEMBERS": "Maximum aantal leden",
+        "MAX_ACTIVE_PROJECTS": "Maximum actieve projecten",
+        "MAX_ACTIVE_CHALLENGES": "Maximum actieve challenges",
+        "CHAT_HISTORY_DAYS": "Chatgeschiedenis (dagen)",
+        "STORAGE_MB": "Opslag (MB)",
+        "CUSTOM_BRANDING": "Eigen huisstijl"
+      }
+    },
+    "subscriptions": {
+      "title": "Circle-abonnementsstatus",
+      "subtitle": "Welke circles op welk abonnement zitten, en in welke staat.",
+      "grant": "Abonnement toekennen",
+      "grantHint": "Circles kunnen nog niet worden gefactureerd; toekennen is de weg naar een betaald niveau.",
+      "grantAction": "Toekennen",
+      "grantSuccess": "Abonnement toegekend.",
+      "grantError": "Abonnement kon niet worden toegekend.",
+      "circleId": "Circle-ID",
+      "plan": "Abonnement",
+      "selectPlan": "Kies een abonnement",
+      "expiresAt": "Verloopt op",
+      "expiresHint": "Leeg laten voor een toekenning zonder einddatum.",
+      "reason": "Reden",
+      "reasonPlaceholder": "Wordt vastgelegd in het gebeurtenissenlogboek van het abonnement.",
+      "allStatuses": "Alle abonnementsstatussen",
+      "allPlans": "Alle abonnementen",
+      "loading": "Abonnementen laden…",
+      "loadError": "Abonnementen konden niet worden geladen.",
+      "empty": "Geen abonnementen voldoen aan deze filters.",
+      "showing": "Toont {{from}}–{{to}}",
+      "planVersion": "Abonnementsversie {{version}}",
+      "cancelAtPeriodEnd": "Stopt aan het einde van de periode",
+      "cancelAtPeriodEndLabel": "Stopt aan het einde van de periode",
+      "purchasedBy": "Gekocht door",
+      "expire": "Geforceerd beëindigen",
+      "expireHint": "Beëindigt de toekenning van abonnement {{plan}} en zet de circle terug op de limieten van het gratis standaardabonnement.",
+      "expireAction": "Geforceerd beëindigen",
+      "expireSuccess": "Abonnement beëindigd.",
+      "expireError": "Abonnement kon niet worden beëindigd.",
+      "expireNoEviction": "Er wordt niets verwijderd: bestaande leden en projecten blijven, alleen nieuwe worden geweigerd.",
+      "columns": {
+        "circle": "Circle",
+        "plan": "Abonnement",
+        "amount": "Bedrag",
+        "interval": "Factuurperiode",
+        "periodStart": "Start periode",
+        "periodEnd": "Einde periode"
+      }
+    },
+    "moderation": {
+      "menuLabel": "Platformingreep",
+      "warning": "Uitzonderlijke maatregel, uitsluitend bij onwettigheid. Nooit een manier om een intern geschil in een circle te beslechten — de circle bestuurt zichzelf via stemming.",
+      "reason": "Reden",
+      "reasonPlaceholder": "Wat maakt dit een uitzonderlijk geval?",
+      "reasonHint": "Wordt vastgelegd in het auditspoor van de circle.",
+      "confirmName": "Typ \"{{name}}\" ter bevestiging",
+      "SUSPEND": {
+        "title": "Circle schorsen",
+        "description": "Schorsen bevriest {{name}} en haalt de circle uit de vindbaarheid.",
+        "action": "Schorsen",
+        "success": "Circle geschorst.",
+        "error": "Circle kon niet worden geschorst."
+      },
+      "UNSUSPEND": {
+        "title": "Schorsing opheffen",
+        "description": "Zet {{name}} terug in normaal bedrijf.",
+        "action": "Schorsing opheffen",
+        "success": "Schorsing opgeheven.",
+        "error": "Schorsing kon niet worden opgeheven."
+      },
+      "DISSOLVE": {
+        "title": "Circle ontbinden",
+        "description": "Het ontbinden van {{name}} is definitief en kan niet ongedaan worden gemaakt.",
+        "action": "Ontbinden",
+        "success": "Circle ontbonden.",
+        "error": "Circle kon niet worden ontbonden."
+      }
+    },
+    "detail": {
+      "loadError": "Deze circle kon niet worden geladen.",
+      "notFound": "Circle niet gevonden",
+      "notFoundHint": "Mogelijk is de circle ontbonden, of klopt het id niet.",
+      "backToList": "Terug naar circles",
+      "profile": "Profiel",
+      "limitsTitle": "Wat het platform hier niet kan",
+      "limitsHint": "Er is geen manier om een lid toe te voegen of te verwijderen, of om een motie te openen, erover te stemmen of haar te overrulen. Een circle bestuurt zichzelf; het platform levert alleen het mechanisme.",
+      "subscriptionError": "Abonnement kon niet worden geladen.",
+      "noSubscription": "Geen abonnement teruggekregen",
+      "noSubscriptionHint": "Elke circle hoort precies één actief abonnement te hebben. Blijft dit leeg, dan faalt de leesactie op circle-service.",
+      "entitlementSnapshot": "Momentopname van de rechten",
+      "entitlementSnapshotHint": "Vastgelegd bij aankoop, zodat bewerken of intrekken van het niveau niet kan verminderen wat deze circle al heeft.",
+      "auditSince": "Vanaf datum",
+      "auditRefresh": "Vernieuwen",
+      "auditError": "Auditspoor kon niet worden geladen.",
+      "auditEmpty": "Geen auditgebeurtenissen",
+      "auditEmptyHint": "Voor deze circle is in het gekozen bereik niets vastgelegd.",
+      "chainVerified": "De hashketen van deze pagina klopt.",
+      "chainBroken": "De hashketen van deze pagina klopt NIET. U kunt hem bekijken, maar niets erin geldt als bewijs.",
+      "tabs": {
+        "overview": "Overzicht",
+        "subscription": "Abonnement",
+        "audit": "Auditspoor"
+      },
+      "fields": {
+        "id": "Circle-ID",
+        "handle": "Handle",
+        "members": "Leden",
+        "joinMode": "Toetreding",
+        "discoverable": "Vindbaar",
+        "founder": "Oprichter",
+        "created": "Aangemaakt",
+        "updated": "Bijgewerkt",
+        "archived": "Gearchiveerd"
+      },
+      "audit": {
+        "seq": "Nr.",
+        "event": "Gebeurtenis",
+        "actor": "Actor",
+        "subject": "Onderwerp",
+        "occurredAt": "Tijdstip",
+        "actorErased": "Gewist"
       }
     }
   }

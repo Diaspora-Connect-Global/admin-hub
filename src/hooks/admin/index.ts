@@ -680,3 +680,43 @@ export {
   type AdminRequestPayoutInput,
 } from "./usePayouts";
 // ===== End Escrow Wallet / Ledger / Payout (escrow-service) =====
+
+// ===== Circles (circle-service) =====
+export {
+  useAdminCirclePlans,
+  useAdminCircles,
+  useAdminCircle,
+  useAdminCircleSubscriptions,
+  useAdminCircleSubscription,
+  useAdminCircleAuditTrail,
+  useAdminCreateCirclePlan,
+  useAdminUpdateCirclePlan,
+  useAdminDeactivateCirclePlan,
+  useAdminSetCirclePlanPrice,
+  useAdminSetCirclePlanEntitlement,
+  useAdminGrantCircleSubscription,
+  useAdminForceExpireCircleSubscription,
+  useAdminSuspendCircle,
+  useAdminUnsuspendCircle,
+  useAdminDissolveCircle,
+  type AdminCirclesFilters,
+  type AdminCircleSubscriptionsFilters,
+  type Circle,
+  type CircleAuditTrailPage,
+  type CircleEntitlement,
+  type CircleEntitlementKey,
+  type CircleEntitlementValueKind,
+  type CircleOwnerType,
+  type CirclePlan,
+  type CirclePlanPrice,
+  type CirclePriceInterval,
+  type CircleStatus,
+  type CircleSubscription,
+  type CircleSubscriptionStatus,
+  type CreateCirclePlanInput,
+  type UpdateCirclePlanInput,
+  type SetCirclePlanPriceInput,
+  type SetCirclePlanEntitlementInput,
+  type GrantCircleSubscriptionInput,
+} from "./useCircles";
+// ===== End Circles (circle-service) =====

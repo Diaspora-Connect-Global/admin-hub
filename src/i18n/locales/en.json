@@ -69,7 +69,10 @@
     "aiConfig": "AI Configuration",
     "openMenu": "Open menu",
     "collapseSidebar": "Collapse sidebar",
-    "expandSidebar": "Expand sidebar"
+    "expandSidebar": "Expand sidebar",
+    "circles": "Circles",
+    "circlePlans": "Circle Plans",
+    "circleSubscriptions": "Circle Subscriptions"
   },
   "dashboard": {
     "title": "Admin Dashboard",
@@ -1247,6 +1250,237 @@
       "registry": {
         "label": "Membership Registry",
         "description": "Official registry of members and their status."
+      }
+    }
+  },
+  "circles": {
+    "status": {
+      "ACTIVE": "Active",
+      "DORMANT": "Dormant",
+      "SUSPENDED": "Suspended",
+      "ARCHIVED": "Archived",
+      "DISSOLVED": "Dissolved"
+    },
+    "subscriptionStatus": {
+      "SUBSCRIPTION_ACTIVE": "Active",
+      "SUBSCRIPTION_PAST_DUE": "Past due",
+      "SUBSCRIPTION_CANCELLED": "Cancelled",
+      "SUBSCRIPTION_EXPIRED": "Expired"
+    },
+    "interval": {
+      "MONTH": "Monthly",
+      "YEAR": "Yearly",
+      "ONE_TIME": "One-time",
+      "NONE": "No billing (free)"
+    },
+    "joinMode": {
+      "INVITE_ONLY": "Invite only",
+      "REQUEST": "By request"
+    },
+    "list": {
+      "title": "Circles",
+      "subtitle": "Every circle on the platform. Look, and moderate only when the law requires it.",
+      "searchPlaceholder": "Search by name or handle…",
+      "allStatuses": "All statuses",
+      "loading": "Loading circles…",
+      "loadError": "Failed to load circles.",
+      "empty": "No circles match these filters.",
+      "showing": "Showing {{from}}–{{to}}",
+      "previousPage": "Previous page",
+      "nextPage": "Next page",
+      "columns": {
+        "circle": "Circle",
+        "members": "Members",
+        "joinMode": "Join mode",
+        "discoverable": "Discoverable",
+        "created": "Created"
+      }
+    },
+    "plans": {
+      "title": "Circle Plans",
+      "subtitle": "The tier ladder. Create as many tiers as you need, name them freely, price each per currency and period.",
+      "create": "Create plan",
+      "edit": "Edit plan",
+      "editorHint": "Prices and entitlements are set separately, from this plan's own dialogs.",
+      "code": "Code",
+      "codeHint": "Stable machine identifier. It cannot be changed after the plan is created.",
+      "name": "Name",
+      "sortOrder": "Ladder position",
+      "sortOrderHint": "Lower numbers appear first in the ladder.",
+      "showInactive": "Show retired plans",
+      "active": "Active",
+      "inactive": "Retired",
+      "default": "Default",
+      "prices": "Prices",
+      "noPrices": "No price set yet.",
+      "entitlements": "Entitlements",
+      "noEntitlements": "No entitlements configured yet.",
+      "pricing": "Pricing",
+      "deactivate": "Retire",
+      "deactivateConfirm": "Retire the plan \"{{name}}\"? Circles already on it keep everything they have — their entitlements were snapshotted at purchase.",
+      "deactivateSuccess": "Plan retired.",
+      "deactivateError": "Failed to retire the plan.",
+      "createSuccess": "Plan created.",
+      "createError": "Failed to create the plan.",
+      "updateSuccess": "Plan updated.",
+      "updateError": "Failed to update the plan.",
+      "loadError": "Failed to load the plan catalogue.",
+      "emptyTitle": "No plans yet",
+      "emptyHint": "Create the first tier. A free plan is a plan too — price it at zero rather than leaving it out.",
+      "version": "Version {{version}}"
+    },
+    "pricing": {
+      "title": "Pricing — {{plan}}",
+      "hint": "A price is set deliberately per currency and per billing period. A yearly price is its own number, not twelve times the monthly one.",
+      "currency": "Currency",
+      "interval": "Billing period",
+      "amountMajor": "Amount ({{currency}})",
+      "willSend": "Will be stored as {{minor}} minor units — {{formatted}}.",
+      "replaces": "Replaces the current price of {{formatted}}.",
+      "enterAmount": "Enter an amount to see exactly what will be stored.",
+      "editCell": "Edit the {{currency}} {{interval}} price",
+      "save": "Save price",
+      "saveSuccess": "Price saved.",
+      "saveError": "Failed to save the price."
+    },
+    "entitlements": {
+      "title": "Entitlements — {{plan}}",
+      "hint": "What a circle on this tier may do. Each row saves on its own, because the API sets one entitlement per call.",
+      "enabled": "Enabled",
+      "disabled": "Disabled",
+      "unlimited": "Unlimited",
+      "unlimitedHint": "Unlimited means no cap at all — it is not a limit of zero.",
+      "valueKind": "Kind",
+      "kindInt": "Numeric limit",
+      "kindBool": "Capability toggle",
+      "notConfigured": "Not configured",
+      "rowHint": "Saved on its own — one entitlement per call.",
+      "limitPlaceholder": "e.g. 20",
+      "limitFor": "Limit for {{key}}",
+      "invalidLimit": "Enter a whole number of zero or more, or switch the row to unlimited.",
+      "saveSuccess": "{{key}} saved.",
+      "saveError": "Failed to save the entitlement.",
+      "keys": {
+        "MAX_MEMBERS": "Maximum members",
+        "MAX_ACTIVE_PROJECTS": "Maximum active projects",
+        "MAX_ACTIVE_CHALLENGES": "Maximum active challenges",
+        "CHAT_HISTORY_DAYS": "Chat history (days)",
+        "STORAGE_MB": "Storage (MB)",
+        "CUSTOM_BRANDING": "Custom branding"
+      }
+    },
+    "subscriptions": {
+      "title": "Circle Subscriptions",
+      "subtitle": "Which circles are on which plan, and in what state.",
+      "grant": "Grant plan",
+      "grantHint": "Circles cannot be charged yet, so a grant is how a paid tier is conferred.",
+      "grantAction": "Grant",
+      "grantSuccess": "Plan granted.",
+      "grantError": "Failed to grant the plan.",
+      "circleId": "Circle ID",
+      "plan": "Plan",
+      "selectPlan": "Select a plan",
+      "expiresAt": "Expires at",
+      "expiresHint": "Leave empty for an open-ended grant.",
+      "reason": "Reason",
+      "reasonPlaceholder": "Recorded on the subscription event ledger.",
+      "allStatuses": "All subscription statuses",
+      "allPlans": "All plans",
+      "loading": "Loading subscriptions…",
+      "loadError": "Failed to load subscriptions.",
+      "empty": "No subscriptions match these filters.",
+      "showing": "Showing {{from}}–{{to}}",
+      "planVersion": "Plan version {{version}}",
+      "cancelAtPeriodEnd": "Cancels at period end",
+      "cancelAtPeriodEndLabel": "Cancels at period end",
+      "purchasedBy": "Purchased by",
+      "expire": "Force-expire",
+      "expireHint": "Ends the grant on plan {{plan}} and returns the circle to the default free plan's caps.",
+      "expireAction": "Force-expire",
+      "expireSuccess": "Subscription expired.",
+      "expireError": "Failed to expire the subscription.",
+      "expireNoEviction": "Nothing is removed: existing members and projects are kept, and only new ones are refused.",
+      "columns": {
+        "circle": "Circle",
+        "plan": "Plan",
+        "amount": "Amount",
+        "interval": "Billing period",
+        "periodStart": "Period start",
+        "periodEnd": "Period end"
+      }
+    },
+    "moderation": {
+      "menuLabel": "Platform override",
+      "warning": "Exceptional action, reserved for illegality. It is never a way to settle a circle's internal dispute — the circle governs itself by vote.",
+      "reason": "Reason",
+      "reasonPlaceholder": "What makes this an exceptional case?",
+      "reasonHint": "Recorded on the circle's audit trail.",
+      "confirmName": "Type \"{{name}}\" to confirm",
+      "SUSPEND": {
+        "title": "Suspend circle",
+        "description": "Suspending {{name}} freezes it and drops it out of discovery.",
+        "action": "Suspend",
+        "success": "Circle suspended.",
+        "error": "Failed to suspend the circle."
+      },
+      "UNSUSPEND": {
+        "title": "Lift suspension",
+        "description": "Returns {{name}} to normal operation.",
+        "action": "Lift suspension",
+        "success": "Suspension lifted.",
+        "error": "Failed to lift the suspension."
+      },
+      "DISSOLVE": {
+        "title": "Dissolve circle",
+        "description": "Dissolving {{name}} is terminal and cannot be undone.",
+        "action": "Dissolve",
+        "success": "Circle dissolved.",
+        "error": "Failed to dissolve the circle."
+      }
+    },
+    "detail": {
+      "loadError": "Failed to load this circle.",
+      "notFound": "Circle not found",
+      "notFoundHint": "It may have been dissolved, or the id is wrong.",
+      "backToList": "Back to circles",
+      "profile": "Profile",
+      "limitsTitle": "What the platform cannot do here",
+      "limitsHint": "There is no way to add or remove a member, or to open, vote on or override a motion. A circle governs itself; the platform only supplies the machinery.",
+      "subscriptionError": "Failed to load the subscription.",
+      "noSubscription": "No subscription returned",
+      "noSubscriptionHint": "Every circle should carry exactly one active subscription. If this stays empty, the circle-service read is failing.",
+      "entitlementSnapshot": "Entitlement snapshot",
+      "entitlementSnapshotHint": "Taken at purchase, so editing or retiring the tier cannot reduce what this circle already has.",
+      "auditSince": "From date",
+      "auditRefresh": "Refresh",
+      "auditError": "Failed to load the audit trail.",
+      "auditEmpty": "No audit events",
+      "auditEmptyHint": "Nothing has been recorded for this circle in the selected range.",
+      "chainVerified": "The hash chain verifies for this page.",
+      "chainBroken": "The hash chain does NOT verify for this page. Inspect it, but treat nothing in it as proof.",
+      "tabs": {
+        "overview": "Overview",
+        "subscription": "Subscription",
+        "audit": "Audit trail"
+      },
+      "fields": {
+        "id": "Circle ID",
+        "handle": "Handle",
+        "members": "Members",
+        "joinMode": "Join mode",
+        "discoverable": "Discoverable",
+        "founder": "Founder",
+        "created": "Created",
+        "updated": "Updated",
+        "archived": "Archived"
+      },
+      "audit": {
+        "seq": "Seq",
+        "event": "Event",
+        "actor": "Actor",
+        "subject": "Subject",
+        "occurredAt": "Occurred at",
+        "actorErased": "Erased"
       }
     }
   }

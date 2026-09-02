@@ -69,7 +69,10 @@
     "aiConfig": "KI-Konfiguration",
     "openMenu": "Menü öffnen",
     "collapseSidebar": "Seitenleiste einklappen",
-    "expandSidebar": "Seitenleiste ausklappen"
+    "expandSidebar": "Seitenleiste ausklappen",
+    "circles": "Circles",
+    "circlePlans": "Circle-Tarife",
+    "circleSubscriptions": "Circle-Abonnements"
   },
   "dashboard": {
     "title": "Admin-Dashboard",
@@ -1247,6 +1250,237 @@
       "registry": {
         "label": "Membership Registry",
         "description": "Official registry of members and their status."
+      }
+    }
+  },
+  "circles": {
+    "status": {
+      "ACTIVE": "Aktiv",
+      "DORMANT": "Ruhend",
+      "SUSPENDED": "Gesperrt",
+      "ARCHIVED": "Archiviert",
+      "DISSOLVED": "Aufgelöst"
+    },
+    "subscriptionStatus": {
+      "SUBSCRIPTION_ACTIVE": "Aktiv",
+      "SUBSCRIPTION_PAST_DUE": "Überfällig",
+      "SUBSCRIPTION_CANCELLED": "Gekündigt",
+      "SUBSCRIPTION_EXPIRED": "Abgelaufen"
+    },
+    "interval": {
+      "MONTH": "Monatlich",
+      "YEAR": "Jährlich",
+      "ONE_TIME": "Einmalig",
+      "NONE": "Keine Abrechnung (kostenlos)"
+    },
+    "joinMode": {
+      "INVITE_ONLY": "Nur mit Einladung",
+      "REQUEST": "Auf Anfrage"
+    },
+    "list": {
+      "title": "Circles",
+      "subtitle": "Alle Circles der Plattform. Einsehen und nur eingreifen, wenn das Gesetz es verlangt.",
+      "searchPlaceholder": "Nach Name oder Handle suchen…",
+      "allStatuses": "Alle Status",
+      "loading": "Circles werden geladen…",
+      "loadError": "Circles konnten nicht geladen werden.",
+      "empty": "Keine Circles passen zu diesen Filtern.",
+      "showing": "Zeige {{from}}–{{to}}",
+      "previousPage": "Vorherige Seite",
+      "nextPage": "Nächste Seite",
+      "columns": {
+        "circle": "Circle",
+        "members": "Mitglieder",
+        "joinMode": "Beitritt",
+        "discoverable": "Auffindbar",
+        "created": "Erstellt"
+      }
+    },
+    "plans": {
+      "title": "Circle-Tarife",
+      "subtitle": "Die Tarifleiter. Beliebig viele Stufen anlegen, frei benennen und je Währung und Zeitraum bepreisen.",
+      "create": "Tarif anlegen",
+      "edit": "Tarif bearbeiten",
+      "editorHint": "Preise und Berechtigungen werden separat in den eigenen Dialogen des Tarifs gesetzt.",
+      "code": "Code",
+      "codeHint": "Stabile technische Kennung. Nach dem Anlegen nicht mehr änderbar.",
+      "name": "Name",
+      "sortOrder": "Position in der Leiter",
+      "sortOrderHint": "Niedrigere Zahlen stehen weiter vorn.",
+      "showInactive": "Stillgelegte Tarife anzeigen",
+      "active": "Aktiv",
+      "inactive": "Stillgelegt",
+      "default": "Standard",
+      "prices": "Preise",
+      "noPrices": "Noch kein Preis gesetzt.",
+      "entitlements": "Berechtigungen",
+      "noEntitlements": "Noch keine Berechtigungen konfiguriert.",
+      "pricing": "Preise",
+      "deactivate": "Stilllegen",
+      "deactivateConfirm": "Tarif \"{{name}}\" stilllegen? Circles auf diesem Tarif behalten alles — ihre Berechtigungen wurden beim Kauf als Snapshot gesichert.",
+      "deactivateSuccess": "Tarif stillgelegt.",
+      "deactivateError": "Tarif konnte nicht stillgelegt werden.",
+      "createSuccess": "Tarif angelegt.",
+      "createError": "Tarif konnte nicht angelegt werden.",
+      "updateSuccess": "Tarif aktualisiert.",
+      "updateError": "Tarif konnte nicht aktualisiert werden.",
+      "loadError": "Tarifkatalog konnte nicht geladen werden.",
+      "emptyTitle": "Noch keine Tarife",
+      "emptyHint": "Legen Sie die erste Stufe an. Ein kostenloser Tarif ist auch ein Tarif — mit Preis null statt gar nicht.",
+      "version": "Version {{version}}"
+    },
+    "pricing": {
+      "title": "Preise — {{plan}}",
+      "hint": "Ein Preis wird bewusst je Währung und Abrechnungszeitraum gesetzt. Ein Jahrespreis ist eine eigene Zahl, nicht das Zwölffache des Monatspreises.",
+      "currency": "Währung",
+      "interval": "Abrechnungszeitraum",
+      "amountMajor": "Betrag ({{currency}})",
+      "willSend": "Wird als {{minor}} kleinste Einheiten gespeichert — {{formatted}}.",
+      "replaces": "Ersetzt den aktuellen Preis von {{formatted}}.",
+      "enterAmount": "Betrag eingeben, um zu sehen, was genau gespeichert wird.",
+      "editCell": "Preis für {{currency}} {{interval}} bearbeiten",
+      "save": "Preis speichern",
+      "saveSuccess": "Preis gespeichert.",
+      "saveError": "Preis konnte nicht gespeichert werden."
+    },
+    "entitlements": {
+      "title": "Berechtigungen — {{plan}}",
+      "hint": "Was ein Circle auf dieser Stufe darf. Jede Zeile wird einzeln gespeichert, weil die API eine Berechtigung pro Aufruf setzt.",
+      "enabled": "Aktiviert",
+      "disabled": "Deaktiviert",
+      "unlimited": "Unbegrenzt",
+      "unlimitedHint": "Unbegrenzt heißt gar keine Obergrenze — nicht eine Grenze von null.",
+      "valueKind": "Art",
+      "kindInt": "Numerische Grenze",
+      "kindBool": "Funktionsschalter",
+      "notConfigured": "Nicht konfiguriert",
+      "rowHint": "Wird einzeln gespeichert — eine Berechtigung pro Aufruf.",
+      "limitPlaceholder": "z. B. 20",
+      "limitFor": "Grenze für {{key}}",
+      "invalidLimit": "Geben Sie eine ganze Zahl ab null ein oder stellen Sie die Zeile auf unbegrenzt.",
+      "saveSuccess": "{{key}} gespeichert.",
+      "saveError": "Berechtigung konnte nicht gespeichert werden.",
+      "keys": {
+        "MAX_MEMBERS": "Maximale Mitglieder",
+        "MAX_ACTIVE_PROJECTS": "Maximale aktive Projekte",
+        "MAX_ACTIVE_CHALLENGES": "Maximale aktive Challenges",
+        "CHAT_HISTORY_DAYS": "Chat-Verlauf (Tage)",
+        "STORAGE_MB": "Speicher (MB)",
+        "CUSTOM_BRANDING": "Eigenes Branding"
+      }
+    },
+    "subscriptions": {
+      "title": "Circle-Abonnements",
+      "subtitle": "Welche Circles auf welchem Tarif sind — und in welchem Zustand.",
+      "grant": "Tarif gewähren",
+      "grantHint": "Circles können noch nicht abgerechnet werden; eine Gewährung ist der Weg zu einem kostenpflichtigen Tarif.",
+      "grantAction": "Gewähren",
+      "grantSuccess": "Tarif gewährt.",
+      "grantError": "Tarif konnte nicht gewährt werden.",
+      "circleId": "Circle-ID",
+      "plan": "Tarif",
+      "selectPlan": "Tarif auswählen",
+      "expiresAt": "Läuft ab am",
+      "expiresHint": "Leer lassen für eine unbefristete Gewährung.",
+      "reason": "Begründung",
+      "reasonPlaceholder": "Wird im Ereignisprotokoll des Abonnements festgehalten.",
+      "allStatuses": "Alle Abonnementstatus",
+      "allPlans": "Alle Tarife",
+      "loading": "Abonnements werden geladen…",
+      "loadError": "Abonnements konnten nicht geladen werden.",
+      "empty": "Keine Abonnements passen zu diesen Filtern.",
+      "showing": "Zeige {{from}}–{{to}}",
+      "planVersion": "Tarifversion {{version}}",
+      "cancelAtPeriodEnd": "Endet zum Periodenende",
+      "cancelAtPeriodEndLabel": "Endet zum Periodenende",
+      "purchasedBy": "Gekauft von",
+      "expire": "Zwangsbeenden",
+      "expireHint": "Beendet die Gewährung des Tarifs {{plan}} und setzt den Circle auf die Grenzen des kostenlosen Standardtarifs zurück.",
+      "expireAction": "Zwangsbeenden",
+      "expireSuccess": "Abonnement beendet.",
+      "expireError": "Abonnement konnte nicht beendet werden.",
+      "expireNoEviction": "Es wird nichts entfernt: bestehende Mitglieder und Projekte bleiben, nur neue werden abgelehnt.",
+      "columns": {
+        "circle": "Circle",
+        "plan": "Tarif",
+        "amount": "Betrag",
+        "interval": "Abrechnungszeitraum",
+        "periodStart": "Periodenbeginn",
+        "periodEnd": "Periodenende"
+      }
+    },
+    "moderation": {
+      "menuLabel": "Plattform-Eingriff",
+      "warning": "Ausnahmemaßnahme, ausschließlich bei Rechtsverstößen. Niemals ein Mittel, um interne Streitigkeiten eines Circles zu klären — der Circle entscheidet per Abstimmung.",
+      "reason": "Begründung",
+      "reasonPlaceholder": "Was macht diesen Fall zur Ausnahme?",
+      "reasonHint": "Wird im Audit-Trail des Circles festgehalten.",
+      "confirmName": "Zur Bestätigung \"{{name}}\" eingeben",
+      "SUSPEND": {
+        "title": "Circle sperren",
+        "description": "Eine Sperre friert {{name}} ein und entfernt den Circle aus der Suche.",
+        "action": "Sperren",
+        "success": "Circle gesperrt.",
+        "error": "Circle konnte nicht gesperrt werden."
+      },
+      "UNSUSPEND": {
+        "title": "Sperre aufheben",
+        "description": "Setzt {{name}} wieder in den Normalbetrieb.",
+        "action": "Sperre aufheben",
+        "success": "Sperre aufgehoben.",
+        "error": "Sperre konnte nicht aufgehoben werden."
+      },
+      "DISSOLVE": {
+        "title": "Circle auflösen",
+        "description": "Die Auflösung von {{name}} ist endgültig und nicht umkehrbar.",
+        "action": "Auflösen",
+        "success": "Circle aufgelöst.",
+        "error": "Circle konnte nicht aufgelöst werden."
+      }
+    },
+    "detail": {
+      "loadError": "Dieser Circle konnte nicht geladen werden.",
+      "notFound": "Circle nicht gefunden",
+      "notFoundHint": "Er wurde möglicherweise aufgelöst, oder die ID ist falsch.",
+      "backToList": "Zurück zu den Circles",
+      "profile": "Profil",
+      "limitsTitle": "Was die Plattform hier nicht kann",
+      "limitsHint": "Es gibt keine Möglichkeit, Mitglieder hinzuzufügen oder zu entfernen oder einen Antrag zu stellen, darüber abzustimmen oder ihn zu übergehen. Ein Circle regiert sich selbst; die Plattform stellt nur die Mechanik.",
+      "subscriptionError": "Abonnement konnte nicht geladen werden.",
+      "noSubscription": "Kein Abonnement zurückgegeben",
+      "noSubscriptionHint": "Jeder Circle sollte genau ein aktives Abonnement haben. Bleibt dies leer, schlägt der Lesezugriff auf circle-service fehl.",
+      "entitlementSnapshot": "Berechtigungs-Snapshot",
+      "entitlementSnapshotHint": "Beim Kauf erstellt — Bearbeiten oder Stilllegen der Stufe kann nicht verringern, was dieser Circle bereits hat.",
+      "auditSince": "Ab Datum",
+      "auditRefresh": "Aktualisieren",
+      "auditError": "Audit-Trail konnte nicht geladen werden.",
+      "auditEmpty": "Keine Audit-Ereignisse",
+      "auditEmptyHint": "Für diesen Circle wurde im gewählten Zeitraum nichts aufgezeichnet.",
+      "chainVerified": "Die Hash-Kette dieser Seite ist stimmig.",
+      "chainBroken": "Die Hash-Kette dieser Seite ist NICHT stimmig. Sie können sie ansehen, aber nichts darin gilt als Nachweis.",
+      "tabs": {
+        "overview": "Überblick",
+        "subscription": "Abonnement",
+        "audit": "Audit-Trail"
+      },
+      "fields": {
+        "id": "Circle-ID",
+        "handle": "Handle",
+        "members": "Mitglieder",
+        "joinMode": "Beitritt",
+        "discoverable": "Auffindbar",
+        "founder": "Gründer",
+        "created": "Erstellt",
+        "updated": "Aktualisiert",
+        "archived": "Archiviert"
+      },
+      "audit": {
+        "seq": "Nr.",
+        "event": "Ereignis",
+        "actor": "Akteur",
+        "subject": "Gegenstand",
+        "occurredAt": "Zeitpunkt",
+        "actorErased": "Gelöscht"
       }
     }
   }
