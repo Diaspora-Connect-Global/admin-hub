@@ -4502,3 +4502,504 @@ export const ADMIN_REQUEST_PAYOUT = gql`
   }
 `;
 // ===== End Escrow Wallet / Ledger / Payout (escrow-service) =====
+
+// ===== Circles: platform oversight + plan catalogue (circle-service) ========
+//
+// The whole `CircleAdminService` tier is @Roles('SYSTEM_ADMIN','SUPER_ADMIN').
+//
+// WHAT THIS TIER CANNOT DO, BY DESIGN: there is no rpc to open, vote on or
+// override a motion, and none to add or remove a member. A circle governs
+// itself; the platform can only suspend, unsuspend or dissolve the whole thing
+// (reserved for illegality), move it between plans, and read its audit trail.
+// If a console control seems to want to reach inside a circle, the answer is
+// that it is deliberately out of scope — not that an operation is missing.
+//
+// ENUMS TRAVEL AS BARE DOMAIN STRINGS. `Circle.status` is "ACTIVE"/"SUSPENDED",
+// and `CircleSubscription.status` is "ACTIVE"/"PAST_DUE"/"CANCELLED"/"EXPIRED"
+// — NOT the proto's prefixed `SUBSCRIPTION_ACTIVE` spelling. circle-service
+// stores and emits the bare domain value (`SubscriptionStatusValue.ACTIVE`);
+// only the proto enum carries the prefix. Compare against the bare form.
+
+/**
+ * Every field of a circle as the platform sees it.
+ *
+ * `memberCount` is computed at read time from active memberships — there is no
+ * stored counter to drift.
+ */
+export const ADMIN_CIRCLE_FIELDS = gql`
+  fragment AdminCircleFields on Circle {
+    id
+    circleNumber
+    name
+    handle
+    tagline
+    description
+    avatarUrl
+    bannerUrl
+    discoverable
+    joinMode
+    status
+    founderUserId
+    memberCount
+    createdAt
+    updatedAt
+    archivedAt
+  }
+`;
+
+/**
+ * One capability grant on a plan or a subscription snapshot.
+ *
+ * READ `hasIntValue` BEFORE `intValue`. On an INT entitlement `hasIntValue:
+ * false` means UNLIMITED, not zero — `intValue` is then 0 only because proto3
+ * has no null. Rendering it as a limit of 0 turns an unlimited plan into one
+ * that permits nothing.
+ */
+export const ADMIN_CIRCLE_ENTITLEMENT_FIELDS = gql`
+  fragment AdminCircleEntitlementFields on CircleEntitlement {
+    key
+    valueKind
+    intValue
+    hasIntValue
+    boolValue
+  }
+`;
+
+/** `amountMinor` is an INTEGER in minor units. Divide by 100 only to display. */
+export const ADMIN_CIRCLE_PLAN_FIELDS = gql`
+  ${ADMIN_CIRCLE_ENTITLEMENT_FIELDS}
+  fragment AdminCirclePlanFields on CirclePlan {
+    id
+    code
+    name
+    description
+    ownerKind
+    isDefault
+    isActive
+    sortOrder
+    version
+    prices {
+      id
+      planId
+      currency
+      interval
+      amountMinor
+    }
+    entitlements {
+      ...AdminCircleEntitlementFields
+    }
+  }
+`;
+
+/**
+ * `entitlements` here is the snapshot taken AT PURCHASE, not a live read of the
+ * plan — editing or deactivating a plan can never retroactively shrink what a
+ * circle already has. `planCode` is for display only; never branch on it.
+ */
+export const ADMIN_CIRCLE_SUBSCRIPTION_FIELDS = gql`
+  ${ADMIN_CIRCLE_ENTITLEMENT_FIELDS}
+  fragment AdminCircleSubscriptionFields on CircleSubscription {
+    id
+    ownerType
+    ownerId
+    planId
+    planCode
+    planVersion
+    currency
+    amountMinor
+    interval
+    status
+    purchasedByUserId
+    cancelAtPeriodEnd
+    currentPeriodStart
+    currentPeriodEnd
+    createdAt
+    entitlements {
+      ...AdminCircleEntitlementFields
+    }
+  }
+`;
+
+/**
+ * THE ONLY READ THAT SEES SUSPENDED AND NON-DISCOVERABLE CIRCLES.
+ *
+ * The user-facing `searchCircles` runs against partial indexes restricted to
+ * `status='ACTIVE'` and `discoverable=true`, so it structurally cannot return
+ * the circles an oversight console exists to find. Never substitute it here: a
+ * suspended circle would simply vanish from the list with no error.
+ *
+ * Returns a plain list with NO total — page with limit/offset and infer
+ * "there may be more" from a full page.
+ */
+export const ADMIN_LIST_CIRCLES = gql`
+  ${ADMIN_CIRCLE_FIELDS}
+  query AdminCircles($status: CircleStatus, $query: String, $limit: Int, $offset: Int) {
+    adminCircles(status: $status, query: $query, limit: $limit, offset: $offset) {
+      ...AdminCircleFields
+    }
+  }
+`;
+
+export const ADMIN_GET_CIRCLE = gql`
+  ${ADMIN_CIRCLE_FIELDS}
+  query AdminCircle($circleId: ID!) {
+    adminCircle(circleId: $circleId) {
+      ...AdminCircleFields
+    }
+  }
+`;
+
+/**
+ * Suspend a circle. `reason` is REQUIRED by the schema and required for a
+ * better reason than that: a suspension has no motion behind it — no vote, no
+ * proposer, no tally — so the written reason is the entire record of why the
+ * platform acted. Reserved for illegality, never for settling a circle's own
+ * internal disputes.
+ *
+ * Also drops the circle out of discovery for free (the search index is partial
+ * on `status='ACTIVE'`).
+ */
+export const ADMIN_SUSPEND_CIRCLE = gql`
+  ${ADMIN_CIRCLE_FIELDS}
+  mutation AdminSuspendCircle($circleId: ID!, $reason: String!) {
+    adminSuspendCircle(circleId: $circleId, reason: $reason) {
+      ...AdminCircleFields
+    }
+  }
+`;
+
+/** Lifts a suspension. `reason` is optional here — nothing is being taken away. */
+export const ADMIN_UNSUSPEND_CIRCLE = gql`
+  ${ADMIN_CIRCLE_FIELDS}
+  mutation AdminUnsuspendCircle($circleId: ID!, $reason: String) {
+    adminUnsuspendCircle(circleId: $circleId, reason: $reason) {
+      ...AdminCircleFields
+    }
+  }
+`;
+
+/** Terminal and irreversible. `reason` required — see ADMIN_SUSPEND_CIRCLE. */
+export const ADMIN_DISSOLVE_CIRCLE = gql`
+  ${ADMIN_CIRCLE_FIELDS}
+  mutation AdminDissolveCircle($circleId: ID!, $reason: String!) {
+    adminDissolveCircle(circleId: $circleId, reason: $reason) {
+      ...AdminCircleFields
+    }
+  }
+`;
+
+/**
+ * Cross-circle subscription listing.
+ *
+ * NOTE — the schema also accepts `status: CircleSubscriptionStatus`, and this
+ * document deliberately does not use it. That enum's values are the PREFIXED
+ * proto spellings (`SUBSCRIPTION_ACTIVE`), the gateway forwards them verbatim,
+ * and circle-service compares them against the bare domain value stored in the
+ * column (`ACTIVE`) — so every value the schema will accept matches zero rows.
+ * A filter that silently returns nothing is worse than no filter, so status is
+ * shown as a column and filtered on the client. Send `planId` instead; that one
+ * is resolved server-side to the plan code and works.
+ */
+export const ADMIN_LIST_CIRCLE_SUBSCRIPTIONS = gql`
+  ${ADMIN_CIRCLE_SUBSCRIPTION_FIELDS}
+  query AdminCircleSubscriptions($planId: ID, $limit: Int, $offset: Int) {
+    adminCircleSubscriptions(planId: $planId, limit: $limit, offset: $offset) {
+      ...AdminCircleSubscriptionFields
+    }
+  }
+`;
+
+/** The one ACTIVE subscription for a circle. Every circle always has exactly one. */
+export const ADMIN_GET_CIRCLE_SUBSCRIPTION = gql`
+  ${ADMIN_CIRCLE_SUBSCRIPTION_FIELDS}
+  query AdminCircleSubscription($circleId: ID!) {
+    adminCircleSubscription(circleId: $circleId) {
+      ...AdminCircleSubscriptionFields
+    }
+  }
+`;
+
+/**
+ * Confer a paid plan. In v1 this is the only route onto one — circles cannot be
+ * charged yet — so a grant is how a paid tier is given. Omit `expiresAt` for an
+ * open-ended grant.
+ */
+export const ADMIN_GRANT_CIRCLE_SUBSCRIPTION = gql`
+  ${ADMIN_CIRCLE_SUBSCRIPTION_FIELDS}
+  mutation AdminGrantCircleSubscription($input: GrantCircleSubscriptionInput!) {
+    adminGrantCircleSubscription(input: $input) {
+      ...AdminCircleSubscriptionFields
+    }
+  }
+`;
+
+/**
+ * End a grant early. The circle drops back to the default free plan's caps —
+ * existing members and projects are KEPT and only new ones are refused. Nothing
+ * is ever evicted for a downgrade.
+ */
+export const ADMIN_FORCE_EXPIRE_CIRCLE_SUBSCRIPTION = gql`
+  ${ADMIN_CIRCLE_SUBSCRIPTION_FIELDS}
+  mutation AdminForceExpireCircleSubscription($subscriptionId: ID!, $reason: String!) {
+    adminForceExpireCircleSubscription(subscriptionId: $subscriptionId, reason: $reason) {
+      ...AdminCircleSubscriptionFields
+    }
+  }
+`;
+
+/**
+ * The one place oversight looks inside a circle, and it is read-only.
+ *
+ * `seq` is gap-free per circle and each event hashes its predecessor, so
+ * `chainVerified: false` means the trail has been tampered with — surface it
+ * loudly rather than rendering the events as if they were trustworthy.
+ */
+export const ADMIN_CIRCLE_AUDIT_TRAIL = gql`
+  query AdminCircleAuditTrail($circleId: ID!, $since: String) {
+    adminCircleAuditTrail(circleId: $circleId, since: $since) {
+      events {
+        id
+        circleId
+        seq
+        eventType
+        actorUserId
+        subjectType
+        subjectId
+        payloadJson
+        occurredAt
+      }
+      chainVerified
+    }
+  }
+`;
+
+/** The catalogue including deactivated plans — the admin-only listing. */
+export const ADMIN_LIST_CIRCLE_PLANS = gql`
+  ${ADMIN_CIRCLE_PLAN_FIELDS}
+  query AdminCirclePlans($ownerKind: CircleOwnerType, $includeInactive: Boolean) {
+    adminCirclePlans(ownerKind: $ownerKind, includeInactive: $includeInactive) {
+      ...AdminCirclePlanFields
+    }
+  }
+`;
+
+export const ADMIN_CREATE_CIRCLE_PLAN = gql`
+  ${ADMIN_CIRCLE_PLAN_FIELDS}
+  mutation AdminCreateCirclePlan($input: CreateCirclePlanInput!) {
+    adminCreateCirclePlan(input: $input) {
+      ...AdminCirclePlanFields
+    }
+  }
+`;
+
+/**
+ * Rename / re-describe / re-order. Deliberately cannot change `code`, prices or
+ * entitlements — and editing a plan never rewrites what a circle already holds,
+ * because entitlements are snapshotted onto the subscription at purchase.
+ */
+export const ADMIN_UPDATE_CIRCLE_PLAN = gql`
+  ${ADMIN_CIRCLE_PLAN_FIELDS}
+  mutation AdminUpdateCirclePlan($input: UpdateCirclePlanInput!) {
+    adminUpdateCirclePlan(input: $input) {
+      ...AdminCirclePlanFields
+    }
+  }
+`;
+
+/**
+ * Retire a plan from the catalogue. Circles already on it keep their snapshot.
+ *
+ * THE DEFAULT FREE PLAN CANNOT BE DEACTIVATED. Every new circle gets its free
+ * subscription in the same transaction as the circle itself, so removing the
+ * default would leave new circles with no entitlements at all — an unrecoverable
+ * state. circle-service refuses it; the console must refuse it too rather than
+ * offering a button that returns an error.
+ */
+export const ADMIN_DEACTIVATE_CIRCLE_PLAN = gql`
+  ${ADMIN_CIRCLE_PLAN_FIELDS}
+  mutation AdminDeactivateCirclePlan($planId: ID!) {
+    adminDeactivateCirclePlan(planId: $planId) {
+      ...AdminCirclePlanFields
+    }
+  }
+`;
+
+/**
+ * Set one (currency, interval) price. `amountMinor` is an INTEGER in minor
+ * units — multiply by 100 exactly once, at the input field.
+ *
+ * Prices are set deliberately per currency and are NEVER derived from an FX
+ * rate. A yearly price is its own number, not 12x the monthly one.
+ */
+export const ADMIN_SET_CIRCLE_PLAN_PRICE = gql`
+  ${ADMIN_CIRCLE_PLAN_FIELDS}
+  mutation AdminSetCirclePlanPrice($input: SetCirclePlanPriceInput!) {
+    adminSetCirclePlanPrice(input: $input) {
+      ...AdminCirclePlanFields
+    }
+  }
+`;
+
+/**
+ * Set one entitlement on a plan.
+ *
+ * `hasIntValue` is forwarded exactly as sent, and FALSE MEANS UNLIMITED. Omit
+ * it (or send false) on an INT entitlement and the plan grants no ceiling at
+ * all — which is right for the free plan's uncapped keys and wrong everywhere
+ * else. Never derive it from "the number box is empty".
+ */
+export const ADMIN_SET_CIRCLE_PLAN_ENTITLEMENT = gql`
+  ${ADMIN_CIRCLE_PLAN_FIELDS}
+  mutation AdminSetCirclePlanEntitlement($input: SetCirclePlanEntitlementInput!) {
+    adminSetCirclePlanEntitlement(input: $input) {
+      ...AdminCirclePlanFields
+    }
+  }
+`;
+
+/** Bare domain values, as stored — not the proto's prefixed spellings. */
+export interface AdminCircle {
+  id: string;
+  circleNumber?: string | null;
+  name: string;
+  handle?: string | null;
+  tagline?: string | null;
+  description?: string | null;
+  avatarUrl?: string | null;
+  bannerUrl?: string | null;
+  discoverable: boolean;
+  /** INVITE_ONLY | REQUEST */
+  joinMode: string;
+  /** ACTIVE | DORMANT | SUSPENDED | ARCHIVED | DISSOLVED */
+  status: string;
+  founderUserId?: string | null;
+  memberCount: number;
+  createdAt?: string | null;
+  updatedAt?: string | null;
+  archivedAt?: string | null;
+}
+
+export interface AdminCircleEntitlement {
+  /** CircleEntitlementKey — MAX_MEMBERS, CHAT_HISTORY_DAYS, CUSTOM_BRANDING, ... */
+  key: string;
+  /** INT | BOOL */
+  valueKind: string;
+  /** Meaningless unless `hasIntValue` is true. */
+  intValue: number;
+  /** false => UNLIMITED for an INT entitlement, NOT zero. */
+  hasIntValue: boolean;
+  boolValue: boolean;
+}
+
+export interface AdminCirclePlanPrice {
+  id: string;
+  planId: string;
+  currency: string;
+  /** MONTH | YEAR | ONE_TIME | NONE */
+  interval: string;
+  /** INTEGER minor units. */
+  amountMinor: number;
+}
+
+export interface AdminCirclePlan {
+  id: string;
+  code: string;
+  name: string;
+  description?: string | null;
+  ownerKind?: string | null;
+  /** Exactly one per owner kind, and it cannot be deactivated. */
+  isDefault: boolean;
+  isActive: boolean;
+  sortOrder: number;
+  version: number;
+  prices: AdminCirclePlanPrice[];
+  entitlements: AdminCircleEntitlement[];
+}
+
+export interface AdminCircleSubscription {
+  id: string;
+  ownerType: string;
+  /** The circle id. */
+  ownerId: string;
+  planId: string;
+  /** Display only. */
+  planCode?: string | null;
+  planVersion: number;
+  currency?: string | null;
+  /** INTEGER minor units. */
+  amountMinor: number;
+  interval?: string | null;
+  /** ACTIVE | PAST_DUE | CANCELLED | EXPIRED — bare, not SUBSCRIPTION_ACTIVE. */
+  status: string;
+  purchasedByUserId?: string | null;
+  cancelAtPeriodEnd: boolean;
+  currentPeriodStart?: string | null;
+  currentPeriodEnd?: string | null;
+  createdAt?: string | null;
+  /** Snapshotted at purchase, not a live read of the plan. */
+  entitlements: AdminCircleEntitlement[];
+}
+
+export interface AdminCircleAuditEvent {
+  id: string;
+  circleId: string;
+  /** Gap-free per circle; a gap is itself evidence of tampering. */
+  seq: number;
+  eventType: string;
+  /** Null after a GDPR erasure — the chain still verifies. */
+  actorUserId?: string | null;
+  subjectType?: string | null;
+  subjectId?: string | null;
+  payloadJson?: string | null;
+  occurredAt?: string | null;
+}
+
+export interface AdminCircleAuditTrailPage {
+  events: AdminCircleAuditEvent[];
+  /** false => the hash chain does not verify. Surface it loudly. */
+  chainVerified: boolean;
+}
+
+export interface CreateCirclePlanInput {
+  code: string;
+  name: string;
+  description?: string;
+  ownerKind?: string;
+  sortOrder?: number;
+}
+
+export interface UpdateCirclePlanInput {
+  planId: string;
+  name?: string;
+  description?: string;
+  sortOrder?: number;
+}
+
+export interface SetCirclePlanPriceInput {
+  planId: string;
+  currency: string;
+  /** MONTH | YEAR | ONE_TIME | NONE */
+  interval: string;
+  /** INTEGER minor units. */
+  amountMinor: number;
+}
+
+export interface SetCirclePlanEntitlementInput {
+  planId: string;
+  key: string;
+  /** INT | BOOL */
+  valueKind: string;
+  intValue?: number;
+  /** false => UNLIMITED. Always send it explicitly for an INT entitlement. */
+  hasIntValue?: boolean;
+  boolValue?: boolean;
+}
+
+export interface GrantCircleSubscriptionInput {
+  circleId: string;
+  planId: string;
+  reason?: string;
+  /** ISO-8601. Omit for an open-ended grant. */
+  expiresAt?: string;
+}
+// ===== End Circles (circle-service) =========================================
