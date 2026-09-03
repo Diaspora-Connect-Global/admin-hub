@@ -1,6 +1,6 @@
 import { Link, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { LayoutDashboard, Users, Wallet, AlertTriangle, BarChart3, Settings, Bell, FileText, HeadphonesIcon, Shield, Store, Key, Activity, ChevronLeft, ChevronRight, LogOut, MessageSquare, Calendar, Briefcase, Landmark, ClipboardList, WalletCards, Banknote, UserX } from "lucide-react";
+import { LayoutDashboard, Users, Wallet, AlertTriangle, BarChart3, Settings, Bell, FileText, HeadphonesIcon, Shield, Store, Key, Activity, ChevronLeft, ChevronRight, LogOut, MessageSquare, Calendar, Briefcase, Landmark, ClipboardList, WalletCards, Banknote, UserX, FileStack, CircleDot, Layers } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { isNavItemVisible, type NavVisibilityRules } from "@/lib/navVisibility";
 import logo from "@/assets/logo.svg";
@@ -40,6 +40,15 @@ const navItems: Array<{
   { id: "support_cases", titleKey: "nav.supportCases", icon: HeadphonesIcon, path: "/support" },
   { id: "case_types", titleKey: "nav.caseTypes", icon: ClipboardList, path: "/support/case-types" },
   { id: "content_moderation", titleKey: "nav.content", icon: Shield, path: "/moderation" },
+  // Platform-wide post/comment moderation. `adminListPosts` is
+  // @Roles('SUPER_ADMIN','SYSTEM_ADMIN') and returns posts at EVERY visibility,
+  // so no `scopedRoles` — community/association admins must not see it.
+  { id: "post_management", titleKey: "nav.posts", icon: FileStack, path: "/moderation/posts", systemAdminOnly: true },
+  // Circles. The whole CircleAdminService tier is
+  // @Roles('SUPER_ADMIN','SYSTEM_ADMIN'), and `adminCircles` returns suspended
+  // and non-discoverable circles — so no `scopedRoles`.
+  { id: "circles", titleKey: "nav.circles", icon: CircleDot, path: "/circles", systemAdminOnly: true },
+  { id: "circle_plans", titleKey: "nav.circlePlans", icon: Layers, path: "/circles/plans", systemAdminOnly: true },
   { id: "vendor_management", titleKey: "nav.vendors", icon: Store, path: "/vendors" },
   { id: "roles_permissions", titleKey: "nav.roles", icon: Key, path: "/roles" },
   { id: "system_health", titleKey: "nav.systemHealth", icon: Activity, path: "/health" },

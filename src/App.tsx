@@ -33,6 +33,7 @@ const SupportTicketing = lazy(() => import("./pages/SupportTicketing"));
 const CaseTypeConfig = lazy(() => import("./pages/CaseTypeConfig"));
 const SystemHealth = lazy(() => import("./pages/SystemHealth"));
 const ContentModeration = lazy(() => import("./pages/ContentModeration"));
+const PostManagement = lazy(() => import("./pages/PostManagement"));
 const DisputesResolution = lazy(() => import("./pages/DisputesResolution"));
 const SystemSettings = lazy(() => import("./pages/SystemSettings"));
 const AuditLogs = lazy(() => import("./pages/AuditLogs"));
@@ -40,6 +41,13 @@ const RolesPermissions = lazy(() => import("./pages/RolesPermissions"));
 const Reports = lazy(() => import("./pages/Reports"));
 const ChatManagement = lazy(() => import("./pages/ChatManagement"));
 const AiConfiguration = lazy(() => import("./pages/AiConfiguration"));
+// Circles oversight + plan catalogue (circle-service). System-admin-only:
+// `adminCircles` is the only read that returns suspended and non-discoverable
+// circles, and the whole CircleAdminService tier is
+// @Roles('SYSTEM_ADMIN','SUPER_ADMIN').
+const CircleManagement = lazy(() => import("./pages/CircleManagement"));
+const CircleDetail = lazy(() => import("./pages/CircleDetail"));
+const CirclePlans = lazy(() => import("./pages/CirclePlans"));
 // Escrow Wallet / Ledger / Payout (escrow-service)
 const WalletLedger = lazy(() => import("./pages/WalletLedger"));
 const Payouts = lazy(() => import("./pages/Payouts"));
@@ -92,6 +100,12 @@ const App = () => (
                   <Route path="/support" element={<SupportTicketing />} />
                   <Route path="/support/case-types" element={<CaseTypeConfig />} />
                   <Route path="/moderation" element={<ContentModeration />} />
+                  <Route path="/moderation/posts" element={<PostManagement />} />
+                  {/* Static segment before the dynamic one so /circles/plans
+                      never resolves as a circle id. */}
+                  <Route path="/circles" element={<CircleManagement />} />
+                  <Route path="/circles/plans" element={<CirclePlans />} />
+                  <Route path="/circles/:id" element={<CircleDetail />} />
                   <Route path="/vendors" element={<VendorManagement />} />
                   <Route path="/roles" element={<RolesPermissions />} />
                   <Route path="/health" element={<SystemHealth />} />

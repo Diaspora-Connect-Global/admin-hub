@@ -612,6 +612,21 @@ export {
 } from "./useUserSubResources";
 
 export {
+  useAdminListPosts,
+  useAdminListPostComments,
+  useAdminHidePost,
+  useAdminRestorePost,
+  POST_STATUSES,
+  POST_VISIBILITIES,
+  POST_AUTHOR_TYPES,
+  type AdminPost,
+  type AdminPostFilterInput,
+  type AdminPostListResponse,
+  type AdminPostComment,
+  type AdminPostCommentListResponse,
+} from "./useAdminPostModeration";
+
+export {
   useGetVendorSalesAnalytics,
   type VendorSalesAnalyticsResponse,
 } from "./useVendorAnalytics";
@@ -680,3 +695,50 @@ export {
   type AdminRequestPayoutInput,
 } from "./usePayouts";
 // ===== End Escrow Wallet / Ledger / Payout (escrow-service) =====
+
+// ===== Circles: platform oversight + plan catalogue (circle-service) =====
+export {
+  useAdminCircles,
+  useAdminCircle,
+  useAdminSuspendCircle,
+  useAdminUnsuspendCircle,
+  useAdminDissolveCircle,
+  useAdminCircleSubscriptions,
+  useAdminCircleSubscription,
+  useAdminGrantCircleSubscription,
+  useAdminForceExpireCircleSubscription,
+  useAdminCircleAuditTrail,
+  CIRCLE_STATUSES,
+  CIRCLE_SUBSCRIPTION_STATUSES,
+  CIRCLE_JOIN_MODES,
+  type AdminCircle,
+  type AdminCircleSubscription,
+  type AdminCircleAuditTrailPage,
+  type GrantCircleSubscriptionInput,
+} from "./useCircles";
+
+export {
+  useAdminCirclePlans,
+  useAdminCreateCirclePlan,
+  useAdminUpdateCirclePlan,
+  useAdminDeactivateCirclePlan,
+  useAdminSetCirclePlanPrice,
+  useAdminSetCirclePlanEntitlement,
+  canDeactivatePlan,
+  buildEntitlementInput,
+  describeEntitlement,
+  findEntitlement,
+  findPrice,
+  isUnlimited,
+  CIRCLE_PRICE_INTERVALS,
+  CIRCLE_ENTITLEMENT_KEYS,
+  type AdminCirclePlan,
+  type AdminCircleEntitlement,
+  type AdminCirclePlanPrice,
+  type CircleEntitlementKey,
+  type CreateCirclePlanInput,
+  type UpdateCirclePlanInput,
+  type SetCirclePlanPriceInput,
+  type SetCirclePlanEntitlementInput,
+} from "./useCirclePlans";
+// ===== End Circles (circle-service) =====
