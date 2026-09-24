@@ -557,7 +557,8 @@ export default function Associations() {
   };
 
   const getAdminNames = (adminIds: string[]) => {
-    return adminIds.map(id => adminById.get(id)?.email || id).join(", ");
+    // Admin ids are never displayed — unresolved admins read "Unknown user".
+    return adminIds.map(id => adminById.get(id)?.email || t("common.unknownUser")).join(", ");
   };
 
   const getCommunityNames = (communityIds: string[]) => {
@@ -1289,7 +1290,7 @@ export default function Associations() {
                         const admin = adminById.get(adminId);
                         return (
                           <TableRow key={adminId}>
-                            <TableCell className="font-medium">{admin?.email || adminId}</TableCell>
+                            <TableCell className="font-medium">{admin?.email || t("common.unknownUser")}</TableCell>
                             <TableCell>{admin?.email || "-"}</TableCell>
                             <TableCell>{admin?.adminType || "-"}</TableCell>
                             <TableCell>

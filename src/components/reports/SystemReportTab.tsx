@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { TabsContent } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -17,6 +18,7 @@ import {
   Legend,
 } from "recharts";
 import { statusConfig, truncateId } from "./shared";
+import { resourceLabel, userLabel } from "@/lib/userLabel";
 
 interface HealthDatum {
   name: string;
@@ -50,6 +52,7 @@ interface SystemReportTabProps {
 }
 
 export function SystemReportTab({ systemHealthPieData, services, auditItems }: SystemReportTabProps) {
+  const { t } = useTranslation();
   return (
     <TabsContent value="system" className="space-y-6">
       <div className="grid gap-6 md:grid-cols-2">
@@ -151,8 +154,11 @@ export function SystemReportTab({ systemHealthPieData, services, auditItems }: S
               auditItems.map((ev: AuditItem) => (
                 <TableRow key={ev.id} className="border-border/50">
                   <TableCell className="font-mono text-sm">{truncateId(ev.id)}</TableCell>
-                  <TableCell className="text-sm" title={ev.actorId}>
-                    {ev.actorLabel || ev.actorEmail || (ev.actorId ? truncateId(ev.actorId) : "—")}
+                  <TableCell className="text-sm">
+                    {userLabel(
+                      { name: ev.actorLabel, email: ev.actorEmail },
+                      ev.actorId ? t("common.unknownUser") : t("common.system"),
+                    )}
                   </TableCell>
                   <TableCell>
                     <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 font-mono text-xs">
@@ -160,8 +166,8 @@ export function SystemReportTab({ systemHealthPieData, services, auditItems }: S
                     </Badge>
                   </TableCell>
                   <TableCell className="text-muted-foreground">{ev.resourceType ?? "—"}</TableCell>
-                  <TableCell className="text-sm text-muted-foreground" title={ev.resourceId}>
-                    {ev.resourceLabel || ev.resourceName || (ev.resourceId ? truncateId(ev.resourceId) : "—")}
+                  <TableCell className="text-sm text-muted-foreground">
+                    {resourceLabel(ev, t("common.unknownUser"))}
                   </TableCell>
                   <TableCell className="text-muted-foreground">
                     {new Date(ev.createdAt).toLocaleString()}

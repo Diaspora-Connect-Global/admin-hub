@@ -68,6 +68,7 @@ import {
   type AdminEscrow,
   type EscrowAttachment,
 } from "@/hooks/admin";
+import { userLabel } from "@/lib/userLabel";
 
 
 // Map API uppercase statuses to display labels
@@ -629,8 +630,8 @@ export default function EscrowManagement() {
                                 {new Date(entry.createdAt).toLocaleString()}
                               </TableCell>
                               <TableCell className="text-foreground">{entry.action}</TableCell>
-                              <TableCell className="text-muted-foreground" title={entry.actorId}>
-                                {entry.actorLabel || entry.actorEmail || (entry.actorId ? entry.actorId.slice(0, 8) + "…" : "System")}
+                              <TableCell className="text-muted-foreground">
+                                {userLabel({ name: entry.actorLabel, email: entry.actorEmail }, entry.actorId ? t("common.unknownUser") : t("common.system"))}
                               </TableCell>
                               <TableCell className="text-muted-foreground text-sm">
                                 {entry.ipAddress ?? "—"}

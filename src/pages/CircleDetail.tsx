@@ -36,6 +36,8 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { friendlyErrorMessage } from "@/lib/graphqlErrors";
 import { downloadCsv } from "@/lib/csv";
+import { isPersonResourceType } from "@/lib/userLabel";
+import { useUserLabels } from "@/hooks/useUserLabels";
 import { formatMinorUnits } from "@/lib/money";
 import {
   useAdminCircle,
@@ -123,6 +125,21 @@ export default function CircleDetail() {
   } = useAdminCircleAuditTrail(id, auditSince, { skip: !auditOpen });
   const auditPage = auditData?.adminCircleAuditTrail ?? null;
 
+  // User ids are never displayed: founder / purchaser / audit actors and
+  // person-typed audit subjects are resolved to a name or email.
+  const userLabels = useUserLabels([
+    circle?.founderUserId,
+    subscription?.purchasedByUserId,
+    ...(auditPage?.events ?? []).map((e) => e.actorUserId),
+    ...(auditPage?.events ?? [])
+      .filter((e) => isPersonResourceType(e.subjectType))
+      .map((e) => e.subjectId),
+  ]);
+  const personLabel = (userId?: string | null) =>
+    (userId && userLabels.get(userId)) || t("common.unknownUser");
+  const subjectLabel = (e: { subjectType?: string | null; subjectId?: string | null }) =>
+    isPersonResourceType(e.subjectType) ? personLabel(e.subjectId) : (e.subjectId ?? "—");
+
   // Only ACTIVE plans are grantable — putting a circle onto a plan that has
   // been retired from the catalogue is how a tier nobody maintains ends up live.
   const { data: plansData } = useAdminCirclePlans(false);
@@ -194,9 +211,9 @@ export default function CircleDetail() {
         seq: e.seq,
         occurredAt: e.occurredAt ?? "",
         eventType: e.eventType,
-        actorUserId: e.actorUserId ?? "",
+        actor: e.actorUserId ? personLabel(e.actorUserId) : t("circles.auditActorErased"),
         subjectType: e.subjectType ?? "",
-        subjectId: e.subjectId ?? "",
+        subject: e.subjectType ? subjectLabel(e) : "",
         payloadJson: e.payloadJson ?? "",
       })),
     );
@@ -303,7 +320,7 @@ export default function CircleDetail() {
             <Detail label={t("circles.founder")}>
               {circle.founderUserId ? (
                 <Link to={`/users/${circle.founderUserId}`} className="hover:underline">
-                  {circle.founderUserId}
+                  {personLabel(circle.founderUserId)}
                 </Link>
               ) : (
                 "—"
@@ -382,7 +399,7 @@ export default function CircleDetail() {
                     {subscription.cancelAtPeriodEnd ? t("common.yes") : t("common.no")}
                   </Detail>
                   <Detail label={t("circles.purchasedBy")}>
-                    {subscription.purchasedByUserId ?? "—"}
+                    {subscription.purchasedByUserId ? personLabel(subscription.purchasedByUserId) : "—"}
                   </Detail>
                 </div>
 
@@ -503,12 +520,12 @@ export default function CircleDetail() {
                           <TableRow key={e.id}>
                             <TableCell className="font-mono text-xs">{e.seq}</TableCell>
                             <TableCell className="text-sm">{e.eventType}</TableCell>
-                            <TableCell className="max-w-[12rem] truncate font-mono text-xs">
+                            <TableCell className="max-w-[12rem] truncate text-xs">
                               {/* Null after a GDPR erasure; the chain still verifies. */}
-                              {e.actorUserId ?? t("circles.auditActorErased")}
+                              {e.actorUserId ? personLabel(e.actorUserId) : t("circles.auditActorErased")}
                             </TableCell>
                             <TableCell className="max-w-[14rem] truncate text-xs text-muted-foreground">
-                              {e.subjectType ? `${e.subjectType}: ${e.subjectId ?? "—"}` : "—"}
+                              {e.subjectType ? `${e.subjectType}: ${subjectLabel(e)}` : "—"}
                             </TableCell>
                             <TableCell className="whitespace-nowrap text-xs text-muted-foreground">
                               {formatDateTime(e.occurredAt)}

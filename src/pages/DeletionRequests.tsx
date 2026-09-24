@@ -52,7 +52,6 @@ export default function DeletionRequests() {
               <Table>
                 <TableHeader>
                   <TableRow className="border-border/50 hover:bg-transparent">
-                    <TableHead>{t("deletionRequests.columns.userId")}</TableHead>
                     <TableHead>{t("deletionRequests.columns.email")}</TableHead>
                     <TableHead>{t("deletionRequests.columns.requestedDate")}</TableHead>
                     <TableHead>{t("deletionRequests.columns.status")}</TableHead>
@@ -63,29 +62,26 @@ export default function DeletionRequests() {
                 <TableBody>
                   {loading ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                      <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
                         {t("deletionRequests.loading")}
                       </TableCell>
                     </TableRow>
                   ) : error ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center text-destructive py-8">
+                      <TableCell colSpan={5} className="text-center text-destructive py-8">
                         {t("deletionRequests.error")}
                       </TableCell>
                     </TableRow>
                   ) : items.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                      <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
                         {t("deletionRequests.empty")}
                       </TableCell>
                     </TableRow>
                   ) : (
                     items.map((item) => (
                       <TableRow key={item.userId} className="border-border/50">
-                        <TableCell className="max-w-[160px] truncate font-mono text-xs text-muted-foreground" title={item.userId}>
-                          {item.userId}
-                        </TableCell>
-                        <TableCell className="text-muted-foreground">{item.email}</TableCell>
+                        <TableCell className="text-foreground">{item.email}</TableCell>
                         <TableCell className="text-muted-foreground">
                           {item.deletionScheduledAt ? new Date(item.deletionScheduledAt).toLocaleDateString() : "—"}
                         </TableCell>

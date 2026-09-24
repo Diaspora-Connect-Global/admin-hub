@@ -41,7 +41,9 @@
     "retry": "Opnieuw proberen",
     "errorTitle": "Er is iets misgegaan",
     "errorLoading": "Gegevens laden mislukt. Probeer het opnieuw.",
-    "success": "Gelukt"
+    "success": "Gelukt",
+    "unknownUser": "Onbekende gebruiker",
+    "system": "Systeem"
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -295,7 +297,7 @@
         "reactor": "Gereageerd door",
         "reactionColumn": "Interactie",
         "reactedAt": "Gereageerd op",
-        "reactorUnresolved": "Naam niet beschikbaar — account-ID wordt getoond",
+        "reactorUnresolved": "Naam niet beschikbaar — het account is mogelijk verwijderd.",
         "reactorDetailUnavailable": "Details per interactie niet beschikbaar",
         "reactorDetailUnavailableHint": "De backend meldt dat de afzonderlijke regels achter deze totalen op dit moment niet kunnen worden gelezen. De totalen hierboven kloppen nog steeds — dit betekent niet dat niemand heeft gereageerd."
       },
@@ -340,7 +342,6 @@
     "title": "Verwijderingsverzoeken",
     "subtitle": "Gebruikers die verwijdering van hun account hebben aangevraagd",
     "columns": {
-      "userId": "Gebruikers-ID",
       "email": "E-mail",
       "requestedDate": "Aangevraagd",
       "status": "Status",

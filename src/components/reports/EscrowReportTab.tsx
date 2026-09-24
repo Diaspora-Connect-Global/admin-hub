@@ -149,8 +149,6 @@ export function EscrowReportTab({ escrowSummary, escrowStatusData, escrows }: Es
           <TableHeader>
             <TableRow className="border-border/50 hover:bg-transparent">
               <TableHead>Transaction ID</TableHead>
-              <TableHead>Buyer ID</TableHead>
-              <TableHead>Seller ID</TableHead>
               <TableHead>Total</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Created At</TableHead>
@@ -160,7 +158,7 @@ export function EscrowReportTab({ escrowSummary, escrowStatusData, escrows }: Es
           <TableBody>
             {escrows.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center text-muted-foreground py-6">
+                <TableCell colSpan={5} className="text-center text-muted-foreground py-6">
                   No escrow transactions found
                 </TableCell>
               </TableRow>
@@ -168,12 +166,6 @@ export function EscrowReportTab({ escrowSummary, escrowStatusData, escrows }: Es
               escrows.map((e) => (
                 <TableRow key={e.id} className="border-border/50">
                   <TableCell className="font-mono text-sm">{truncateId(e.id)}</TableCell>
-                  <TableCell className="font-mono text-sm text-muted-foreground">
-                    {e.buyerId ? truncateId(e.buyerId) : "—"}
-                  </TableCell>
-                  <TableCell className="font-mono text-sm text-muted-foreground">
-                    {e.sellerId ? truncateId(e.sellerId) : "—"}
-                  </TableCell>
                   <TableCell className="font-semibold">{formatAmount(e.amount ?? 0, e.currency)}</TableCell>
                   <TableCell>
                     <Badge variant="outline" className={statusConfig[e.status]?.className}>

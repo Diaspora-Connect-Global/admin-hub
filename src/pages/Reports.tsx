@@ -269,8 +269,7 @@ export default function Reports() {
       case "users":
         downloadCSV(
           "users.csv",
-          users.map((u: { id: string; displayName?: string; email: string; createdAt: string }) => ({
-            id: u.id,
+          users.map((u: { displayName?: string; email: string; createdAt: string }) => ({
             displayName: u.displayName ?? "",
             email: u.email,
             createdAt: u.createdAt,
@@ -309,8 +308,6 @@ export default function Reports() {
           "escrows.csv",
           escrows.map((e) => ({
             id: e.id,
-            buyerId: e.buyerId ?? "",
-            sellerId: e.sellerId ?? "",
             amount: e.amount ?? 0,
             currency: e.currency,
             status: e.status,

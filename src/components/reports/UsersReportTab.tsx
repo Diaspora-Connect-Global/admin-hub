@@ -19,7 +19,6 @@ import {
   ResponsiveContainer,
   Legend,
 } from "recharts";
-import { truncateId } from "./shared";
 
 interface UsersReportTabProps {
   userGrowthData: Array<{ date: string; newUsers: number }>;
@@ -66,7 +65,6 @@ export function UsersReportTab({ userGrowthData, sortedUsers }: UsersReportTabPr
         <Table>
           <TableHeader>
             <TableRow className="border-border/50 hover:bg-transparent">
-              <TableHead>User ID</TableHead>
               <TableHead>Display Name</TableHead>
               <TableHead>Email</TableHead>
               <TableHead>Joined</TableHead>
@@ -76,14 +74,13 @@ export function UsersReportTab({ userGrowthData, sortedUsers }: UsersReportTabPr
           <TableBody>
             {sortedUsers.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center text-muted-foreground py-6">
+                <TableCell colSpan={4} className="text-center text-muted-foreground py-6">
                   No users found
                 </TableCell>
               </TableRow>
             ) : (
               sortedUsers.map((user: { id: string; email: string; displayName?: string; createdAt: string }) => (
                 <TableRow key={user.id} className="border-border/50">
-                  <TableCell className="font-mono text-sm">{truncateId(user.id)}</TableCell>
                   <TableCell className="font-medium">{user.displayName ?? "—"}</TableCell>
                   <TableCell className="text-muted-foreground">{user.email}</TableCell>
                   <TableCell className="text-muted-foreground">

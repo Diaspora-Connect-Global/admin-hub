@@ -27,7 +27,11 @@ interface UserEnforcementTabProps {
   loading: boolean;
   error?: unknown;
   paging: Omit<UserTabPaging, "count" | "total">;
-  userId: string;
+  /**
+   * Admin id → email. The acting admin is shown by email (or, failing that, by
+   * role) — never by id: user/admin ids must not be displayed to anyone.
+   */
+  adminEmailById?: ReadonlyMap<string, string>;
   t: (key: string) => string;
 }
 
@@ -37,18 +41,21 @@ export function UserEnforcementTab({
   loading,
   error,
   paging,
-  userId,
+  adminEmailById,
   t,
 }: UserEnforcementTabProps) {
+  const adminOf = (action: ModerationActionRow) =>
+    (action.adminId && adminEmailById?.get(action.adminId)) || "";
+
   // Exports exactly the rows on screen — the same page the admin is looking at,
   // rather than silently re-querying the whole history.
   const handleExport = () =>
     downloadCsv(
-      `user-${userId}-enforcement.csv`,
+      `user-enforcement-${new Date().toISOString().slice(0, 10)}.csv`,
       actions.map((action) => ({
         date: action.createdAt ?? "",
         action: action.actionType ?? "",
-        admin: action.adminId ?? "",
+        admin: adminOf(action),
         adminRole: action.adminRole ?? "",
         reason: action.reason ?? "",
       })),
@@ -95,9 +102,8 @@ export function UserEnforcementTab({
               <TableCell>
                 {action.actionType ? <Badge variant="secondary">{action.actionType}</Badge> : "—"}
               </TableCell>
-              <TableCell className="font-mono text-xs text-muted-foreground">
-                {action.adminId ? `${action.adminId.slice(0, 8)}…` : "—"}
-                {action.adminRole ? ` · ${action.adminRole}` : ""}
+              <TableCell className="text-xs text-muted-foreground">
+                {[adminOf(action), action.adminRole].filter(Boolean).join(" · ") || "—"}
               </TableCell>
               <TableCell className="max-w-[260px] text-sm">{action.reason ?? "—"}</TableCell>
             </TableRow>

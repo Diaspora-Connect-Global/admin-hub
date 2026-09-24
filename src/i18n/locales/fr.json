@@ -41,7 +41,9 @@
     "retry": "Réessayer",
     "errorTitle": "Une erreur s'est produite",
     "errorLoading": "Échec du chargement des données. Veuillez réessayer.",
-    "success": "Succès"
+    "success": "Succès",
+    "unknownUser": "Utilisateur inconnu",
+    "system": "Système"
   },
   "nav": {
     "dashboard": "Tableau de bord",
@@ -295,7 +297,7 @@
         "reactor": "Auteur de la réaction",
         "reactionColumn": "Réaction",
         "reactedAt": "Réaction le",
-        "reactorUnresolved": "Nom indisponible : l'identifiant du compte est affiché",
+        "reactorUnresolved": "Nom indisponible — le compte a peut-être été supprimé.",
         "reactorDetailUnavailable": "Détail des réactions indisponible",
         "reactorDetailUnavailableHint": "Le backend signale que les lignes individuelles derrière ces totaux ne peuvent pas être lues pour le moment. Les totaux ci-dessus restent exacts : cela ne signifie pas que personne n'a réagi."
       },
@@ -340,7 +342,6 @@
     "title": "Demandes de suppression",
     "subtitle": "Utilisateurs ayant demandé la suppression de leur compte",
     "columns": {
-      "userId": "ID utilisateur",
       "email": "E-mail",
       "requestedDate": "Demandé le",
       "status": "Statut",

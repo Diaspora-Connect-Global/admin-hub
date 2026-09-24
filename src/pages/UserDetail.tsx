@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { useApolloClient } from "@apollo/client/react";
@@ -31,6 +31,7 @@ import {
   useGetUserOpportunities,
   useGetUserTransactions,
   useGetModerationActions,
+  useListAdmins,
 } from "@/hooks/admin";
 import {
   AccountStatusBadge,
@@ -144,6 +145,14 @@ export default function UserDetail() {
   };
 
   const enforcement = useUserEnforcement({ onStatusChanged: handleStatusChanged });
+
+  // Resolve the acting admin of each enforcement row to an email — ids are
+  // never displayed.
+  const admins = useListAdmins(100, 0);
+  const adminEmailById = useMemo(
+    () => new Map((admins.data?.listAdmins?.admins ?? []).map((a) => [a.id, a.email] as const)),
+    [admins.data],
+  );
 
   const displayName =
     [profile?.firstName, profile?.lastName].filter((part) => part && part.trim()).join(" ") ||
@@ -453,7 +462,7 @@ export default function UserDetail() {
               onPrev: () => setEnforcementOffset((o) => Math.max(0, o - PAGE_SIZE)),
               onNext: () => setEnforcementOffset((o) => o + PAGE_SIZE),
             }}
-            userId={userId ?? ""}
+            adminEmailById={adminEmailById}
             t={t}
           />
         </Tabs>

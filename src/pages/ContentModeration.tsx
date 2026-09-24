@@ -1,5 +1,7 @@
 import { useState, useMemo } from "react";
 import { useTranslation } from "react-i18next";
+import { useUserLabels } from "@/hooks/useUserLabels";
+import { isPersonResourceType } from "@/lib/userLabel";
 import {
   useGetReports,
   useUpdateReportStatus,
@@ -160,11 +162,22 @@ export default function ContentModeration() {
     if (!searchQuery) return raw;
     const q = searchQuery.toLowerCase();
     return raw.filter((r: ReportItem) =>
-      r.targetId.toLowerCase().includes(q) ||
+      (!isPersonResourceType(r.targetType) && r.targetId.toLowerCase().includes(q)) ||
       r.reason.toLowerCase().includes(q) ||
       (r.description ?? "").toLowerCase().includes(q)
     );
   }, [reportsData, searchQuery]);
+
+  // Reporters, reviewers and reported USERS arrive as bare user ids. Ids are
+  // never displayed — resolve each to a name/email ("Unknown user" otherwise).
+  const peopleLabels = useUserLabels([
+    ...reports.map((r) => r.reporterId),
+    ...reports.filter((r) => isPersonResourceType(r.targetType)).map((r) => r.targetId),
+    selectedItem?.reviewedBy,
+  ]);
+  const personOf = (userId?: string | null) =>
+    (userId && peopleLabels.get(userId)) || t("common.unknownUser");
+  const targetOf = (r: ReportItem) => (isPersonResourceType(r.targetType) ? personOf(r.targetId) : r.targetId);
 
   const getStatusBadge = (status: string) => {
     const variants: Record<string, "active" | "warning" | "inactive" | "error" | "pending" | "info"> = {
@@ -362,7 +375,7 @@ export default function ContentModeration() {
                 <TableHead>Type</TableHead>
                 <TableHead>Reason</TableHead>
                 <TableHead>Reporter</TableHead>
-                <TableHead>Target ID</TableHead>
+                <TableHead>Target</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Reported</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
@@ -402,8 +415,10 @@ export default function ContentModeration() {
                     </div>
                   </TableCell>
                   <TableCell className="max-w-[200px] truncate">{item.reason}</TableCell>
-                  <TableCell className="font-mono text-xs max-w-[100px] truncate">{item.reporterId}</TableCell>
-                  <TableCell className="font-mono text-xs max-w-[100px] truncate">{item.targetId}</TableCell>
+                  <TableCell className="text-sm max-w-[160px] truncate">{personOf(item.reporterId)}</TableCell>
+                  <TableCell className={isPersonResourceType(item.targetType) ? "text-sm max-w-[160px] truncate" : "font-mono text-xs max-w-[100px] truncate"}>
+                    {targetOf(item)}
+                  </TableCell>
                   <TableCell>{getStatusBadge(displayStatus)}</TableCell>
                   <TableCell className="text-sm">{new Date(item.createdAt).toLocaleDateString()}</TableCell>
                   <TableCell className="text-right">
@@ -448,7 +463,7 @@ export default function ContentModeration() {
                     {getStatusBadge(reportStatusToDisplay(selectedItem.status))}
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    Reported by <span className="font-mono">{selectedItem.reporterId}</span>
+                    Reported by <span>{personOf(selectedItem.reporterId)}</span>
                   </p>
                 </SheetHeader>
 
@@ -482,8 +497,8 @@ export default function ContentModeration() {
                         <div><span className="text-muted-foreground">Content Type:</span> <span className="ml-2">{targetTypeToLabel(selectedItem.targetType)}</span></div>
                         <div><span className="text-muted-foreground">Status:</span> <span className="ml-2">{reportStatusToDisplay(selectedItem.status)}</span></div>
                         <div><span className="text-muted-foreground">Reported:</span> <span className="ml-2">{new Date(selectedItem.createdAt).toLocaleString()}</span></div>
-                        <div className="col-span-2"><span className="text-muted-foreground">Target ID:</span> <span className="ml-2 font-mono text-xs">{selectedItem.targetId}</span></div>
-                        <div className="col-span-2"><span className="text-muted-foreground">Reporter ID:</span> <span className="ml-2 font-mono text-xs">{selectedItem.reporterId}</span></div>
+                        <div className="col-span-2"><span className="text-muted-foreground">Target:</span> <span className={isPersonResourceType(selectedItem.targetType) ? "ml-2" : "ml-2 font-mono text-xs"}>{targetOf(selectedItem)}</span></div>
+                        <div className="col-span-2"><span className="text-muted-foreground">Reporter:</span> <span className="ml-2">{personOf(selectedItem.reporterId)}</span></div>
                       </div>
                     </div>
                     <div className="p-4 rounded-lg border bg-card space-y-3">
@@ -507,7 +522,7 @@ export default function ContentModeration() {
                         <>
                           <div><span className="text-muted-foreground">Reviewed at:</span> <span className="ml-2">{new Date(selectedItem.reviewedAt).toLocaleString()}</span></div>
                           {selectedItem.reviewedBy && (
-                            <div><span className="text-muted-foreground">Reviewed by:</span> <span className="ml-2 font-mono text-xs">{selectedItem.reviewedBy}</span></div>
+                            <div><span className="text-muted-foreground">Reviewed by:</span> <span className="ml-2">{personOf(selectedItem.reviewedBy)}</span></div>
                           )}
                         </>
                       ) : (

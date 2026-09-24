@@ -40,6 +40,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { friendlyErrorMessage } from "@/lib/graphqlErrors";
+import { useUserLabels } from "@/hooks/useUserLabels";
 import {
   Search,
   Eye,
@@ -173,6 +174,7 @@ export default function SupportTicketing() {
     id: admin.id,
     name: admin.email,
   }));
+  const adminEmailById = new Map(adminList.map((a) => [a.id, a.name] as const));
 
   // ── list query ─────────────────────────────────────────────────────────────
   const { data, loading } = useAllCases({
@@ -183,19 +185,6 @@ export default function SupportTicketing() {
     offset,
   });
   const total = data?.allCases?.total ?? 0;
-
-  // Client-side search across the current page.
-  const cases = useMemo(() => {
-    const allCases = data?.allCases?.cases ?? [];
-    const q = searchQuery.trim().toLowerCase();
-    if (!q) return allCases;
-    return allCases.filter(
-      (c) =>
-        c.caseNumber.toLowerCase().includes(q) ||
-        c.title.toLowerCase().includes(q) ||
-        c.reporterUserId.toLowerCase().includes(q),
-    );
-  }, [data, searchQuery]);
 
   // ── detail queries ─────────────────────────────────────────────────────────
   const { data: caseData, loading: caseLoading } = useSupportCase(selectedCaseId);
@@ -209,6 +198,37 @@ export default function SupportTicketing() {
   const { data: historyData, loading: historyLoading } =
     useCaseStatusHistory(selectedCaseId);
   const history = historyData?.caseStatusHistory ?? [];
+
+  // ── people ─────────────────────────────────────────────────────────────────
+  // User ids are never displayed. Reporters / note authors / history actors are
+  // resolved to a name or email (admins via the admin list, everyone else via
+  // their profile); anything unresolvable reads "Unknown user".
+  const pageCases = data?.allCases?.cases;
+  const userLabels = useUserLabels([
+    ...(pageCases ?? []).map((c) => c.reporterUserId),
+    ...(pageCases ?? []).map((c) => c.assigneeUserId).filter((id) => id && !adminEmailById.has(id)),
+    supportCase?.reporterUserId,
+    supportCase?.assigneeUserId && !adminEmailById.has(supportCase.assigneeUserId)
+      ? supportCase.assigneeUserId
+      : null,
+    ...notes.map((n) => n.authorUserId).filter((id) => !adminEmailById.has(id)),
+    ...history.map((h) => h.actorUserId).filter((id) => id && !adminEmailById.has(id)),
+  ]);
+  const personLabel = (id?: string | null): string =>
+    (id && (adminEmailById.get(id) ?? userLabels.get(id))) || t("common.unknownUser");
+
+  // Client-side search across the current page.
+  const cases = useMemo(() => {
+    const allCases = pageCases ?? [];
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return allCases;
+    return allCases.filter(
+      (c) =>
+        c.caseNumber.toLowerCase().includes(q) ||
+        c.title.toLowerCase().includes(q) ||
+        (userLabels.get(c.reporterUserId) ?? "").toLowerCase().includes(q),
+    );
+  }, [pageCases, searchQuery, userLabels]);
 
   // ── mutations ──────────────────────────────────────────────────────────────
   const [assignCase, { loading: assignLoading }] = useAssignCase();
@@ -476,12 +496,12 @@ export default function SupportTicketing() {
                     <TableCell>
                       <Badge variant={statusVariant(c.status)}>{titleCase(c.status)}</Badge>
                     </TableCell>
-                    <TableCell className="font-mono text-xs">
-                      {c.reporterUserId ? c.reporterUserId.slice(0, 8) + "…" : "—"}
+                    <TableCell className="text-sm">
+                      {c.reporterUserId ? personLabel(c.reporterUserId) : "—"}
                     </TableCell>
-                    <TableCell className="font-mono text-xs">
+                    <TableCell className="text-sm">
                       {c.assigneeUserId
-                        ? c.assigneeUserId.slice(0, 8) + "…"
+                        ? personLabel(c.assigneeUserId)
                         : t("supportCases.unassigned")}
                     </TableCell>
                     <TableCell className="text-sm">{formatTs(c.submittedAt)}</TableCell>
@@ -637,12 +657,14 @@ export default function SupportTicketing() {
                         </div>
                         <div>
                           <span className="text-muted-foreground">{t("supportCases.reporter")}:</span>
-                          <span className="ml-2 font-mono text-xs">{supportCase.reporterUserId}</span>
+                          <span className="ml-2">{personLabel(supportCase.reporterUserId)}</span>
                         </div>
                         <div>
                           <span className="text-muted-foreground">{t("supportCases.assignee")}:</span>
-                          <span className="ml-2 font-mono text-xs">
-                            {supportCase.assigneeUserId ?? t("supportCases.unassigned")}
+                          <span className="ml-2">
+                            {supportCase.assigneeUserId
+                              ? personLabel(supportCase.assigneeUserId)
+                              : t("supportCases.unassigned")}
                           </span>
                         </div>
                         <div>
@@ -767,13 +789,13 @@ export default function SupportTicketing() {
                             <div key={note.id} className="flex gap-3">
                               <Avatar className="h-8 w-8">
                                 <AvatarFallback>
-                                  {note.authorUserId.slice(0, 2).toUpperCase()}
+                                  {personLabel(note.authorUserId).slice(0, 2).toUpperCase()}
                                 </AvatarFallback>
                               </Avatar>
                               <div className="flex-1">
                                 <div className="flex items-center gap-2 mb-1">
-                                  <span className="font-mono text-xs font-medium">
-                                    {note.authorUserId.slice(0, 8)}…
+                                  <span className="text-xs font-medium">
+                                    {personLabel(note.authorUserId)}
                                   </span>
                                   <span className="text-xs text-muted-foreground">
                                     {formatTs(note.createdAt)}
@@ -839,8 +861,8 @@ export default function SupportTicketing() {
                                   {h.fromStatus ? `${titleCase(h.fromStatus)} → ` : ""}
                                   {titleCase(h.toStatus)}
                                 </TableCell>
-                                <TableCell className="font-mono text-xs">
-                                  {h.actorUserId ? h.actorUserId.slice(0, 8) + "…" : "System"}
+                                <TableCell className="text-xs">
+                                  {h.actorUserId ? personLabel(h.actorUserId) : t("common.system")}
                                 </TableCell>
                                 <TableCell className="max-w-xs truncate text-muted-foreground">
                                   {h.reason ?? "—"}

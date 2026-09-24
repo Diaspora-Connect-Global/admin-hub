@@ -42,6 +42,9 @@ import {
   Building2, Shield, AlertTriangle,
 } from "lucide-react";
 import { AssociationServicesTab } from "@/components/association/AssociationServicesTab";
+import { useTranslation } from "react-i18next";
+import { useUserLabels } from "@/hooks/useUserLabels";
+import { userLabel } from "@/lib/userLabel";
 
 const getStatusBadge = (status: string) => {
   const styles: Record<string, string> = {
@@ -58,6 +61,7 @@ const getStatusBadge = (status: string) => {
 
 export default function AssociationDetail() {
   const { id } = useParams();
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -90,6 +94,34 @@ export default function AssociationDetail() {
     usersData as { getUsers?: { items?: Array<{ id: string; email: string; displayName?: string | null }> } } | undefined
   )?.getUsers?.items ?? [];
   const userById = new Map(users.map((u) => [u.id, u]));
+
+  // Pending requests — offset-paged (server caps a page at 200).
+  const PENDING_PAGE_SIZE = 20;
+  const [pendingOffset, setPendingOffset] = useState(0);
+  const { data: pendingData, refetch: refetchPending } =
+    useGetPendingMembershipRequests(id ?? null, "ASSOCIATION", {
+      limit: PENDING_PAGE_SIZE,
+      offset: pendingOffset,
+    });
+  const pendingRequests = pendingData?.getPendingMembershipRequests.requests ?? [];
+  const pendingTotal = pendingData?.getPendingMembershipRequests.total ?? pendingRequests.length;
+  const pendingHasMore = pendingData?.getPendingMembershipRequests.hasMore ?? false;
+
+  // User ids are never displayed. `userById` only covers the first page of
+  // getUsers, so other members / requesters are resolved through their
+  // profile; unresolvable people read "Unknown user".
+  const resolvedLabels = useUserLabels(
+    [...liveMembers.map((m) => m.userId), ...pendingRequests.map((r) => r.userId)].filter(
+      (uid) => !userById.has(uid),
+    ),
+  );
+  const nameOf = (uid: string): string => {
+    const u = userById.get(uid);
+    return userLabel(
+      { name: u?.displayName, email: u?.email },
+      resolvedLabels.get(uid) ?? t("common.unknownUser"),
+    );
+  };
   const associationAdmins = liveMembers
     .filter((member) => {
       const role = (member.role ?? "").toUpperCase();
@@ -104,23 +136,11 @@ export default function AssociationDetail() {
       const user = userById.get(member.userId);
       return {
         id: member.userId,
-        name: user?.displayName || user?.email || member.userId,
+        name: nameOf(member.userId),
         email: user?.email || "—",
         role: member.role || "Association Admin",
       };
     });
-
-  // Pending requests — offset-paged (server caps a page at 200).
-  const PENDING_PAGE_SIZE = 20;
-  const [pendingOffset, setPendingOffset] = useState(0);
-  const { data: pendingData, refetch: refetchPending } =
-    useGetPendingMembershipRequests(id ?? null, "ASSOCIATION", {
-      limit: PENDING_PAGE_SIZE,
-      offset: pendingOffset,
-    });
-  const pendingRequests = pendingData?.getPendingMembershipRequests.requests ?? [];
-  const pendingTotal = pendingData?.getPendingMembershipRequests.total ?? pendingRequests.length;
-  const pendingHasMore = pendingData?.getPendingMembershipRequests.hasMore ?? false;
 
   // ── Mutations ──────────────────────────────────────────────────────────────
   const [approveMembership] = useApproveMembership();
@@ -556,8 +576,10 @@ export default function AssociationDetail() {
                       return (
                       <div key={req.userId} className="flex items-center justify-between p-3 rounded-lg bg-warning/10 border border-warning/20">
                         <div>
-                          <p className="text-sm font-medium">{u?.displayName || "Unknown user"}</p>
-                          <p className="text-xs text-muted-foreground">{u?.email || req.userId} · {new Date(req.requestedAt).toLocaleDateString()}</p>
+                          <p className="text-sm font-medium">{u?.displayName || nameOf(req.userId)}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {[u?.email, new Date(req.requestedAt).toLocaleDateString()].filter(Boolean).join(" · ")}
+                          </p>
                         </div>
                         <div className="flex gap-2">
                           <Button size="sm" variant="outline" className="text-success" onClick={() => handleApproveMembership(req.userId)}>
@@ -593,7 +615,7 @@ export default function AssociationDetail() {
                 <Table>
                   <TableHeader>
                     <TableRow className="border-border/50">
-                      <TableHead>User ID</TableHead>
+                      <TableHead>{t("common.name")}</TableHead>
                       <TableHead>Role</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Joined At</TableHead>
@@ -607,7 +629,7 @@ export default function AssociationDetail() {
                       </TableRow>
                     ) : liveMembers.map((member) => (
                       <TableRow key={member.userId} className="border-border/50">
-                        <TableCell className="font-mono text-xs">{member.userId}</TableCell>
+                        <TableCell className="font-medium">{nameOf(member.userId)}</TableCell>
                         <TableCell><Badge variant="secondary">{member.role ?? "Member"}</Badge></TableCell>
                         <TableCell>{getStatusBadge(member.status === "ACTIVE" ? "Active" : member.status)}</TableCell>
                         <TableCell className="text-muted-foreground">{member.joinedAt ? new Date(member.joinedAt).toLocaleDateString() : "-"}</TableCell>

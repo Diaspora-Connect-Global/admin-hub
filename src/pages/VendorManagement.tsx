@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useUserLabels } from "@/hooks/useUserLabels";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -154,6 +155,8 @@ export default function VendorManagement() {
     selectedVendor?.id,
     !selectedVendor
   );
+  // `suspendedBy` is an admin/user id — resolve it; ids are never displayed.
+  const suspenderLabels = useUserLabels(suspensions.map((s) => s.suspendedBy));
 
   // Mutations
   const [suspendVendor] = useSuspendVendor();
@@ -852,7 +855,7 @@ export default function VendorManagement() {
                                   {s.reason}
                                 </TableCell>
                                 <TableCell className="text-sm text-muted-foreground">
-                                  {s.suspendedBy}
+                                  {(s.suspendedBy && suspenderLabels.get(s.suspendedBy)) || t("common.unknownUser")}
                                 </TableCell>
                                 <TableCell className="text-sm">
                                   {new Date(s.suspendedAt).toLocaleDateString()}

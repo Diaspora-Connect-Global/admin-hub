@@ -41,7 +41,9 @@
     "retry": "Reintentar",
     "errorTitle": "Algo salió mal",
     "errorLoading": "No se pudieron cargar los datos. Inténtelo de nuevo.",
-    "success": "Correcto"
+    "success": "Correcto",
+    "unknownUser": "Usuario desconocido",
+    "system": "Sistema"
   },
   "nav": {
     "dashboard": "Panel de control",
@@ -295,7 +297,7 @@
         "reactor": "Autor de la reacción",
         "reactionColumn": "Reacción",
         "reactedAt": "Fecha de la reacción",
-        "reactorUnresolved": "Nombre no disponible: se muestra el ID de la cuenta",
+        "reactorUnresolved": "Nombre no disponible: es posible que la cuenta se haya eliminado.",
         "reactorDetailUnavailable": "Detalle de reacciones no disponible",
         "reactorDetailUnavailableHint": "El backend informa de que ahora mismo no se pueden leer las filas individuales que hay detrás de estos totales. Los totales de arriba siguen siendo correctos: esto no significa que nadie haya reaccionado."
       },
@@ -340,7 +342,6 @@
     "title": "Solicitudes de eliminación",
     "subtitle": "Usuarios que han solicitado la eliminación de su cuenta",
     "columns": {
-      "userId": "ID de usuario",
       "email": "Correo electrónico",
       "requestedDate": "Solicitado",
       "status": "Estado",

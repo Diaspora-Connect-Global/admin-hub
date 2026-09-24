@@ -20,6 +20,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { friendlyErrorMessage } from "@/lib/graphqlErrors";
+import { userLabel } from "@/lib/userLabel";
 import {
   useApproveVerification,
   useBusinessVerifications,
@@ -164,12 +165,12 @@ export default function KycVerifications() {
           {b.registrationNumber} · {b.countryOfIncorporation}
         </div>
       </TableCell>
-      <TableCell className="text-muted-foreground">{b.submittedByName || b.submittedByUserId || "—"}</TableCell>
+      <TableCell className="text-muted-foreground">{userLabel({ name: b.submittedByName }, t("common.unknownUser"))}</TableCell>
       <TableCell>
         <ul className="space-y-1 text-sm">
           {b.owners.map((o) => (
             <li key={o.individualProfileId} className="flex items-center gap-2">
-              <span className="text-foreground">{o.name || o.userId || o.individualProfileId}</span>
+              <span className="text-foreground">{userLabel({ name: o.name }, t("common.unknownUser"))}</span>
               <span className="text-muted-foreground">{o.ownershipPercentage}%</span>
               {o.kycStatus && (
                 <StatusBadge variant={statusVariant(o.kycStatus)}>
@@ -195,7 +196,7 @@ export default function KycVerifications() {
   const individualRow = (i: IndividualVerification) => (
     <TableRow key={i.id} className="border-border/50">
       <TableCell>
-        <div className="font-medium text-foreground">{i.userName || i.userId || "—"}</div>
+        <div className="font-medium text-foreground">{userLabel({ name: i.userName, email: i.userEmail }, t("common.unknownUser"))}</div>
         {i.userEmail && <div className="text-xs text-muted-foreground">{i.userEmail}</div>}
       </TableCell>
       <TableCell className="text-muted-foreground">{i.docType || "—"}</TableCell>
@@ -206,7 +207,7 @@ export default function KycVerifications() {
         </StatusBadge>
       </TableCell>
       <TableCell className="text-right">
-        {i.status === "PENDING" ? actions(i.id, i.userName || i.userId || i.id) : null}
+        {i.status === "PENDING" ? actions(i.id, userLabel({ name: i.userName, email: i.userEmail }, t("common.unknownUser"))) : null}
       </TableCell>
     </TableRow>
   );

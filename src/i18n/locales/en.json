@@ -41,7 +41,9 @@
     "retry": "Retry",
     "errorTitle": "Something went wrong",
     "errorLoading": "Failed to load data. Please try again.",
-    "success": "Success"
+    "success": "Success",
+    "unknownUser": "Unknown user",
+    "system": "System"
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -295,7 +297,7 @@
         "reactor": "Reactor",
         "reactionColumn": "Reaction",
         "reactedAt": "Reacted at",
-        "reactorUnresolved": "Name unavailable — showing the account ID",
+        "reactorUnresolved": "Name unavailable — the account may have been deleted.",
         "reactorDetailUnavailable": "Reactor detail unavailable",
         "reactorDetailUnavailableHint": "The backend reports that the per-reactor rows behind these counts cannot be read right now. The totals above are still accurate — this is not the same as nobody having reacted."
       },
@@ -340,7 +342,6 @@
     "title": "Deletion Requests",
     "subtitle": "Users who have requested account deletion",
     "columns": {
-      "userId": "User ID",
       "email": "Email",
       "requestedDate": "Requested",
       "status": "Status",

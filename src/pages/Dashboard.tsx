@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { useUserLabels } from "@/hooks/useUserLabels";
 import {
   Users,
   Layers,
@@ -117,6 +118,8 @@ export default function Dashboard() {
   const analytics = analyticsData?.getPlatformAnalytics;
   const recentEscrows = escrowData?.adminListEscrows?.escrows ?? [];
   const recentDisputes = disputesData?.adminListDisputes?.disputes ?? [];
+  // `raisedBy` is a user id — resolve it; ids are never displayed.
+  const raisedByLabels = useUserLabels(recentDisputes.map((d) => d.raisedBy));
 
   const systemHealthChartData = health
     ? [
@@ -502,7 +505,7 @@ export default function Dashboard() {
                     <TableRow key={dispute.id} className="border-border">
                       <TableCell className="font-medium text-foreground font-mono text-xs">{dispute.id.slice(0, 12)}…</TableCell>
                       <TableCell>{getDisputeStatusBadge(dispute.status)}</TableCell>
-                      <TableCell className="text-muted-foreground">{dispute.raisedBy ?? "—"}</TableCell>
+                      <TableCell className="text-muted-foreground">{dispute.raisedBy ? raisedByLabels.get(dispute.raisedBy) ?? t("common.unknownUser") : "—"}</TableCell>
                       <TableCell className="text-muted-foreground text-xs">
                         {new Date(dispute.createdAt).toLocaleDateString()}
                       </TableCell>

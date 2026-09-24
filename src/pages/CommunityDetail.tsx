@@ -18,6 +18,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { MultiSelect } from "@/components/ui/multi-select";
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
 import { toast } from "@/hooks/use-toast";
+import { useUserLabels } from "@/hooks/useUserLabels";
+import { isPersonResourceType, userLabel } from "@/lib/userLabel";
 import {
   useDiscoverAssociations,
   useGetAuditLogs,
@@ -277,13 +279,30 @@ export default function CommunityDetail() {
   )?.getUsers?.items ?? [];
   const userById = new Map(users.map((u) => [u.id, u]));
   const communityMembers = membersData?.listCommunityMembers?.members ?? [];
+  // User ids are never displayed. `userById` only covers the first page of
+  // getUsers, so anyone else (members, pending requesters, assigned admins) is
+  // resolved through their profile; unresolvable people read "Unknown user".
+  const resolvedLabels = useUserLabels(
+    [
+      ...communityMembers.map((m) => m.userId),
+      ...pendingRequests.map((r) => r.userId),
+      ...(community?.assignedAdminIds ?? []),
+    ].filter((uid) => !userById.has(uid)),
+  );
+  const nameOf = (uid: string): string => {
+    const u = userById.get(uid);
+    return userLabel(
+      { name: u?.displayName, email: u?.email },
+      resolvedLabels.get(uid) ?? t("common.unknownUser"),
+    );
+  };
   const membersTotal = membersData?.listCommunityMembers?.total ?? communityMembers.length;
   const membersHasMore = membersData?.listCommunityMembers?.hasMore ?? false;
   const communityMemberRows = communityMembers.map((member) => {
     const user = userById.get(member.userId);
     return {
       id: member.userId,
-      name: user?.displayName || user?.email || member.userId,
+      name: nameOf(member.userId),
       roles: [member.role],
       associationsCount: 0,
       joinedAt: member.joinedAt,
@@ -306,7 +325,7 @@ export default function CommunityDetail() {
       const user = userById.get(userId);
       return {
         id: userId,
-        email: user?.email ?? userId,
+        email: user?.email || nameOf(userId),
         status: "Assigned",
         adminType: "Community admin",
         roles: [] as CommunityAdminListItem['roles'],
@@ -329,18 +348,22 @@ export default function CommunityDetail() {
   ).map((log) => {
     // `resourceLabel` already folds the type into readable text ("Community:
     // Accra Diaspora"), so it replaces the old "TYPE: uuid" concatenation.
+    // A person-typed resource never falls back to its (user) id.
     const resource =
       log.resourceLabel ||
       log.resourceName ||
       log.resourceType ||
-      log.resourceId ||
+      (isPersonResourceType(log.resourceType) ? "" : log.resourceId) ||
       "";
     const ip = log.ipAddress ? `IP ${log.ipAddress}` : "";
     const notes = [resource, ip].filter(Boolean).join(" · ") || "—";
     return {
       timestamp: log.createdAt,
       action: log.action,
-      performedBy: log.actorLabel || log.actorEmail || log.actorId || "System",
+      performedBy: userLabel(
+        { name: log.actorLabel, email: log.actorEmail },
+        log.actorId ? t("common.unknownUser") : t("common.system"),
+      ),
       notes,
     };
   });
@@ -1021,7 +1044,8 @@ export default function CommunityDetail() {
             onReject={handleRejectMembership}
             resolveUser={(uid) => {
               const u = userById.get(uid);
-              return { name: u?.displayName || "Unknown user", email: u?.email || uid };
+              const label = nameOf(uid);
+              return { name: u?.displayName || label, email: u?.email || "" };
             }}
             membersTotal={membersTotal}
             membersOffset={membersOffset}

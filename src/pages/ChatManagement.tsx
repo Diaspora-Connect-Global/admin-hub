@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
+import { userLabel } from "@/lib/userLabel";
+import { useUserLabels } from "@/hooks/useUserLabels";
 import {
   useGetFlaggedConversations,
   useGetChatSettings,
@@ -140,6 +142,15 @@ export default function ChatManagement() {
     loading: groupLoading,
   } = useListGroupConversations({ limit: 50 });
   const groupConversations = groupData?.listGroupConversations?.items ?? [];
+  // Group creators / flaggers arrive as a bare user id — resolve to a name/email; ids are
+  // never displayed.
+  const creatorLabels = useUserLabels([
+    ...groupConversations.map((g) => g.createdBy),
+    ...flaggedConversations.map((c) => c.flaggedBy),
+  ]);
+  const creatorOf = (createdBy?: string | null) =>
+    createdBy ? creatorLabels.get(createdBy) ?? t("common.unknownUser") : "—";
+  const participantOf = (name?: string | null) => userLabel({ name }, t("common.unknownUser"));
   const groupTotal = groupData?.listGroupConversations?.total ?? 0;
 
   // Combined flagged count from DM + Group lists
@@ -387,15 +398,13 @@ export default function ChatManagement() {
                       dmConversations
                         .filter((dm) =>
                           !searchQuery ||
-                          dm.participant1Id.includes(searchQuery) ||
-                          dm.participant2Id.includes(searchQuery) ||
                           (dm.participant1Name ?? "").toLowerCase().includes(searchQuery.toLowerCase()) ||
                           (dm.participant2Name ?? "").toLowerCase().includes(searchQuery.toLowerCase())
                         )
                         .map((dm) => (
                           <TableRow key={dm.id}>
-                            <TableCell className="font-medium">{dm.participant1Name || dm.participant1Id}</TableCell>
-                            <TableCell className="font-medium">{dm.participant2Name || dm.participant2Id}</TableCell>
+                            <TableCell className="font-medium">{participantOf(dm.participant1Name)}</TableCell>
+                            <TableCell className="font-medium">{participantOf(dm.participant2Name)}</TableCell>
                             <TableCell>{dm.messageCount}</TableCell>
                             <TableCell className="text-muted-foreground text-sm">
                               {dm.lastMessageAt ? new Date(dm.lastMessageAt).toLocaleString() : "—"}
@@ -415,8 +424,8 @@ export default function ChatManagement() {
                                     onClick={() =>
                                       setDmMetadataModal({
                                         dmId: dm.id,
-                                        userA: dm.participant1Name ?? dm.participant1Id,
-                                        userB: dm.participant2Name ?? dm.participant2Id,
+                                        userA: participantOf(dm.participant1Name),
+                                        userB: participantOf(dm.participant2Name),
                                         messageCount: dm.messageCount,
                                         lastActive: dm.lastMessageAt ? new Date(dm.lastMessageAt).toLocaleString() : "—",
                                         flagCount: dm.flagged ? 1 : 0,
@@ -429,7 +438,7 @@ export default function ChatManagement() {
                                     onClick={() =>
                                       setMembersModal({
                                         conversationId: dm.id,
-                                        title: `Participants – ${dm.participant1Name ?? dm.participant1Id} & ${dm.participant2Name ?? dm.participant2Id}`,
+                                        title: `Participants – ${participantOf(dm.participant1Name)} & ${participantOf(dm.participant2Name)}`,
                                       })
                                     }
                                   >
@@ -515,7 +524,7 @@ export default function ChatManagement() {
                       groupConversations.map((grp) => (
                         <TableRow key={grp.id}>
                           <TableCell className="font-medium">{grp.name}</TableCell>
-                          <TableCell className="text-muted-foreground font-mono text-sm">{grp.createdBy ?? "—"}</TableCell>
+                          <TableCell className="text-muted-foreground text-sm">{creatorOf(grp.createdBy)}</TableCell>
                           <TableCell>
                             <div className="flex items-center gap-1">
                               <Users className="h-3 w-3 text-muted-foreground" />
@@ -542,7 +551,7 @@ export default function ChatManagement() {
                                     setGroupDetailModal({
                                       groupId: grp.id,
                                       name: grp.name,
-                                      creator: grp.createdBy ?? "—",
+                                      creator: creatorOf(grp.createdBy),
                                       memberCount: grp.memberCount,
                                       messageCount: grp.messageCount,
                                       lastActive: grp.lastMessageAt ? new Date(grp.lastMessageAt).toLocaleString() : "—",
@@ -707,7 +716,7 @@ export default function ChatManagement() {
                             </Badge>
                           </TableCell>
                           <TableCell>{chat.flagReason}</TableCell>
-                          <TableCell className="text-muted-foreground">{chat.flaggedBy ?? "—"}</TableCell>
+                          <TableCell className="text-muted-foreground">{creatorOf(chat.flaggedBy)}</TableCell>
                           <TableCell className="text-muted-foreground">
                             {chat.createdAt ? new Date(chat.createdAt).toLocaleString() : "—"}
                           </TableCell>
@@ -980,15 +989,12 @@ export default function ChatManagement() {
                       <Avatar className="h-8 w-8">
                         <AvatarImage src={member.avatarUrl} />
                         <AvatarFallback>
-                          {(member.displayName ?? member.userId).slice(0, 2).toUpperCase()}
+                          {participantOf(member.displayName).slice(0, 2).toUpperCase()}
                         </AvatarFallback>
                       </Avatar>
                       <div className="flex flex-col">
                         <span className="text-sm font-medium">
-                          {member.displayName ?? member.userId}
-                        </span>
-                        <span className="text-xs text-muted-foreground font-mono">
-                          {member.userId}
+                          {participantOf(member.displayName)}
                         </span>
                       </div>
                     </div>
@@ -1006,7 +1012,7 @@ export default function ChatManagement() {
                           setBanDialog({
                             conversationId: membersModal!.conversationId,
                             userId: member.userId,
-                            displayName: member.displayName ?? member.userId,
+                            displayName: participantOf(member.displayName),
                           })
                         }
                       >

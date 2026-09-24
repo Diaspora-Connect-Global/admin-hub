@@ -85,8 +85,9 @@ export function CommunityMembersTab({
                 <div>
                   <p className="text-sm font-medium">{u.name}</p>
                   <p className="text-xs text-muted-foreground">
-                    {u.email}
-                    {req.requestedAt ? ` · ${new Date(req.requestedAt).toLocaleDateString()}` : ""}
+                    {[u.email, req.requestedAt ? new Date(req.requestedAt).toLocaleDateString() : ""]
+                      .filter(Boolean)
+                      .join(" · ")}
                   </p>
                 </div>
                 <div className="flex gap-2">

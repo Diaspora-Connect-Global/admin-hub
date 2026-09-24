@@ -84,6 +84,7 @@ import {
   ResponsiveContainer,
   Legend,
 } from "recharts";
+import { resourceLabel, userLabel } from "@/lib/userLabel";
 
 /** Maps backend category strings to translation keys. */
 const CATEGORY_KEYS: Record<string, string> = {
@@ -608,13 +609,16 @@ export default function SystemHealth() {
                             <TableCell>
                               <Badge variant="outline">{log.action}</Badge>
                             </TableCell>
-                            {/* The gateway resolves these per page; the id
-                                fallbacks only fire on a pre-upgrade cache. */}
-                            <TableCell className="text-xs" title={log.actorId ?? undefined}>
-                              {log.actorLabel || log.actorEmail || log.actorId?.slice(0, 8) || "—"}
+                            {/* The gateway resolves these per page. User ids
+                                are never displayed, even when unresolved. */}
+                            <TableCell className="text-xs">
+                              {userLabel(
+                                { name: log.actorLabel, email: log.actorEmail },
+                                log.actorId ? t("common.unknownUser") : "—",
+                              )}
                             </TableCell>
-                            <TableCell className="text-xs" title={log.resourceId ?? undefined}>
-                              {log.resourceLabel || log.resourceName || log.resourceId?.slice(0, 8) || "—"}
+                            <TableCell className="text-xs">
+                              {resourceLabel(log, t("common.unknownUser"))}
                             </TableCell>
                           </TableRow>
                         ))}

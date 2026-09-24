@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useAdminListDisputes, useAdminResolveDispute, useGetAuditLogs, useListAdmins } from "@/hooks/admin";
 import { useTranslation } from "react-i18next";
+import { useUserLabels } from "@/hooks/useUserLabels";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -69,6 +70,7 @@ import {
   Store,
   Shield,
 } from "lucide-react";
+import { userLabel } from "@/lib/userLabel";
 
 
 export default function DisputesResolution() {
@@ -96,6 +98,18 @@ export default function DisputesResolution() {
     limit: 50,
   });
   const disputes = disputesData?.adminListDisputes?.disputes ?? [];
+
+  // `raisedBy` / `assigned_admin` are ids — resolve them to a name/email.
+  // User ids are never displayed.
+  const raiserLabels = useUserLabels(disputes.map((d) => d.raisedBy ?? d.raised_by));
+  const raisedByOf = (d: { raisedBy?: string; raised_by?: string }) => {
+    const uid = d.raisedBy ?? d.raised_by;
+    return uid ? raiserLabels.get(uid) ?? t("common.unknownUser") : "—";
+  };
+  const assignedAdminOf = (d: { assigned_admin?: string }) =>
+    d.assigned_admin
+      ? adminList.find((a) => a.id === d.assigned_admin)?.name ?? t("common.unknownUser")
+      : "—";
 
   // Resolve mutation
   const [resolveDispute, { loading: resolveLoading }] = useAdminResolveDispute();
@@ -409,8 +423,8 @@ export default function DisputesResolution() {
                   <TableCell className="max-w-[200px] truncate">{dispute.title_summary}</TableCell>
                   <TableCell>{getStatusBadge(dispute.status)}</TableCell>
                   <TableCell>{getPriorityBadge(dispute.priority)}</TableCell>
-                  <TableCell>{dispute.raised_by}</TableCell>
-                  <TableCell>{dispute.assigned_admin}</TableCell>
+                  <TableCell>{raisedByOf(dispute)}</TableCell>
+                  <TableCell>{assignedAdminOf(dispute)}</TableCell>
                   <TableCell className="text-sm">{dispute.created_at}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-1">
@@ -465,7 +479,7 @@ export default function DisputesResolution() {
                     {getStatusBadge(selectedDispute.status)}
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    Raised by {selectedDispute.raised_by} | Assigned to {selectedDispute.assigned_admin}
+                    Raised by {raisedByOf(selectedDispute)} | Assigned to {assignedAdminOf(selectedDispute)}
                   </p>
                 </SheetHeader>
 
@@ -499,8 +513,8 @@ export default function DisputesResolution() {
                         <div><span className="text-muted-foreground">Type:</span> <span className="ml-2">{selectedDispute.type}</span></div>
                         <div><span className="text-muted-foreground">Status:</span> <span className="ml-2">{selectedDispute.status}</span></div>
                         <div><span className="text-muted-foreground">Priority:</span> <span className="ml-2">{selectedDispute.priority}</span></div>
-                        <div><span className="text-muted-foreground">Raised By:</span> <span className="ml-2">{selectedDispute.raised_by}</span></div>
-                        <div><span className="text-muted-foreground">Assigned:</span> <span className="ml-2">{selectedDispute.assigned_admin}</span></div>
+                        <div><span className="text-muted-foreground">Raised By:</span> <span className="ml-2">{raisedByOf(selectedDispute)}</span></div>
+                        <div><span className="text-muted-foreground">Assigned:</span> <span className="ml-2">{assignedAdminOf(selectedDispute)}</span></div>
                         <div><span className="text-muted-foreground">Related Entity:</span> <span className="ml-2">{selectedDispute.related_entity}</span></div>
                         <div><span className="text-muted-foreground">Created:</span> <span className="ml-2">{selectedDispute.created_at}</span></div>
                       </div>
@@ -543,8 +557,8 @@ export default function DisputesResolution() {
                               <TableRow key={log.id}>
                                 <TableCell className="text-sm">{new Date(log.createdAt).toLocaleString()}</TableCell>
                                 <TableCell>{log.action}</TableCell>
-                                <TableCell className="text-xs" title={log.actorId}>
-                                  {log.actorLabel || log.actorEmail || (log.actorId ? log.actorId.slice(0, 8) + "…" : "System")}
+                                <TableCell className="text-xs">
+                                  {userLabel({ name: log.actorLabel, email: log.actorEmail }, log.actorId ? t("common.unknownUser") : t("common.system"))}
                                 </TableCell>
                                 <TableCell className="max-w-xs truncate text-muted-foreground">{log.ipAddress ?? "—"}</TableCell>
                               </TableRow>

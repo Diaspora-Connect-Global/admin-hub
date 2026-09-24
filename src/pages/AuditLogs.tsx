@@ -49,13 +49,15 @@ import {
 import { cn } from "@/lib/utils";
 import { logger } from "@/lib/logger";
 import { useToast } from "@/hooks/use-toast";
+import { isPersonResourceType, userLabel } from "@/lib/userLabel";
 
 const logger_ = logger.child("AuditLogs");
 
 /**
  * The row this page renders. `actorLabel` / `resourceLabel` are what the table
- * SHOWS; `actorId` / `resourceId` are kept only because they are the durable
- * references — used for the copy-able detail panel and for filtering.
+ * SHOWS; `actorId` / `resourceId` are the durable references. A user id is
+ * never rendered, exported or searched (product rule); a non-person resource id
+ * may be shown in the detail panel.
  *
  * Both labels are non-null from the gateway, but the fallbacks below still
  * treat them as possibly-missing: a stale Apollo cache entry written before
@@ -76,10 +78,21 @@ interface AuditLogEntry {
   ipAddress?: string | null;
 }
 
-/** Never render a raw uuid: fall back through the label, then the id. */
-const actorOf = (e: AuditLogEntry) => e.actorLabel || e.actorEmail || e.actorId || "—";
-const resourceOf = (e: AuditLogEntry) =>
-  e.resourceLabel || e.resourceName || e.resourceType || "—";
+/**
+ * Never render a user id (product rule — not even to admins): the actor falls
+ * back through label → name → email → "Unknown user". A person-typed resource
+ * (USER, ADMIN…) likewise never shows its id; other resources fall back to
+ * their type.
+ */
+const actorOf = (e: AuditLogEntry, unknown: string) =>
+  userLabel({ name: e.actorLabel || e.actorName, email: e.actorEmail }, e.actorId ? unknown : "—");
+const resourceOf = (e: AuditLogEntry, unknown: string) => {
+  const named = userLabel({ name: e.resourceLabel || e.resourceName }, "");
+  if (named) return named;
+  return isPersonResourceType(e.resourceType) ? unknown : e.resourceType || "—";
+};
+/** Record id safe to show/export: blank for person-typed resources. */
+const resourceIdOf = (e: AuditLogEntry) => (isPersonResourceType(e.resourceType) ? "" : e.resourceId);
 
 const getActionBadge = (action: string) => {
   const styles: Record<string, string> = {
@@ -110,6 +123,7 @@ function dateRangeToIso(dateRange: string, selectedDate?: Date): { fromDate?: st
 
 export default function AuditLogs() {
   const { t } = useTranslation();
+  const unknownUser = t("common.unknownUser");
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
   const [dateRange, setDateRange] = useState<string>("all");
@@ -141,15 +155,14 @@ export default function AuditLogs() {
     // promised name search while only ever matching uuids, so typing a
     // colleague's name returned nothing.
     return auditLogs.filter(l =>
-      actorOf(l).toLowerCase().includes(q) ||
+      actorOf(l, unknownUser).toLowerCase().includes(q) ||
       (l.actorEmail ?? "").toLowerCase().includes(q) ||
-      l.actorId.toLowerCase().includes(q) ||
       l.action.toLowerCase().includes(q) ||
       l.resourceType.toLowerCase().includes(q) ||
-      resourceOf(l).toLowerCase().includes(q) ||
-      l.resourceId.toLowerCase().includes(q)
+      resourceOf(l, unknownUser).toLowerCase().includes(q) ||
+      resourceIdOf(l).toLowerCase().includes(q)
     );
-  }, [auditLogs, searchQuery]);
+  }, [auditLogs, searchQuery, unknownUser]);
 
   const toggleRow = (id: string) => {
     setExpandedRows(prev =>
@@ -166,8 +179,8 @@ export default function AuditLogs() {
     const entries = filteredLogs;
     logger_.info("Exporting CSV", { count: entries.length });
 
-    // Names lead; the uuids stay as trailing columns so an exported sheet is
-    // still joinable against the databases.
+    // Names lead. User ids are never exported (product rule); a non-person
+    // resource keeps its record id so the sheet stays joinable.
     const headers = [
       "timestamp",
       "actor",
@@ -176,7 +189,6 @@ export default function AuditLogs() {
       "resourceType",
       "resource",
       "ipAddress",
-      "actorId",
       "resourceId",
     ];
     const escape = (val: string | null | undefined) => {
@@ -188,14 +200,13 @@ export default function AuditLogs() {
     const rows = entries.map((e) =>
       [
         escape(format(new Date(e.createdAt), "yyyy-MM-dd HH:mm:ss")),
-        escape(actorOf(e)),
+        escape(actorOf(e, unknownUser)),
         escape(e.actorEmail ?? ""),
         escape(e.action),
         escape(e.resourceType),
-        escape(resourceOf(e)),
+        escape(resourceOf(e, unknownUser)),
         escape(e.ipAddress ?? ""),
-        escape(e.actorId),
-        escape(e.resourceId),
+        escape(resourceIdOf(e)),
       ].join(",")
     );
     const csv = [headers.join(","), ...rows].join("\n");
@@ -373,8 +384,8 @@ export default function AuditLogs() {
                           {format(new Date(entry.createdAt), "yyyy-MM-dd HH:mm:ss")}
                         </TableCell>
                         <TableCell className="text-sm max-w-[240px]">
-                          <span className="block truncate" title={actorOf(entry)}>
-                            {entry.actorName || actorOf(entry)}
+                          <span className="block truncate" title={actorOf(entry, unknownUser)}>
+                            {actorOf(entry, unknownUser)}
                           </span>
                           {entry.actorName && entry.actorEmail && (
                             <span className="block truncate text-xs text-muted-foreground">
@@ -388,8 +399,8 @@ export default function AuditLogs() {
                           </Badge>
                         </TableCell>
                         <TableCell className="text-sm max-w-[280px]">
-                          <span className="block truncate" title={resourceOf(entry)}>
-                            {resourceOf(entry)}
+                          <span className="block truncate" title={resourceOf(entry, unknownUser)}>
+                            {resourceOf(entry, unknownUser)}
                           </span>
                         </TableCell>
                         <TableCell className="font-mono text-xs text-muted-foreground">
@@ -406,24 +417,22 @@ export default function AuditLogs() {
                           <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
                             <div>
                               <span className="text-muted-foreground block text-xs mb-1">{t('audit.user')}</span>
-                              <span className="text-xs break-all">{actorOf(entry)}</span>
+                              <span className="text-xs break-all">{actorOf(entry, unknownUser)}</span>
                             </div>
                             <div>
                               <span className="text-muted-foreground block text-xs mb-1">{t('audit.resource')}</span>
-                              <span className="text-xs break-all">{resourceOf(entry)}</span>
+                              <span className="text-xs break-all">{resourceOf(entry, unknownUser)}</span>
                             </div>
                             <div>
                               <span className="text-muted-foreground block text-xs mb-1">Resource Type</span>
                               <span className="text-xs">{entry.resourceType || "—"}</span>
                             </div>
-                            <div>
-                              <span className="text-muted-foreground block text-xs mb-1">Full Actor ID</span>
-                              <span className="font-mono text-xs break-all">{entry.actorId}</span>
-                            </div>
-                            <div>
-                              <span className="text-muted-foreground block text-xs mb-1">Full Resource ID</span>
-                              <span className="font-mono text-xs break-all">{entry.resourceId}</span>
-                            </div>
+                            {resourceIdOf(entry) && (
+                              <div>
+                                <span className="text-muted-foreground block text-xs mb-1">Full Resource ID</span>
+                                <span className="font-mono text-xs break-all">{resourceIdOf(entry)}</span>
+                              </div>
+                            )}
                             <div>
                               <span className="text-muted-foreground block text-xs mb-1">{t('audit.ipAddress')}</span>
                               <span className="font-mono">{entry.ipAddress ?? "—"}</span>
@@ -480,17 +489,14 @@ export default function AuditLogs() {
                   </div>
                   <div className="col-span-2">
                     <span className="text-muted-foreground block text-xs mb-1">{t('audit.user')}</span>
-                    <span className="text-sm break-all">{actorOf(selectedLog)}</span>
-                    <span className="font-mono text-[11px] text-muted-foreground block break-all mt-0.5">
-                      {selectedLog.actorId}
-                    </span>
+                    <span className="text-sm break-all">{actorOf(selectedLog, unknownUser)}</span>
                   </div>
                   <div className="col-span-2">
                     <span className="text-muted-foreground block text-xs mb-1">{t('audit.resource')}</span>
-                    <span className="text-sm break-all">{resourceOf(selectedLog)}</span>
+                    <span className="text-sm break-all">{resourceOf(selectedLog, unknownUser)}</span>
                     <span className="font-mono text-[11px] text-muted-foreground block break-all mt-0.5">
                       {selectedLog.resourceType}
-                      {selectedLog.resourceId ? ` · ${selectedLog.resourceId}` : ""}
+                      {resourceIdOf(selectedLog) ? ` · ${resourceIdOf(selectedLog)}` : ""}
                     </span>
                   </div>
                   <div>

@@ -68,6 +68,7 @@ import {
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
+import { userLabel } from "@/lib/userLabel";
 
 const PAGE_SIZE = 20;
 const ALL = "all";
@@ -389,10 +390,10 @@ export default function PostManagement() {
                               <AvatarFallback>{initials(post.authorName)}</AvatarFallback>
                             </Avatar>
                             <div className="min-w-0">
-                              {/* Falls back to the raw id: a GDPR-erased author
-                                  still has posts that need moderating. */}
+                              {/* A GDPR-erased author still has posts that need
+                                  moderating — shown as "Unknown user", never by id. */}
                               <div className="truncate text-sm font-medium">
-                                {post.authorName ?? post.authorId}
+                                {userLabel({ name: post.authorName }, t("common.unknownUser"))}
                               </div>
                               <Badge variant="outline" className="mt-0.5 text-[10px]">
                                 {post.authorType}
@@ -668,7 +669,7 @@ function CommentsDialog({
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="text-sm font-medium">
-                      {comment.authorName ?? comment.authorId}
+                      {userLabel({ name: comment.authorName }, t("common.unknownUser"))}
                     </span>
                     <span className="text-xs text-muted-foreground">
                       {formatDate(comment.createdAt)}

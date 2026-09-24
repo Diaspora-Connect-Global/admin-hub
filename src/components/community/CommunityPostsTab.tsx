@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Check, X, Trash2, Eye, FileText, Loader2 } from "lucide-react";
 import { getStatusBadge } from "./statusBadge";
+import { userLabel } from "@/lib/userLabel";
 
 interface CommunityPost {
   id: string;
@@ -66,7 +67,7 @@ export function CommunityPostsTab({
                 {communityPosts.map((post) => (
                   <TableRow key={post.id} className="border-border/50">
                     <TableCell className="font-mono text-xs">{post.id}</TableCell>
-                    <TableCell>{post.authorName ?? post.authorId ?? "—"}</TableCell>
+                    <TableCell>{userLabel({ name: post.authorName }, t("common.unknownUser"))}</TableCell>
                     <TableCell className="max-w-[200px] truncate">{post.content ?? "—"}</TableCell>
                     <TableCell>{post.mediaCount != null ? `${post.mediaCount} file(s)` : "—"}</TableCell>
                     <TableCell>{post.likeCount}</TableCell>

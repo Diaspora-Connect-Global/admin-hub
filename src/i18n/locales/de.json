@@ -41,7 +41,9 @@
     "retry": "Erneut versuchen",
     "errorTitle": "Etwas ist schiefgelaufen",
     "errorLoading": "Daten konnten nicht geladen werden. Bitte versuchen Sie es erneut.",
-    "success": "Erfolg"
+    "success": "Erfolg",
+    "unknownUser": "Unbekannter Nutzer",
+    "system": "System"
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -295,7 +297,7 @@
         "reactor": "Reagiert von",
         "reactionColumn": "Reaktion",
         "reactedAt": "Reagiert am",
-        "reactorUnresolved": "Name nicht verfügbar – Konto-ID wird angezeigt",
+        "reactorUnresolved": "Name nicht verfügbar – das Konto wurde möglicherweise gelöscht.",
         "reactorDetailUnavailable": "Details zu den Reagierenden nicht verfügbar",
         "reactorDetailUnavailableHint": "Das Backend meldet, dass die einzelnen Reaktionszeilen hinter diesen Zahlen derzeit nicht gelesen werden können. Die Summen oben stimmen weiterhin – das bedeutet nicht, dass niemand reagiert hat."
       },
@@ -340,7 +342,6 @@
     "title": "Löschanfragen",
     "subtitle": "Benutzer, die die Löschung ihres Kontos beantragt haben",
     "columns": {
-      "userId": "Benutzer-ID",
       "email": "E-Mail",
       "requestedDate": "Beantragt",
       "status": "Status",

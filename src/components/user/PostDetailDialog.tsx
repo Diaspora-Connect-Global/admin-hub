@@ -21,6 +21,7 @@ import { Label } from "@/components/ui/label";
 import { LoadingState, ErrorState, EmptyState } from "@/components/common/StateViews";
 import { ListPager } from "@/components/community/ListPager";
 import { friendlyErrorMessage } from "@/lib/graphqlErrors";
+import { userLabel } from "@/lib/userLabel";
 import {
   useAdminGetPostEngagement,
   useAdminListPostReactions,
@@ -264,11 +265,12 @@ export function PostDetailDialog({ post, onClose }: PostDetailDialogProps) {
                       <TableBody>
                         {rows.map((r) => {
                           // displayName is null for GDPR-erased or otherwise
-                          // unresolvable accounts. Show the id — a blank cell
-                          // would read as "no reactor", which is never true of
-                          // a row that exists.
-                          const named = Boolean(r.displayName);
-                          const shown = r.displayName || r.userId;
+                          // unresolvable accounts. Show "Unknown user" — a
+                          // blank cell would read as "no reactor", which is
+                          // never true of a row that exists — and never the id.
+                          const shown = userLabel({ name: r.displayName }, "");
+                          const named = shown !== "";
+                          const label = shown || t("common.unknownUser");
                           const when = r.createdAt ? new Date(r.createdAt) : null;
                           const whenValid = when && !Number.isNaN(when.getTime());
                           return (
@@ -278,7 +280,7 @@ export function PostDetailDialog({ post, onClose }: PostDetailDialogProps) {
                                   <Avatar className="h-7 w-7">
                                     {r.avatarUrl ? <AvatarImage src={r.avatarUrl} alt="" /> : null}
                                     <AvatarFallback className="text-[10px]">
-                                      {initials(shown)}
+                                      {named ? initials(shown) : "?"}
                                     </AvatarFallback>
                                   </Avatar>
                                   <div className="min-w-0">
@@ -286,11 +288,10 @@ export function PostDetailDialog({ post, onClose }: PostDetailDialogProps) {
                                       className={
                                         named
                                           ? "truncate text-sm"
-                                          : "truncate font-mono text-xs text-muted-foreground"
+                                          : "truncate text-sm text-muted-foreground"
                                       }
-                                      title={r.userId}
                                     >
-                                      {shown}
+                                      {label}
                                     </p>
                                     {!named && (
                                       <p className="text-[11px] text-muted-foreground">
