@@ -47,6 +47,7 @@
     "dashboard": "Panel de control",
     "users": "Gestión de usuarios",
     "deletionRequests": "Solicitudes de eliminación",
+    "kycVerifications": "Verificaciones KYC",
     "vendors": "Gestión de vendedores",
     "communities": "Comunidades",
     "events": "Eventos",
@@ -354,6 +355,69 @@
     "loading": "Cargando solicitudes de eliminación...",
     "empty": "No se encontraron solicitudes de eliminación.",
     "error": "Error al cargar las solicitudes de eliminación.",
+    "showing": "Mostrando {{from}}-{{to}} de {{total}}",
+    "previous": "Anterior",
+    "next": "Siguiente"
+  },
+  "kycVerifications": {
+    "title": "Verificaciones KYC",
+    "subtitle": "Revisa las verificaciones de identidad y de empresas pendientes de decisión",
+    "tabs": {
+      "businesses": "Empresas",
+      "individuals": "Personas"
+    },
+    "filter": {
+      "PENDING": "Pendientes de revisión",
+      "APPROVED": "Aprobadas",
+      "REJECTED": "Rechazadas",
+      "ALL": "Todas"
+    },
+    "columns": {
+      "business": "Empresa",
+      "submittedBy": "Enviado por",
+      "owners": "Titulares reales",
+      "updated": "Actualizado",
+      "status": "Estado",
+      "actions": "Acciones",
+      "user": "Usuario",
+      "document": "Documento",
+      "submitted": "Enviado"
+    },
+    "businessStatus": {
+      "DOCUMENTS_SUBMITTED": "Enviada",
+      "UNDER_REVIEW": "En revisión",
+      "APPROVED": "Aprobada",
+      "REJECTED": "Rechazada",
+      "SUSPENDED": "Suspendida",
+      "NOT_STARTED": "No iniciada"
+    },
+    "individualStatus": {
+      "PENDING": "Pendiente",
+      "APPROVED": "Aprobada",
+      "REJECTED": "Rechazada"
+    },
+    "ownerKyc": {
+      "APPROVED": "Verificado",
+      "SUBMITTED": "Enviado",
+      "UNDER_REVIEW": "En revisión",
+      "REJECTED": "Rechazado",
+      "NOT_STARTED": "No verificado"
+    },
+    "approve": "Aprobar",
+    "reject": "Rechazar",
+    "cancel": "Cancelar",
+    "approveTitle": "¿Aprobar la verificación?",
+    "approveDescription": "{{name}} se marcará como verificado.",
+    "rejectTitle": "¿Rechazar la verificación?",
+    "rejectDescription": "{{name}} se marcará como rechazado y podrá enviarla de nuevo.",
+    "reasonLabel": "Motivo",
+    "reasonPlaceholder": "Explica por qué se rechazó esta verificación",
+    "approved": "Verificación aprobada",
+    "rejected": "Verificación rechazada",
+    "actionFailed": "No se pudo completar la acción",
+    "loading": "Cargando verificaciones...",
+    "empty": "No se encontraron verificaciones.",
+    "error": "No se pudieron cargar las verificaciones.",
     "showing": "Mostrando {{from}}-{{to}} de {{total}}",
     "previous": "Anterior",
     "next": "Siguiente"

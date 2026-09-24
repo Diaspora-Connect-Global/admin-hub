@@ -47,6 +47,7 @@
     "dashboard": "Tableau de bord",
     "users": "Gestion des utilisateurs",
     "deletionRequests": "Demandes de suppression",
+    "kycVerifications": "Vérifications KYC",
     "vendors": "Gestion des vendeurs",
     "communities": "Communautés",
     "events": "Événements",
@@ -355,6 +356,69 @@
     "empty": "Aucune demande de suppression trouvée.",
     "error": "Échec du chargement des demandes de suppression.",
     "showing": "Affichage de {{from}} à {{to}} sur {{total}}",
+    "previous": "Précédent",
+    "next": "Suivant"
+  },
+  "kycVerifications": {
+    "title": "Vérifications KYC",
+    "subtitle": "Examiner les vérifications d'identité et d'entreprise en attente de décision",
+    "tabs": {
+      "businesses": "Entreprises",
+      "individuals": "Particuliers"
+    },
+    "filter": {
+      "PENDING": "En attente d'examen",
+      "APPROVED": "Approuvées",
+      "REJECTED": "Rejetées",
+      "ALL": "Toutes"
+    },
+    "columns": {
+      "business": "Entreprise",
+      "submittedBy": "Soumis par",
+      "owners": "Bénéficiaires effectifs",
+      "updated": "Mis à jour",
+      "status": "Statut",
+      "actions": "Actions",
+      "user": "Utilisateur",
+      "document": "Document",
+      "submitted": "Soumis"
+    },
+    "businessStatus": {
+      "DOCUMENTS_SUBMITTED": "Soumise",
+      "UNDER_REVIEW": "En cours d'examen",
+      "APPROVED": "Approuvée",
+      "REJECTED": "Rejetée",
+      "SUSPENDED": "Suspendue",
+      "NOT_STARTED": "Non commencée"
+    },
+    "individualStatus": {
+      "PENDING": "En attente",
+      "APPROVED": "Approuvée",
+      "REJECTED": "Rejetée"
+    },
+    "ownerKyc": {
+      "APPROVED": "Vérifié",
+      "SUBMITTED": "Soumis",
+      "UNDER_REVIEW": "En cours d'examen",
+      "REJECTED": "Rejeté",
+      "NOT_STARTED": "Non vérifié"
+    },
+    "approve": "Approuver",
+    "reject": "Rejeter",
+    "cancel": "Annuler",
+    "approveTitle": "Approuver la vérification ?",
+    "approveDescription": "{{name}} sera marqué comme vérifié.",
+    "rejectTitle": "Rejeter la vérification ?",
+    "rejectDescription": "{{name}} sera marqué comme rejeté et pourra soumettre à nouveau.",
+    "reasonLabel": "Motif",
+    "reasonPlaceholder": "Expliquez pourquoi cette vérification a été rejetée",
+    "approved": "Vérification approuvée",
+    "rejected": "Vérification rejetée",
+    "actionFailed": "Impossible de terminer l'action",
+    "loading": "Chargement des vérifications...",
+    "empty": "Aucune vérification trouvée.",
+    "error": "Échec du chargement des vérifications.",
+    "showing": "{{from}}-{{to}} sur {{total}}",
     "previous": "Précédent",
     "next": "Suivant"
   },

@@ -47,6 +47,7 @@
     "dashboard": "Dashboard",
     "users": "Benutzerverwaltung",
     "deletionRequests": "Löschanfragen",
+    "kycVerifications": "KYC-Verifizierungen",
     "vendors": "Verkäuferverwaltung",
     "communities": "Gemeinschaften",
     "events": "Veranstaltungen",
@@ -355,6 +356,69 @@
     "empty": "Keine Löschanfragen gefunden.",
     "error": "Löschanfragen konnten nicht geladen werden.",
     "showing": "Zeige {{from}}-{{to}} von {{total}}",
+    "previous": "Zurück",
+    "next": "Weiter"
+  },
+  "kycVerifications": {
+    "title": "KYC-Verifizierungen",
+    "subtitle": "Identitäts- und Unternehmensverifizierungen prüfen, die auf eine Entscheidung warten",
+    "tabs": {
+      "businesses": "Unternehmen",
+      "individuals": "Personen"
+    },
+    "filter": {
+      "PENDING": "Prüfung ausstehend",
+      "APPROVED": "Genehmigt",
+      "REJECTED": "Abgelehnt",
+      "ALL": "Alle"
+    },
+    "columns": {
+      "business": "Unternehmen",
+      "submittedBy": "Eingereicht von",
+      "owners": "Wirtschaftlich Berechtigte",
+      "updated": "Aktualisiert",
+      "status": "Status",
+      "actions": "Aktionen",
+      "user": "Benutzer",
+      "document": "Dokument",
+      "submitted": "Eingereicht"
+    },
+    "businessStatus": {
+      "DOCUMENTS_SUBMITTED": "Eingereicht",
+      "UNDER_REVIEW": "In Prüfung",
+      "APPROVED": "Genehmigt",
+      "REJECTED": "Abgelehnt",
+      "SUSPENDED": "Gesperrt",
+      "NOT_STARTED": "Nicht begonnen"
+    },
+    "individualStatus": {
+      "PENDING": "Ausstehend",
+      "APPROVED": "Genehmigt",
+      "REJECTED": "Abgelehnt"
+    },
+    "ownerKyc": {
+      "APPROVED": "Verifiziert",
+      "SUBMITTED": "Eingereicht",
+      "UNDER_REVIEW": "In Prüfung",
+      "REJECTED": "Abgelehnt",
+      "NOT_STARTED": "Nicht verifiziert"
+    },
+    "approve": "Genehmigen",
+    "reject": "Ablehnen",
+    "cancel": "Abbrechen",
+    "approveTitle": "Verifizierung genehmigen?",
+    "approveDescription": "{{name}} wird als verifiziert markiert.",
+    "rejectTitle": "Verifizierung ablehnen?",
+    "rejectDescription": "{{name}} wird als abgelehnt markiert und kann erneut einreichen.",
+    "reasonLabel": "Grund",
+    "reasonPlaceholder": "Erklären Sie, warum diese Verifizierung abgelehnt wurde",
+    "approved": "Verifizierung genehmigt",
+    "rejected": "Verifizierung abgelehnt",
+    "actionFailed": "Aktion konnte nicht abgeschlossen werden",
+    "loading": "Verifizierungen werden geladen...",
+    "empty": "Keine Verifizierungen gefunden.",
+    "error": "Verifizierungen konnten nicht geladen werden.",
+    "showing": "{{from}}-{{to}} von {{total}}",
     "previous": "Zurück",
     "next": "Weiter"
   },

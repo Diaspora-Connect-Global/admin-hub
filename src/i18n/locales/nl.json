@@ -47,6 +47,7 @@
     "dashboard": "Dashboard",
     "users": "Gebruikersbeheer",
     "deletionRequests": "Verwijderingsverzoeken",
+    "kycVerifications": "KYC-verificaties",
     "vendors": "Verkopersbeheer",
     "communities": "Gemeenschappen",
     "events": "Evenementen",
@@ -355,6 +356,69 @@
     "empty": "Geen verwijderingsverzoeken gevonden.",
     "error": "Kan verwijderingsverzoeken niet laden.",
     "showing": "Toont {{from}}-{{to}} van {{total}}",
+    "previous": "Vorige",
+    "next": "Volgende"
+  },
+  "kycVerifications": {
+    "title": "KYC-verificaties",
+    "subtitle": "Beoordeel identiteits- en bedrijfsverificaties die op een besluit wachten",
+    "tabs": {
+      "businesses": "Bedrijven",
+      "individuals": "Personen"
+    },
+    "filter": {
+      "PENDING": "Wacht op beoordeling",
+      "APPROVED": "Goedgekeurd",
+      "REJECTED": "Afgewezen",
+      "ALL": "Alle"
+    },
+    "columns": {
+      "business": "Bedrijf",
+      "submittedBy": "Ingediend door",
+      "owners": "Uiteindelijk belanghebbenden",
+      "updated": "Bijgewerkt",
+      "status": "Status",
+      "actions": "Acties",
+      "user": "Gebruiker",
+      "document": "Document",
+      "submitted": "Ingediend"
+    },
+    "businessStatus": {
+      "DOCUMENTS_SUBMITTED": "Ingediend",
+      "UNDER_REVIEW": "In beoordeling",
+      "APPROVED": "Goedgekeurd",
+      "REJECTED": "Afgewezen",
+      "SUSPENDED": "Opgeschort",
+      "NOT_STARTED": "Niet gestart"
+    },
+    "individualStatus": {
+      "PENDING": "In afwachting",
+      "APPROVED": "Goedgekeurd",
+      "REJECTED": "Afgewezen"
+    },
+    "ownerKyc": {
+      "APPROVED": "Geverifieerd",
+      "SUBMITTED": "Ingediend",
+      "UNDER_REVIEW": "In beoordeling",
+      "REJECTED": "Afgewezen",
+      "NOT_STARTED": "Niet geverifieerd"
+    },
+    "approve": "Goedkeuren",
+    "reject": "Afwijzen",
+    "cancel": "Annuleren",
+    "approveTitle": "Verificatie goedkeuren?",
+    "approveDescription": "{{name}} wordt als geverifieerd gemarkeerd.",
+    "rejectTitle": "Verificatie afwijzen?",
+    "rejectDescription": "{{name}} wordt als afgewezen gemarkeerd en kan opnieuw indienen.",
+    "reasonLabel": "Reden",
+    "reasonPlaceholder": "Leg uit waarom deze verificatie is afgewezen",
+    "approved": "Verificatie goedgekeurd",
+    "rejected": "Verificatie afgewezen",
+    "actionFailed": "De actie kon niet worden voltooid",
+    "loading": "Verificaties laden...",
+    "empty": "Geen verificaties gevonden.",
+    "error": "Verificaties konden niet worden geladen.",
+    "showing": "{{from}}-{{to}} van {{total}}",
     "previous": "Vorige",
     "next": "Volgende"
   },

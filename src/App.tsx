@@ -26,6 +26,7 @@ const Opportunities = lazy(() => import("./pages/Opportunities"));
 const UserManagement = lazy(() => import("./pages/UserManagement"));
 const UserDetail = lazy(() => import("./pages/UserDetail"));
 const DeletionRequests = lazy(() => import("./pages/DeletionRequests"));
+const KycVerifications = lazy(() => import("./pages/KycVerifications"));
 const Associations = lazy(() => import("./pages/Associations"));
 const AssociationDetail = lazy(() => import("./pages/AssociationDetail"));
 const VendorManagement = lazy(() => import("./pages/VendorManagement"));
@@ -86,6 +87,7 @@ const App = () => (
                   <Route path="/users" element={<UserManagement />} />
                   <Route path="/users/:id" element={<UserDetail />} />
                   <Route path="/deletion-requests" element={<DeletionRequests />} />
+                  <Route path="/kyc" element={<KycVerifications />} />
                   <Route path="/chats" element={<ChatManagement />} />
                   <Route path="/escrow" element={<EscrowManagement />} />
                   {/* Escrow Wallet / Ledger / Payout (escrow-service) */}

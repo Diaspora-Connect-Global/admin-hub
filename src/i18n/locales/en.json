@@ -47,6 +47,7 @@
     "dashboard": "Dashboard",
     "users": "User Management",
     "deletionRequests": "Deletion Requests",
+    "kycVerifications": "KYC Verifications",
     "vendors": "Vendor Management",
     "communities": "Communities",
     "events": "Events",
@@ -354,6 +355,69 @@
     "loading": "Loading deletion requests...",
     "empty": "No deletion requests found.",
     "error": "Failed to load deletion requests.",
+    "showing": "Showing {{from}}-{{to}} of {{total}}",
+    "previous": "Previous",
+    "next": "Next"
+  },
+  "kycVerifications": {
+    "title": "KYC Verifications",
+    "subtitle": "Review identity and business verifications awaiting a decision",
+    "tabs": {
+      "businesses": "Businesses",
+      "individuals": "Individuals"
+    },
+    "filter": {
+      "PENDING": "Awaiting review",
+      "APPROVED": "Approved",
+      "REJECTED": "Rejected",
+      "ALL": "All"
+    },
+    "columns": {
+      "business": "Business",
+      "submittedBy": "Submitted by",
+      "owners": "Beneficial owners",
+      "updated": "Updated",
+      "status": "Status",
+      "actions": "Actions",
+      "user": "User",
+      "document": "Document",
+      "submitted": "Submitted"
+    },
+    "businessStatus": {
+      "DOCUMENTS_SUBMITTED": "Submitted",
+      "UNDER_REVIEW": "Under review",
+      "APPROVED": "Approved",
+      "REJECTED": "Rejected",
+      "SUSPENDED": "Suspended",
+      "NOT_STARTED": "Not started"
+    },
+    "individualStatus": {
+      "PENDING": "Pending",
+      "APPROVED": "Approved",
+      "REJECTED": "Rejected"
+    },
+    "ownerKyc": {
+      "APPROVED": "Verified",
+      "SUBMITTED": "Submitted",
+      "UNDER_REVIEW": "Under review",
+      "REJECTED": "Rejected",
+      "NOT_STARTED": "Not verified"
+    },
+    "approve": "Approve",
+    "reject": "Reject",
+    "cancel": "Cancel",
+    "approveTitle": "Approve verification?",
+    "approveDescription": "{{name}} will be marked as verified.",
+    "rejectTitle": "Reject verification?",
+    "rejectDescription": "{{name}} will be marked as rejected and can submit again.",
+    "reasonLabel": "Reason",
+    "reasonPlaceholder": "Explain why this verification was rejected",
+    "approved": "Verification approved",
+    "rejected": "Verification rejected",
+    "actionFailed": "Could not complete the action",
+    "loading": "Loading verifications...",
+    "empty": "No verifications found.",
+    "error": "Failed to load verifications.",
     "showing": "Showing {{from}}-{{to}} of {{total}}",
     "previous": "Previous",
     "next": "Next"
