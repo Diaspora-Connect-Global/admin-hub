@@ -46,6 +46,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
+import { friendlyErrorMessage } from "@/lib/graphqlErrors";
 import {
   useListVendors,
   useGetVendorDashboard,
@@ -251,8 +252,10 @@ export default function VendorManagement() {
     try {
       await approveKyc({ variables: { vendorId: selectedVendor.id } });
       toast({ title: "Success", description: "KYC approved successfully." });
-    } catch {
-      toast({ title: "Error", description: "Failed to approve KYC.", variant: "destructive" });
+    } catch (error) {
+      // The backend now refuses (rather than silently "succeeding") when the
+      // vendor has no KYC to approve — show why.
+      toast({ title: "Error", description: friendlyErrorMessage(error, "Failed to approve KYC."), variant: "destructive" });
     }
   };
 
@@ -265,8 +268,8 @@ export default function VendorManagement() {
       toast({ title: "Success", description: "KYC rejected." });
       setIsRejectKycModalOpen(false);
       setRejectKycReason("");
-    } catch {
-      toast({ title: "Error", description: "Failed to reject KYC.", variant: "destructive" });
+    } catch (error) {
+      toast({ title: "Error", description: friendlyErrorMessage(error, "Failed to reject KYC."), variant: "destructive" });
     }
   };
 
