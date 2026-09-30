@@ -1,18 +1,20 @@
 import { Link, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { Settings, Brain } from "lucide-react";
+import { Settings, Brain, Send } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAdminAuth } from "@/hooks/auth/useAdminAuth";
 
 /**
  * Shared sub-navigation for the Settings section. Rendered at the top of each
- * settings page (SystemSettings, AiConfiguration) so the routes read as one
- * tabbed area. The AI tab is system-admin only, mirroring the sidebar gating.
+ * settings page (SystemSettings, AiConfiguration, OtpDeliverySettings) so the
+ * routes read as one tabbed area. The AI and OTP tabs are system-admin only,
+ * mirroring the sidebar gating.
  * (Provider-key tabs were removed — provider keys now live in Secret Manager.)
  */
 const SETTINGS_TABS = [
   { titleKey: "nav.settings", icon: Settings, path: "/settings", exact: true },
   { titleKey: "nav.aiConfig", icon: Brain, path: "/settings/ai", systemAdminOnly: true },
+  { titleKey: "nav.otpSettings", icon: Send, path: "/settings/otp", systemAdminOnly: true },
 ];
 
 export function SettingsTabs() {

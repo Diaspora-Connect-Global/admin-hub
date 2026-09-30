@@ -5048,3 +5048,70 @@ export interface GrantCircleSubscriptionInput {
   expiresAt?: string;
 }
 // ===== End Circles (circle-service) =========================================
+
+// ===== OTP Delivery (auth-service, via api-gateway) ==========================
+// Per-channel country policy for one-time verification codes. Server default:
+// email ALL / sms NONE. Server rule (not client-enforced): a country allowed by
+// neither channel still gets its code by EMAIL, so nobody is locked out.
+
+export type OtpChannelMode = "ALL" | "NONE" | "LIST";
+
+export interface OtpChannelPolicy {
+  mode: OtpChannelMode;
+  /** ISO 3166-1 alpha-2, uppercase. Only meaningful when mode === "LIST". */
+  countries: string[];
+}
+
+export interface OtpSettings {
+  email: OtpChannelPolicy;
+  sms: OtpChannelPolicy;
+  /** ISO timestamp; null/undefined if never changed. */
+  updatedAt?: string | null;
+  /** Display name only — never a user id. Null if never changed. */
+  updatedByName?: string | null;
+}
+
+export interface OtpChannelPolicyInput {
+  mode: OtpChannelMode;
+  countries: string[];
+}
+
+export interface UpdateOtpSettingsInput {
+  email: OtpChannelPolicyInput;
+  sms: OtpChannelPolicyInput;
+}
+
+export const GET_ADMIN_OTP_SETTINGS = gql`
+  query AdminOtpSettings {
+    adminOtpSettings {
+      email {
+        mode
+        countries
+      }
+      sms {
+        mode
+        countries
+      }
+      updatedAt
+      updatedByName
+    }
+  }
+`;
+
+export const UPDATE_OTP_SETTINGS = gql`
+  mutation UpdateOtpSettings($input: UpdateOtpSettingsInput!) {
+    updateOtpSettings(input: $input) {
+      email {
+        mode
+        countries
+      }
+      sms {
+        mode
+        countries
+      }
+      updatedAt
+      updatedByName
+    }
+  }
+`;
+// ===== End OTP Delivery =======================================================

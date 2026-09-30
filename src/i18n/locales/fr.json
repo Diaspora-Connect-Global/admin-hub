@@ -71,6 +71,7 @@
     "systemHealth": "État du système",
     "settings": "Paramètres système",
     "aiConfig": "Configuration IA",
+    "otpSettings": "Envoi des OTP",
     "openMenu": "Ouvrir le menu",
     "collapseSidebar": "Réduire la barre latérale",
     "expandSidebar": "Développer la barre latérale",

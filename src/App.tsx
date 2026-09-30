@@ -42,6 +42,7 @@ const RolesPermissions = lazy(() => import("./pages/RolesPermissions"));
 const Reports = lazy(() => import("./pages/Reports"));
 const ChatManagement = lazy(() => import("./pages/ChatManagement"));
 const AiConfiguration = lazy(() => import("./pages/AiConfiguration"));
+const OtpDeliverySettings = lazy(() => import("./pages/OtpDeliverySettings"));
 // Circles oversight + plan catalogue (circle-service). System-admin-only:
 // `adminCircles` is the only read that returns suspended and non-discoverable
 // circles, and the whole CircleAdminService tier is
@@ -97,6 +98,7 @@ const App = () => (
                   <Route path="/reports" element={<Reports />} />
                   <Route path="/settings" element={<SystemSettings />} />
                   <Route path="/settings/ai" element={<AiConfiguration />} />
+                  <Route path="/settings/otp" element={<OtpDeliverySettings />} />
                   <Route path="/notifications" element={<NotificationsBroadcasts />} />
                   <Route path="/audit" element={<AuditLogs />} />
                   <Route path="/support" element={<SupportTicketing />} />

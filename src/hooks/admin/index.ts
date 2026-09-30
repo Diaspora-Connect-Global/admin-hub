@@ -747,3 +747,12 @@ export {
   type SetCirclePlanEntitlementInput,
 } from "./useCirclePlans";
 // ===== End Circles (circle-service) =====
+
+export {
+  useAdminOtpSettings,
+  useUpdateOtpSettings,
+  type OtpSettings,
+  type OtpChannelPolicy,
+  type OtpChannelMode,
+  type UpdateOtpSettingsInput,
+} from "./useOtpSettings";

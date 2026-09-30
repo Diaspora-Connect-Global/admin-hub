@@ -71,6 +71,7 @@
     "systemHealth": "Systemstatus",
     "settings": "Systemeinstellungen",
     "aiConfig": "KI-Konfiguration",
+    "otpSettings": "OTP-Zustellung",
     "openMenu": "Menü öffnen",
     "collapseSidebar": "Seitenleiste einklappen",
     "expandSidebar": "Seitenleiste ausklappen",
