@@ -17,6 +17,7 @@ import {
 } from "@/hooks/admin";
 import { useToast } from "@/hooks/use-toast";
 import { AdminLayout } from "@/components/layout/AdminLayout";
+import { PrivateReplySettingsCard } from "@/components/settings/PrivateReplySettingsCard";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
@@ -275,9 +276,10 @@ export default function ChatManagement() {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-3 lg:w-auto lg:inline-grid">
+          <TabsList className="grid w-full grid-cols-4 lg:w-auto lg:inline-grid">
             <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
             <TabsTrigger value="flagged">Flagged Chats</TabsTrigger>
+            <TabsTrigger value="private-replies">Private Replies</TabsTrigger>
             <TabsTrigger value="settings">Settings</TabsTrigger>
           </TabsList>
 
@@ -758,6 +760,11 @@ export default function ChatManagement() {
                 )}
               </CardContent>
             </Card>
+          </TabsContent>
+
+          {/* Private Replies Tab */}
+          <TabsContent value="private-replies" className="space-y-6">
+            <PrivateReplySettingsCard />
           </TabsContent>
 
           {/* Settings Tab */}

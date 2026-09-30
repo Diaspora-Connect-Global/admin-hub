@@ -5,6 +5,8 @@ import {
   FLAG_CONVERSATION,
   REVIEW_CONVERSATION,
   UPDATE_CHAT_SETTING,
+  GET_ADMIN_PRIVATE_REPLY_SETTINGS,
+  UPDATE_PRIVATE_REPLY_SETTINGS,
   LIST_DM_CONVERSATIONS,
   LIST_GROUP_CONVERSATIONS,
   GET_CONVERSATION_MEMBERS,
@@ -12,6 +14,9 @@ import {
   BAN_USER_FROM_CONVERSATION,
   type FlaggedConversation,
   type ChatSetting,
+  type PrivateReplySettings,
+  type PrivateReplyMemberManagement,
+  type UpdatePrivateReplySettingsInput,
   type AdminDMConversationItem,
   type AdminGroupConversationItem,
   type ConversationMemberItem,
@@ -22,6 +27,9 @@ import {
 export type {
   FlaggedConversation,
   ChatSetting,
+  PrivateReplySettings,
+  PrivateReplyMemberManagement,
+  UpdatePrivateReplySettingsInput,
   AdminDMConversationItem,
   AdminGroupConversationItem,
   ConversationMemberItem,
@@ -70,6 +78,22 @@ export function useUpdateChatSetting() {
     { input: { key: string; value: string } }
   >(UPDATE_CHAT_SETTING, {
     refetchQueries: [{ query: GET_CHAT_SETTINGS }],
+  });
+}
+
+/** Platform-wide rules for private replies inside group chats. Admin-only. */
+export function useAdminPrivateReplySettings() {
+  return useQuery<{ adminPrivateReplySettings: PrivateReplySettings }>(
+    GET_ADMIN_PRIVATE_REPLY_SETTINGS
+  );
+}
+
+export function useUpdatePrivateReplySettings() {
+  return useMutation<
+    { updatePrivateReplySettings: PrivateReplySettings },
+    { input: UpdatePrivateReplySettingsInput }
+  >(UPDATE_PRIVATE_REPLY_SETTINGS, {
+    refetchQueries: [{ query: GET_ADMIN_PRIVATE_REPLY_SETTINGS }],
   });
 }
 

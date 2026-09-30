@@ -1,8 +1,28 @@
-/** Apollo `errorPolicy: "all"` can resolve with `errors` set — surface them instead of showing a false success. */
+/**
+ * Apollo `errorPolicy: "all"` can resolve a query/mutation instead of
+ * rejecting it — surface the failure explicitly instead of showing a false
+ * success.
+ *
+ * The resolved shape depends on the installed Apollo Client major version:
+ * v3 put the GraphQL errors in a top-level `errors` array; **v4 (what this
+ * app uses) puts a single `error` — a `CombinedGraphQLErrors` instance —
+ * on the result instead**, and that array-shaped `errors` field is absent.
+ * A check that only looked for `.errors` would never fire under v4, silently
+ * treating every refused mutation as a success. Check both.
+ */
 export function throwIfGraphQLErrors(result: unknown, operationLabel: string): void {
-  const errors = (result as { errors?: ReadonlyArray<{ message?: string }> | undefined })?.errors;
-  if (!errors?.length) return;
-  const msg = errors.map((e) => e.message ?? "Unknown GraphQL error").join("; ");
+  const r = result as
+    | {
+        errors?: ReadonlyArray<{ message?: string }>;
+        error?: { message?: string; errors?: ReadonlyArray<{ message?: string }> };
+      }
+    | undefined;
+
+  if (r?.error) {
+    throw new Error(`${operationLabel}: ${r.error.message ?? "Unknown GraphQL error"}`);
+  }
+  if (!r?.errors?.length) return;
+  const msg = r.errors.map((e) => e.message ?? "Unknown GraphQL error").join("; ");
   throw new Error(`${operationLabel}: ${msg}`);
 }
 

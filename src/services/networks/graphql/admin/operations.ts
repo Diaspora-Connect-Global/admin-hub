@@ -2940,6 +2940,51 @@ export const UPDATE_CHAT_SETTING = gql`
   }
 `;
 
+// ─── Private Replies (platform-wide group-chat private-reply rules) ──────────
+
+/** NOBODY = fixed membership once started; STARTER = the person who opened it (default); GROUP_ADMINS = owner/admins of the group. */
+export type PrivateReplyMemberManagement = "NOBODY" | "STARTER" | "GROUP_ADMINS";
+
+export interface PrivateReplySettings {
+  maxMembers: number;
+  memberManagement: PrivateReplyMemberManagement;
+  newMembersSeeHistory: boolean;
+  /** ISO timestamp; null/undefined if never changed. */
+  updatedAt?: string | null;
+  /** Display name only — never a user id. Null if never changed. */
+  updatedByName?: string | null;
+}
+
+export interface UpdatePrivateReplySettingsInput {
+  maxMembers: number;
+  memberManagement: PrivateReplyMemberManagement;
+  newMembersSeeHistory: boolean;
+}
+
+export const GET_ADMIN_PRIVATE_REPLY_SETTINGS = gql`
+  query AdminPrivateReplySettings {
+    adminPrivateReplySettings {
+      maxMembers
+      memberManagement
+      newMembersSeeHistory
+      updatedAt
+      updatedByName
+    }
+  }
+`;
+
+export const UPDATE_PRIVATE_REPLY_SETTINGS = gql`
+  mutation UpdatePrivateReplySettings($input: UpdatePrivateReplySettingsInput!) {
+    updatePrivateReplySettings(input: $input) {
+      maxMembers
+      memberManagement
+      newMembersSeeHistory
+      updatedAt
+      updatedByName
+    }
+  }
+`;
+
 // ─── Admin Conversation Listing ───────────────────────────────────────────
 
 export interface AdminDMConversationItem {
