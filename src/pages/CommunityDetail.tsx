@@ -61,7 +61,7 @@ import { useGetEventsByOwner } from "@/hooks/events";
 import { useListOpportunities } from "@/hooks/opportunity";
 import { OwnerType } from "@/types/opportunities";
 import {
-  ArrowLeft, Edit, Link2, UserPlus, Pause, Eye, Check, X, Trash2,
+  ArrowLeft, Edit, Link2, UserPlus, Pause, Play, Eye, Check, X, Trash2,
   MoreHorizontal, Download, Store, Unlink, Globe, Calendar, Users,
   FileText, Briefcase, History, Shield, Building2, Loader2, Upload,
   ChevronLeft, ChevronRight,
@@ -75,6 +75,7 @@ import { CommunityVendorTab } from "@/components/community/CommunityVendorTab";
 import { CommunityServicesTab } from "@/components/community/CommunityServicesTab";
 import { CommunityAuditTab } from "@/components/community/CommunityAuditTab";
 import { EditCommunityDialog } from "@/components/community/EditCommunityDialog";
+import { SuspendCommunityDialog } from "@/components/community/SuspendCommunityDialog";
 import { LinkAssociationDialog, AssignAdminDialog } from "@/components/community/CommunityAdminDialogs";
 import { uploadCommunityAvatar, uploadCommunityCover } from "@/lib/communityImageUpload";
 import { friendlyErrorMessage } from "@/lib/graphqlErrors";
@@ -985,6 +986,9 @@ export default function CommunityDetail() {
                     {community.communityType.name}
                   </Badge>
                 )}
+                {community.isSuspended && (
+                  <Badge variant="destructive">{t("communities.suspended")}</Badge>
+                )}
               </div>
               <p className="text-sm text-muted-foreground mt-1 flex items-center gap-1">
                 <Globe className="h-3 w-3" /> {countryLabel}
@@ -995,7 +999,11 @@ export default function CommunityDetail() {
             <Button variant="outline" onClick={() => setEditOpen(true)}><Edit className="mr-2 h-4 w-4" /> Edit</Button>
             <Button variant="outline" onClick={() => setLinkAssociationOpen(true)}><Link2 className="mr-2 h-4 w-4" /> Link Associations</Button>
             <Button variant="outline" onClick={() => setAssignAdminOpen(true)}><UserPlus className="mr-2 h-4 w-4" /> Assign Admins</Button>
-            <Button variant="destructive" onClick={() => setSuspendOpen(true)}><Pause className="mr-2 h-4 w-4" /> Suspend</Button>
+            {community.isSuspended ? (
+              <Button variant="outline" onClick={() => setSuspendOpen(true)}><Play className="mr-2 h-4 w-4" /> {t("communities.unsuspend")}</Button>
+            ) : (
+              <Button variant="destructive" onClick={() => setSuspendOpen(true)}><Pause className="mr-2 h-4 w-4" /> {t("communities.suspend")}</Button>
+            )}
           </div>
         </div>
 
@@ -1189,36 +1197,13 @@ export default function CommunityDetail() {
         </DialogContent>
       </Dialog>
 
-      {/* Suspend Modal */}
-      <Dialog open={suspendOpen} onOpenChange={setSuspendOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Suspend Community</DialogTitle>
-            <DialogDescription>Suspending will block all posting and vendor activity.</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>Reason <span className="text-destructive">*</span></Label>
-              <Textarea placeholder="Enter reason for suspension..." />
-            </div>
-            <div className="space-y-2">
-              <Label>Duration</Label>
-              <Select defaultValue="indefinite">
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent className="bg-popover border-border">
-                  <SelectItem value="indefinite">Indefinite</SelectItem>
-                  <SelectItem value="7days">7 days</SelectItem>
-                  <SelectItem value="30days">30 days</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setSuspendOpen(false)}>Cancel</Button>
-            <Button variant="destructive" onClick={() => { toast({ title: "Community Suspended" }); setSuspendOpen(false); }}>Suspend</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Suspend / unsuspend community */}
+      <SuspendCommunityDialog
+        community={{ id: community.id, name: community.name, isSuspended: community.isSuspended }}
+        open={suspendOpen}
+        onOpenChange={setSuspendOpen}
+        onChanged={() => refetch()}
+      />
 
       {/* Invite Member Modal */}
       <Dialog open={inviteMemberOpen} onOpenChange={setInviteMemberOpen}>

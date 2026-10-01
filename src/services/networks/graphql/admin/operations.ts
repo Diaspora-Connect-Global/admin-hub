@@ -670,6 +670,8 @@ export interface Community {
   whoCanPost?: string;
   /** Member-facing services enabled for this community. Null/undefined on legacy records. */
   enabledServices?: string[] | null;
+  /** True while a platform suspension is in force (content, joining and discovery closed). */
+  isSuspended?: boolean | null;
 }
 
 /** CommunityListResponse (listCommunities). */
@@ -705,6 +707,7 @@ export const LIST_COMMUNITIES = gql`
         memberCount
         membershipStatus
         createdAt
+        isSuspended
       }
       total
     }
@@ -782,6 +785,40 @@ export const GET_COMMUNITY = gql`
       website
       whoCanPost
       enabledServices
+      isSuspended
+    }
+  }
+`;
+
+/** Result of suspendCommunity / unsuspendCommunity (CommunityOperationResponse). */
+export interface CommunitySuspensionResult {
+  success: boolean;
+  message?: string | null;
+  timestamp?: string | null;
+}
+
+/**
+ * Platform takedown of a whole community (platform admins only). Leaves
+ * visibility, join policy and memberships untouched, so unsuspending restores
+ * the community exactly as it was. `reason` is optional.
+ */
+export const SUSPEND_COMMUNITY = gql`
+  mutation SuspendCommunity($input: SuspendCommunityInput!) {
+    suspendCommunity(input: $input) {
+      success
+      message
+      timestamp
+    }
+  }
+`;
+
+/** Lifts a platform suspension (platform admins only). */
+export const UNSUSPEND_COMMUNITY = gql`
+  mutation UnsuspendCommunity($input: UnsuspendCommunityInput!) {
+    unsuspendCommunity(input: $input) {
+      success
+      message
+      timestamp
     }
   }
 `;

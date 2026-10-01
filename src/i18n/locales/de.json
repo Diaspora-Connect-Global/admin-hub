@@ -587,7 +587,17 @@
       "embassyCountryPlaceholder": "Land auswählen, das diese Botschaft vertritt",
       "locationCountry": "Standortland (Wo die Botschaft ist)",
       "locationCountryPlaceholder": "Land auswählen, wo die Botschaft sich befindet"
-    }
+    },
+    "unsuspend": "Sperre aufheben",
+    "unsuspendCommunity": "Sperre der Gemeinschaft aufheben",
+    "unsuspendConfirm": "Die Sperre von {{name}} aufheben? Inhalte, Beitritt und Auffindbarkeit werden genau wie zuvor wieder geöffnet.",
+    "communityUnsuspended": "Sperre aufgehoben",
+    "communityUnsuspendedDesc": "{{name}} ist wieder aktiv.",
+    "suspendEffect": "Während der Sperre sehen nur Plattform-Admins und die eigenen Admins der Gemeinschaft ihre Inhalte, niemand kann neu beitreten und sie ist in der Suche nicht auffindbar. Mitglieder und Einstellungen bleiben erhalten.",
+    "suspendReasonOptional": "Grund (optional)",
+    "suspendReasonPlaceholder": "Warum wird diese Gemeinschaft gesperrt?",
+    "suspendFailed": "Die Gemeinschaft konnte nicht gesperrt werden",
+    "unsuspendFailed": "Die Sperre der Gemeinschaft konnte nicht aufgehoben werden"
   },
   "associations": {
     "title": "Verbände",

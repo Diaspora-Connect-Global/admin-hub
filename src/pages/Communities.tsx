@@ -16,7 +16,7 @@ import { Switch } from "@/components/ui/switch";
 import { Card, CardContent } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { MultiSelect } from "@/components/ui/multi-select";
-import { Search, Plus, MoreHorizontal, Eye, Edit, Link2, Pause, ChevronDown, Download, FileJson, BarChart3, Trash2, Upload, Globe, Loader2, X } from "lucide-react";
+import { Search, Plus, MoreHorizontal, Eye, Edit, Link2, Pause, Play, ChevronDown, Download, FileJson, BarChart3, Trash2, Upload, Globe, Loader2, X } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { friendlyErrorMessage } from "@/lib/graphqlErrors";
 import { useCreateCommunity, useDiscoverAssociations, useGetUsers, useListCommunities, useGetPlatformSettings } from "@/hooks/admin";
@@ -25,6 +25,7 @@ import { uploadCommunityAvatar, uploadCommunityCover } from "@/lib/communityImag
 import { useListCommunityTypes } from "@/hooks/admin/useEntityTypes";
 import type { CreateCommunityInput, Community, CommunityType } from "@/services/networks/graphql/admin";
 import { ServiceCheckboxGrid } from "@/components/services/ServiceCheckboxGrid";
+import { SuspendCommunityDialog } from "@/components/community/SuspendCommunityDialog";
 import { ALL_SERVICE_KEYS, parseServiceKeys, sortServiceKeys } from "@/constants/communityServices";
 import {
   countriesServedLabelsToIso2,
@@ -47,6 +48,7 @@ interface CommunityRow {
   eventsCount: number;
   vendorEnabled: boolean;
   createdAt: string;
+  isSuspended: boolean;
 }
 
 function mapCommunityToRow(c: Community): CommunityRow {
@@ -63,6 +65,7 @@ function mapCommunityToRow(c: Community): CommunityRow {
     eventsCount: 0,
     vendorEnabled: false,
     createdAt: c.createdAt ?? "",
+    isSuspended: c.isSuspended === true,
   };
 }
 
@@ -389,12 +392,6 @@ export default function Communities() {
     }
   };
 
-  const handleSuspend = () => {
-    toast({ title: t('communities.communitySuspended'), description: t('communities.communitySuspendedDesc', { name: selectedCommunity?.name }) });
-    setSuspendModalOpen(false);
-    setSelectedCommunity(null);
-  };
-
   const handleLinkAssociation = () => {
     toast({ title: t('communities.associationLinked'), description: t('communities.associationLinkedDesc') });
     setLinkAssociationOpen(false);
@@ -588,7 +585,14 @@ export default function Communities() {
                           onCheckedChange={(checked) => handleSelectCommunity(community.id, checked as boolean)}
                         />
                       </TableCell>
-                      <TableCell className="font-medium">{community.name}</TableCell>
+                      <TableCell className="font-medium">
+                        <div className="flex items-center gap-2">
+                          <span>{community.name}</span>
+                          {community.isSuspended && (
+                            <Badge variant="destructive" className="text-xs whitespace-nowrap">{t('communities.suspended')}</Badge>
+                          )}
+                        </div>
+                      </TableCell>
                       <TableCell>
                         {community.type !== "—" ? (
                           <Badge variant="outline" className="text-xs whitespace-nowrap">{community.type}</Badge>
@@ -653,9 +657,15 @@ export default function Communities() {
                               </DropdownMenuItem>
                               <DropdownMenuItem><BarChart3 className="mr-2 h-4 w-4" /> {t('communities.viewAnalytics')}</DropdownMenuItem>
                               <DropdownMenuSeparator />
-                              <DropdownMenuItem className="text-destructive" onClick={() => { setSelectedCommunity(community); setSuspendModalOpen(true); }}>
-                                <Pause className="mr-2 h-4 w-4" /> {t('communities.suspend')}
-                              </DropdownMenuItem>
+                              {community.isSuspended ? (
+                                <DropdownMenuItem onClick={() => { setSelectedCommunity(community); setSuspendModalOpen(true); }}>
+                                  <Play className="mr-2 h-4 w-4" /> {t('communities.unsuspend')}
+                                </DropdownMenuItem>
+                              ) : (
+                                <DropdownMenuItem className="text-destructive" onClick={() => { setSelectedCommunity(community); setSuspendModalOpen(true); }}>
+                                  <Pause className="mr-2 h-4 w-4" /> {t('communities.suspend')}
+                                </DropdownMenuItem>
+                              )}
                               <DropdownMenuItem className="text-destructive">
                                 <Trash2 className="mr-2 h-4 w-4" /> {t('communities.deleteCommunity')}
                               </DropdownMenuItem>
@@ -1146,25 +1156,13 @@ export default function Communities() {
         </DialogContent>
       </Dialog>
 
-      {/* Suspend Community Modal */}
-      <Dialog open={suspendModalOpen} onOpenChange={setSuspendModalOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>{t('communities.suspendCommunity')}</DialogTitle>
-            <DialogDescription>{t('communities.suspendConfirm', { name: selectedCommunity?.name })}</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>{t('communities.suspendReason')} <span className="text-destructive">*</span></Label>
-              <Textarea placeholder={t('communities.suspendReason') + "..."} />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setSuspendModalOpen(false)}>{t('common.cancel')}</Button>
-            <Button variant="destructive" onClick={handleSuspend}>{t('communities.suspend')}</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Suspend / unsuspend community */}
+      <SuspendCommunityDialog
+        community={selectedCommunity}
+        open={suspendModalOpen}
+        onOpenChange={setSuspendModalOpen}
+        onChanged={() => refetchCommunities()}
+      />
     </AdminLayout>
   );
 }

@@ -587,7 +587,17 @@
       "embassyCountryPlaceholder": "Select the country this embassy represents",
       "locationCountry": "Location Country (Where Embassy is Based)",
       "locationCountryPlaceholder": "Select the country where the embassy is located"
-    }
+    },
+    "unsuspend": "Unsuspend",
+    "unsuspendCommunity": "Unsuspend Community",
+    "unsuspendConfirm": "Lift the suspension of {{name}}? Its content, joining and discovery reopen exactly as they were.",
+    "communityUnsuspended": "Community unsuspended",
+    "communityUnsuspendedDesc": "{{name}} is active again.",
+    "suspendEffect": "While suspended, only platform admins and the community's own admins can see its content, nobody new can join, and it is hidden from discovery. Members and settings are kept.",
+    "suspendReasonOptional": "Reason (optional)",
+    "suspendReasonPlaceholder": "Why is this community being suspended?",
+    "suspendFailed": "Couldn't suspend the community",
+    "unsuspendFailed": "Couldn't unsuspend the community"
   },
   "associations": {
     "title": "Associations",

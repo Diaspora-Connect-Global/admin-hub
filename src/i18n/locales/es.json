@@ -587,7 +587,17 @@
       "embassyCountryPlaceholder": "Seleccione el país que representa esta embajada",
       "locationCountry": "País de ubicación (Donde está la embajada)",
       "locationCountryPlaceholder": "Seleccione el país donde está ubicada la embajada"
-    }
+    },
+    "unsuspend": "Reactivar",
+    "unsuspendCommunity": "Reactivar comunidad",
+    "unsuspendConfirm": "¿Levantar la suspensión de {{name}}? Su contenido, las nuevas incorporaciones y su visibilidad vuelven a estar como antes.",
+    "communityUnsuspended": "Suspensión levantada",
+    "communityUnsuspendedDesc": "{{name}} vuelve a estar activa.",
+    "suspendEffect": "Mientras esté suspendida, solo los administradores de la plataforma y los de la propia comunidad pueden ver su contenido, nadie nuevo puede unirse y no aparece en el descubrimiento. Se conservan los miembros y la configuración.",
+    "suspendReasonOptional": "Motivo (opcional)",
+    "suspendReasonPlaceholder": "¿Por qué se suspende esta comunidad?",
+    "suspendFailed": "No se pudo suspender la comunidad",
+    "unsuspendFailed": "No se pudo levantar la suspensión de la comunidad"
   },
   "associations": {
     "title": "Asociaciones",

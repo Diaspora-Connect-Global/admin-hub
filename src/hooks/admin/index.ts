@@ -28,6 +28,8 @@ import {
   UNBOOST_CONTENT,
   GET_COMMUNITY,
   LIST_COMMUNITIES,
+  SUSPEND_COMMUNITY,
+  UNSUSPEND_COMMUNITY,
   DISCOVER_ASSOCIATIONS,
   CREATE_COMMUNITY,
   CREATE_ASSOCIATION,
@@ -302,6 +304,19 @@ export function useGetCommunity(id: string | null) {
     variables: { id: id ?? "" },
     skip: !id,
   });
+}
+
+/** Platform suspension of a community. Callers must check the result (errorPolicy "all"). */
+export function useSuspendCommunity() {
+  return useMutation<{
+    suspendCommunity: import("@/services/networks/graphql/admin").CommunitySuspensionResult;
+  }>(SUSPEND_COMMUNITY);
+}
+
+export function useUnsuspendCommunity() {
+  return useMutation<{
+    unsuspendCommunity: import("@/services/networks/graphql/admin").CommunitySuspensionResult;
+  }>(UNSUSPEND_COMMUNITY);
 }
 
 export function useListCommunities(options: {

@@ -587,7 +587,17 @@
       "embassyCountryPlaceholder": "Selecteer het land dat deze ambassade vertegenwoordigt",
       "locationCountry": "Locatieland (Waar de ambassade is)",
       "locationCountryPlaceholder": "Selecteer het land waar de ambassade is gevestigd"
-    }
+    },
+    "unsuspend": "Opschorting opheffen",
+    "unsuspendCommunity": "Opschorting van gemeenschap opheffen",
+    "unsuspendConfirm": "De opschorting van {{name}} opheffen? Inhoud, lid worden en vindbaarheid gaan weer open zoals voorheen.",
+    "communityUnsuspended": "Opschorting opgeheven",
+    "communityUnsuspendedDesc": "{{name}} is weer actief.",
+    "suspendEffect": "Tijdens de opschorting zien alleen platformbeheerders en de eigen beheerders van de gemeenschap de inhoud, kan niemand nieuw lid worden en is ze niet vindbaar. Leden en instellingen blijven behouden.",
+    "suspendReasonOptional": "Reden (optioneel)",
+    "suspendReasonPlaceholder": "Waarom wordt deze gemeenschap opgeschort?",
+    "suspendFailed": "De gemeenschap kon niet worden opgeschort",
+    "unsuspendFailed": "De opschorting van de gemeenschap kon niet worden opgeheven"
   },
   "associations": {
     "title": "Verenigingen",
