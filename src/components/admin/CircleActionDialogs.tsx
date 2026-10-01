@@ -18,6 +18,7 @@ import {
   useAdminDissolveCircle,
   type AdminCircle,
 } from "@/hooks/admin";
+import { displayErrorMessage, throwIfGraphQLErrors } from "@/lib/graphqlErrors";
 
 export type CircleAction = "suspend" | "unsuspend" | "dissolve";
 
@@ -25,8 +26,13 @@ interface CircleActionDialogsProps {
   action: CircleAction | null;
   circle: AdminCircle | null;
   onClose: () => void;
-  /** Called with an already-translated confirmation message. */
+  /** Called with an already-translated confirmation message, only after the server confirmed the act. */
   onSuccess: (message: string) => void | Promise<void>;
+  /**
+   * Called when the act was refused or failed. The error's message is already
+   * admin-readable and id-free (see `displayErrorMessage`); it is also shown
+   * inside the dialog, which stays open.
+   */
   onError: (error: unknown) => void;
 }
 
@@ -49,6 +55,13 @@ interface CircleActionDialogsProps {
  * requiring justification to STOP penalising someone gets the incentive
  * backwards.
  *
+ * ── A RESOLVED MUTATION IS NOT A SUCCESSFUL ONE ─────────────────────────────
+ * The admin Apollo client uses `errorPolicy: "all"`, so a refused act (no
+ * permission, circle already dissolved, circle-service down) RESOLVES with
+ * `data: null` and an error instead of rejecting. Every act therefore goes
+ * through `throwIfGraphQLErrors` and must return the circle; anything else is a
+ * failure, and the success toast is reached only after both checks pass.
+ *
  * ── SCOPE ──────────────────────────────────────────────────────────────────
  * These acts apply to the whole circle and are reserved for illegality. There
  * is deliberately no per-member or per-motion equivalent — see the note at the
@@ -63,6 +76,7 @@ export function CircleActionDialogs({
 }: CircleActionDialogsProps) {
   const { t } = useTranslation();
   const [reason, setReason] = useState("");
+  const [error, setError] = useState<string | null>(null);
 
   const [suspendCircle, { loading: suspending }] = useAdminSuspendCircle();
   const [unsuspendCircle, { loading: unsuspending }] = useAdminUnsuspendCircle();
@@ -72,6 +86,7 @@ export function CircleActionDialogs({
   // submitted against the next one.
   useEffect(() => {
     setReason("");
+    setError(null);
   }, [action, circle?.id]);
 
   const busy = suspending || unsuspending || dissolving;
@@ -81,23 +96,45 @@ export function CircleActionDialogs({
 
   if (!action || !circle) return null;
 
+  /** Runs the act and returns the success message, or throws when the server did not confirm it. */
+  const perform = async (): Promise<string> => {
+    if (action === "suspend") {
+      const result = await suspendCircle({ variables: { circleId: circle.id, reason: trimmedReason } });
+      throwIfGraphQLErrors(result, "AdminSuspendCircle");
+      if (!result.data?.adminSuspendCircle) throw new Error(t("circles.suspendFailed"));
+      return t("circles.suspended", { name: circle.name });
+    }
+    if (action === "unsuspend") {
+      const result = await unsuspendCircle({
+        variables: { circleId: circle.id, reason: trimmedReason || undefined },
+      });
+      throwIfGraphQLErrors(result, "AdminUnsuspendCircle");
+      if (!result.data?.adminUnsuspendCircle) throw new Error(t("circles.unsuspendFailed"));
+      return t("circles.unsuspended", { name: circle.name });
+    }
+    const result = await dissolveCircle({ variables: { circleId: circle.id, reason: trimmedReason } });
+    throwIfGraphQLErrors(result, "AdminDissolveCircle");
+    if (!result.data?.adminDissolveCircle) throw new Error(t("circles.dissolveFailed"));
+    return t("circles.dissolved", { name: circle.name });
+  };
+
   const handleConfirm = async () => {
+    setError(null);
+    let successMessage: string;
     try {
-      if (action === "suspend") {
-        await suspendCircle({ variables: { circleId: circle.id, reason: trimmedReason } });
-        await onSuccess(t("circles.suspended", { name: circle.name }));
-      } else if (action === "unsuspend") {
-        await unsuspendCircle({
-          variables: { circleId: circle.id, reason: trimmedReason || undefined },
-        });
-        await onSuccess(t("circles.unsuspended", { name: circle.name }));
-      } else {
-        await dissolveCircle({ variables: { circleId: circle.id, reason: trimmedReason } });
-        await onSuccess(t("circles.dissolved", { name: circle.name }));
-      }
-      onClose();
+      successMessage = await perform();
     } catch (e) {
-      onError(e);
+      const message = displayErrorMessage(e, copy.failed);
+      setError(message);
+      onError(new Error(message));
+      return;
+    }
+    onClose();
+    try {
+      await onSuccess(successMessage);
+    } catch (e) {
+      // The act itself succeeded; only the follow-up re-read failed.
+      onError(new Error(displayErrorMessage(e, t("common.errorLoading"))));
     }
   };
 
@@ -106,18 +143,21 @@ export function CircleActionDialogs({
       title: t("circles.suspendTitle", { name: circle.name }),
       description: t("circles.suspendDescription"),
       confirm: t("circles.suspend"),
+      failed: t("circles.suspendFailed"),
       destructive: false,
     },
     unsuspend: {
       title: t("circles.unsuspendTitle", { name: circle.name }),
       description: t("circles.unsuspendDescription"),
       confirm: t("circles.unsuspend"),
+      failed: t("circles.unsuspendFailed"),
       destructive: false,
     },
     dissolve: {
       title: t("circles.dissolveTitle", { name: circle.name }),
       description: t("circles.dissolveDescription"),
       confirm: t("circles.dissolve"),
+      failed: t("circles.dissolveFailed"),
       destructive: true,
     },
   }[action];
@@ -146,16 +186,22 @@ export function CircleActionDialogs({
           </p>
         </div>
 
+        {error && (
+          <p role="alert" className="text-sm text-destructive">
+            {error}
+          </p>
+        )}
+
         <DialogFooter>
           <Button variant="outline" onClick={onClose} disabled={busy}>
             {t("common.cancel")}
           </Button>
           <Button
             variant={copy.destructive ? "destructive" : "default"}
-            onClick={handleConfirm}
+            onClick={() => void handleConfirm()}
             disabled={!canConfirm}
           >
-            {busy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {busy && <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />}
             {copy.confirm}
           </Button>
         </DialogFooter>

@@ -465,9 +465,7 @@
     "suspend": "Suspend",
     "viewDetails": "View Details",
     "editCommunity": "Edit Community",
-    "manageAssociations": "Manage Associations",
     "deleteCommunity": "Delete Community",
-    "viewAnalytics": "View Analytics",
     "exportData": "Export Data",
     "allCountries": "All Countries",
     "allStatus": "All Status",
@@ -597,7 +595,69 @@
     "suspendReasonOptional": "Reason (optional)",
     "suspendReasonPlaceholder": "Why is this community being suspended?",
     "suspendFailed": "Couldn't suspend the community",
-    "unsuspendFailed": "Couldn't unsuspend the community"
+    "unsuspendFailed": "Couldn't unsuspend the community",
+    "retryFailed": "Retry the failed ones",
+    "link": {
+      "title": "Link an association",
+      "descriptionOne": "Pick the association to link to {{name}}. As a platform admin, the link takes effect immediately.",
+      "descriptionMany": "Pick the association to link to each of the {{count}} selected communities. As a platform admin, the links take effect immediately.",
+      "targetsLabel": "Selected communities",
+      "searchLabel": "Search associations",
+      "searchPlaceholder": "Type an association name…",
+      "resultsLabel": "Associations",
+      "noResults": "No associations match your search.",
+      "loadFailed": "Couldn't load associations.",
+      "selected": "Selected: {{name}}",
+      "confirm": "Link association",
+      "progress": "Linking… {{done}} of {{total}}",
+      "linked": "Association linked",
+      "linkedDescOne": "{{association}} is now linked to {{name}}.",
+      "linkedDescMany": "{{association}} is now linked to the selected communities ({{count}}).",
+      "failed": "Couldn't link the association",
+      "partial": "Linked {{succeeded}} of {{total}}. These communities were not linked:",
+      "partialToast": "Some links failed"
+    },
+    "bulkSuspendDialog": {
+      "title": "Suspend the selected communities",
+      "willSuspend": "Will be suspended ({{count}}):",
+      "alreadySuspended": "Already suspended — left unchanged, their recorded reason is kept ({{count}}):",
+      "nothingToSuspend": "Every selected community is already suspended.",
+      "reasonPlaceholder": "Why are these communities being suspended?",
+      "confirm": "Suspend ({{count}})",
+      "progress": "Suspending… {{done}} of {{total}}",
+      "done": "Communities suspended",
+      "doneDesc": "Suspended: {{count}}.",
+      "partial": "Suspended {{succeeded}} of {{total}}. These communities were not suspended:",
+      "partialToast": "Some suspensions failed"
+    },
+    "delete": {
+      "title": "Delete {{name}}?",
+      "effect": "The community is removed from the platform: it disappears from every list and from search, all of its memberships end (active members: {{count}}), and its default group is deleted. Members lose access immediately.",
+      "irreversible": "This can't be undone from the console.",
+      "confirmLabel": "Type “{{name}}” to confirm",
+      "confirm": "Delete community",
+      "deleted": "Community deleted",
+      "deletedDesc": "{{name}} has been deleted.",
+      "failed": "Couldn't delete the community"
+    },
+    "stats": {
+      "menu": "View stats",
+      "title": "{{name}} — stats",
+      "description": "Live counts from the community's membership records.",
+      "activeMembers": "Active members",
+      "pendingRequests": "Pending join requests",
+      "loadFailed": "Couldn't load the stats."
+    },
+    "export": {
+      "selected": "Export selected ({{count}})",
+      "ready": "Export ready",
+      "readyDescOne": "{{name}} was exported.",
+      "readyDescMany": "Communities exported: {{count}}.",
+      "failedOne": "Couldn't export the community",
+      "failedMany": "Couldn't export the communities"
+    },
+    "selectAllOnPage": "Select all communities on this page",
+    "selectCommunity": "Select {{name}}"
   },
   "associations": {
     "title": "Associations",
@@ -1480,7 +1540,10 @@
       "PAST_DUE": "Past due",
       "CANCELLED": "Cancelled",
       "EXPIRED": "Expired"
-    }
+    },
+    "suspendFailed": "Couldn't suspend the circle",
+    "unsuspendFailed": "Couldn't lift the suspension",
+    "dissolveFailed": "Couldn't dissolve the circle"
   },
   "circlePlans": {
     "title": "Circle plans",

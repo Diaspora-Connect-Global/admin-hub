@@ -178,16 +178,26 @@ export const GET_CONTENT_PRIORITIES = gql`
   }
 `;
 
+/**
+ * Live membership counts for one community (community-service counts the rows).
+ *
+ * `postCount` is deliberately not selected: community-service does not own posts
+ * and always returns 0 for it, so showing it would state a false fact. (This
+ * document used to ask for `activeMembers` / `pendingRequests`, which the schema
+ * does not have — it failed validation on every call.)
+ */
 export const GET_COMMUNITY_STATS = gql`
   query GetCommunityStats($communityId: ID!) {
     getCommunityStats(communityId: $communityId) {
       memberCount
-      activeMembers
-      pendingRequests
-      postCount
+      pendingRequestCount
     }
   }
 `;
+
+export interface CommunityStatsData {
+  getCommunityStats: { memberCount: number; pendingRequestCount: number } | null;
+}
 
 export const GET_ASSOCIATION_STATS = gql`
   query GetAssociationStats($associationId: ID!) {
@@ -1912,6 +1922,64 @@ export const ASSIGN_ASSOCIATION_ADMIN = gql`
     }
   }
 `;
+
+/**
+ * Lean association lookup for pickers: platform admins see every association
+ * (`searchAssociations` runs as super admin), searched server-side by name.
+ * Only what a picker shows — no contact details ride along.
+ */
+export const SEARCH_ASSOCIATION_OPTIONS = gql`
+  query SearchAssociationOptions($input: SearchAssociationsInput) {
+    searchAssociations(input: $input) {
+      associations {
+        id
+        name
+      }
+      total
+    }
+  }
+`;
+
+export interface AssociationOption {
+  id: string;
+  name: string;
+}
+
+export interface SearchAssociationOptionsData {
+  searchAssociations: { associations: AssociationOption[]; total: number } | null;
+}
+
+/**
+ * One community's record as an inline export. `fileName` is not selected: the
+ * server builds it from the community id, and a download bar is somewhere a
+ * person reads it — the client names the file after the community instead.
+ */
+export const EXPORT_COMMUNITY_DATA = gql`
+  mutation ExportCommunityData($communityId: ID!, $format: String) {
+    exportCommunityData(communityId: $communityId, format: $format) {
+      success
+      format
+      content
+    }
+  }
+`;
+
+/** Several communities' records as one inline export. Always pass `ids` — without them the server exports an arbitrary first 100. */
+export const BULK_EXPORT_COMMUNITIES = gql`
+  mutation BulkExportCommunities($ids: [ID!], $format: String) {
+    bulkExportCommunities(ids: $ids, format: $format) {
+      success
+      format
+      content
+    }
+  }
+`;
+
+export interface CommunityExportPayload {
+  success: boolean;
+  format: string;
+  content: string;
+}
 
 export const SOFT_DELETE_COMMUNITY = gql`
   mutation SoftDeleteCommunity($communityId: ID!) {

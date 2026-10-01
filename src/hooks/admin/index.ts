@@ -31,6 +31,9 @@ import {
   SUSPEND_COMMUNITY,
   UNSUSPEND_COMMUNITY,
   DISCOVER_ASSOCIATIONS,
+  SEARCH_ASSOCIATION_OPTIONS,
+  EXPORT_COMMUNITY_DATA,
+  BULK_EXPORT_COMMUNITIES,
   CREATE_COMMUNITY,
   CREATE_ASSOCIATION,
   REQUEST_MEMBERSHIP,
@@ -191,10 +194,12 @@ export function useGetContentPriorities(variables: {
   });
 }
 
+/** Live member / pending-request counts; re-read every time it mounts so a stats view never shows a stale count. */
 export function useGetCommunityStats(communityId: string | null) {
-  return useQuery(GET_COMMUNITY_STATS, {
+  return useQuery<import("@/services/networks/graphql/admin").CommunityStatsData>(GET_COMMUNITY_STATS, {
     variables: { communityId: communityId ?? "" },
     skip: !communityId,
+    fetchPolicy: "network-only",
   });
 }
 
@@ -317,6 +322,37 @@ export function useUnsuspendCommunity() {
   return useMutation<{
     unsuspendCommunity: import("@/services/networks/graphql/admin").CommunitySuspensionResult;
   }>(UNSUSPEND_COMMUNITY);
+}
+
+/** Association picker: server-side name search, first page only. Pass `skip` until the picker is shown. */
+export function useSearchAssociationOptions(searchTerm: string, options: { skip?: boolean; limit?: number } = {}) {
+  return useQuery<import("@/services/networks/graphql/admin").SearchAssociationOptionsData>(
+    SEARCH_ASSOCIATION_OPTIONS,
+    {
+      // No `searchTerm` key at all when empty, so the cache key (and request) stays stable.
+      variables: {
+        input: { ...(searchTerm ? { searchTerm } : {}), limit: options.limit ?? 20, page: 1 },
+      },
+      skip: options.skip,
+      fetchPolicy: "cache-and-network",
+    },
+  );
+}
+
+/** One community's record as an inline export. Callers must check the result (errorPolicy "all"). */
+export function useExportCommunityData() {
+  return useMutation<
+    { exportCommunityData: import("@/services/networks/graphql/admin").CommunityExportPayload | null },
+    { communityId: string; format?: string }
+  >(EXPORT_COMMUNITY_DATA);
+}
+
+/** Several communities as one inline export. Always send `ids`. Callers must check the result. */
+export function useBulkExportCommunities() {
+  return useMutation<
+    { bulkExportCommunities: import("@/services/networks/graphql/admin").CommunityExportPayload | null },
+    { ids: string[]; format?: string }
+  >(BULK_EXPORT_COMMUNITIES);
 }
 
 export function useListCommunities(options: {
@@ -585,6 +621,7 @@ export {
   useAssignAssociationAdmin,
   useSoftDeleteCommunity,
   useRestoreCommunity,
+  useLinkAssociation,
   useSearchCommunitiesAdvanced,
   useCommunityBanUser,
   useCommunityUnbanUser,

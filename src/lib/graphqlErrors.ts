@@ -133,3 +133,22 @@ export function friendlyErrorMessage(
   // 4) Fall back to the raw message, stripping any GraphQL operation prefix.
   return raw.replace(/^[A-Za-z ]+:\s*/, "").trim() || fallback;
 }
+
+/** A UUID anywhere in a string (any version). Linear — no nested quantifiers. */
+const UUID_PATTERN = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
+
+/**
+ * `friendlyErrorMessage` for text a person will read, with one more guarantee:
+ * the result never carries an id.
+ *
+ * Several services word their refusals for operators, not people —
+ * community-service's link handler says `Community with ID <uuid> not found`,
+ * circle-service names circles by uuid — and `friendlyErrorMessage` falls back
+ * to the raw message. Stripping the id out of such a sentence leaves broken
+ * grammar ("Community with ID not found"), so when the message contains one the
+ * caller's (translated) fallback is shown instead.
+ */
+export function displayErrorMessage(err: unknown, fallback: string): string {
+  const message = friendlyErrorMessage(err, fallback);
+  return UUID_PATTERN.test(message) ? fallback : message;
+}

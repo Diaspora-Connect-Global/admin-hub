@@ -465,9 +465,7 @@
     "suspend": "Opschorten",
     "viewDetails": "Details bekijken",
     "editCommunity": "Gemeenschap bewerken",
-    "manageAssociations": "Verenigingen beheren",
     "deleteCommunity": "Gemeenschap verwijderen",
-    "viewAnalytics": "Analyses bekijken",
     "exportData": "Gegevens exporteren",
     "allCountries": "Alle landen",
     "allStatus": "Alle statussen",
@@ -597,7 +595,69 @@
     "suspendReasonOptional": "Reden (optioneel)",
     "suspendReasonPlaceholder": "Waarom wordt deze gemeenschap opgeschort?",
     "suspendFailed": "De gemeenschap kon niet worden opgeschort",
-    "unsuspendFailed": "De opschorting van de gemeenschap kon niet worden opgeheven"
+    "unsuspendFailed": "De opschorting van de gemeenschap kon niet worden opgeheven",
+    "retryFailed": "Mislukte opnieuw proberen",
+    "link": {
+      "title": "Een vereniging koppelen",
+      "descriptionOne": "Kies de vereniging die aan {{name}} wordt gekoppeld. Als platformbeheerder gaat de koppeling direct in.",
+      "descriptionMany": "Kies de vereniging die aan elk van de {{count}} geselecteerde gemeenschappen wordt gekoppeld. Als platformbeheerder gaan de koppelingen direct in.",
+      "targetsLabel": "Geselecteerde gemeenschappen",
+      "searchLabel": "Verenigingen zoeken",
+      "searchPlaceholder": "Typ de naam van een vereniging…",
+      "resultsLabel": "Verenigingen",
+      "noResults": "Geen vereniging komt overeen met je zoekopdracht.",
+      "loadFailed": "Verenigingen konden niet worden geladen.",
+      "selected": "Geselecteerd: {{name}}",
+      "confirm": "Vereniging koppelen",
+      "progress": "Bezig met koppelen… {{done}} van {{total}}",
+      "linked": "Vereniging gekoppeld",
+      "linkedDescOne": "{{association}} is nu gekoppeld aan {{name}}.",
+      "linkedDescMany": "{{association}} is nu gekoppeld aan de geselecteerde gemeenschappen ({{count}}).",
+      "failed": "De vereniging kon niet worden gekoppeld",
+      "partial": "{{succeeded}} van {{total}} gekoppeld. Deze gemeenschappen zijn niet gekoppeld:",
+      "partialToast": "Sommige koppelingen zijn mislukt"
+    },
+    "bulkSuspendDialog": {
+      "title": "Geselecteerde gemeenschappen opschorten",
+      "willSuspend": "Worden opgeschort ({{count}}):",
+      "alreadySuspended": "Al opgeschort — blijven ongewijzigd, de vastgelegde reden blijft behouden ({{count}}):",
+      "nothingToSuspend": "Alle geselecteerde gemeenschappen zijn al opgeschort.",
+      "reasonPlaceholder": "Waarom worden deze gemeenschappen opgeschort?",
+      "confirm": "Opschorten ({{count}})",
+      "progress": "Bezig met opschorten… {{done}} van {{total}}",
+      "done": "Gemeenschappen opgeschort",
+      "doneDesc": "Opgeschort: {{count}}.",
+      "partial": "{{succeeded}} van {{total}} opgeschort. Deze gemeenschappen zijn niet opgeschort:",
+      "partialToast": "Sommige opschortingen zijn mislukt"
+    },
+    "delete": {
+      "title": "{{name}} verwijderen?",
+      "effect": "De gemeenschap wordt van het platform verwijderd: ze verdwijnt uit alle lijsten en uit de zoekresultaten, al haar lidmaatschappen eindigen (actieve leden: {{count}}) en haar standaardgroep wordt verwijderd. Leden verliezen direct de toegang.",
+      "irreversible": "Dit kan niet ongedaan worden gemaakt vanuit de console.",
+      "confirmLabel": "Typ „{{name}}” om te bevestigen",
+      "confirm": "Gemeenschap verwijderen",
+      "deleted": "Gemeenschap verwijderd",
+      "deletedDesc": "{{name}} is verwijderd.",
+      "failed": "De gemeenschap kon niet worden verwijderd"
+    },
+    "stats": {
+      "menu": "Statistieken bekijken",
+      "title": "{{name}} — statistieken",
+      "description": "Actuele aantallen uit de lidmaatschapsgegevens van de gemeenschap.",
+      "activeMembers": "Actieve leden",
+      "pendingRequests": "Openstaande lidmaatschapsaanvragen",
+      "loadFailed": "De statistieken konden niet worden geladen."
+    },
+    "export": {
+      "selected": "Selectie exporteren ({{count}})",
+      "ready": "Export klaar",
+      "readyDescOne": "{{name}} is geëxporteerd.",
+      "readyDescMany": "Geëxporteerde gemeenschappen: {{count}}.",
+      "failedOne": "De gemeenschap kon niet worden geëxporteerd",
+      "failedMany": "De gemeenschappen konden niet worden geëxporteerd"
+    },
+    "selectAllOnPage": "Alle gemeenschappen op deze pagina selecteren",
+    "selectCommunity": "{{name}} selecteren"
   },
   "associations": {
     "title": "Verenigingen",
@@ -1480,7 +1540,10 @@
       "PAST_DUE": "Achterstallig",
       "CANCELLED": "Opgezegd",
       "EXPIRED": "Verlopen"
-    }
+    },
+    "suspendFailed": "De circle kon niet worden opgeschort",
+    "unsuspendFailed": "De schorsing kon niet worden opgeheven",
+    "dissolveFailed": "De circle kon niet worden ontbonden"
   },
   "circlePlans": {
     "title": "Circle-abonnementen",

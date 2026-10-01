@@ -465,9 +465,7 @@
     "suspend": "Sperren",
     "viewDetails": "Details anzeigen",
     "editCommunity": "Gemeinschaft bearbeiten",
-    "manageAssociations": "Verbände verwalten",
     "deleteCommunity": "Gemeinschaft löschen",
-    "viewAnalytics": "Analysen anzeigen",
     "exportData": "Daten exportieren",
     "allCountries": "Alle Länder",
     "allStatus": "Alle Status",
@@ -597,7 +595,69 @@
     "suspendReasonOptional": "Grund (optional)",
     "suspendReasonPlaceholder": "Warum wird diese Gemeinschaft gesperrt?",
     "suspendFailed": "Die Gemeinschaft konnte nicht gesperrt werden",
-    "unsuspendFailed": "Die Sperre der Gemeinschaft konnte nicht aufgehoben werden"
+    "unsuspendFailed": "Die Sperre der Gemeinschaft konnte nicht aufgehoben werden",
+    "retryFailed": "Fehlgeschlagene erneut versuchen",
+    "link": {
+      "title": "Verband verknüpfen",
+      "descriptionOne": "Wählen Sie den Verband, der mit {{name}} verknüpft werden soll. Als Plattform-Admin wird die Verknüpfung sofort wirksam.",
+      "descriptionMany": "Wählen Sie den Verband, der mit jeder der {{count}} ausgewählten Gemeinschaften verknüpft werden soll. Als Plattform-Admin werden die Verknüpfungen sofort wirksam.",
+      "targetsLabel": "Ausgewählte Gemeinschaften",
+      "searchLabel": "Verbände suchen",
+      "searchPlaceholder": "Namen eines Verbands eingeben…",
+      "resultsLabel": "Verbände",
+      "noResults": "Kein Verband entspricht Ihrer Suche.",
+      "loadFailed": "Verbände konnten nicht geladen werden.",
+      "selected": "Ausgewählt: {{name}}",
+      "confirm": "Verband verknüpfen",
+      "progress": "Wird verknüpft… {{done}} von {{total}}",
+      "linked": "Verband verknüpft",
+      "linkedDescOne": "{{association}} ist jetzt mit {{name}} verknüpft.",
+      "linkedDescMany": "{{association}} ist jetzt mit den ausgewählten Gemeinschaften verknüpft ({{count}}).",
+      "failed": "Der Verband konnte nicht verknüpft werden",
+      "partial": "{{succeeded}} von {{total}} verknüpft. Diese Gemeinschaften wurden nicht verknüpft:",
+      "partialToast": "Einige Verknüpfungen sind fehlgeschlagen"
+    },
+    "bulkSuspendDialog": {
+      "title": "Ausgewählte Gemeinschaften sperren",
+      "willSuspend": "Werden gesperrt ({{count}}):",
+      "alreadySuspended": "Bereits gesperrt — bleiben unverändert, der erfasste Grund bleibt erhalten ({{count}}):",
+      "nothingToSuspend": "Alle ausgewählten Gemeinschaften sind bereits gesperrt.",
+      "reasonPlaceholder": "Warum werden diese Gemeinschaften gesperrt?",
+      "confirm": "Sperren ({{count}})",
+      "progress": "Wird gesperrt… {{done}} von {{total}}",
+      "done": "Gemeinschaften gesperrt",
+      "doneDesc": "Gesperrt: {{count}}.",
+      "partial": "{{succeeded}} von {{total}} gesperrt. Diese Gemeinschaften wurden nicht gesperrt:",
+      "partialToast": "Einige Sperrungen sind fehlgeschlagen"
+    },
+    "delete": {
+      "title": "{{name}} löschen?",
+      "effect": "Die Gemeinschaft wird von der Plattform entfernt: Sie verschwindet aus allen Listen und aus der Suche, alle Mitgliedschaften enden (aktive Mitglieder: {{count}}) und ihre Standardgruppe wird gelöscht. Mitglieder verlieren sofort den Zugriff.",
+      "irreversible": "Dies kann in der Konsole nicht rückgängig gemacht werden.",
+      "confirmLabel": "Geben Sie „{{name}}“ zur Bestätigung ein",
+      "confirm": "Gemeinschaft löschen",
+      "deleted": "Gemeinschaft gelöscht",
+      "deletedDesc": "{{name}} wurde gelöscht.",
+      "failed": "Die Gemeinschaft konnte nicht gelöscht werden"
+    },
+    "stats": {
+      "menu": "Statistiken anzeigen",
+      "title": "{{name}} — Statistiken",
+      "description": "Aktuelle Zahlen aus den Mitgliedschaftsdaten der Gemeinschaft.",
+      "activeMembers": "Aktive Mitglieder",
+      "pendingRequests": "Offene Beitrittsanfragen",
+      "loadFailed": "Die Statistiken konnten nicht geladen werden."
+    },
+    "export": {
+      "selected": "Auswahl exportieren ({{count}})",
+      "ready": "Export bereit",
+      "readyDescOne": "{{name}} wurde exportiert.",
+      "readyDescMany": "Exportierte Gemeinschaften: {{count}}.",
+      "failedOne": "Die Gemeinschaft konnte nicht exportiert werden",
+      "failedMany": "Die Gemeinschaften konnten nicht exportiert werden"
+    },
+    "selectAllOnPage": "Alle Gemeinschaften auf dieser Seite auswählen",
+    "selectCommunity": "{{name}} auswählen"
   },
   "associations": {
     "title": "Verbände",
@@ -1480,7 +1540,10 @@
       "PAST_DUE": "Überfällig",
       "CANCELLED": "Gekündigt",
       "EXPIRED": "Abgelaufen"
-    }
+    },
+    "suspendFailed": "Der Circle konnte nicht gesperrt werden",
+    "unsuspendFailed": "Die Sperre konnte nicht aufgehoben werden",
+    "dissolveFailed": "Der Circle konnte nicht aufgelöst werden"
   },
   "circlePlans": {
     "title": "Circle-Tarife",

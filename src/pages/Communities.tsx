@@ -18,14 +18,26 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { MultiSelect } from "@/components/ui/multi-select";
 import { Search, Plus, MoreHorizontal, Eye, Edit, Link2, Pause, Play, ChevronDown, Download, FileJson, BarChart3, Trash2, Upload, Globe, Loader2, X } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
-import { friendlyErrorMessage } from "@/lib/graphqlErrors";
-import { useCreateCommunity, useDiscoverAssociations, useGetUsers, useListCommunities, useGetPlatformSettings } from "@/hooks/admin";
+import { displayErrorMessage, friendlyErrorMessage, throwIfGraphQLErrors } from "@/lib/graphqlErrors";
+import { downloadTextFile, fileNameSlug } from "@/lib/download";
+import {
+  useBulkExportCommunities,
+  useCreateCommunity,
+  useExportCommunityData,
+  useGetUsers,
+  useListCommunities,
+  useGetPlatformSettings,
+} from "@/hooks/admin";
 import { useGetCommunityAvatarUploadUrl, useGetCommunityCoverUploadUrl } from "@/hooks/admin";
 import { uploadCommunityAvatar, uploadCommunityCover } from "@/lib/communityImageUpload";
 import { useListCommunityTypes } from "@/hooks/admin/useEntityTypes";
 import type { CreateCommunityInput, Community, CommunityType } from "@/services/networks/graphql/admin";
 import { ServiceCheckboxGrid } from "@/components/services/ServiceCheckboxGrid";
 import { SuspendCommunityDialog } from "@/components/community/SuspendCommunityDialog";
+import { LinkAssociationsDialog } from "@/components/community/LinkAssociationsDialog";
+import { BulkSuspendCommunitiesDialog } from "@/components/community/BulkSuspendCommunitiesDialog";
+import { DeleteCommunityDialog } from "@/components/community/DeleteCommunityDialog";
+import { CommunityStatsDialog } from "@/components/community/CommunityStatsDialog";
 import { ALL_SERVICE_KEYS, parseServiceKeys, sortServiceKeys } from "@/constants/communityServices";
 import {
   countriesServedLabelsToIso2,
@@ -202,14 +214,6 @@ export default function Communities() {
   const totalCount = listData?.listCommunities?.total ?? 0;
   const rows = apiCommunities.map(mapCommunityToRow);
 
-  const { data: associationsData, loading: associationsLoading } = useDiscoverAssociations({
-    limit: 1000,
-    offset: 0,
-  });
-  const associationOptions = (
-    associationsData as { discoverAssociations?: { associations?: Array<{ id: string; name: string }> } } | undefined
-  )?.discoverAssociations?.associations ?? [];
-
   const { data: usersData, loading: usersLoading } = useGetUsers({
     limit: 200,
     offset: 0,
@@ -237,11 +241,28 @@ export default function Communities() {
       }
     });
 
+  // Bulk actions act only on selected rows that are on screen: a selection never
+  // survives a page / filter change, and rows that vanish after a refetch drop out.
+  useEffect(() => {
+    setSelectedCommunities([]);
+  }, [page, pageSize, searchTerm, visibilityFilter, typeFilter, countryFilter]);
+  const selectedRows = filteredCommunities.filter((c) => selectedCommunities.includes(c.id));
+
   // Modals
   const [createModalOpen, setCreateModalOpen] = useState(false);
-  const [linkAssociationOpen, setLinkAssociationOpen] = useState(false);
   const [suspendModalOpen, setSuspendModalOpen] = useState(false);
   const [selectedCommunity, setSelectedCommunity] = useState<CommunityRow | null>(null);
+  /** Communities the link dialog acts on: one row, or the bulk selection. */
+  const [linkTargets, setLinkTargets] = useState<CommunityRow[]>([]);
+  const [linkFromSelection, setLinkFromSelection] = useState(false);
+  const [linkDialogOpen, setLinkDialogOpen] = useState(false);
+  const [bulkSuspendOpen, setBulkSuspendOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [statsDialogOpen, setStatsDialogOpen] = useState(false);
+
+  const [exportCommunityData] = useExportCommunityData();
+  const [bulkExportCommunities, { loading: bulkExporting }] = useBulkExportCommunities();
+  const [exportingId, setExportingId] = useState<string | null>(null);
 
   // Form state
   const [formData, setFormData] = useState<CreateFormData>(initialFormData);
@@ -252,6 +273,70 @@ export default function Communities() {
 
   const handleSelectAll = (checked: boolean) => {
     setSelectedCommunities(checked ? filteredCommunities.map(c => c.id) : []);
+  };
+
+  const openLinkDialog = (targets: CommunityRow[], fromSelection = false) => {
+    setLinkTargets(targets);
+    setLinkFromSelection(fromSelection);
+    setLinkDialogOpen(true);
+  };
+
+  /** After a bulk run, keep only the rows that failed selected, ready for a retry. */
+  const keepFailedSelected = (failedIds: string[]) => setSelectedCommunities(failedIds);
+
+  const exportFailed = (err: unknown, fallback: string) =>
+    toast({ title: fallback, description: displayErrorMessage(err, fallback), variant: "destructive" });
+
+  /** One community's record, saved as JSON and named after the community (never its id). */
+  const handleExportCommunity = async (community: CommunityRow) => {
+    setExportingId(community.id);
+    try {
+      const result = await exportCommunityData({ variables: { communityId: community.id, format: "JSON" } });
+      throwIfGraphQLErrors(result, "ExportCommunityData");
+      const payload = result.data?.exportCommunityData;
+      if (!payload?.success || !payload.content) throw new Error(t("communities.export.failedOne"));
+      downloadTextFile(
+        `community-${fileNameSlug(community.name, "export")}.json`,
+        payload.content,
+        "application/json",
+      );
+      toast({
+        title: t("communities.export.ready"),
+        description: t("communities.export.readyDescOne", { name: community.name }),
+      });
+    } catch (err) {
+      exportFailed(err, t("communities.export.failedOne"));
+    } finally {
+      setExportingId(null);
+    }
+  };
+
+  /**
+   * The selected rows, or — with nothing selected — the rows on screen. Always
+   * sends ids: without them the server exports an arbitrary first 100.
+   */
+  const handleBulkExport = async () => {
+    const targets = selectedRows.length > 0 ? selectedRows : filteredCommunities;
+    if (targets.length === 0) return;
+    try {
+      const result = await bulkExportCommunities({
+        variables: { ids: targets.map((c) => c.id), format: "JSON" },
+      });
+      throwIfGraphQLErrors(result, "BulkExportCommunities");
+      const payload = result.data?.bulkExportCommunities;
+      if (!payload?.success || !payload.content) throw new Error(t("communities.export.failedMany"));
+      downloadTextFile(
+        `communities-export-${new Date().toISOString().slice(0, 10)}.json`,
+        payload.content,
+        "application/json",
+      );
+      toast({
+        title: t("communities.export.ready"),
+        description: t("communities.export.readyDescMany", { count: targets.length }),
+      });
+    } catch (err) {
+      exportFailed(err, t("communities.export.failedMany"));
+    }
   };
 
   const handleSelectCommunity = (id: string, checked: boolean) => {
@@ -392,12 +477,6 @@ export default function Communities() {
     }
   };
 
-  const handleLinkAssociation = () => {
-    toast({ title: t('communities.associationLinked'), description: t('communities.associationLinkedDesc') });
-    setLinkAssociationOpen(false);
-    setSelectedCommunity(null);
-  };
-
   const handleAssignedAdminToggle = (adminId: string) => {
     setFormData(prev => ({
       ...prev,
@@ -461,17 +540,33 @@ export default function Communities() {
           <div className="flex items-center gap-3">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" disabled={selectedCommunities.length === 0}>
-                  {t('communities.bulkActions')} <ChevronDown className="ml-2 h-4 w-4" />
+                <Button variant="outline" disabled={selectedRows.length === 0}>
+                  {t('communities.bulkActions')} <ChevronDown className="ml-2 h-4 w-4" aria-hidden="true" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="bg-popover border-border">
-                <DropdownMenuItem className="text-destructive"><Pause className="mr-2 h-4 w-4" /> {t('communities.bulkSuspend')}</DropdownMenuItem>
-                <DropdownMenuItem><Link2 className="mr-2 h-4 w-4" /> {t('communities.bulkLinkAssociations')}</DropdownMenuItem>
+                <DropdownMenuItem className="text-destructive" onClick={() => setBulkSuspendOpen(true)}>
+                  <Pause className="mr-2 h-4 w-4" aria-hidden="true" /> {t('communities.bulkSuspend')}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => openLinkDialog(selectedRows, true)}>
+                  <Link2 className="mr-2 h-4 w-4" aria-hidden="true" /> {t('communities.bulkLinkAssociations')}
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-            <Button variant="outline" size="sm">
-              <Download className="mr-2 h-4 w-4" /> {t('communities.exportCommunities')}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => void handleBulkExport()}
+              disabled={bulkExporting || filteredCommunities.length === 0}
+            >
+              {bulkExporting ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
+              ) : (
+                <Download className="mr-2 h-4 w-4" aria-hidden="true" />
+              )}
+              {selectedRows.length > 0
+                ? t('communities.export.selected', { count: selectedRows.length })
+                : t('communities.exportCommunities')}
             </Button>
             <Button onClick={openCreateModal}>
               <Plus className="mr-2 h-4 w-4" /> {t('communities.createCommunity')}
@@ -540,8 +635,9 @@ export default function Communities() {
                   <TableRow className="border-border/50 hover:bg-transparent">
                     <TableHead className="w-12">
                       <Checkbox
-                        checked={filteredCommunities.length > 0 && selectedCommunities.length === filteredCommunities.length}
+                        checked={filteredCommunities.length > 0 && selectedRows.length === filteredCommunities.length}
                         onCheckedChange={handleSelectAll}
+                        aria-label={t('communities.selectAllOnPage')}
                       />
                     </TableHead>
                     <TableHead>{t('communities.communityName')}</TableHead>
@@ -580,9 +676,10 @@ export default function Communities() {
                   filteredCommunities.map((community) => (
                     <TableRow key={community.id} className="border-border/50">
                       <TableCell>
-                        <Checkbox 
+                        <Checkbox
                           checked={selectedCommunities.includes(community.id)}
                           onCheckedChange={(checked) => handleSelectCommunity(community.id, checked as boolean)}
+                          aria-label={t('communities.selectCommunity', { name: community.name })}
                         />
                       </TableCell>
                       <TableCell className="font-medium">
@@ -638,7 +735,7 @@ export default function Communities() {
                           <Button variant="ghost" size="icon" aria-label={t('communities.viewDetails')} onClick={() => navigate(`/communities/${community.id}`)}>
                             <Eye className="h-4 w-4" />
                           </Button>
-                          <Button variant="ghost" size="icon" aria-label={t('communities.manageAssociations')} onClick={() => { setSelectedCommunity(community); setLinkAssociationOpen(true); }}>
+                          <Button variant="ghost" size="icon" aria-label={t('communities.linkAssociation')} onClick={() => openLinkDialog([community])}>
                             <Link2 className="h-4 w-4" />
                           </Button>
                           <DropdownMenu>
@@ -652,10 +749,12 @@ export default function Communities() {
                               <DropdownMenuItem onClick={() => navigate(`/communities/${community.id}?edit=1`)}>
                                 <Edit className="mr-2 h-4 w-4" /> {t('communities.editCommunity')}
                               </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => { setSelectedCommunity(community); setLinkAssociationOpen(true); }}>
-                                <Link2 className="mr-2 h-4 w-4" /> {t('communities.manageAssociations')}
+                              <DropdownMenuItem onClick={() => openLinkDialog([community])}>
+                                <Link2 className="mr-2 h-4 w-4" /> {t('communities.linkAssociation')}
                               </DropdownMenuItem>
-                              <DropdownMenuItem><BarChart3 className="mr-2 h-4 w-4" /> {t('communities.viewAnalytics')}</DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => { setSelectedCommunity(community); setStatsDialogOpen(true); }}>
+                                <BarChart3 className="mr-2 h-4 w-4" /> {t('communities.stats.menu')}
+                              </DropdownMenuItem>
                               <DropdownMenuSeparator />
                               {community.isSuspended ? (
                                 <DropdownMenuItem onClick={() => { setSelectedCommunity(community); setSuspendModalOpen(true); }}>
@@ -666,11 +765,13 @@ export default function Communities() {
                                   <Pause className="mr-2 h-4 w-4" /> {t('communities.suspend')}
                                 </DropdownMenuItem>
                               )}
-                              <DropdownMenuItem className="text-destructive">
+                              <DropdownMenuItem className="text-destructive" onClick={() => { setSelectedCommunity(community); setDeleteDialogOpen(true); }}>
                                 <Trash2 className="mr-2 h-4 w-4" /> {t('communities.deleteCommunity')}
                               </DropdownMenuItem>
                               <DropdownMenuSeparator />
-                              <DropdownMenuItem><FileJson className="mr-2 h-4 w-4" /> {t('communities.exportData')}</DropdownMenuItem>
+                              <DropdownMenuItem disabled={exportingId === community.id} onClick={() => void handleExportCommunity(community)}>
+                                <FileJson className="mr-2 h-4 w-4" /> {t('communities.exportData')}
+                              </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </div>
@@ -1119,42 +1220,36 @@ export default function Communities() {
         </DialogContent>
       </Dialog>
 
-      {/* Link Association Modal */}
-      <Dialog open={linkAssociationOpen} onOpenChange={setLinkAssociationOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>{t('communities.linkAssociationTo')}</DialogTitle>
-            <DialogDescription>{t('communities.linkAssociationDesc', { name: selectedCommunity?.name })}</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>{t('communities.title')}</Label>
-              <Input value={selectedCommunity?.name || ""} disabled />
-            </div>
-            <div className="space-y-2">
-              <Label>{t('communities.selectAssociations')} <span className="text-destructive">*</span></Label>
-              <Select>
-                <SelectTrigger><SelectValue placeholder={t('communities.searchAssociations')} /></SelectTrigger>
-                <SelectContent className="bg-popover border-border">
-                  {associationsLoading ? (
-                    <SelectItem value="associations-loading" disabled>{t('common.loading')}</SelectItem>
-                  ) : associationOptions.length === 0 ? (
-                    <SelectItem value="associations-empty" disabled>{t('common.noData')}</SelectItem>
-                  ) : (
-                    associationOptions.map((assoc) => (
-                      <SelectItem key={assoc.id} value={assoc.id}>{assoc.name}</SelectItem>
-                    ))
-                  )}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setLinkAssociationOpen(false)}>{t('common.cancel')}</Button>
-            <Button onClick={handleLinkAssociation}>{t('communities.linkAssociation')}</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Link an association to one community or the bulk selection */}
+      <LinkAssociationsDialog
+        communities={linkTargets}
+        open={linkDialogOpen}
+        onOpenChange={setLinkDialogOpen}
+        onChanged={() => refetchCommunities()}
+        // A row's own link must not rewrite the bulk selection.
+        onCompleted={linkFromSelection ? keepFailedSelected : undefined}
+      />
+
+      <BulkSuspendCommunitiesDialog
+        communities={selectedRows}
+        open={bulkSuspendOpen}
+        onOpenChange={setBulkSuspendOpen}
+        onChanged={() => refetchCommunities()}
+        onCompleted={keepFailedSelected}
+      />
+
+      <DeleteCommunityDialog
+        community={selectedCommunity}
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        onDeleted={() => refetchCommunities()}
+      />
+
+      <CommunityStatsDialog
+        community={selectedCommunity}
+        open={statsDialogOpen}
+        onOpenChange={setStatsDialogOpen}
+      />
 
       {/* Suspend / unsuspend community */}
       <SuspendCommunityDialog

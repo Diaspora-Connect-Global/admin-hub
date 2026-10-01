@@ -465,9 +465,7 @@
     "suspend": "Suspender",
     "viewDetails": "Ver detalles",
     "editCommunity": "Editar comunidad",
-    "manageAssociations": "Gestionar asociaciones",
     "deleteCommunity": "Eliminar comunidad",
-    "viewAnalytics": "Ver análisis",
     "exportData": "Exportar datos",
     "allCountries": "Todos los países",
     "allStatus": "Todos los estados",
@@ -597,7 +595,69 @@
     "suspendReasonOptional": "Motivo (opcional)",
     "suspendReasonPlaceholder": "¿Por qué se suspende esta comunidad?",
     "suspendFailed": "No se pudo suspender la comunidad",
-    "unsuspendFailed": "No se pudo levantar la suspensión de la comunidad"
+    "unsuspendFailed": "No se pudo levantar la suspensión de la comunidad",
+    "retryFailed": "Reintentar los fallidos",
+    "link": {
+      "title": "Vincular una asociación",
+      "descriptionOne": "Elija la asociación que se vinculará a {{name}}. Como administrador de la plataforma, el vínculo se aplica de inmediato.",
+      "descriptionMany": "Elija la asociación que se vinculará a cada una de las {{count}} comunidades seleccionadas. Como administrador de la plataforma, los vínculos se aplican de inmediato.",
+      "targetsLabel": "Comunidades seleccionadas",
+      "searchLabel": "Buscar asociaciones",
+      "searchPlaceholder": "Escriba el nombre de una asociación…",
+      "resultsLabel": "Asociaciones",
+      "noResults": "Ninguna asociación coincide con su búsqueda.",
+      "loadFailed": "No se pudieron cargar las asociaciones.",
+      "selected": "Seleccionada: {{name}}",
+      "confirm": "Vincular asociación",
+      "progress": "Vinculando… {{done}} de {{total}}",
+      "linked": "Asociación vinculada",
+      "linkedDescOne": "{{association}} ahora está vinculada a {{name}}.",
+      "linkedDescMany": "{{association}} ahora está vinculada a las comunidades seleccionadas ({{count}}).",
+      "failed": "No se pudo vincular la asociación",
+      "partial": "Vinculadas {{succeeded}} de {{total}}. Estas comunidades no se vincularon:",
+      "partialToast": "Algunos vínculos fallaron"
+    },
+    "bulkSuspendDialog": {
+      "title": "Suspender las comunidades seleccionadas",
+      "willSuspend": "Se suspenderán ({{count}}):",
+      "alreadySuspended": "Ya suspendidas — no cambian y se conserva el motivo registrado ({{count}}):",
+      "nothingToSuspend": "Todas las comunidades seleccionadas ya están suspendidas.",
+      "reasonPlaceholder": "¿Por qué se suspenden estas comunidades?",
+      "confirm": "Suspender ({{count}})",
+      "progress": "Suspendiendo… {{done}} de {{total}}",
+      "done": "Comunidades suspendidas",
+      "doneDesc": "Suspendidas: {{count}}.",
+      "partial": "Suspendidas {{succeeded}} de {{total}}. Estas comunidades no se suspendieron:",
+      "partialToast": "Algunas suspensiones fallaron"
+    },
+    "delete": {
+      "title": "¿Eliminar {{name}}?",
+      "effect": "La comunidad se retira de la plataforma: desaparece de todas las listas y de la búsqueda, todas sus membresías terminan (miembros activos: {{count}}) y se elimina su grupo predeterminado. Los miembros pierden el acceso de inmediato.",
+      "irreversible": "Esto no se puede deshacer desde la consola.",
+      "confirmLabel": "Escriba «{{name}}» para confirmar",
+      "confirm": "Eliminar comunidad",
+      "deleted": "Comunidad eliminada",
+      "deletedDesc": "{{name}} ha sido eliminada.",
+      "failed": "No se pudo eliminar la comunidad"
+    },
+    "stats": {
+      "menu": "Ver estadísticas",
+      "title": "{{name}} — estadísticas",
+      "description": "Recuentos en vivo de los registros de membresía de la comunidad.",
+      "activeMembers": "Miembros activos",
+      "pendingRequests": "Solicitudes de ingreso pendientes",
+      "loadFailed": "No se pudieron cargar las estadísticas."
+    },
+    "export": {
+      "selected": "Exportar selección ({{count}})",
+      "ready": "Exportación lista",
+      "readyDescOne": "{{name}} se ha exportado.",
+      "readyDescMany": "Comunidades exportadas: {{count}}.",
+      "failedOne": "No se pudo exportar la comunidad",
+      "failedMany": "No se pudieron exportar las comunidades"
+    },
+    "selectAllOnPage": "Seleccionar todas las comunidades de esta página",
+    "selectCommunity": "Seleccionar {{name}}"
   },
   "associations": {
     "title": "Asociaciones",
@@ -1480,7 +1540,10 @@
       "PAST_DUE": "Pago vencido",
       "CANCELLED": "Cancelada",
       "EXPIRED": "Caducada"
-    }
+    },
+    "suspendFailed": "No se pudo suspender el círculo",
+    "unsuspendFailed": "No se pudo levantar la suspensión",
+    "dissolveFailed": "No se pudo disolver el círculo"
   },
   "circlePlans": {
     "title": "Planes de círculo",
