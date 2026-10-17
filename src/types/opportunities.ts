@@ -134,7 +134,9 @@ export interface Opportunity {
   formFields?: FormField[] | null;
   status: OpportunityStatus;
   priorityLevel: PriorityLevel;
+  /** Integer MINOR units (x100: cents/pesewas) - platform money rule. */
   compensationMin?: number | null;
+  /** Integer MINOR units (x100). */
   compensationMax?: number | null;
   compensationCurrency?: string | null;
   compensationType?: CompensationType | null;
@@ -238,6 +240,7 @@ export interface CreateOpportunityInput {
   eligibilityCriteria?: string;
   deliveryMode?: DeliveryMode;
   commitmentType?: CommitmentType;
+  /** Integer MINOR units (x100) - convert at the form boundary only (@/lib/minorUnits). */
   compensationMin?: number;
   compensationMax?: number;
   compensationCurrency?: string;    // ISO currency code e.g. "GHS"
@@ -267,6 +270,7 @@ export interface UpdateOpportunityInput {
   deliveryMode?: DeliveryMode;
   commitmentType?: CommitmentType;
   location?: string;
+  /** Integer MINOR units (x100) - convert at the form boundary only (@/lib/minorUnits). */
   compensationMin?: number;
   compensationMax?: number;
   compensationCurrency?: string;

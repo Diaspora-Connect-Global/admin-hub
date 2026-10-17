@@ -58,6 +58,7 @@ import {
 } from "@/types/opportunities";
 import { toast } from "@/hooks/use-toast";
 import { getUserId } from "@/stores/session";
+import { majorTextToMinor, minorToMajorText } from "@/lib/minorUnits";
 import {
   OPPORTUNITY_CATEGORIES,
   getSubCategoryOptions,
@@ -217,8 +218,8 @@ export function CreateEditOpportunityModal({
       setEligibilityCriteria(opportunity.eligibilityCriteria ?? "");
       setDeliveryMode((opportunity.deliveryMode as DeliveryMode) ?? "");
       setCommitmentType((opportunity.commitmentType as CommitmentType) ?? "");
-      setCompensationMin(opportunity.compensationMin != null ? String(opportunity.compensationMin) : "");
-      setCompensationMax(opportunity.compensationMax != null ? String(opportunity.compensationMax) : "");
+      setCompensationMin(minorToMajorText(opportunity.compensationMin));
+      setCompensationMax(minorToMajorText(opportunity.compensationMax));
       setCompensationCurrency(opportunity.compensationCurrency ?? "");
       setCompensationType((opportunity.compensationType as CompensationType) ?? "");
       setDuration(opportunity.duration ?? "");
@@ -334,8 +335,8 @@ export function CreateEditOpportunityModal({
         deliveryMode: deliveryMode || undefined,
         commitmentType: commitmentType || undefined,
         location: location || undefined,
-        compensationMin: compensationMin ? Number(compensationMin) : undefined,
-        compensationMax: compensationMax ? Number(compensationMax) : undefined,
+        compensationMin: majorTextToMinor(compensationMin),
+        compensationMax: majorTextToMinor(compensationMax),
         compensationCurrency: compensationCurrency || undefined,
         compensationType: compensationType || undefined,
         duration: duration || undefined,
@@ -374,8 +375,8 @@ export function CreateEditOpportunityModal({
         deliveryMode: deliveryMode || undefined,
         commitmentType: commitmentType || undefined,
         location: location || undefined,
-        compensationMin: compensationMin ? Number(compensationMin) : undefined,
-        compensationMax: compensationMax ? Number(compensationMax) : undefined,
+        compensationMin: majorTextToMinor(compensationMin),
+        compensationMax: majorTextToMinor(compensationMax),
         compensationCurrency: compensationCurrency || undefined,
         compensationType: compensationType || undefined,
         duration: duration || undefined,
@@ -819,6 +820,7 @@ export function CreateEditOpportunityModal({
                         type="number"
                         placeholder="0"
                         min={0}
+                        step="0.01"
                         value={compensationMin}
                         onChange={(e) => setCompensationMin(e.target.value)}
                       />
@@ -829,6 +831,7 @@ export function CreateEditOpportunityModal({
                         type="number"
                         placeholder="0"
                         min={0}
+                        step="0.01"
                         value={compensationMax}
                         onChange={(e) => setCompensationMax(e.target.value)}
                       />
