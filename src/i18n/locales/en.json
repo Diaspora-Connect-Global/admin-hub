@@ -1533,7 +1533,8 @@
     },
     "joinModeValue": {
       "INVITE_ONLY": "Invite only",
-      "REQUEST": "By request"
+      "REQUEST": "By request",
+      "OPEN": "Open to join"
     },
     "subscriptionStatusValue": {
       "ACTIVE": "Active",
