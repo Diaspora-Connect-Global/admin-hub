@@ -2,6 +2,7 @@ import { useTranslation } from "react-i18next";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { COMMUNITY_SERVICES } from "@/constants/communityServices";
+import { isEventsOnly } from "@/lib/eventNetworking";
 
 interface ServiceCheckboxGridProps {
   /** Currently-selected service keys. */
@@ -11,6 +12,11 @@ interface ServiceCheckboxGridProps {
   /** Optional bulk helpers — when provided, "Select all / Clear all" controls render. */
   onSelectAll?: () => void;
   onClearAll?: () => void;
+  /**
+   * When provided, an "Events-only" preset renders: it replaces the selection with just
+   * `events`, for a community or association that exists only to run events.
+   */
+  onEventsOnly?: () => void;
   disabled?: boolean;
   /** Unique prefix so multiple grids on one page keep distinct checkbox ids. */
   idPrefix?: string;
@@ -26,6 +32,7 @@ export function ServiceCheckboxGrid({
   onToggle,
   onSelectAll,
   onClearAll,
+  onEventsOnly,
   disabled = false,
   idPrefix = "service",
 }: ServiceCheckboxGridProps) {
@@ -34,8 +41,20 @@ export function ServiceCheckboxGrid({
 
   return (
     <div className="space-y-3">
-      {(onSelectAll || onClearAll) && (
+      {(onSelectAll || onClearAll || onEventsOnly) && (
         <div className="flex items-center justify-end gap-2">
+          {onEventsOnly && (
+            <Button
+              type="button"
+              variant={isEventsOnly(selected) ? "secondary" : "outline"}
+              size="sm"
+              onClick={onEventsOnly}
+              disabled={disabled}
+              aria-pressed={isEventsOnly(selected)}
+            >
+              {t("services.eventsOnly", "Events-only")}
+            </Button>
+          )}
           {onSelectAll && (
             <Button
               type="button"
@@ -59,6 +78,15 @@ export function ServiceCheckboxGrid({
             </Button>
           )}
         </div>
+      )}
+
+      {onEventsOnly && isEventsOnly(selected) && (
+        <p className="text-xs text-muted-foreground">
+          {t(
+            "services.eventsOnlyHint",
+            "Events-only: its admins land on an Events dashboard and see only event-related menu items.",
+          )}
+        </p>
       )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">

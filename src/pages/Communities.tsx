@@ -1122,6 +1122,7 @@ export default function Communities() {
                     }
                     onSelectAll={() => setFormData((prev) => ({ ...prev, enabledServices: [...ALL_SERVICE_KEYS] }))}
                     onClearAll={() => setFormData((prev) => ({ ...prev, enabledServices: [] }))}
+                    onEventsOnly={() => setFormData((prev) => ({ ...prev, enabledServices: ["events"] }))}
                   />
                 </div>
               </div>

@@ -112,6 +112,8 @@ const EVENT_REGISTRATION_FIELDS = gql`
     ticketId
     quantity
     status
+    registrationStatus
+    waitlistPosition
     totalAmount
     currency
     registeredAt

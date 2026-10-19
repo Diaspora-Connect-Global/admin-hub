@@ -2,6 +2,9 @@ import { useEffect, useMemo, useState } from "react";
 import { useApolloClient } from "@apollo/client/react";
 import { format } from "date-fns";
 import { Event, EventRegistration } from "@/types/events";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { EventNetworkingTabs } from "@/components/events/networking/EventNetworkingTabs";
+import { RegistrationStatusBadge } from "@/components/events/networking/RegistrationStatusBadge";
 import { GET_USER_DISPLAY_NAME } from "@/services/networks/graphql/user";
 import {
   Sheet,
@@ -26,7 +29,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { StatusBadge } from "@/components/ui/StatusBadge";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -224,122 +226,130 @@ export function RegistrationsDrawer({
           <p className="text-sm text-muted-foreground">{t.forEvent}: {event.title}</p>
         </SheetHeader>
 
-        <div className="mt-6 space-y-4">
-          {/* Controls */}
-          <div className="flex flex-wrap gap-3">
-            <div className="relative flex-1 min-w-[200px]">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder={t.searchAttendees}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9"
-              />
-            </div>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[140px]">
-                <SelectValue placeholder={t.status} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{t.allStatus}</SelectItem>
-                <SelectItem value="PENDING">{t.pending}</SelectItem>
-                <SelectItem value="CONFIRMED">Confirmed</SelectItem>
-                <SelectItem value="WAITLISTED">Waitlisted</SelectItem>
-                <SelectItem value="CHECKED_IN">Checked In</SelectItem>
-                <SelectItem value="CANCELLED">Cancelled</SelectItem>
-              </SelectContent>
-            </Select>
-            <Button variant="outline" size="icon">
-              <Download className="h-4 w-4" />
-            </Button>
-          </div>
+        <Tabs defaultValue="registrations" className="mt-6">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="registrations">Registrations</TabsTrigger>
+            <TabsTrigger value="manage">Approvals &amp; staff</TabsTrigger>
+          </TabsList>
+          <TabsContent value="registrations">
+            <div className="mt-4 space-y-4">
+              {/* Controls */}
+              <div className="flex flex-wrap gap-3">
+                <div className="relative flex-1 min-w-[200px]">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder={t.searchAttendees}
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-9"
+                  />
+                </div>
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className="w-[140px]">
+                    <SelectValue placeholder={t.status} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">{t.allStatus}</SelectItem>
+                    <SelectItem value="PENDING">{t.pending}</SelectItem>
+                    <SelectItem value="PENDING_APPROVAL">Awaiting approval</SelectItem>
+                    <SelectItem value="CONFIRMED">Confirmed</SelectItem>
+                    <SelectItem value="WAITLISTED">Waitlisted</SelectItem>
+                    <SelectItem value="CHECKED_IN">Checked In</SelectItem>
+                    <SelectItem value="REJECTED">Declined</SelectItem>
+                    <SelectItem value="CANCELLED">Cancelled</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Button variant="outline" size="icon">
+                  <Download className="h-4 w-4" />
+                </Button>
+              </div>
 
-          {/* Table */}
-          {loading ? (
-            <div className="text-center py-12 text-muted-foreground">Loading…</div>
-          ) : filteredRegistrations.length > 0 ? (
-            <div className="rounded-lg border border-border overflow-hidden">
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-muted/50">
-                    <TableHead>{t.attendee}</TableHead>
-                    <TableHead>Quantity</TableHead>
-                    {event.isPaid && <TableHead>{t.payment}</TableHead>}
-                    <TableHead>{t.status}</TableHead>
-                    <TableHead>{t.registeredAt}</TableHead>
-                    <TableHead className="w-[50px]"></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredRegistrations.map((registration) => (
-                    <TableRow key={registration.id}>
-                      <TableCell
-                        className="font-medium max-w-[220px] truncate"
-                        title={resolveAttendeeName(registration, fallbackNameByUserId)}
-                      >
-                        {resolveAttendeeName(registration, fallbackNameByUserId)}
-                      </TableCell>
-                      <TableCell>{registration.quantity}</TableCell>
-                      {event.isPaid && (
-                        <TableCell>
-                          {registration.totalAmount
-                            ? formatRegistrationAmount(
-                                registration.totalAmount,
-                                registration.currency ?? event.currency,
-                              )
-                            : "Free"}
-                        </TableCell>
-                      )}
-                      <TableCell>
-                        <StatusBadge
-                          variant={
-                            registration.status?.toLowerCase() === "confirmed" ? "active"
-                            : registration.status?.toLowerCase() === "pending" ? "warning"
-                            : "inactive"
-                          }
-                        >
-                          {registration.status}
-                        </StatusBadge>
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {registration.registeredAt
-                          ? format(new Date(registration.registeredAt), "MMM d, yyyy HH:mm")
-                          : "—"}
-                      </TableCell>
-                      <TableCell>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => handleMarkCheckedIn(registration)}>
-                              <CheckCircle className="mr-2 h-4 w-4" />
-                              {t.markAsCheckedIn}
-                            </DropdownMenuItem>
-                            <DropdownMenuItem className="text-destructive" onClick={() => handleRemove(registration)}>
-                              <UserX className="mr-2 h-4 w-4" />
-                              {t.removeAttendee}
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+              {/* Table */}
+              {loading ? (
+                <div className="text-center py-12 text-muted-foreground">Loading…</div>
+              ) : filteredRegistrations.length > 0 ? (
+                <div className="rounded-lg border border-border overflow-hidden">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-muted/50">
+                        <TableHead>{t.attendee}</TableHead>
+                        <TableHead>Quantity</TableHead>
+                        {event.isPaid && <TableHead>{t.payment}</TableHead>}
+                        <TableHead>{t.status}</TableHead>
+                        <TableHead>{t.registeredAt}</TableHead>
+                        <TableHead className="w-[50px]"></TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredRegistrations.map((registration) => (
+                        <TableRow key={registration.id}>
+                          <TableCell
+                            className="font-medium max-w-[220px] truncate"
+                            title={resolveAttendeeName(registration, fallbackNameByUserId)}
+                          >
+                            {resolveAttendeeName(registration, fallbackNameByUserId)}
+                          </TableCell>
+                          <TableCell>{registration.quantity}</TableCell>
+                          {event.isPaid && (
+                            <TableCell>
+                              {registration.totalAmount
+                                ? formatRegistrationAmount(
+                                    registration.totalAmount,
+                                    registration.currency ?? event.currency,
+                                  )
+                                : "Free"}
+                            </TableCell>
+                          )}
+                          <TableCell>
+                            <RegistrationStatusBadge status={registration.registrationStatus || registration.status} />
+                            {registration.waitlistPosition != null && (
+                              <span className="ml-1 text-xs text-muted-foreground">#{registration.waitlistPosition}</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-muted-foreground">
+                            {registration.registeredAt
+                              ? format(new Date(registration.registeredAt), "MMM d, yyyy HH:mm")
+                              : "—"}
+                          </TableCell>
+                          <TableCell>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-8 w-8">
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => handleMarkCheckedIn(registration)}>
+                                  <CheckCircle className="mr-2 h-4 w-4" />
+                                  {t.markAsCheckedIn}
+                                </DropdownMenuItem>
+                                <DropdownMenuItem className="text-destructive" onClick={() => handleRemove(registration)}>
+                                  <UserX className="mr-2 h-4 w-4" />
+                                  {t.removeAttendee}
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              ) : (
+                <div className="text-center py-12 border border-dashed border-border rounded-lg">
+                  <Users className="h-12 w-12 mx-auto text-muted-foreground/50 mb-3" />
+                  <h3 className="text-lg font-medium text-foreground mb-1">{t.noRegistrationsYet}</h3>
+                  <p className="text-sm text-muted-foreground">
+                    {t.shareEventToAttract}
+                  </p>
+                </div>
+              )}
             </div>
-          ) : (
-            <div className="text-center py-12 border border-dashed border-border rounded-lg">
-              <Users className="h-12 w-12 mx-auto text-muted-foreground/50 mb-3" />
-              <h3 className="text-lg font-medium text-foreground mb-1">{t.noRegistrationsYet}</h3>
-              <p className="text-sm text-muted-foreground">
-                {t.shareEventToAttract}
-              </p>
-            </div>
-          )}
-        </div>
+          </TabsContent>
+          <TabsContent value="manage" className="mt-4">
+            <EventNetworkingTabs eventId={event.id} onChanged={() => { refetch(); onRefetch?.(); }} />
+          </TabsContent>
+        </Tabs>
       </SheetContent>
     </Sheet>
   );
