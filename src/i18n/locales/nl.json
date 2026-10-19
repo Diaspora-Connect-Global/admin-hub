@@ -1422,6 +1422,7 @@
     "hidden": "Bericht verborgen.",
     "restoreFailed": "Het bericht kon niet worden hersteld.",
     "restored": "Bericht hersteld.",
+    "removeFailed": "De inhoud kon niet worden verwijderd.",
     "removePostTitle": "Dit bericht verwijderen?",
     "removePostDescription": "Het bericht en al zijn reacties, reacties-emoji's en feed-vermeldingen worden verwijderd. Dit kan niet ongedaan worden gemaakt vanuit de console — verberg het bericht als u het mogelijk terug wilt.",
     "removeCommentTitle": "Deze reactie verwijderen?",
@@ -1432,7 +1433,9 @@
     "reasonPlaceholder": "Wordt vastgelegd in het moderatie-auditlogboek",
     "commentsTitle": "Reacties ({{count}})",
     "noComments": "Geen reacties op dit bericht.",
-    "deleted": "Verwijderd"
+    "deleted": "Verwijderd",
+    "noTextPost": "Een bericht zonder tekst",
+    "noTextComment": "Een reactie zonder tekst"
   },
   "circles": {
     "title": "Circles",

@@ -1422,6 +1422,7 @@
     "hidden": "Publication masquée.",
     "restoreFailed": "Impossible de restaurer la publication.",
     "restored": "Publication restaurée.",
+    "removeFailed": "Impossible de supprimer le contenu.",
     "removePostTitle": "Supprimer cette publication ?",
     "removePostDescription": "La publication ainsi que tous ses commentaires, réactions et entrées de fil sont supprimés. Cette action est irréversible depuis la console : masquez plutôt la publication si vous pourriez en avoir besoin.",
     "removeCommentTitle": "Supprimer ce commentaire ?",
@@ -1432,7 +1433,9 @@
     "reasonPlaceholder": "Consigné dans le journal d'audit de modération",
     "commentsTitle": "Commentaires ({{count}})",
     "noComments": "Aucun commentaire sur cette publication.",
-    "deleted": "Supprimé"
+    "deleted": "Supprimé",
+    "noTextPost": "Une publication sans texte",
+    "noTextComment": "Un commentaire sans texte"
   },
   "circles": {
     "title": "Cercles",

@@ -40,7 +40,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
-import { friendlyErrorMessage } from "@/lib/graphqlErrors";
+import { friendlyErrorMessage, throwIfGraphQLErrors } from "@/lib/graphqlErrors";
 import {
   useAdminListPosts,
   useAdminListPostComments,
@@ -218,13 +218,21 @@ export default function PostManagement() {
   const handleRemove = async () => {
     if (!removeTarget) return;
     try {
-      await removeContent({
+      const res = await removeContent({
         variables: {
           contentType: removeTarget.type,
           contentId: removeTarget.id,
           reason: removeReason || t("posts.defaultRemovalReason"),
         },
       });
+      // The gateway answers a refused removal as `{ success:false, error }`
+      // (it catches the downstream failure) and the client may resolve a
+      // GraphQL error as `data:null`: neither throws, so without this check a
+      // refused removal toasted "Content removed." and the post stayed.
+      throwIfGraphQLErrors(res, "adminRemoveContent");
+      if (!res.data?.adminRemoveContent?.success) {
+        throw new Error(res.data?.adminRemoveContent?.error || t("posts.removeFailed"));
+      }
       toast({ title: t("common.success"), description: t("posts.removed") });
       await refetch();
     } catch (e) {
@@ -480,7 +488,7 @@ export default function PostManagement() {
                                   setRemoveTarget({
                                     type: "POST",
                                     id: post.id,
-                                    preview: post.text ?? post.id,
+                                    preview: post.text?.trim() || t("posts.noTextPost"),
                                   })
                                 }
                               >
@@ -507,7 +515,7 @@ export default function PostManagement() {
           setRemoveTarget({
             type: "COMMENT",
             id: comment.id,
-            preview: comment.text ?? comment.id,
+            preview: comment.text?.trim() || t("posts.noTextComment"),
           })
         }
       />

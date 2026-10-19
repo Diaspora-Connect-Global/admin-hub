@@ -1422,6 +1422,7 @@
     "hidden": "Beitrag ausgeblendet.",
     "restoreFailed": "Der Beitrag konnte nicht wiederhergestellt werden.",
     "restored": "Beitrag wiederhergestellt.",
+    "removeFailed": "Der Inhalt konnte nicht entfernt werden.",
     "removePostTitle": "Diesen Beitrag entfernen?",
     "removePostDescription": "Der Beitrag und alle zugehörigen Kommentare, Reaktionen und Feed-Einträge werden gelöscht. Das lässt sich in der Konsole nicht rückgängig machen – blenden Sie den Beitrag stattdessen aus, wenn Sie ihn eventuell zurückhaben möchten.",
     "removeCommentTitle": "Diesen Kommentar entfernen?",
@@ -1432,7 +1433,9 @@
     "reasonPlaceholder": "Wird im Moderations-Audit-Log erfasst",
     "commentsTitle": "Kommentare ({{count}})",
     "noComments": "Keine Kommentare zu diesem Beitrag.",
-    "deleted": "Gelöscht"
+    "deleted": "Gelöscht",
+    "noTextPost": "Ein Beitrag ohne Text",
+    "noTextComment": "Ein Kommentar ohne Text"
   },
   "circles": {
     "title": "Circles",
