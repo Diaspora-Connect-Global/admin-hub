@@ -1422,6 +1422,7 @@
     "hidden": "Publicación oculta.",
     "restoreFailed": "No se pudo restaurar la publicación.",
     "restored": "Publicación restaurada.",
+    "removeFailed": "No se pudo eliminar el contenido.",
     "removePostTitle": "¿Eliminar esta publicación?",
     "removePostDescription": "Se eliminan la publicación y todos sus comentarios, reacciones y entradas de feed. Esto no se puede deshacer desde la consola: si cree que la necesitará, oculte la publicación en su lugar.",
     "removeCommentTitle": "¿Eliminar este comentario?",

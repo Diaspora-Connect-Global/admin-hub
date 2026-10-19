@@ -1422,6 +1422,7 @@
     "hidden": "Post hidden.",
     "restoreFailed": "Could not restore the post.",
     "restored": "Post restored.",
+    "removeFailed": "Could not remove the content.",
     "removePostTitle": "Remove this post?",
     "removePostDescription": "The post and all of its comments, reactions and feed entries are deleted. This cannot be undone from the console — hide the post instead if you may want it back.",
     "removeCommentTitle": "Remove this comment?",
