@@ -1536,7 +1536,8 @@
     },
     "joinModeValue": {
       "INVITE_ONLY": "Nur auf Einladung",
-      "REQUEST": "Auf Anfrage"
+      "REQUEST": "Auf Anfrage",
+      "OPEN": "Offen für alle"
     },
     "subscriptionStatusValue": {
       "ACTIVE": "Aktiv",
