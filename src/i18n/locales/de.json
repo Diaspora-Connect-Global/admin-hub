@@ -1433,7 +1433,9 @@
     "reasonPlaceholder": "Wird im Moderations-Audit-Log erfasst",
     "commentsTitle": "Kommentare ({{count}})",
     "noComments": "Keine Kommentare zu diesem Beitrag.",
-    "deleted": "Gelöscht"
+    "deleted": "Gelöscht",
+    "noTextPost": "Ein Beitrag ohne Text",
+    "noTextComment": "Ein Kommentar ohne Text"
   },
   "circles": {
     "title": "Circles",

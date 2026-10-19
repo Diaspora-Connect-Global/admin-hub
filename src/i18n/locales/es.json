@@ -1433,7 +1433,9 @@
     "reasonPlaceholder": "Se registra en el historial de moderación",
     "commentsTitle": "Comentarios ({{count}})",
     "noComments": "Esta publicación no tiene comentarios.",
-    "deleted": "Eliminado"
+    "deleted": "Eliminado",
+    "noTextPost": "Una publicación sin texto",
+    "noTextComment": "Un comentario sin texto"
   },
   "circles": {
     "title": "Círculos",

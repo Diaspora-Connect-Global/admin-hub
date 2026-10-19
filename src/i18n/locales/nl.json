@@ -1433,7 +1433,9 @@
     "reasonPlaceholder": "Wordt vastgelegd in het moderatie-auditlogboek",
     "commentsTitle": "Reacties ({{count}})",
     "noComments": "Geen reacties op dit bericht.",
-    "deleted": "Verwijderd"
+    "deleted": "Verwijderd",
+    "noTextPost": "Een bericht zonder tekst",
+    "noTextComment": "Een reactie zonder tekst"
   },
   "circles": {
     "title": "Circles",

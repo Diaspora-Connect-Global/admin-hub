@@ -1433,7 +1433,9 @@
     "reasonPlaceholder": "Recorded in the moderation audit log",
     "commentsTitle": "Comments ({{count}})",
     "noComments": "No comments on this post.",
-    "deleted": "Deleted"
+    "deleted": "Deleted",
+    "noTextPost": "A post with no text",
+    "noTextComment": "A comment with no text"
   },
   "circles": {
     "title": "Circles",

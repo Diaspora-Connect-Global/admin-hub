@@ -1433,7 +1433,9 @@
     "reasonPlaceholder": "Consigné dans le journal d'audit de modération",
     "commentsTitle": "Commentaires ({{count}})",
     "noComments": "Aucun commentaire sur cette publication.",
-    "deleted": "Supprimé"
+    "deleted": "Supprimé",
+    "noTextPost": "Une publication sans texte",
+    "noTextComment": "Un commentaire sans texte"
   },
   "circles": {
     "title": "Cercles",

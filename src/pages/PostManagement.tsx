@@ -488,7 +488,7 @@ export default function PostManagement() {
                                   setRemoveTarget({
                                     type: "POST",
                                     id: post.id,
-                                    preview: post.text ?? post.id,
+                                    preview: post.text?.trim() || t("posts.noTextPost"),
                                   })
                                 }
                               >
@@ -515,7 +515,7 @@ export default function PostManagement() {
           setRemoveTarget({
             type: "COMMENT",
             id: comment.id,
-            preview: comment.text ?? comment.id,
+            preview: comment.text?.trim() || t("posts.noTextComment"),
           })
         }
       />
