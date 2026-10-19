@@ -32,18 +32,37 @@ function renderCard(mocks: ReadonlyArray<MockedResponse>) {
   );
 }
 
+const SAVE_INPUT = {
+  // Email is always ALL — the card never offers anything else.
+  email: { mode: "ALL", countries: [] as string[] },
+  sms: { mode: "LIST", countries: ["GH"] },
+};
+
+async function loaded() {
+  // The fieldsets render immediately but stay disabled until the query resolves;
+  // "Last changed" only appears once settings have loaded, so wait for it.
+  await screen.findByText(/Last changed/);
+  return {
+    email: screen.getByRole("group", { name: /^email codes$/i }),
+    sms: screen.getByRole("group", { name: /^sms codes$/i }),
+  };
+}
+
+async function pickSmsGhana(sms: HTMLElement) {
+  await userEvent.click(within(sms).getByRole("radio", { name: /only these countries/i }));
+  await userEvent.click(await screen.findByRole("checkbox", { name: /ghana/i }));
+}
+
 // ~195 Radix checkboxes per list; give slow CI machines headroom.
 describe("OtpDeliverySettingsCard", { timeout: 30000 }, () => {
-  it("loads settings, shows who changed it last, and keeps Save disabled until something changes", async () => {
+  it("shows email as always on (no choice), who changed it last, and keeps Save disabled until something changes", async () => {
     renderCard([settingsMock()]);
+    const { email, sms } = await loaded();
 
-    // Both Email and SMS fieldsets render an "All countries" radio, so scope
-    // to the Email one instead of an ambiguous page-wide query.
-    const emailFieldset = await screen.findByRole("group", { name: /^email codes$/i });
-    // The fieldsets render immediately but stay disabled until the query resolves;
-    // "Last changed" only appears once settings have loaded, so wait for it.
-    await screen.findByText(/Last changed/);
-    expect(within(emailFieldset).getByRole("radio", { name: /all countries/i })).toBeChecked();
+    expect(email).toHaveTextContent(/always on, in all countries/i);
+    expect(within(email).queryAllByRole("radio")).toHaveLength(0);
+    expect(within(email).queryAllByRole("checkbox")).toHaveLength(0);
+    expect(within(sms).getByRole("radio", { name: /no countries/i })).toBeChecked();
 
     const lastChanged = screen.getByText(/Last changed/);
     expect(lastChanged).toHaveTextContent("Ama Mensah");
@@ -51,82 +70,40 @@ describe("OtpDeliverySettingsCard", { timeout: 30000 }, () => {
     expect(lastChanged.textContent).not.toMatch(/[0-9a-f]{8}-[0-9a-f]{4}-/i);
 
     expect(screen.getByRole("button", { name: /save changes/i })).toBeDisabled();
-    // Default (email ALL) covers every country, so no gap warning.
-    expect(screen.queryByText(/some countries aren't covered/i)).not.toBeInTheDocument();
   });
 
-  it("shows an inline error and keeps Save disabled when LIST has zero countries", async () => {
+  it("shows an inline error and keeps Save disabled when the SMS list has zero countries", async () => {
     renderCard([settingsMock()]);
+    const { sms } = await loaded();
+    await userEvent.click(within(sms).getByRole("radio", { name: /only these countries/i }));
 
-    const emailFieldset = await screen.findByRole("group", { name: /^email codes$/i });
-    // The fieldsets render immediately but stay disabled until the query resolves;
-    // "Last changed" only appears once settings have loaded, so wait for it.
-    await screen.findByText(/Last changed/);
-    await userEvent.click(
-      within(emailFieldset).getByRole("radio", { name: /only these countries/i }),
-    );
-
-    expect(
-      await screen.findByText(/select at least one country/i),
-    ).toBeInTheDocument();
+    expect(await screen.findByText(/select at least one country/i)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /save changes/i })).toBeDisabled();
   });
 
-  it("warns when the current choices leave a country with no channel", async () => {
-    renderCard([settingsMock()]);
-
-    const emailFieldset = await screen.findByRole("group", { name: /^email codes$/i });
-    // The fieldsets render immediately but stay disabled until the query resolves;
-    // "Last changed" only appears once settings have loaded, so wait for it.
-    await screen.findByText(/Last changed/);
-    await userEvent.click(
-      within(emailFieldset).getByRole("radio", { name: /only these countries/i }),
-    );
-    await userEvent.click(await screen.findByRole("checkbox", { name: /ghana/i }));
-
-    expect(
-      await screen.findByText(/some countries aren't covered/i),
-    ).toBeInTheDocument();
-  });
-
-  it("enables Save on a valid change and saves successfully", async () => {
+  it("saves an SMS change and always sends email ALL", async () => {
     const onMutate = vi.fn();
     renderCard([
       settingsMock(),
       {
-        request: {
-          query: UPDATE_OTP_SETTINGS,
-          variables: {
-            input: {
-              email: { mode: "LIST", countries: ["GH"] },
-              sms: { mode: "NONE", countries: [] as string[] },
-            },
-          },
-        },
+        request: { query: UPDATE_OTP_SETTINGS, variables: { input: SAVE_INPUT } },
         result: () => {
           onMutate();
           return {
             data: {
               updateOtpSettings: {
                 ...defaultSettings,
-                email: { __typename: "OtpChannelPolicy", mode: "LIST", countries: ["GH"] },
-                updatedAt: "2026-09-29T00:00:00.000Z",
+                sms: { __typename: "OtpChannelPolicy", mode: "LIST", countries: ["GH"] },
+                updatedAt: "2026-10-18T00:00:00.000Z",
               },
             },
           };
         },
       },
-      settingsMock({ email: { __typename: "OtpChannelPolicy", mode: "LIST", countries: ["GH"] } }),
+      settingsMock({ sms: { __typename: "OtpChannelPolicy", mode: "LIST", countries: ["GH"] } }),
     ]);
-
-    const emailFieldset = await screen.findByRole("group", { name: /^email codes$/i });
-    // The fieldsets render immediately but stay disabled until the query resolves;
-    // "Last changed" only appears once settings have loaded, so wait for it.
-    await screen.findByText(/Last changed/);
-    await userEvent.click(
-      within(emailFieldset).getByRole("radio", { name: /only these countries/i }),
-    );
-    await userEvent.click(await screen.findByRole("checkbox", { name: /ghana/i }));
+    const { sms } = await loaded();
+    await pickSmsGhana(sms);
 
     const saveButton = screen.getByRole("button", { name: /save changes/i });
     expect(saveButton).toBeEnabled();
@@ -140,15 +117,7 @@ describe("OtpDeliverySettingsCard", { timeout: 30000 }, () => {
     renderCard([
       settingsMock(),
       {
-        request: {
-          query: UPDATE_OTP_SETTINGS,
-          variables: {
-            input: {
-              email: { mode: "LIST", countries: ["GH"] },
-              sms: { mode: "NONE", countries: [] as string[] },
-            },
-          },
-        },
+        request: { query: UPDATE_OTP_SETTINGS, variables: { input: SAVE_INPUT } },
         // errorPolicy "all" resolves with data:null + errors — never a thrown rejection.
         result: {
           data: null,
@@ -157,15 +126,8 @@ describe("OtpDeliverySettingsCard", { timeout: 30000 }, () => {
       },
       settingsMock(), // consumed by the mutation's refetchQueries even on a refusal
     ]);
-
-    const emailFieldset = await screen.findByRole("group", { name: /^email codes$/i });
-    // The fieldsets render immediately but stay disabled until the query resolves;
-    // "Last changed" only appears once settings have loaded, so wait for it.
-    await screen.findByText(/Last changed/);
-    await userEvent.click(
-      within(emailFieldset).getByRole("radio", { name: /only these countries/i }),
-    );
-    await userEvent.click(await screen.findByRole("checkbox", { name: /ghana/i }));
+    const { sms } = await loaded();
+    await pickSmsGhana(sms);
     await userEvent.click(screen.getByRole("button", { name: /save changes/i }));
 
     expect(await screen.findByText(/country list must not be empty/i)).toBeInTheDocument();

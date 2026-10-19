@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { AlertTriangle, Loader2, Save } from "lucide-react";
+import { Loader2, Mail, Save } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -42,18 +42,6 @@ function samePolicy(a: ChannelDraft, b: ChannelDraft): boolean {
 /** LIST with zero countries can't be saved — it wouldn't allow anyone. */
 function policyValid(p: ChannelDraft): boolean {
   return p.mode !== "LIST" || p.countries.length > 0;
-}
-
-/**
- * True when some country would be allowed by neither channel. The server still
- * sends that country's code by email regardless (nobody is ever locked out) —
- * this is purely a "did you mean to do that?" signal for the admin.
- */
-function hasUncoveredCountry(email: ChannelDraft, sms: ChannelDraft): boolean {
-  if (email.mode === "ALL" || sms.mode === "ALL") return false;
-  const emailSet = email.mode === "LIST" ? new Set(email.countries) : new Set<string>();
-  const smsSet = sms.mode === "LIST" ? new Set(sms.countries) : new Set<string>();
-  return ALL_COUNTRY_CODES.some((c) => !emailSet.has(c) && !smsSet.has(c));
 }
 
 const MODE_OPTIONS: Array<{ value: OtpChannelMode; label: string }> = [
@@ -128,7 +116,9 @@ function ChannelSection({
 }
 
 /**
- * Per-country OTP delivery policy for EMAIL and SMS. System-admin only
+ * OTP delivery policy. Email is ALWAYS on for every country (owner decision,
+ * 2026-10-18; auth-service refuses any other email mode), so it is shown as a
+ * fixed fact, not a choice. Only the SMS policy is editable. System-admin only
  * (route-gated by RequireSystemAdmin at the page level).
  */
 export function OtpDeliverySettingsCard() {
@@ -139,12 +129,11 @@ export function OtpDeliverySettingsCard() {
 
   const settings = data?.adminOtpSettings;
 
-  const [email, setEmail] = useState<ChannelDraft>({ mode: "ALL", countries: [] });
   const [sms, setSms] = useState<ChannelDraft>({ mode: "NONE", countries: [] });
   const [saveError, setSaveError] = useState<string | null>(null);
 
   // Snapshot of the last-loaded/-saved values, used to tell whether the form is dirty.
-  const [loaded, setLoaded] = useState<{ email: ChannelDraft; sms: ChannelDraft } | null>(null);
+  const [loaded, setLoaded] = useState<ChannelDraft | null>(null);
 
   // Guards the sync-from-server effect below against clobbering an in-progress
   // edit: `data` (and therefore `settings`) isn't guaranteed to keep the same
@@ -158,27 +147,19 @@ export function OtpDeliverySettingsCard() {
 
   useEffect(() => {
     if (!settings || dirtyRef.current) return;
-    const next = {
-      email: { mode: settings.email.mode, countries: settings.email.countries },
-      sms: { mode: settings.sms.mode, countries: settings.sms.countries },
-    };
-    setEmail(next.email);
-    setSms(next.sms);
+    const next = { mode: settings.sms.mode, countries: settings.sms.countries };
+    setSms(next);
     setLoaded(next);
   }, [settings]);
 
-  const updateEmail = (next: ChannelDraft) => {
-    dirtyRef.current = true;
-    setEmail(next);
-  };
   const updateSms = (next: ChannelDraft) => {
     dirtyRef.current = true;
     setSms(next);
   };
 
   // Localized country names + a stable display order, computed once per admin
-  // locale and shared by both selectors (avoids building Intl.DisplayNames /
-  // sorting the ~195-country list twice per render).
+  // locale (avoids rebuilding Intl.DisplayNames / re-sorting the ~195-country
+  // list on every render).
   const countryNames = useMemo(() => {
     const map = new Map<string, string>();
     let displayNames: Intl.DisplayNames | null = null;
@@ -202,19 +183,18 @@ export function OtpDeliverySettingsCard() {
     [countryNames],
   );
 
-  const emailValid = policyValid(email);
   const smsValid = policyValid(sms);
-  const showGapWarning = useMemo(() => hasUncoveredCountry(email, sms), [email, sms]);
 
-  const isDirty = !!loaded && (!samePolicy(loaded.email, email) || !samePolicy(loaded.sms, sms));
-  const canSave = !!loaded && isDirty && emailValid && smsValid && !saving && !loading;
+  const isDirty = !!loaded && !samePolicy(loaded, sms);
+  const canSave = !!loaded && isDirty && smsValid && !saving && !loading;
 
   const handleSave = async () => {
     if (!canSave) return;
     setSaveError(null);
 
     const input: UpdateOtpSettingsInput = {
-      email: { mode: email.mode, countries: email.mode === "LIST" ? email.countries : [] },
+      // Email is always on everywhere; the server refuses anything else.
+      email: { mode: "ALL", countries: [] },
       sms: { mode: sms.mode, countries: sms.mode === "LIST" ? sms.countries : [] },
     };
 
@@ -262,8 +242,8 @@ export function OtpDeliverySettingsCard() {
           {loading && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
         </CardTitle>
         <CardDescription>
-          Choose, per channel, which countries receive one-time verification codes by email and
-          which by SMS.
+          Verification codes always go by email, in every country. Choose which countries also
+          get them by SMS.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -281,42 +261,28 @@ export function OtpDeliverySettingsCard() {
           </Alert>
         )}
 
-        <ChannelSection
-          idPrefix="otp-email"
-          title="Email codes"
-          helpText="Email codes use the address people sign up with."
-          draft={email}
-          onChange={updateEmail}
-          sortedCodes={sortedCodes}
-          countryNames={countryNames}
-          disabled={loading || saving}
-        />
+        <fieldset className="space-y-1 rounded-md border border-border p-4">
+          <legend className="px-1 text-sm font-semibold">Email codes</legend>
+          <p className="flex items-center gap-2 text-sm">
+            <Mail className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+            Always on, in all countries
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Every code is sent to the email address people sign up with, so nobody is locked out.
+            This can&apos;t be turned off.
+          </p>
+        </fieldset>
 
         <ChannelSection
           idPrefix="otp-sms"
           title="SMS codes"
-          helpText="Codes are only sent by SMS to phone numbers from the countries you allow. SMS delivery depends on the SMS provider's country permissions."
+          helpText="An SMS copy of the code goes only to phone numbers from the countries you allow (people without a phone number get email only). SMS delivery depends on the SMS provider's country permissions."
           draft={sms}
           onChange={updateSms}
           sortedCodes={sortedCodes}
           countryNames={countryNames}
           disabled={loading || saving}
         />
-
-        <p className="text-xs text-muted-foreground">
-          If a country is allowed by neither channel, people there still get their code by
-          email, so nobody is locked out of signing up.
-        </p>
-
-        {showGapWarning && (
-          <Alert className="border-warning/50 text-warning [&>svg]:text-warning">
-            <AlertTriangle className="h-4 w-4" aria-hidden="true" />
-            <AlertDescription className="text-warning">
-              Warning: with these choices, some countries aren&apos;t covered by SMS or by your
-              email list. People there will still get a code — just only by email.
-            </AlertDescription>
-          </Alert>
-        )}
 
         {settings?.updatedAt && (
           <p className="text-xs text-muted-foreground">
