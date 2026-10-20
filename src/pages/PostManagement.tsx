@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import { Button } from "@/components/ui/button";
@@ -43,7 +43,6 @@ import { useToast } from "@/hooks/use-toast";
 import { friendlyErrorMessage, throwIfGraphQLErrors } from "@/lib/graphqlErrors";
 import {
   useAdminListPosts,
-  useAdminListPostComments,
   useAdminHidePost,
   useAdminRestorePost,
   useAdminRemoveContent,
@@ -51,7 +50,6 @@ import {
   POST_VISIBILITIES,
   POST_AUTHOR_TYPES,
   type AdminPost,
-  type AdminPostComment,
 } from "@/hooks/admin";
 import {
   Search,
@@ -67,8 +65,10 @@ import {
   Lock,
   ChevronLeft,
   ChevronRight,
+  Maximize2,
 } from "lucide-react";
 import { userLabel } from "@/lib/userLabel";
+import { PostDetailSheet } from "@/components/posts/PostDetailSheet";
 
 const PAGE_SIZE = 20;
 const ALL = "all";
@@ -140,7 +140,9 @@ export default function PostManagement() {
   const [page, setPage] = useState(0);
 
   // ── dialogs ───────────────────────────────────────────────────────────────
-  const [commentsPost, setCommentsPost] = useState<AdminPost | null>(null);
+  // Only the id is kept: the drawer reads the live row from the list, so a
+  // hide/restore refetch updates it in place and a removed post closes it.
+  const [viewPostId, setViewPostId] = useState<string | null>(null);
   const [removeTarget, setRemoveTarget] = useState<
     { type: "POST" | "COMMENT"; id: string; preview: string } | null
   >(null);
@@ -165,6 +167,7 @@ export default function PostManagement() {
   const posts = data?.adminListPosts?.items ?? [];
   const total = data?.adminListPosts?.total ?? 0;
   const maxPage = Math.max(Math.ceil(total / PAGE_SIZE) - 1, 0);
+  const viewPost = viewPostId ? (posts.find((p) => p.id === viewPostId) ?? null) : null;
 
   const applySearch = () => {
     setPage(0);
@@ -385,7 +388,7 @@ export default function PostManagement() {
                       <TableHead>{t("posts.status")}</TableHead>
                       <TableHead>{t("posts.engagement")}</TableHead>
                       <TableHead>{t("posts.created")}</TableHead>
-                      <TableHead className="w-10" />
+                      <TableHead className="w-28" />
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -457,17 +460,23 @@ export default function PostManagement() {
                           {formatDate(post.createdAt)}
                         </TableCell>
                         <TableCell>
+                          <div className="flex items-center gap-1">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="gap-1"
+                            onClick={() => setViewPostId(post.id)}
+                          >
+                            <Maximize2 className="h-3 w-3" />
+                            {t("posts.view")}
+                          </Button>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon">
+                              <Button variant="ghost" size="icon" aria-label={t("posts.moreActions")}>
                                 <MoreHorizontal className="h-4 w-4" />
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => setCommentsPost(post)}>
-                                <MessageCircle className="mr-2 h-4 w-4" />
-                                {t("posts.viewComments")}
-                              </DropdownMenuItem>
                               {post.status === "HIDDEN" ? (
                                 <DropdownMenuItem
                                   disabled={restoring}
@@ -497,6 +506,7 @@ export default function PostManagement() {
                               </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -508,9 +518,9 @@ export default function PostManagement() {
         </Card>
       </div>
 
-      <CommentsDialog
-        post={commentsPost}
-        onClose={() => setCommentsPost(null)}
+      <PostDetailSheet
+        post={viewPost}
+        onClose={() => setViewPostId(null)}
         onRemoveComment={(comment) =>
           setRemoveTarget({
             type: "COMMENT",
@@ -518,6 +528,16 @@ export default function PostManagement() {
             preview: comment.text?.trim() || t("posts.noTextComment"),
           })
         }
+        onHide={(p) => setHideTarget(p)}
+        onRestore={(p) => void handleRestore(p)}
+        onRemove={(p) =>
+          setRemoveTarget({
+            type: "POST",
+            id: p.id,
+            preview: p.text?.trim() || t("posts.noTextPost"),
+          })
+        }
+        busy={hiding || restoring || removing}
       />
 
       {/* Hide — reversible, so it asks for a reason but not for confirmation of
@@ -587,141 +607,5 @@ export default function PostManagement() {
         </DialogContent>
       </Dialog>
     </AdminLayout>
-  );
-}
-
-/**
- * Comments under one post.
- *
- * Root comments and replies come back in one flat list; replies are indented by
- * `parentId` rather than re-fetched per thread. Already-deleted comments are
- * shown struck through instead of being dropped — a moderator reviewing a
- * thread needs to know something was taken down, not silently see a gap.
- */
-function CommentsDialog({
-  post,
-  onClose,
-  onRemoveComment,
-}: {
-  post: AdminPost | null;
-  onClose: () => void;
-  onRemoveComment: (comment: AdminPostComment) => void;
-}) {
-  const { t } = useTranslation();
-  const { data, loading, error } = useAdminListPostComments(post?.id ?? null, 100, 0);
-
-  const comments = data?.adminListPostComments?.items ?? [];
-  const total = data?.adminListPostComments?.total ?? 0;
-
-  // Roots first, each followed by its replies — the flat list arrives newest
-  // first and would otherwise separate a reply from what it replies to.
-  const ordered = useMemo(() => {
-    const roots = comments.filter((c) => !c.parentId);
-    const repliesByParent = new Map<string, AdminPostComment[]>();
-    for (const c of comments) {
-      if (!c.parentId) continue;
-      const list = repliesByParent.get(c.parentId) ?? [];
-      list.push(c);
-      repliesByParent.set(c.parentId, list);
-    }
-    const out: Array<{ comment: AdminPostComment; depth: number }> = [];
-    for (const root of roots) {
-      out.push({ comment: root, depth: 0 });
-      for (const reply of repliesByParent.get(root.id) ?? []) {
-        out.push({ comment: reply, depth: 1 });
-      }
-    }
-    // A reply whose parent is outside this page still has to render, or it
-    // vanishes from the moderation view entirely.
-    const rendered = new Set(out.map((o) => o.comment.id));
-    for (const c of comments) {
-      if (!rendered.has(c.id)) out.push({ comment: c, depth: 1 });
-    }
-    return out;
-  }, [comments]);
-
-  return (
-    <Dialog open={!!post} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-h-[85vh] max-w-2xl overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>{t("posts.commentsTitle", { count: total })}</DialogTitle>
-          <DialogDescription className="line-clamp-2">
-            {post?.text || t("posts.noText")}
-          </DialogDescription>
-        </DialogHeader>
-
-        {error ? (
-          <div className="py-8 text-center text-sm text-destructive">
-            {friendlyErrorMessage(error)}
-          </div>
-        ) : loading && comments.length === 0 ? (
-          <div className="py-8 text-center text-sm text-muted-foreground">
-            {t("common.loading")}
-          </div>
-        ) : ordered.length === 0 ? (
-          <div className="py-8 text-center text-sm text-muted-foreground">
-            {t("posts.noComments")}
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {ordered.map(({ comment, depth }) => (
-              <div
-                key={comment.id}
-                className="flex gap-3 rounded-md border p-3"
-                style={{ marginLeft: depth * 24 }}
-              >
-                <Avatar className="h-8 w-8 shrink-0">
-                  <AvatarImage src={comment.authorAvatarUrl ?? undefined} />
-                  <AvatarFallback>{initials(comment.authorName)}</AvatarFallback>
-                </Avatar>
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-sm font-medium">
-                      {userLabel({ name: comment.authorName }, t("common.unknownUser"))}
-                    </span>
-                    <span className="text-xs text-muted-foreground">
-                      {formatDate(comment.createdAt)}
-                    </span>
-                    {comment.isDeleted && (
-                      <StatusBadge variant="error">{t("posts.deleted")}</StatusBadge>
-                    )}
-                  </div>
-                  <p
-                    className={`mt-1 whitespace-pre-wrap break-words text-sm ${
-                      comment.isDeleted ? "text-muted-foreground line-through" : ""
-                    }`}
-                  >
-                    {comment.text}
-                  </p>
-                  <div className="mt-2 flex items-center gap-3 text-xs text-muted-foreground">
-                    <span className="inline-flex items-center gap-1">
-                      <Heart className="h-3 w-3" />
-                      {comment.likeCount}
-                    </span>
-                    {comment.replyCount > 0 && (
-                      <span className="inline-flex items-center gap-1">
-                        <MessageCircle className="h-3 w-3" />
-                        {comment.replyCount}
-                      </span>
-                    )}
-                  </div>
-                </div>
-                {!comment.isDeleted && (
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="shrink-0 text-destructive"
-                    onClick={() => onRemoveComment(comment)}
-                    aria-label={t("posts.removeComment")}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-      </DialogContent>
-    </Dialog>
   );
 }

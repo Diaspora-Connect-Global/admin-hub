@@ -5,6 +5,7 @@ import {
   ADMIN_HIDE_POST,
   ADMIN_RESTORE_POST,
   type AdminPost,
+  type AdminPostAttachment,
   type AdminPostFilterInput,
   type AdminPostListResponse,
   type AdminPostComment,
@@ -13,6 +14,7 @@ import {
 
 export type {
   AdminPost,
+  AdminPostAttachment,
   AdminPostFilterInput,
   AdminPostListResponse,
   AdminPostComment,

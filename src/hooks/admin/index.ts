@@ -677,6 +677,7 @@ export {
   POST_VISIBILITIES,
   POST_AUTHOR_TYPES,
   type AdminPost,
+  type AdminPostAttachment,
   type AdminPostFilterInput,
   type AdminPostListResponse,
   type AdminPostComment,
