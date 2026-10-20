@@ -117,9 +117,17 @@ export function useAdminListPostReactions(
   type: PostReactionType | null,
   limit = 20,
   offset = 0,
+  /** HAPPY | HOPEFUL | SAD; omit for every reaction (the backend treats "" as "untyped only"). */
+  reactionType?: string | null,
 ) {
   return useQuery<{ adminListPostReactions: AdminPostReactionList }>(ADMIN_LIST_POST_REACTIONS, {
-    variables: { postId: postId ?? "", type: type ?? undefined, limit, offset },
+    variables: {
+      postId: postId ?? "",
+      type: type ?? undefined,
+      limit,
+      offset,
+      reactionType: reactionType ?? undefined,
+    },
     skip: !postId,
     fetchPolicy: "cache-and-network",
   });

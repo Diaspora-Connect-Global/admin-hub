@@ -3337,6 +3337,9 @@ export const ADMIN_GET_POST_ENGAGEMENT = gql`
       shares
       saves
       comments
+      happy
+      hopeful
+      sad
       reactorDetailAvailable
     }
   }
@@ -3359,11 +3362,12 @@ export const ADMIN_GET_POST_ENGAGEMENT = gql`
  * `AdminPostReactionList` object type, which also carries `avatarUrl`.
  */
 export const ADMIN_LIST_POST_REACTIONS = gql`
-  query AdminListPostReactions($postId: ID!, $type: String, $limit: Int, $offset: Int) {
-    adminListPostReactions(postId: $postId, type: $type, limit: $limit, offset: $offset) {
+  query AdminListPostReactions($postId: ID!, $type: String, $limit: Int, $offset: Int, $reactionType: String) {
+    adminListPostReactions(postId: $postId, type: $type, limit: $limit, offset: $offset, reactionType: $reactionType) {
       items {
         userId
         type
+        reactionType
         createdAt
         displayName
         avatarUrl
@@ -3381,6 +3385,10 @@ export interface AdminPostEngagementBreakdown {
   shares: number;
   saves: number;
   comments: number;
+  /** Per-reaction breakdown. `likes` is the TOTAL and may exceed happy+hopeful+sad (untyped legacy likes). */
+  happy: number;
+  hopeful: number;
+  sad: number;
   /** Whether per-reactor rows are reachable at all. Permanently true today. */
   reactorDetailAvailable: boolean;
 }
@@ -3389,8 +3397,10 @@ export interface AdminPostReaction {
   userId: string;
   /** LIKE | SHARE | SAVE */
   type: string;
+  /** HAPPY | HOPEFUL | SAD on a LIKE row; null for an untyped legacy like (shown as Happy) or SHARE/SAVE. */
+  reactionType?: string | null;
   createdAt: string;
-  /** Null for a GDPR-erased or unresolvable account — render the id instead. */
+  /** Null for a GDPR-erased or unresolvable account — render "Unknown user", never the id. */
   displayName?: string | null;
   avatarUrl?: string | null;
 }
@@ -3434,6 +3444,14 @@ export const ADMIN_LIST_POSTS = gql`
         shareCount
         saveCount
         attachmentCount
+        attachments {
+          id
+          type
+          mimeType
+          url
+          width
+          height
+        }
         createdAt
         updatedAt
       }
@@ -3515,12 +3533,22 @@ export interface AdminPostFilterInput {
   offset?: number;
 }
 
+export interface AdminPostAttachment {
+  id: string;
+  /** IMAGE | VIDEO | DOCUMENT */
+  type: string;
+  mimeType: string;
+  url: string;
+  width?: number | null;
+  height?: number | null;
+}
+
 export interface AdminPost {
   id: string;
   text?: string | null;
   authorType: string;
   authorId: string;
-  /** Null for a GDPR-erased or unresolvable account — render the id instead. */
+  /** Null for a GDPR-erased or unresolvable account — render "Unknown user", never the id. */
   authorName?: string | null;
   authorAvatarUrl?: string | null;
   visibility?: string | null;
@@ -3530,6 +3558,7 @@ export interface AdminPost {
   shareCount: number;
   saveCount: number;
   attachmentCount: number;
+  attachments?: AdminPostAttachment[] | null;
   createdAt: string;
   updatedAt?: string | null;
 }
