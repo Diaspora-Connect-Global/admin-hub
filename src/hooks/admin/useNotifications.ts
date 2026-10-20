@@ -2,9 +2,8 @@ import { useMutation, useQuery } from "@apollo/client/react";
 import {
   DELETE_ALL_NOTIFICATIONS,
   DELETE_NOTIFICATION,
-  GET_NOTIFICATIONS_WITH_META,
-  GET_UNREAD_NOTIFICATION_COUNT,
-  MARK_ALL_NOTIFICATIONS_AS_READ,
+  GET_MY_ADMIN_NOTIFICATIONS,
+  MARK_MY_ADMIN_NOTIFICATIONS_READ,
   MARK_NOTIFICATION_AS_READ,
 } from "@/services/networks/graphql/admin";
 import type {
@@ -12,24 +11,19 @@ import type {
   NotificationsWithMeta,
 } from "@/types/notifications";
 
-interface GetNotificationsWithMetaResponse {
-  getNotificationsWithMeta: NotificationsWithMeta;
+interface MyAdminNotificationsResponse {
+  myAdminNotifications: NotificationsWithMeta;
 }
 
-interface GetNotificationsWithMetaVariables {
+interface MyAdminNotificationsVariables {
   limit?: number;
   offset?: number;
 }
 
-interface GetUnreadNotificationCountResponse {
-  getUnreadNotificationCount: {
-    count: number;
-  };
-}
-
-export function useNotificationsWithMeta(limit = 20, offset = 0, skip = false) {
-  return useQuery<GetNotificationsWithMetaResponse, GetNotificationsWithMetaVariables>(
-    GET_NOTIFICATIONS_WITH_META,
+/** Notifications directed to platform admins (never the personal inbox). */
+export function useMyAdminNotifications(limit = 20, offset = 0, skip = false) {
+  return useQuery<MyAdminNotificationsResponse, MyAdminNotificationsVariables>(
+    GET_MY_ADMIN_NOTIFICATIONS,
     {
       variables: { limit, offset },
       skip,
@@ -39,23 +33,29 @@ export function useNotificationsWithMeta(limit = 20, offset = 0, skip = false) {
   );
 }
 
-export function useUnreadNotificationCount(pollIntervalMs = 45000) {
-  return useQuery<GetUnreadNotificationCountResponse>(GET_UNREAD_NOTIFICATION_COUNT, {
-    pollInterval: pollIntervalMs,
-    fetchPolicy: "network-only",
-    nextFetchPolicy: "cache-first",
-  });
+/** Unread count for the same directed set (a one-row page carries it). */
+export function useMyAdminUnreadCount(pollIntervalMs = 45000) {
+  return useQuery<MyAdminNotificationsResponse, MyAdminNotificationsVariables>(
+    GET_MY_ADMIN_NOTIFICATIONS,
+    {
+      variables: { limit: 1, offset: 0 },
+      pollInterval: pollIntervalMs,
+      fetchPolicy: "network-only",
+      nextFetchPolicy: "cache-first",
+    }
+  );
+}
+
+/** Marks only the directed set read - never the admin's personal rows. */
+export function useMarkMyAdminNotificationsRead() {
+  return useMutation<{ markMyAdminNotificationsRead: NotificationMutationResult }>(
+    MARK_MY_ADMIN_NOTIFICATIONS_READ
+  );
 }
 
 export function useMarkNotificationAsRead() {
   return useMutation<{ markNotificationAsRead: NotificationMutationResult }, { notificationId: string }>(
     MARK_NOTIFICATION_AS_READ
-  );
-}
-
-export function useMarkAllNotificationsAsRead() {
-  return useMutation<{ markAllNotificationsAsRead: NotificationMutationResult }>(
-    MARK_ALL_NOTIFICATIONS_AS_READ
   );
 }
 

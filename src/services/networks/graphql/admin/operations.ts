@@ -255,6 +255,46 @@ export const GET_AUDIT_LOGS = gql`
   }
 `;
 
+/**
+ * The signed-in platform admin's notifications that are DIRECTED to platform
+ * admins (reports/moderation, KYC review, system and GDPR alerts, ...). This is
+ * what feeds the bell. Not the personal inbox, and never other users' rows.
+ */
+export const GET_MY_ADMIN_NOTIFICATIONS = gql`
+  query MyAdminNotifications($limit: Int, $offset: Int) {
+    myAdminNotifications(scope: PLATFORM, limit: $limit, offset: $offset) {
+      notifications {
+        id
+        type
+        title
+        message
+        body
+        data
+        read
+        isRead
+        actionUrl
+        link
+        imageUrl
+        createdAt
+        readAt
+      }
+      total
+      limit
+      offset
+      unreadCount
+    }
+  }
+`;
+
+export const MARK_MY_ADMIN_NOTIFICATIONS_READ = gql`
+  mutation MarkMyAdminNotificationsRead {
+    markMyAdminNotificationsRead(scope: PLATFORM) {
+      success
+      message
+    }
+  }
+`;
+
 export const GET_NOTIFICATIONS_WITH_META = gql`
   query GetNotificationsWithMeta($limit: Int, $offset: Int) {
     getNotificationsWithMeta(limit: $limit, offset: $offset) {
