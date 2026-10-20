@@ -9,12 +9,11 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import {
-  useDeleteAllNotifications,
   useDeleteNotification,
-  useMarkAllNotificationsAsRead,
+  useMarkMyAdminNotificationsRead,
   useMarkNotificationAsRead,
-  useNotificationsWithMeta,
-  useUnreadNotificationCount,
+  useMyAdminNotifications,
+  useMyAdminUnreadCount,
 } from "@/hooks/admin/useNotifications";
 import { dedupeNotifications, normalizeNotification } from "@/lib/notifications";
 import type { AdminNotification } from "@/types/notifications";
@@ -31,28 +30,27 @@ export function AdminNotificationBell() {
   const [notifications, setNotifications] = useState<AdminNotification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
 
-  const { data: unreadData, refetch: refetchUnreadCount } = useUnreadNotificationCount(45000);
+  const { data: unreadData, refetch: refetchUnreadCount } = useMyAdminUnreadCount(45000);
   const {
     data: notificationData,
     loading: listLoading,
     error: listError,
     refetch: refetchNotifications,
-  } = useNotificationsWithMeta(PAGE_SIZE, offset, !isOpen);
+  } = useMyAdminNotifications(PAGE_SIZE, offset, !isOpen);
 
   const [markNotificationAsRead, { loading: markOneLoading }] = useMarkNotificationAsRead();
-  const [markAllNotificationsAsRead, { loading: markAllLoading }] = useMarkAllNotificationsAsRead();
+  const [markAllNotificationsAsRead, { loading: markAllLoading }] = useMarkMyAdminNotificationsRead();
   const [deleteNotification, { loading: deleteOneLoading }] = useDeleteNotification();
-  const [deleteAllNotifications, { loading: deleteAllLoading }] = useDeleteAllNotifications();
-
+  
   useEffect(() => {
-    const count = unreadData?.getUnreadNotificationCount?.count;
+    const count = unreadData?.myAdminNotifications?.unreadCount;
     if (typeof count === "number") {
       setUnreadCount(count);
     }
   }, [unreadData]);
 
   useEffect(() => {
-    const payload = notificationData?.getNotificationsWithMeta;
+    const payload = notificationData?.myAdminNotifications;
     if (!payload) return;
 
     const incoming = payload.notifications.map(normalizeNotification);
@@ -78,7 +76,7 @@ export function AdminNotificationBell() {
     [notifications.length, offset, total]
   );
 
-  const isMutating = markOneLoading || markAllLoading || deleteOneLoading || deleteAllLoading;
+  const isMutating = markOneLoading || markAllLoading || deleteOneLoading;
 
   async function refreshNow() {
     try {
@@ -178,29 +176,6 @@ export function AdminNotificationBell() {
     }
   }
 
-  async function onDeleteAll() {
-    if (!notifications.length) return;
-
-    const confirmed = window.confirm("Delete all notifications? This action cannot be undone.");
-    if (!confirmed) return;
-
-    setNotifications([]);
-    setTotal(0);
-    setUnreadCount(0);
-
-    try {
-      await deleteAllNotifications();
-      await refetchUnreadCount();
-      setLastSyncedAt(new Date());
-    } catch {
-      toast({
-        title: "Delete failed",
-        description: "Could not clear notifications. Data will resync shortly.",
-        variant: "destructive",
-      });
-    }
-  }
-
   return (
     <Popover open={isOpen} onOpenChange={setIsOpen}>
       <PopoverTrigger asChild>
@@ -239,10 +214,6 @@ export function AdminNotificationBell() {
             <CheckCheck className="h-4 w-4 mr-1" />
             Mark all read
           </Button>
-          <Button variant="outline" size="sm" className="h-8" onClick={onDeleteAll} disabled={isMutating || notifications.length === 0}>
-            <Trash2 className="h-4 w-4 mr-1" />
-            Clear all
-          </Button>
           <Button variant="ghost" size="sm" className="h-8 ml-auto" onClick={refreshNow} disabled={listLoading}>
             {listLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
             <span className="sr-only">Refresh notifications</span>
@@ -256,7 +227,7 @@ export function AdminNotificationBell() {
             <div className="p-4 text-sm text-destructive">Unable to load notifications. Try refreshing.</div>
           ) : notifications.length === 0 ? (
             <div className="p-4 text-sm text-muted-foreground">
-              <p>No notifications yet.</p>
+              <p>Nothing needs your attention right now.</p>
               {lastSyncedAt && (
                 <p className="mt-1 text-xs">Last checked {formatDistanceToNowStrict(lastSyncedAt, { addSuffix: true })}.</p>
               )}
