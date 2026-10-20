@@ -58,7 +58,7 @@ import {
 } from "@/types/opportunities";
 import { toast } from "@/hooks/use-toast";
 import { getUserId } from "@/stores/session";
-import { majorTextToMinor, minorToMajorText } from "@/lib/minorUnits";
+import { isValidMajorText, majorTextToMinor, minorToMajorText } from "@/lib/minorUnits";
 import {
   OPPORTUNITY_CATEGORIES,
   getSubCategoryOptions,
@@ -313,6 +313,16 @@ export function CreateEditOpportunityModal({
     }
     if (applicationMethod === ApplicationMethod.EXTERNAL_LINK && !externalLink.trim()) {
       toast({ title: "External Link Required", description: "Please enter an external application link.", variant: "destructive" });
+      return;
+    }
+    // Amounts are typed in full currency units and sent as integer minor units (x100);
+    // refuse what cannot be converted exactly instead of silently dropping it.
+    if (!isValidMajorText(compensationMin) || !isValidMajorText(compensationMax)) {
+      toast({
+        title: "Invalid amount",
+        description: "Enter the amount in full currency units, with at most 2 decimals (for example 1500 or 1500.50).",
+        variant: "destructive",
+      });
       return;
     }
 

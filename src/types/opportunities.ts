@@ -134,7 +134,7 @@ export interface Opportunity {
   formFields?: FormField[] | null;
   status: OpportunityStatus;
   priorityLevel: PriorityLevel;
-  /** Integer MINOR units (x100: cents/pesewas) - platform money rule. */
+  /** Integer MINOR units (x100: cents/pesewas) - platform money rule. GraphQL Float: 64-bit on the backend, any safe integer (<= Number.MAX_SAFE_INTEGER). */
   compensationMin?: number | null;
   /** Integer MINOR units (x100). */
   compensationMax?: number | null;
