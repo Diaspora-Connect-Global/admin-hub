@@ -20,7 +20,7 @@ vi.mock("@/hooks/events", () => ({
 }));
 const apolloClient = vi.hoisted(() => ({ query: (): Promise<{ data: null }> => Promise.resolve({ data: null }) }));
 vi.mock("@apollo/client/react", () => ({ useApolloClient: () => apolloClient }));
-vi.mock("@/components/events/networking/EventNetworkingTabs", () => ({ EventNetworkingTabs: () => null }));
+vi.mock("@/components/events/networking/EventNetworkingTabs", () => ({ EventNetworkingTabs: (): null => null }));
 
 import "@/i18n";
 import { RegistrationsDrawer } from "./RegistrationsDrawer";
