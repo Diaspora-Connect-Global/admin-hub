@@ -7,8 +7,8 @@ const hooks = vi.hoisted(() => ({
   removeRegistration: vi.fn().mockResolvedValue({}),
 }));
 const reg = {
-  id: "reg-1", eventId: "e1", userId: "user-1", user: { id: "user-1", firstName: "Ama", lastName: "Mensah", email: "ama@example.com", avatarUrl: null },
-  quantity: 2, status: "CONFIRMED", registrationStatus: "CONFIRMED", totalAmount: null, currency: null, registeredAt: "2026-11-01T10:00:00Z",
+  id: "reg-1", eventId: "e1", userId: "user-1", user: { id: "user-1", firstName: "Ama", lastName: "Mensah", email: "ama@example.com", avatarUrl: null as string | null },
+  quantity: 2, status: "CONFIRMED", registrationStatus: "CONFIRMED", totalAmount: null as string | null, currency: null as string | null, registeredAt: "2026-11-01T10:00:00Z",
   formResponsesJson: JSON.stringify({ full_name: "Ama Mensah", diet: ["Vegan", "Halal"], newsletter: true }),
 };
 // Stable result object, as Apollo returns between renders (a fresh one each render loops the drawer's effects).
@@ -18,7 +18,7 @@ vi.mock("@/hooks/events", () => ({
   useMarkRegistrationCheckedIn: () => [hooks.markCheckedIn],
   useRemoveEventRegistration: () => [hooks.removeRegistration],
 }));
-const apolloClient = vi.hoisted(() => ({ query: () => Promise.resolve({ data: null }) }));
+const apolloClient = vi.hoisted(() => ({ query: (): Promise<{ data: null }> => Promise.resolve({ data: null }) }));
 vi.mock("@apollo/client/react", () => ({ useApolloClient: () => apolloClient }));
 vi.mock("@/components/events/networking/EventNetworkingTabs", () => ({ EventNetworkingTabs: () => null }));
 

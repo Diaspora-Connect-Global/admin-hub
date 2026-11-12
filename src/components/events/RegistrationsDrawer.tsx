@@ -47,7 +47,7 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
 import { GET_EVENT_REGISTRATIONS, GET_EVENT_TICKETS } from "@/services/networks/graphql/events";
-import { answerText, buildCsv, downloadCsv, parseFormResponses } from "@/lib/eventRegistrationCsv";
+import { answerText, buildCsv, downloadCsv, parseFormResponses, registrantEmail } from "@/lib/eventRegistrationCsv";
 import { BUILTIN_IDS } from "@/lib/eventRegistrationForm";
 import { registrationStatusLabel } from "@/lib/eventNetworking";
 import { useT } from "@/hooks/useT";
@@ -81,7 +81,7 @@ function resolveAttendeeName(
   fallbackNameByUserId?: Record<string, string>,
 ): string {
   const fullName = getAttendeeFullName(registration.user);
-  return fullName || registration.user?.email?.trim() || fallbackNameByUserId?.[registration.userId] || "Unknown attendee";
+  return fullName || registrantEmail(registration.user?.email, registration.formResponsesJson) || fallbackNameByUserId?.[registration.userId] || "Unknown attendee";
 }
 
 function formatRegistrationAmount(totalAmount: string, currency?: string | null): string {
@@ -250,8 +250,7 @@ export function RegistrationsDrawer({
     const display = resolveAttendeeName(reg, fallbackNameByUserId).toLowerCase();
     const matchesSearch =
       display.includes(q) ||
-      reg.userId.toLowerCase().includes(q) ||
-      (reg.user?.email ?? "").toLowerCase().includes(q) ||
+      registrantEmail(reg.user?.email, reg.formResponsesJson).toLowerCase().includes(q) ||
       (reg.totalAmount ?? "").toLowerCase().includes(q);
     return matchesSearch;
   });
@@ -323,7 +322,7 @@ export function RegistrationsDrawer({
         const answers = parseFormResponses(reg.formResponsesJson);
         return [
           resolveAttendeeName(reg, fallbackNameByUserId),
-          reg.user?.email ?? "",
+          registrantEmail(reg.user?.email, reg.formResponsesJson),
           reg.registeredAt ? format(new Date(reg.registeredAt), "yyyy-MM-dd HH:mm") : "",
           (reg.ticketId && ticketNames.get(reg.ticketId)) || "",
           String(reg.quantity ?? ""),
