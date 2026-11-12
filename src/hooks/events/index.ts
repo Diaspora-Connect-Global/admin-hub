@@ -16,6 +16,7 @@ import {
   GET_EVENT_REGISTRATIONS_ADMIN,
   CREATE_EVENT,
   UPDATE_EVENT,
+  UPDATE_EVENT_FORM_FIELDS,
   GET_UPLOAD_URL,
   DELETE_EVENT,
   DELETE_EVENT_ADMIN,
@@ -201,6 +202,10 @@ export function useCreateEvent() {
 
 export function useUpdateEvent() {
   return useMutation(UPDATE_EVENT);
+}
+
+export function useUpdateEventFormFields() {
+  return useMutation(UPDATE_EVENT_FORM_FIELDS);
 }
 
 /** Lazy query: call with contentType + category (e.g. event_cover) before PUT to uploadUrl. */

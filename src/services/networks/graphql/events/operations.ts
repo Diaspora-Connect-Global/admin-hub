@@ -35,6 +35,7 @@ const EVENT_LIST_FIELDS = gql`
     registrationCount
     coverImageUrl
     registrationLink
+    registrationMode
     tags
     tickets {
       id
@@ -48,6 +49,7 @@ const EVENT_LIST_FIELDS = gql`
       type
       required
       options
+      builtin
     }
   }
 `;
@@ -81,6 +83,7 @@ const EVENT_FULL_FIELDS = gql`
     currency
     coverImageUrl
     registrationLink
+    registrationMode
     tags
     registrationCount
     isRegistered
@@ -120,6 +123,7 @@ const EVENT_REGISTRATION_FIELDS = gql`
     confirmedAt
     cancelledAt
     createdAt
+    formResponsesJson
   }
 `;
 
@@ -151,6 +155,7 @@ export const GET_EVENT = gql`
         type
         required
         options
+        builtin
       }
     }
   }
@@ -365,9 +370,27 @@ export const CREATE_EVENT = gql`
         type
         required
         options
+        builtin
       }
       createdAt
       updatedAt
+    }
+  }
+`;
+
+/** Replaces the event's WHOLE registration form, in order. */
+export const UPDATE_EVENT_FORM_FIELDS = gql`
+  mutation UpdateEventFormFields($input: UpdateEventFormFieldsInput!) {
+    updateEventFormFields(input: $input) {
+      id
+      registrationFormFields {
+        id
+        label
+        type
+        required
+        options
+        builtin
+      }
     }
   }
 `;
@@ -421,6 +444,7 @@ export const UPDATE_EVENT = gql`
         type
         required
         options
+        builtin
       }
       createdAt
       updatedAt

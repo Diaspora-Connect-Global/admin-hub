@@ -35,7 +35,21 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Search, Download, MoreHorizontal, CheckCircle, UserX, Users } from "lucide-react";
+import { Search, Download, MoreHorizontal, CheckCircle, UserX, Users, ClipboardList, Loader2 } from "lucide-react";
+import { useTranslation } from "react-i18next";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { toast } from "@/hooks/use-toast";
+import { GET_EVENT_REGISTRATIONS, GET_EVENT_TICKETS } from "@/services/networks/graphql/events";
+import { answerText, buildCsv, downloadCsv, parseFormResponses } from "@/lib/eventRegistrationCsv";
+import { BUILTIN_IDS } from "@/lib/eventRegistrationForm";
+import { registrationStatusLabel } from "@/lib/eventNetworking";
 import { useT } from "@/hooks/useT";
 import {
   useGetEventRegistrations,
@@ -89,11 +103,53 @@ function formatRegistrationAmount(totalAmount: string, currency?: string | null)
   }
 }
 
+type AnswerField = { id: string; label: string; type: string; builtin?: string | null };
+
+/** A question's name: default fields translated (older payloads carry no `builtin`, the reserved id still marks them). */
+function questionLabel(f: AnswerField, tr: (key: string, opts?: Record<string, unknown>) => string): string {
+  const builtin = f.builtin ?? (BUILTIN_IDS.includes(f.id) ? f.id : null);
+  return builtin ? tr(`events.registration.default_${builtin}`, { defaultValue: f.label }) : f.label;
+}
+
 interface RegistrationsDrawerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   event: Event | null;
   onRefetch?: () => void;
+}
+
+interface GetRegistrationsData {
+  getEventRegistrations?: { total?: number; registrations?: EventRegistration[] } | null;
+}
+
+/** Question → answer for one registrant (blank answers left out, never ids). */
+function AnswersList({
+  registration,
+  fields,
+  tr,
+}: {
+  registration: EventRegistration | null;
+  fields: AnswerField[];
+  tr: (key: string, opts?: Record<string, unknown>) => string;
+}) {
+  const words = { yes: tr("events.registration.yes"), no: tr("events.registration.no") };
+  const answers = parseFormResponses(registration?.formResponsesJson);
+  const answered = fields
+    .map((f) => ({ f, text: answerText(answers[f.id], f, words) }))
+    .filter(({ text }) => text !== "");
+  if (answered.length === 0) {
+    return <p className="text-sm text-muted-foreground">{tr("events.registration.noAnswers")}</p>;
+  }
+  return (
+    <dl className="space-y-3">
+      {answered.map(({ f, text }) => (
+        <div key={f.id}>
+          <dt className="text-xs text-muted-foreground break-words">{questionLabel(f, tr)}</dt>
+          <dd className="text-sm text-foreground whitespace-pre-wrap break-words">{text}</dd>
+        </div>
+      ))}
+    </dl>
+  );
 }
 
 export function RegistrationsDrawer({
@@ -107,6 +163,10 @@ export function RegistrationsDrawer({
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [fallbackNameByUserId, setFallbackNameByUserId] = useState<Record<string, string>>({});
   const t = useT("events");
+  const { t: tr } = useTranslation();
+  const [answersFor, setAnswersFor] = useState<EventRegistration | null>(null);
+  const [exporting, setExporting] = useState(false);
+  const formFields: AnswerField[] = (event?.registrationFormFields ?? []) as AnswerField[];
 
   const { data, loading, refetch } = useGetEventRegistrations(
     event?.id
@@ -216,6 +276,73 @@ export function RegistrationsDrawer({
     }
   };
 
+  /** Every registration of the event (paged, bounded) as a spreadsheet; question columns follow the current form. */
+  const handleExport = async () => {
+    if (!event) return;
+    setExporting(true);
+    try {
+      const pageSize = 100;
+      const rows: EventRegistration[] = [];
+      for (let page = 0; page < 50; page += 1) {
+        const { data: pageData } = await client.query<GetRegistrationsData>({
+          query: GET_EVENT_REGISTRATIONS,
+          variables: { eventId: event.id, limit: pageSize, offset: page * pageSize, status: statusFilter === "all" ? "" : statusFilter },
+          fetchPolicy: "network-only",
+        });
+        const got = pageData?.getEventRegistrations?.registrations ?? [];
+        rows.push(...got);
+        if (got.length < pageSize || rows.length >= (pageData?.getEventRegistrations?.total ?? Infinity)) break;
+      }
+      if (rows.length === 0) {
+        toast({ title: tr("events.registration.nothingToExport") });
+        return;
+      }
+      const ticketNames = new Map<string, string>();
+      try {
+        const { data: tk } = await client.query<{ getEventTickets?: { tickets?: { id: string; name: string }[] | null } | null }>({
+          query: GET_EVENT_TICKETS,
+          variables: { eventId: event.id },
+          fetchPolicy: "network-only",
+        });
+        for (const x of tk?.getEventTickets?.tickets ?? []) ticketNames.set(x.id, x.name);
+      } catch {
+        // ticket names are a nicety; the export still works without them
+      }
+      const words = { yes: tr("events.registration.yes"), no: tr("events.registration.no") };
+      const headers = [
+        tr("events.registration.colName"),
+        tr("events.registration.colEmail"),
+        tr("events.registration.colRegistered"),
+        tr("events.registration.colTicket"),
+        tr("events.registration.csvQuantity"),
+        tr("events.registration.colRegistration"),
+        ...(event.isPaid ? [tr("events.registration.colPayment")] : []),
+        ...formFields.map((f) => questionLabel(f, tr)),
+      ];
+      const body = rows.map((reg) => {
+        const answers = parseFormResponses(reg.formResponsesJson);
+        return [
+          resolveAttendeeName(reg, fallbackNameByUserId),
+          reg.user?.email ?? "",
+          reg.registeredAt ? format(new Date(reg.registeredAt), "yyyy-MM-dd HH:mm") : "",
+          (reg.ticketId && ticketNames.get(reg.ticketId)) || "",
+          String(reg.quantity ?? ""),
+          registrationStatusLabel(reg.registrationStatus || reg.status),
+          ...(event.isPaid
+            ? [reg.totalAmount ? formatRegistrationAmount(reg.totalAmount, reg.currency ?? event.currency) : "Free"]
+            : []),
+          ...formFields.map((f) => answerText(answers[f.id], f, words)),
+        ];
+      });
+      const slug = event.title.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "event";
+      downloadCsv(buildCsv(headers, body), `${slug}-registrations.csv`);
+    } catch {
+      toast({ title: "Error", description: tr("events.registration.exportFailed"), variant: "destructive" });
+    } finally {
+      setExporting(false);
+    }
+  };
+
   if (!event) return null;
 
   return (
@@ -259,8 +386,20 @@ export function RegistrationsDrawer({
                     <SelectItem value="CANCELLED">Cancelled</SelectItem>
                   </SelectContent>
                 </Select>
-                <Button variant="outline" size="icon">
-                  <Download className="h-4 w-4" />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  disabled={exporting}
+                  aria-label={tr("events.registration.exportCsv")}
+                  title={tr("events.registration.exportCsv")}
+                  onClick={() => void handleExport()}
+                >
+                  {exporting ? (
+                    <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                  ) : (
+                    <Download className="h-4 w-4" aria-hidden="true" />
+                  )}
                 </Button>
               </div>
 
@@ -323,6 +462,10 @@ export function RegistrationsDrawer({
                                   <CheckCircle className="mr-2 h-4 w-4" />
                                   {t.markAsCheckedIn}
                                 </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => setAnswersFor(registration)}>
+                                  <ClipboardList className="mr-2 h-4 w-4" />
+                                  {tr("events.registration.viewAnswers")}
+                                </DropdownMenuItem>
                                 <DropdownMenuItem className="text-destructive" onClick={() => handleRemove(registration)}>
                                   <UserX className="mr-2 h-4 w-4" />
                                   {t.removeAttendee}
@@ -351,6 +494,25 @@ export function RegistrationsDrawer({
           </TabsContent>
         </Tabs>
       </SheetContent>
+
+      <Dialog open={!!answersFor} onOpenChange={(v) => !v && setAnswersFor(null)}>
+        <DialogContent className="sm:max-w-[520px] max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{tr("events.registration.answersTitle")}</DialogTitle>
+            <DialogDescription>
+              {tr("events.registration.answersFor", {
+                name: answersFor ? resolveAttendeeName(answersFor, fallbackNameByUserId) : "",
+              })}
+            </DialogDescription>
+          </DialogHeader>
+          <AnswersList registration={answersFor} fields={formFields} tr={tr} />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAnswersFor(null)}>
+              {tr("events.registration.close")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Sheet>
   );
 }

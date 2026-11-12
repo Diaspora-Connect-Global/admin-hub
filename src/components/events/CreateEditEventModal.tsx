@@ -27,6 +27,22 @@ import { cn } from "@/lib/utils";
 import { EVENT_BANNER_MAX_BYTES } from "@/lib/eventBannerUpload";
 import { useT } from "@/hooks/useT";
 import { toast } from "@/hooks/use-toast";
+import { useTranslation } from "react-i18next";
+import { RegistrationSection } from "@/components/events/RegistrationFormBuilder";
+import {
+  BUILTIN_IDS,
+  defaultFieldDrafts,
+  fieldsToDrafts,
+  formSignature,
+  normalizeRegistrationLink,
+  validateDrafts,
+  type RegistrationFormField,
+} from "@/lib/eventRegistrationForm";
+
+/** Older list payloads carry no `builtin`; a reserved id still marks a default field. */
+function withBuiltin(fields: RegistrationFormField[] | null | undefined): RegistrationFormField[] {
+  return (fields ?? []).map((f) => ({ ...f, builtin: f.builtin ?? (BUILTIN_IDS.includes(f.id) ? f.id : null) }));
+}
 
 const createDefaultTicket = (currency = "USD") => ({
   name: "General Admission",
@@ -54,7 +70,13 @@ const EMPTY_EVENT_FORM: EventFormData = {
   city: "",
   country: "",
   virtualLink: "",
+  registrationMode: "IN_APP",
   registrationLink: "",
+  // A new event starts with the four default fields (rebuilt on every open, below).
+  registrationFields: [],
+  registrationBaseline: null,
+  savedRegistrationMode: null,
+  registeredCount: 0,
   isPaid: false,
   tickets: [createDefaultTicket("USD")],
   ticketType: "free",
@@ -103,7 +125,7 @@ export function CreateEditEventModal({
     prevOpenRef.current = true;
 
     if (isCreatingNew && justOpened) {
-      setFormData(EMPTY_EVENT_FORM);
+      setFormData({ ...EMPTY_EVENT_FORM, registrationFields: defaultFieldDrafts() });
       setCurrentStep(1);
       return;
     }
@@ -134,7 +156,12 @@ export function CreateEditEventModal({
       city: event.locationDetails?.city ?? "",
       country: event.locationDetails?.country ?? "",
       virtualLink: event.locationDetails?.virtualLink || "",
+      registrationMode: event.registrationMode === "EXTERNAL" ? "EXTERNAL" : "IN_APP",
       registrationLink: event.registrationLink ?? "",
+      registrationFields: fieldsToDrafts(withBuiltin(event.registrationFormFields)),
+      registrationBaseline: formSignature(fieldsToDrafts(withBuiltin(event.registrationFormFields))),
+      savedRegistrationMode: event.registrationMode === "EXTERNAL" ? "EXTERNAL" : "IN_APP",
+      registeredCount: event.registrationCount ?? 0,
       isPaid: event.isPaid,
       tickets:
         event.tickets && event.tickets.length > 0
@@ -173,11 +200,15 @@ export function CreateEditEventModal({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, isCreatingNew, event?.id, event?.description]);
 
+  const { t: tr } = useTranslation();
+  const [registrationShowErrors, setRegistrationShowErrors] = useState(false);
+
   const steps = [
     { id: 1, title: t.basicInformation },
     { id: 2, title: t.scheduleLocation },
     { id: 3, title: t.ticketingCapacity },
-    { id: 4, title: t.visibilitySettings },
+    { id: 4, title: tr("events.registration.title") },
+    { id: 5, title: t.visibilitySettings },
   ];
 
   const updateField = <K extends keyof EventFormData>(field: K, value: EventFormData[K]) => {
@@ -334,6 +365,13 @@ export function CreateEditEventModal({
         }
       }
     }
+    if (step === 4) {
+      if (formData.registrationMode === "EXTERNAL") {
+        if (!normalizeRegistrationLink(formData.registrationLink)) return tr("events.registration.urlInvalid");
+      } else if (!validateDrafts(formData.registrationFields).ok) {
+        return tr("events.registration.err_form");
+      }
+    }
     if (step === 3 && formData.hasParticipantLimit) {
       if (!Number.isFinite(formData.maxParticipants) || formData.maxParticipants <= 0) {
         return "Maximum participants must be greater than 0.";
@@ -345,6 +383,7 @@ export function CreateEditEventModal({
   const handleNext = () => {
     const error = validateStep(currentStep);
     if (error) {
+      if (currentStep === 4) setRegistrationShowErrors(true);
       toast({ title: "Required fields missing", description: error, variant: "destructive" });
       return;
     }
@@ -423,7 +462,7 @@ export function CreateEditEventModal({
               {index < steps.length - 1 && (
                 <div
                   className={cn(
-                    "w-12 sm:w-20 h-0.5 mx-2",
+                    "w-6 sm:w-20 h-0.5 mx-1 sm:mx-2",
                     currentStep > step.id ? "bg-primary" : "bg-muted"
                   )}
                 />
@@ -704,17 +743,6 @@ export function CreateEditEventModal({
                   />
                 </div>
               )}
-              <div className="space-y-2">
-                <Label htmlFor="registrationLink">{t.registrationLinkLabel}</Label>
-                <Input
-                  id="registrationLink"
-                  type="url"
-                  placeholder={t.addRegistrationLink}
-                  value={formData.registrationLink}
-                  onChange={(e) => updateField("registrationLink", e.target.value)}
-                />
-                <p className="text-xs text-muted-foreground">{t.registrationLinkHelp}</p>
-              </div>
             </>
           )}
 
@@ -913,6 +941,15 @@ export function CreateEditEventModal({
           )}
 
           {currentStep === 4 && (
+            <RegistrationSection
+              mode={event ? "edit" : "create"}
+              form={formData}
+              onChange={(patch) => setFormData((prev) => ({ ...prev, ...patch }))}
+              showErrors={registrationShowErrors}
+            />
+          )}
+
+          {currentStep === 5 && (
             <>
               <div className="flex items-center justify-between p-4 rounded-lg border border-border">
                 <div>

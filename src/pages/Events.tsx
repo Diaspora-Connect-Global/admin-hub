@@ -37,6 +37,7 @@ import {
   useGetEvent,
   useCreateEvent,
   useUpdateEvent,
+  useUpdateEventFormFields,
   useDeleteEventAdmin,
   usePublishEventAdmin,
   useUnpublishEventAdmin,
@@ -47,6 +48,14 @@ import { uploadEventBannerToStorage } from "@/lib/eventBannerUpload";
 import { getUserId } from "@/stores/session";
 import { useSessionStore } from "@/stores/sessionStore";
 import { friendlyErrorMessage } from "@/lib/graphqlErrors";
+import {
+  draftsToInputs,
+  formSignature,
+  normalizeRegistrationLink,
+  stripErrorCode,
+  validateDrafts,
+} from "@/lib/eventRegistrationForm";
+import i18n from "@/i18n";
 
 export default function Events() {
   const location = useLocation();
@@ -81,6 +90,7 @@ export default function Events() {
 
   const [createEvent] = useCreateEvent();
   const [updateEvent] = useUpdateEvent();
+  const [updateEventFormFields] = useUpdateEventFormFields();
   const [fetchUploadUrl] = useGetUploadUrl();
   const [deleteEventAdmin] = useDeleteEventAdmin();
   const [publishEventAdmin] = usePublishEventAdmin();
@@ -298,6 +308,19 @@ export default function Events() {
       }
     }
 
+    // Where people register: a usable website, or a valid form of questions.
+    let registrationLink: string | null = null;
+    if (data.registrationMode === "EXTERNAL") {
+      registrationLink = normalizeRegistrationLink(data.registrationLink);
+      if (!registrationLink) {
+        toast({ title: "Registration", description: i18n.t("events.registration.urlInvalid"), variant: "destructive" });
+        return;
+      }
+    } else if (!validateDrafts(data.registrationFields).ok) {
+      toast({ title: "Registration", description: i18n.t("events.registration.err_form"), variant: "destructive" });
+      return;
+    }
+
     const locationType =
       data.eventType === "in-person" ? "physical" : data.eventType === "virtual" ? "virtual" : "hybrid";
     const locationDetails = buildEventLocationPayload(data);
@@ -350,9 +373,9 @@ export default function Events() {
             ...(isPaidEvent && eventCurrency ? { currency: eventCurrency } : {}),
             capacity: capacityValue ?? 0,
             ...(coverImageUrl != null ? { coverImageUrl } : {}),
-            ...(data.registrationLink?.trim()
-              ? { registrationLink: data.registrationLink.trim() }
-              : { registrationLink: "" }),
+            // With a mode the link is authoritative: "" clears it when going back to DiaspoPlug.
+            registrationMode: data.registrationMode,
+            registrationLink: registrationLink ?? "",
           },
         };
         logEventMutation("UpdateEvent (edit)", updateVariables);
@@ -360,6 +383,15 @@ export default function Events() {
           variables: updateVariables,
         });
         throwIfGraphQLErrors(updateRes, "UpdateEvent");
+        if (
+          data.registrationMode === "IN_APP" &&
+          formSignature(data.registrationFields) !== data.registrationBaseline
+        ) {
+          const formRes = await updateEventFormFields({
+            variables: { input: { eventId: editingEventId, fields: draftsToInputs(data.registrationFields) } },
+          });
+          throwIfGraphQLErrors(formRes, "UpdateEventFormFields");
+        }
         toast({ title: "Event Updated", description: "Your changes have been saved." });
       } else {
         let coverImageUrl: string | undefined;
@@ -385,9 +417,8 @@ export default function Events() {
             visibility: data.visibility ?? DEFAULT_EVENT_VISIBILITY,
             ...(capacityValue != null ? { capacity: capacityValue } : {}),
             ...(coverImageUrl != null ? { coverImageUrl } : {}),
-            ...(data.registrationLink?.trim()
-              ? { registrationLink: data.registrationLink.trim() }
-              : {}),
+            registrationMode: data.registrationMode,
+            ...(registrationLink ? { registrationLink } : {}),
             tags: [] as string[],
             ...pricingPayload,
           },
@@ -399,6 +430,29 @@ export default function Events() {
         });
         throwIfGraphQLErrors(createResult, "CreateEvent");
         const createdId = createResult.data?.createEvent?.id as string | undefined;
+
+        // The organiser's form goes up right after the event exists, before it is published.
+        if (data.registrationMode === "IN_APP" && createdId) {
+          try {
+            const formRes = await updateEventFormFields({
+              variables: { input: { eventId: createdId, fields: draftsToInputs(data.registrationFields) } },
+            });
+            throwIfGraphQLErrors(formRes, "UpdateEventFormFields");
+          } catch (formErr) {
+            // The event exists as a draft: close the dialog (a retry would create a duplicate) and say how to fix it.
+            toast({
+              title: "Error",
+              description: i18n.t("events.registration.saveFormFailed", {
+                message: stripErrorCode(friendlyErrorMessage(formErr)),
+              }),
+              variant: "destructive",
+            });
+            setEditingEventId(null);
+            setCreateModalOpen(false);
+            refetch();
+            return;
+          }
+        }
 
         if (data.publishNow && createdId) {
           const publishVariables = { id: createdId };
@@ -420,7 +474,7 @@ export default function Events() {
       setCreateModalOpen(false);
       refetch();
     } catch (e) {
-      toast({ title: "Error", description: friendlyErrorMessage(e), variant: "destructive" });
+      toast({ title: "Error", description: stripErrorCode(friendlyErrorMessage(e)), variant: "destructive" });
       throw e;
     }
   };

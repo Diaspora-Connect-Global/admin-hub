@@ -3,6 +3,8 @@
  * @see docs/EVENTS-GRAPHQL-API.md
  */
 
+import type { RegistrationFieldDraft, RegistrationMode } from "@/lib/eventRegistrationForm";
+
 export type EventStatus =
   | "DRAFT"
   | "PUBLISHED"
@@ -51,6 +53,8 @@ export interface EventRegistrationFormField {
   type: string;
   required: boolean;
   options?: string[] | null;
+  /** full_name | email | phone | job_title for a default field; null for the organiser's own. */
+  builtin?: string | null;
 }
 
 export interface Event {
@@ -80,6 +84,8 @@ export interface Event {
   tickets?: EventTicket[] | null;
   coverImageUrl?: string | null;
   registrationLink?: string | null;
+  /** null from an old gateway ⇒ IN_APP. */
+  registrationMode?: RegistrationMode | null;
   tags?: string[] | null;
   publishedAt?: string | null;
   cancelledAt?: string | null;
@@ -112,6 +118,8 @@ export interface EventRegistration {
   confirmedAt?: string | null;
   cancelledAt?: string | null;
   createdAt?: string | null;
+  /** JSON object { [questionId]: string | string[] | boolean }; null when none. */
+  formResponsesJson?: string | null;
 }
 
 /** Form data for create/edit event modal (UI values). */
@@ -144,8 +152,17 @@ export interface EventFormData {
   city: string;
   country: string;
   virtualLink: string;
-  /** Optional external registration / RSVP URL. */
+  /** Where people register: DiaspoPlug's own form, or an organiser website. */
+  registrationMode: RegistrationMode;
+  /** External registration website (EXTERNAL only). */
   registrationLink: string;
+  /** The organiser-built form (IN_APP only). */
+  registrationFields: RegistrationFieldDraft[];
+  /** Edit mode: signature of the form as loaded; the form is re-saved only when it differs. */
+  registrationBaseline: string | null;
+  /** Edit mode: the saved mode, and how many people already registered. */
+  savedRegistrationMode: RegistrationMode | null;
+  registeredCount: number;
   isPaid: boolean;
   tickets: EventTicketFormData[];
   ticketType: "general" | "free";
