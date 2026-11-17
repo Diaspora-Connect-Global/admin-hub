@@ -1,6 +1,7 @@
 import { Link, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { LayoutDashboard, Users, Wallet, AlertTriangle, BarChart3, Settings, Bell, FileText, HeadphonesIcon, Shield, Store, Key, Activity, ChevronLeft, ChevronRight, LogOut, MessageSquare, Calendar, Briefcase, Landmark, ClipboardList, WalletCards, Banknote, UserX, BadgeCheck, FileStack, CircleDot, Layers } from "lucide-react";
+import { LayoutDashboard, Users, Wallet, AlertTriangle, BarChart3, Settings, Bell, FileText, HeadphonesIcon, Shield, Store, Key, Activity, ChevronLeft, ChevronRight, LogOut, MessageSquare, Calendar, Briefcase, Landmark, ClipboardList, WalletCards, Banknote, UserX, BadgeCheck, FileStack, CircleDot, Layers, ListChecks } from "lucide-react";
+import { TasksNavBadge } from "@/components/tasks/TasksNavBadge";
 import { cn } from "@/lib/utils";
 import { isNavItemVisible, type NavVisibilityRules } from "@/lib/navVisibility";
 import logo from "@/assets/logo.svg";
@@ -51,6 +52,8 @@ const navItems: Array<{
   // and non-discoverable circles — so no `scopedRoles`.
   { id: "circles", titleKey: "nav.circles", icon: CircleDot, path: "/circles", systemAdminOnly: true },
   { id: "circle_plans", titleKey: "nav.circlePlans", icon: Layers, path: "/circles/plans", systemAdminOnly: true },
+  // Admin tasks live in the platform team's scope; the route sits behind RequireSystemAdmin.
+  { id: "tasks", titleKey: "nav.tasks", icon: ListChecks, path: "/tasks", systemAdminOnly: true },
   { id: "vendor_management", titleKey: "nav.vendors", icon: Store, path: "/vendors" },
   { id: "roles_permissions", titleKey: "nav.roles", icon: Key, path: "/roles" },
   { id: "system_health", titleKey: "nav.systemHealth", icon: Activity, path: "/health" },
@@ -120,10 +123,11 @@ function SidebarContent({ collapsed = false, onToggleCollapse, onNavigate }: Sid
                 <Link
                   to={item.path}
                   onClick={onNavigate}
-                  className={cn("sidebar-item", active ? "sidebar-item-active" : "sidebar-item-inactive")}
+                  className={cn("sidebar-item", active ? "sidebar-item-active" : "sidebar-item-inactive", item.id === "tasks" && collapsed && "relative")}
                 >
                   <item.icon className={cn("w-5 h-5 flex-shrink-0", collapsed && "mx-auto")} />
                   {!collapsed && <span>{t(item.titleKey)}</span>}
+                  {item.id === "tasks" && <TasksNavBadge collapsed={collapsed} />}
                 </Link>
               </li>
             );

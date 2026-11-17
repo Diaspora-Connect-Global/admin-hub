@@ -77,7 +77,8 @@
     "expandSidebar": "Seitenleiste ausklappen",
     "posts": "Beitragsverwaltung",
     "circles": "Circles",
-    "circlePlans": "Circle-Tarife"
+    "circlePlans": "Circle-Tarife",
+    "tasks": "Aufgaben"
   },
   "dashboard": {
     "title": "Admin-Dashboard",
@@ -1722,6 +1723,174 @@
       "CHAT_HISTORY_DAYS": "Chatverlauf (Tage)",
       "STORAGE_MB": "Speicher (MB)",
       "CUSTOM_BRANDING": "Eigenes Branding"
+    }
+  },
+  "tasks": {
+    "title": "Aufgaben",
+    "subtitle": "Weisen Sie anderen Admins Aufgaben zu und verfolgen Sie den Fortschritt.",
+    "newTask": "Neue Aufgabe",
+    "tabs": {
+      "mine": "Meine Aufgaben",
+      "team": "Team-Board",
+      "createdByMe": "Von mir zugewiesen",
+      "progress": "Team-Fortschritt"
+    },
+    "showFinished": "Erledigte Aufgaben anzeigen",
+    "loadMore": "Mehr laden",
+    "loading": "Wird geladen …",
+    "empty": "Hier gibt es keine Aufgaben.",
+    "retry": "Erneut versuchen",
+    "cancelDialog": "Abbrechen",
+    "filter": {
+      "person": "Nach Person filtern",
+      "everyone": "Alle"
+    },
+    "status": {
+      "TODO": "Zu erledigen",
+      "IN_PROGRESS": "In Bearbeitung",
+      "BLOCKED": "Blockiert",
+      "DONE": "Erledigt",
+      "CANCELLED": "Abgebrochen"
+    },
+    "priority": {
+      "LOW": "Niedrig",
+      "MEDIUM": "Mittel",
+      "HIGH": "Hoch",
+      "URGENT": "Dringend"
+    },
+    "card": {
+      "overdue": "Überfällig",
+      "due": "Fällig am {{date}}",
+      "noDue": "Kein Fälligkeitsdatum",
+      "assignee": "Zugewiesen an",
+      "comments_one": "{{count}} Kommentar",
+      "comments_other": "{{count}} Kommentare"
+    },
+    "badge": {
+      "open_one": "{{count}} offene Aufgabe",
+      "open_other": "{{count}} offene Aufgaben",
+      "overdue_one": "{{count}} überfällig",
+      "overdue_other": "{{count}} überfällig",
+      "withOverdue": "{{open}}, {{overdue}}"
+    },
+    "field": {
+      "title": "Titel",
+      "description": "Beschreibung",
+      "assignee": "Zugewiesen an",
+      "priority": "Priorität",
+      "dueDate": "Fälligkeitsdatum",
+      "checklist": "Checkliste"
+    },
+    "new": {
+      "title": "Neue Aufgabe",
+      "description": "Beschreiben Sie, was zu tun ist und wer es erledigen soll.",
+      "myself": "Ich selbst",
+      "selfNote": "Diese Aufgabe wird Ihnen zugewiesen.",
+      "addItem": "Checklistenpunkt hinzufügen",
+      "itemN": "Checklistenpunkt {{n}}",
+      "removeItemN": "Checklistenpunkt {{n}} entfernen",
+      "create": "Aufgabe erstellen",
+      "creating": "Wird erstellt …"
+    },
+    "validation": {
+      "titleRequired": "Geben Sie einen Titel ein.",
+      "titleTooLong": "Der Titel darf höchstens {{max}} Zeichen lang sein.",
+      "descriptionTooLong": "Die Beschreibung darf höchstens {{max}} Zeichen lang sein.",
+      "itemTooLong": "Jeder Checklistenpunkt darf höchstens {{max}} Zeichen lang sein.",
+      "tooManyItems": "Eine Aufgabe kann höchstens {{max}} Checklistenpunkte haben.",
+      "dueInvalid": "Geben Sie ein gültiges Fälligkeitsdatum innerhalb der nächsten 5 Jahre ein.",
+      "reasonTooLong": "Der Grund darf höchstens {{max}} Zeichen lang sein.",
+      "commentTooLong": "Ein Kommentar darf höchstens {{max}} Zeichen lang sein."
+    },
+    "toast": {
+      "created": "Aufgabe erstellt.",
+      "updated": "Aufgabe aktualisiert.",
+      "reassigned": "Aufgabe neu zugewiesen.",
+      "status": "Status aktualisiert.",
+      "commented": "Kommentar hinzugefügt."
+    },
+    "drawer": {
+      "fallbackTitle": "Aufgabe",
+      "description": "Aufgabendetails, Checkliste, Kommentare und Verlauf.",
+      "summary": "Zusammenfassung",
+      "details": "Details",
+      "noDescription": "Keine Beschreibung.",
+      "createdBy": "Erstellt von {{email}}",
+      "edit": "Titel und Beschreibung bearbeiten",
+      "save": "Speichern",
+      "clearDue": "Fälligkeitsdatum entfernen",
+      "statusHeading": "Status",
+      "moveTo": "Verschieben nach „{{status}}“",
+      "reopenAs": "Wieder öffnen als „{{status}}“",
+      "cancelTask": "Aufgabe abbrechen",
+      "restoreTask": "Aufgabe wiederherstellen",
+      "blockedReasonLabel": "Warum ist sie blockiert? (erforderlich)",
+      "confirmBlocked": "Als blockiert markieren",
+      "blockedBecause": "Blockiert: {{reason}}"
+    },
+    "checklist": {
+      "heading": "Checkliste",
+      "progress": "{{done}} von {{total}} erledigt",
+      "none": "Keine Checklistenpunkte.",
+      "addLabel": "Checklistenpunkt hinzufügen",
+      "add": "Hinzufügen",
+      "remove": "„{{text}}“ entfernen"
+    },
+    "comments": {
+      "heading": "Kommentare",
+      "none": "Noch keine Kommentare.",
+      "addLabel": "Kommentar hinzufügen",
+      "post": "Kommentar senden"
+    },
+    "history": {
+      "heading": "Verlauf",
+      "system": "Das System",
+      "note": "Grund: {{note}}",
+      "CREATED": "{{actor}} hat die Aufgabe erstellt",
+      "REASSIGNED": "{{actor}} hat sie von {{from}} an {{to}} übertragen",
+      "REASSIGNED_TO": "{{actor}} hat sie {{to}} zugewiesen",
+      "STATUS_CHANGED": "{{actor}} hat den Status von „{{from}}“ auf „{{to}}“ geändert",
+      "PRIORITY_CHANGED": "{{actor}} hat die Priorität von „{{from}}“ auf „{{to}}“ geändert",
+      "DUE_CHANGED": "{{actor}} hat das Fälligkeitsdatum von {{from}} auf {{to}} geändert",
+      "DUE_SET": "{{actor}} hat das Fälligkeitsdatum auf {{to}} gesetzt",
+      "DUE_CLEARED": "{{actor}} hat das Fälligkeitsdatum entfernt",
+      "EDITED": "{{actor}} hat die Aufgabe bearbeitet",
+      "CHECKLIST_ITEM_ADDED": "{{actor}} hat den Checklistenpunkt „{{item}}“ hinzugefügt",
+      "CHECKLIST_ITEM_CHECKED": "{{actor}} hat „{{item}}“ abgehakt",
+      "CHECKLIST_ITEM_UNCHECKED": "{{actor}} hat den Haken bei „{{item}}“ entfernt",
+      "CHECKLIST_ITEM_REMOVED": "{{actor}} hat den Checklistenpunkt „{{item}}“ entfernt",
+      "COMMENTED": "{{actor}} hat kommentiert",
+      "OTHER": "{{actor}} hat die Aufgabe aktualisiert"
+    },
+    "openLinked": {
+      "USER": "Verknüpften Nutzer öffnen",
+      "COMMUNITY": "Verknüpfte Community öffnen",
+      "ASSOCIATION": "Verknüpften Verband öffnen",
+      "CIRCLE": "Verknüpften Circle öffnen"
+    },
+    "progress": {
+      "caption": "Fortschritt pro Teammitglied",
+      "person": "Person",
+      "overdue": "Überfällig",
+      "doneWeek": "In den letzten 7 Tagen erledigt",
+      "avg": "Durchschnittliche Dauer",
+      "totals": "Team gesamt",
+      "totalOpen_one": "{{count}} offen",
+      "totalOpen_other": "{{count}} offen",
+      "totalBlocked_one": "{{count}} blockiert",
+      "totalBlocked_other": "{{count}} blockiert",
+      "hours": "{{value}} Std.",
+      "days": "{{value}} Tage"
+    },
+    "errors": {
+      "ADMIN_TASK_NOT_FOUND": "Diese Aufgabe existiert nicht mehr oder gehört nicht zu Ihrem Team.",
+      "ADMIN_TASK_NOT_ALLOWED": "Das ist bei dieser Aufgabe nicht erlaubt.",
+      "ADMIN_TASK_NOT_A_MEMBER": "Sie gehören keinem Admin-Team an, das Aufgaben nutzen kann.",
+      "ADMIN_TASK_INVALID_TRANSITION": "Die Aufgabe kann von ihrem aktuellen Status nicht in diesen Status wechseln.",
+      "ADMIN_TASK_LIMIT": "Für diese Aufgabe wurde eine Grenze erreicht, z. B. die Anzahl der Checklistenpunkte.",
+      "ADMIN_TASK_INVALID": "Einige Eingaben sind ungültig. Prüfen Sie die Felder und versuchen Sie es erneut.",
+      "ADMIN_TASK_UNAVAILABLE": "Aufgaben sind vorübergehend nicht verfügbar. Bitte versuchen Sie es gleich noch einmal.",
+      "GENERIC": "Etwas ist schiefgelaufen. Bitte versuchen Sie es erneut."
     }
   }
 }

@@ -77,7 +77,8 @@
     "expandSidebar": "Expandir barra lateral",
     "posts": "Gestión de publicaciones",
     "circles": "Círculos",
-    "circlePlans": "Planes de círculo"
+    "circlePlans": "Planes de círculo",
+    "tasks": "Tareas"
   },
   "dashboard": {
     "title": "Panel de administración",
@@ -1722,6 +1723,174 @@
       "CHAT_HISTORY_DAYS": "Historial de chat (días)",
       "STORAGE_MB": "Almacenamiento (MB)",
       "CUSTOM_BRANDING": "Marca personalizada"
+    }
+  },
+  "tasks": {
+    "title": "Tareas",
+    "subtitle": "Asigne tareas a otros administradores y siga su progreso.",
+    "newTask": "Nueva tarea",
+    "tabs": {
+      "mine": "Mis tareas",
+      "team": "Tablero del equipo",
+      "createdByMe": "Asignadas por mí",
+      "progress": "Progreso del equipo"
+    },
+    "showFinished": "Mostrar tareas terminadas",
+    "loadMore": "Cargar más",
+    "loading": "Cargando…",
+    "empty": "No hay tareas aquí.",
+    "retry": "Reintentar",
+    "cancelDialog": "Cancelar",
+    "filter": {
+      "person": "Filtrar por persona",
+      "everyone": "Todos"
+    },
+    "status": {
+      "TODO": "Por hacer",
+      "IN_PROGRESS": "En curso",
+      "BLOCKED": "Bloqueada",
+      "DONE": "Hecha",
+      "CANCELLED": "Cancelada"
+    },
+    "priority": {
+      "LOW": "Baja",
+      "MEDIUM": "Media",
+      "HIGH": "Alta",
+      "URGENT": "Urgente"
+    },
+    "card": {
+      "overdue": "Vencida",
+      "due": "Vence el {{date}}",
+      "noDue": "Sin fecha límite",
+      "assignee": "Asignada a",
+      "comments_one": "{{count}} comentario",
+      "comments_other": "{{count}} comentarios"
+    },
+    "badge": {
+      "open_one": "{{count}} tarea abierta",
+      "open_other": "{{count}} tareas abiertas",
+      "overdue_one": "{{count}} vencida",
+      "overdue_other": "{{count}} vencidas",
+      "withOverdue": "{{open}}, {{overdue}}"
+    },
+    "field": {
+      "title": "Título",
+      "description": "Descripción",
+      "assignee": "Asignada a",
+      "priority": "Prioridad",
+      "dueDate": "Fecha límite",
+      "checklist": "Lista de verificación"
+    },
+    "new": {
+      "title": "Nueva tarea",
+      "description": "Describa qué hay que hacer y quién debe hacerlo.",
+      "myself": "Yo mismo",
+      "selfNote": "Esta tarea se le asignará a usted.",
+      "addItem": "Añadir elemento",
+      "itemN": "Elemento {{n}}",
+      "removeItemN": "Quitar el elemento {{n}}",
+      "create": "Crear tarea",
+      "creating": "Creando…"
+    },
+    "validation": {
+      "titleRequired": "Introduzca un título.",
+      "titleTooLong": "El título puede tener como máximo {{max}} caracteres.",
+      "descriptionTooLong": "La descripción puede tener como máximo {{max}} caracteres.",
+      "itemTooLong": "Cada elemento puede tener como máximo {{max}} caracteres.",
+      "tooManyItems": "Una tarea puede tener como máximo {{max}} elementos.",
+      "dueInvalid": "Introduzca una fecha límite válida dentro de los próximos 5 años.",
+      "reasonTooLong": "El motivo puede tener como máximo {{max}} caracteres.",
+      "commentTooLong": "Un comentario puede tener como máximo {{max}} caracteres."
+    },
+    "toast": {
+      "created": "Tarea creada.",
+      "updated": "Tarea actualizada.",
+      "reassigned": "Tarea reasignada.",
+      "status": "Estado actualizado.",
+      "commented": "Comentario añadido."
+    },
+    "drawer": {
+      "fallbackTitle": "Tarea",
+      "description": "Detalles de la tarea, lista de verificación, comentarios e historial.",
+      "summary": "Resumen",
+      "details": "Detalles",
+      "noDescription": "Sin descripción.",
+      "createdBy": "Creada por {{email}}",
+      "edit": "Editar título y descripción",
+      "save": "Guardar",
+      "clearDue": "Quitar fecha límite",
+      "statusHeading": "Estado",
+      "moveTo": "Mover a «{{status}}»",
+      "reopenAs": "Reabrir como «{{status}}»",
+      "cancelTask": "Cancelar tarea",
+      "restoreTask": "Restaurar tarea",
+      "blockedReasonLabel": "¿Por qué está bloqueada? (obligatorio)",
+      "confirmBlocked": "Marcar como bloqueada",
+      "blockedBecause": "Bloqueada: {{reason}}"
+    },
+    "checklist": {
+      "heading": "Lista de verificación",
+      "progress": "{{done}} de {{total}} hechos",
+      "none": "Sin elementos.",
+      "addLabel": "Añadir un elemento",
+      "add": "Añadir",
+      "remove": "Quitar «{{text}}»"
+    },
+    "comments": {
+      "heading": "Comentarios",
+      "none": "Aún no hay comentarios.",
+      "addLabel": "Añadir un comentario",
+      "post": "Publicar comentario"
+    },
+    "history": {
+      "heading": "Historial",
+      "system": "El sistema",
+      "note": "Motivo: {{note}}",
+      "CREATED": "{{actor}} creó la tarea",
+      "REASSIGNED": "{{actor}} la reasignó de {{from}} a {{to}}",
+      "REASSIGNED_TO": "{{actor}} la asignó a {{to}}",
+      "STATUS_CHANGED": "{{actor}} cambió el estado de «{{from}}» a «{{to}}»",
+      "PRIORITY_CHANGED": "{{actor}} cambió la prioridad de «{{from}}» a «{{to}}»",
+      "DUE_CHANGED": "{{actor}} cambió la fecha límite del {{from}} al {{to}}",
+      "DUE_SET": "{{actor}} fijó la fecha límite el {{to}}",
+      "DUE_CLEARED": "{{actor}} quitó la fecha límite",
+      "EDITED": "{{actor}} editó la tarea",
+      "CHECKLIST_ITEM_ADDED": "{{actor}} añadió el elemento «{{item}}»",
+      "CHECKLIST_ITEM_CHECKED": "{{actor}} marcó «{{item}}» como hecho",
+      "CHECKLIST_ITEM_UNCHECKED": "{{actor}} desmarcó «{{item}}»",
+      "CHECKLIST_ITEM_REMOVED": "{{actor}} quitó el elemento «{{item}}»",
+      "COMMENTED": "{{actor}} comentó",
+      "OTHER": "{{actor}} actualizó la tarea"
+    },
+    "openLinked": {
+      "USER": "Abrir el usuario vinculado",
+      "COMMUNITY": "Abrir la comunidad vinculada",
+      "ASSOCIATION": "Abrir la asociación vinculada",
+      "CIRCLE": "Abrir el círculo vinculado"
+    },
+    "progress": {
+      "caption": "Progreso por miembro del equipo",
+      "person": "Persona",
+      "overdue": "Vencidas",
+      "doneWeek": "Hechas en los últimos 7 días",
+      "avg": "Tiempo medio de finalización",
+      "totals": "Total del equipo",
+      "totalOpen_one": "{{count}} abierta",
+      "totalOpen_other": "{{count}} abiertas",
+      "totalBlocked_one": "{{count}} bloqueada",
+      "totalBlocked_other": "{{count}} bloqueadas",
+      "hours": "{{value}} h",
+      "days": "{{value}} días"
+    },
+    "errors": {
+      "ADMIN_TASK_NOT_FOUND": "Esta tarea ya no existe o no pertenece a su equipo.",
+      "ADMIN_TASK_NOT_ALLOWED": "No puede hacer eso en esta tarea.",
+      "ADMIN_TASK_NOT_A_MEMBER": "No forma parte de un equipo de administración que pueda usar tareas.",
+      "ADMIN_TASK_INVALID_TRANSITION": "La tarea no puede pasar a ese estado desde el actual.",
+      "ADMIN_TASK_LIMIT": "Se alcanzó un límite de esta tarea, por ejemplo el número de elementos de la lista.",
+      "ADMIN_TASK_INVALID": "Algunos datos introducidos no son válidos. Revise los campos e inténtelo de nuevo.",
+      "ADMIN_TASK_UNAVAILABLE": "Las tareas no están disponibles temporalmente. Inténtelo de nuevo en un momento.",
+      "GENERIC": "Algo salió mal. Inténtelo de nuevo."
     }
   }
 }

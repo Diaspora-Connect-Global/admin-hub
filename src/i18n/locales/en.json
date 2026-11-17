@@ -77,7 +77,8 @@
     "expandSidebar": "Expand sidebar",
     "posts": "Post Management",
     "circles": "Circles",
-    "circlePlans": "Circle Plans"
+    "circlePlans": "Circle Plans",
+    "tasks": "Tasks"
   },
   "dashboard": {
     "title": "Admin Dashboard",
@@ -1722,6 +1723,174 @@
       "CHAT_HISTORY_DAYS": "Chat history (days)",
       "STORAGE_MB": "Storage (MB)",
       "CUSTOM_BRANDING": "Custom branding"
+    }
+  },
+  "tasks": {
+    "title": "Tasks",
+    "subtitle": "Give fellow admins tasks and follow their progress.",
+    "newTask": "New task",
+    "tabs": {
+      "mine": "My tasks",
+      "team": "Team board",
+      "createdByMe": "Assigned by me",
+      "progress": "Team progress"
+    },
+    "showFinished": "Show finished tasks",
+    "loadMore": "Load more",
+    "loading": "Loading…",
+    "empty": "No tasks here.",
+    "retry": "Try again",
+    "cancelDialog": "Cancel",
+    "filter": {
+      "person": "Filter by person",
+      "everyone": "Everyone"
+    },
+    "status": {
+      "TODO": "To do",
+      "IN_PROGRESS": "In progress",
+      "BLOCKED": "Blocked",
+      "DONE": "Done",
+      "CANCELLED": "Cancelled"
+    },
+    "priority": {
+      "LOW": "Low",
+      "MEDIUM": "Medium",
+      "HIGH": "High",
+      "URGENT": "Urgent"
+    },
+    "card": {
+      "overdue": "Overdue",
+      "due": "Due {{date}}",
+      "noDue": "No due date",
+      "assignee": "Assignee",
+      "comments_one": "{{count}} comment",
+      "comments_other": "{{count}} comments"
+    },
+    "badge": {
+      "open_one": "{{count}} open task",
+      "open_other": "{{count}} open tasks",
+      "overdue_one": "{{count}} overdue",
+      "overdue_other": "{{count}} overdue",
+      "withOverdue": "{{open}}, {{overdue}}"
+    },
+    "field": {
+      "title": "Title",
+      "description": "Description",
+      "assignee": "Assignee",
+      "priority": "Priority",
+      "dueDate": "Due date",
+      "checklist": "Checklist"
+    },
+    "new": {
+      "title": "New task",
+      "description": "Describe what needs doing and who should do it.",
+      "myself": "Myself",
+      "selfNote": "This task will be assigned to you.",
+      "addItem": "Add checklist item",
+      "itemN": "Checklist item {{n}}",
+      "removeItemN": "Remove checklist item {{n}}",
+      "create": "Create task",
+      "creating": "Creating…"
+    },
+    "validation": {
+      "titleRequired": "Enter a title.",
+      "titleTooLong": "The title can be at most {{max}} characters.",
+      "descriptionTooLong": "The description can be at most {{max}} characters.",
+      "itemTooLong": "Each checklist item can be at most {{max}} characters.",
+      "tooManyItems": "A task can have at most {{max}} checklist items.",
+      "dueInvalid": "Enter a valid due date within the next 5 years.",
+      "reasonTooLong": "The reason can be at most {{max}} characters.",
+      "commentTooLong": "A comment can be at most {{max}} characters."
+    },
+    "toast": {
+      "created": "Task created.",
+      "updated": "Task updated.",
+      "reassigned": "Task reassigned.",
+      "status": "Status updated.",
+      "commented": "Comment added."
+    },
+    "drawer": {
+      "fallbackTitle": "Task",
+      "description": "Task details, checklist, comments and history.",
+      "summary": "Summary",
+      "details": "Details",
+      "noDescription": "No description.",
+      "createdBy": "Created by {{email}}",
+      "edit": "Edit title and description",
+      "save": "Save",
+      "clearDue": "Clear due date",
+      "statusHeading": "Status",
+      "moveTo": "Move to {{status}}",
+      "reopenAs": "Reopen as {{status}}",
+      "cancelTask": "Cancel task",
+      "restoreTask": "Restore task",
+      "blockedReasonLabel": "Why is it blocked? (required)",
+      "confirmBlocked": "Mark as blocked",
+      "blockedBecause": "Blocked: {{reason}}"
+    },
+    "checklist": {
+      "heading": "Checklist",
+      "progress": "{{done}} of {{total}} done",
+      "none": "No checklist items.",
+      "addLabel": "Add a checklist item",
+      "add": "Add",
+      "remove": "Remove “{{text}}”"
+    },
+    "comments": {
+      "heading": "Comments",
+      "none": "No comments yet.",
+      "addLabel": "Add a comment",
+      "post": "Post comment"
+    },
+    "history": {
+      "heading": "History",
+      "system": "The system",
+      "note": "Reason: {{note}}",
+      "CREATED": "{{actor}} created the task",
+      "REASSIGNED": "{{actor}} reassigned it from {{from}} to {{to}}",
+      "REASSIGNED_TO": "{{actor}} assigned it to {{to}}",
+      "STATUS_CHANGED": "{{actor}} changed the status from {{from}} to {{to}}",
+      "PRIORITY_CHANGED": "{{actor}} changed the priority from {{from}} to {{to}}",
+      "DUE_CHANGED": "{{actor}} changed the due date from {{from}} to {{to}}",
+      "DUE_SET": "{{actor}} set the due date to {{to}}",
+      "DUE_CLEARED": "{{actor}} removed the due date",
+      "EDITED": "{{actor}} edited the task",
+      "CHECKLIST_ITEM_ADDED": "{{actor}} added the checklist item “{{item}}”",
+      "CHECKLIST_ITEM_CHECKED": "{{actor}} checked off “{{item}}”",
+      "CHECKLIST_ITEM_UNCHECKED": "{{actor}} unchecked “{{item}}”",
+      "CHECKLIST_ITEM_REMOVED": "{{actor}} removed the checklist item “{{item}}”",
+      "COMMENTED": "{{actor}} commented",
+      "OTHER": "{{actor}} updated the task"
+    },
+    "openLinked": {
+      "USER": "Open linked user",
+      "COMMUNITY": "Open linked community",
+      "ASSOCIATION": "Open linked association",
+      "CIRCLE": "Open linked circle"
+    },
+    "progress": {
+      "caption": "Progress per team member",
+      "person": "Person",
+      "overdue": "Overdue",
+      "doneWeek": "Done in last 7 days",
+      "avg": "Average time to finish",
+      "totals": "Team total",
+      "totalOpen_one": "{{count}} open",
+      "totalOpen_other": "{{count}} open",
+      "totalBlocked_one": "{{count}} blocked",
+      "totalBlocked_other": "{{count}} blocked",
+      "hours": "{{value}} h",
+      "days": "{{value}} days"
+    },
+    "errors": {
+      "ADMIN_TASK_NOT_FOUND": "This task no longer exists or isn't in your team.",
+      "ADMIN_TASK_NOT_ALLOWED": "You can't do that on this task.",
+      "ADMIN_TASK_NOT_A_MEMBER": "You're not part of an admin team that can use tasks.",
+      "ADMIN_TASK_INVALID_TRANSITION": "The task can't move to that status from where it is now.",
+      "ADMIN_TASK_LIMIT": "You've reached a limit for this task, such as the number of checklist items.",
+      "ADMIN_TASK_INVALID": "Some of what you entered isn't valid. Check the fields and try again.",
+      "ADMIN_TASK_UNAVAILABLE": "Tasks are temporarily unavailable. Please try again in a moment.",
+      "GENERIC": "Something went wrong. Please try again."
     }
   }
 }

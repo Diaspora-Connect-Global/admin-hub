@@ -77,7 +77,8 @@
     "expandSidebar": "Zijbalk uitklappen",
     "posts": "Berichtenbeheer",
     "circles": "Circles",
-    "circlePlans": "Circle-abonnementen"
+    "circlePlans": "Circle-abonnementen",
+    "tasks": "Taken"
   },
   "dashboard": {
     "title": "Admin Dashboard",
@@ -1722,6 +1723,174 @@
       "CHAT_HISTORY_DAYS": "Chatgeschiedenis (dagen)",
       "STORAGE_MB": "Opslag (MB)",
       "CUSTOM_BRANDING": "Eigen huisstijl"
+    }
+  },
+  "tasks": {
+    "title": "Taken",
+    "subtitle": "Geef andere beheerders taken en volg hun voortgang.",
+    "newTask": "Nieuwe taak",
+    "tabs": {
+      "mine": "Mijn taken",
+      "team": "Teambord",
+      "createdByMe": "Door mij toegewezen",
+      "progress": "Teamvoortgang"
+    },
+    "showFinished": "Afgeronde taken tonen",
+    "loadMore": "Meer laden",
+    "loading": "Laden…",
+    "empty": "Geen taken hier.",
+    "retry": "Opnieuw proberen",
+    "cancelDialog": "Annuleren",
+    "filter": {
+      "person": "Filteren op persoon",
+      "everyone": "Iedereen"
+    },
+    "status": {
+      "TODO": "Te doen",
+      "IN_PROGRESS": "In uitvoering",
+      "BLOCKED": "Geblokkeerd",
+      "DONE": "Klaar",
+      "CANCELLED": "Geannuleerd"
+    },
+    "priority": {
+      "LOW": "Laag",
+      "MEDIUM": "Gemiddeld",
+      "HIGH": "Hoog",
+      "URGENT": "Dringend"
+    },
+    "card": {
+      "overdue": "Te laat",
+      "due": "Deadline {{date}}",
+      "noDue": "Geen deadline",
+      "assignee": "Toegewezen aan",
+      "comments_one": "{{count}} reactie",
+      "comments_other": "{{count}} reacties"
+    },
+    "badge": {
+      "open_one": "{{count}} open taak",
+      "open_other": "{{count}} open taken",
+      "overdue_one": "{{count}} te laat",
+      "overdue_other": "{{count}} te laat",
+      "withOverdue": "{{open}}, {{overdue}}"
+    },
+    "field": {
+      "title": "Titel",
+      "description": "Beschrijving",
+      "assignee": "Toegewezen aan",
+      "priority": "Prioriteit",
+      "dueDate": "Deadline",
+      "checklist": "Checklist"
+    },
+    "new": {
+      "title": "Nieuwe taak",
+      "description": "Beschrijf wat er moet gebeuren en wie het doet.",
+      "myself": "Mezelf",
+      "selfNote": "Deze taak wordt aan u toegewezen.",
+      "addItem": "Checklistpunt toevoegen",
+      "itemN": "Checklistpunt {{n}}",
+      "removeItemN": "Checklistpunt {{n}} verwijderen",
+      "create": "Taak aanmaken",
+      "creating": "Aanmaken…"
+    },
+    "validation": {
+      "titleRequired": "Vul een titel in.",
+      "titleTooLong": "De titel mag maximaal {{max}} tekens bevatten.",
+      "descriptionTooLong": "De beschrijving mag maximaal {{max}} tekens bevatten.",
+      "itemTooLong": "Elk checklistpunt mag maximaal {{max}} tekens bevatten.",
+      "tooManyItems": "Een taak kan maximaal {{max}} checklistpunten hebben.",
+      "dueInvalid": "Vul een geldige deadline in binnen de komende 5 jaar.",
+      "reasonTooLong": "De reden mag maximaal {{max}} tekens bevatten.",
+      "commentTooLong": "Een reactie mag maximaal {{max}} tekens bevatten."
+    },
+    "toast": {
+      "created": "Taak aangemaakt.",
+      "updated": "Taak bijgewerkt.",
+      "reassigned": "Taak opnieuw toegewezen.",
+      "status": "Status bijgewerkt.",
+      "commented": "Reactie toegevoegd."
+    },
+    "drawer": {
+      "fallbackTitle": "Taak",
+      "description": "Taakdetails, checklist, reacties en geschiedenis.",
+      "summary": "Samenvatting",
+      "details": "Details",
+      "noDescription": "Geen beschrijving.",
+      "createdBy": "Aangemaakt door {{email}}",
+      "edit": "Titel en beschrijving bewerken",
+      "save": "Opslaan",
+      "clearDue": "Deadline wissen",
+      "statusHeading": "Status",
+      "moveTo": "Verplaatsen naar ‘{{status}}’",
+      "reopenAs": "Heropenen als ‘{{status}}’",
+      "cancelTask": "Taak annuleren",
+      "restoreTask": "Taak herstellen",
+      "blockedReasonLabel": "Waarom is deze geblokkeerd? (verplicht)",
+      "confirmBlocked": "Als geblokkeerd markeren",
+      "blockedBecause": "Geblokkeerd: {{reason}}"
+    },
+    "checklist": {
+      "heading": "Checklist",
+      "progress": "{{done}} van {{total}} klaar",
+      "none": "Geen checklistpunten.",
+      "addLabel": "Checklistpunt toevoegen",
+      "add": "Toevoegen",
+      "remove": "‘{{text}}’ verwijderen"
+    },
+    "comments": {
+      "heading": "Reacties",
+      "none": "Nog geen reacties.",
+      "addLabel": "Reactie toevoegen",
+      "post": "Reactie plaatsen"
+    },
+    "history": {
+      "heading": "Geschiedenis",
+      "system": "Het systeem",
+      "note": "Reden: {{note}}",
+      "CREATED": "{{actor}} heeft de taak aangemaakt",
+      "REASSIGNED": "{{actor}} heeft de taak van {{from}} aan {{to}} toegewezen",
+      "REASSIGNED_TO": "{{actor}} heeft de taak aan {{to}} toegewezen",
+      "STATUS_CHANGED": "{{actor}} heeft de status van ‘{{from}}’ naar ‘{{to}}’ gewijzigd",
+      "PRIORITY_CHANGED": "{{actor}} heeft de prioriteit van ‘{{from}}’ naar ‘{{to}}’ gewijzigd",
+      "DUE_CHANGED": "{{actor}} heeft de deadline van {{from}} naar {{to}} gewijzigd",
+      "DUE_SET": "{{actor}} heeft de deadline op {{to}} gezet",
+      "DUE_CLEARED": "{{actor}} heeft de deadline verwijderd",
+      "EDITED": "{{actor}} heeft de taak bewerkt",
+      "CHECKLIST_ITEM_ADDED": "{{actor}} heeft het checklistpunt ‘{{item}}’ toegevoegd",
+      "CHECKLIST_ITEM_CHECKED": "{{actor}} heeft ‘{{item}}’ afgevinkt",
+      "CHECKLIST_ITEM_UNCHECKED": "{{actor}} heeft ‘{{item}}’ uitgevinkt",
+      "CHECKLIST_ITEM_REMOVED": "{{actor}} heeft het checklistpunt ‘{{item}}’ verwijderd",
+      "COMMENTED": "{{actor}} heeft gereageerd",
+      "OTHER": "{{actor}} heeft de taak bijgewerkt"
+    },
+    "openLinked": {
+      "USER": "Gekoppelde gebruiker openen",
+      "COMMUNITY": "Gekoppelde community openen",
+      "ASSOCIATION": "Gekoppelde vereniging openen",
+      "CIRCLE": "Gekoppelde cirkel openen"
+    },
+    "progress": {
+      "caption": "Voortgang per teamlid",
+      "person": "Persoon",
+      "overdue": "Te laat",
+      "doneWeek": "Klaar in de afgelopen 7 dagen",
+      "avg": "Gemiddelde doorlooptijd",
+      "totals": "Totaal team",
+      "totalOpen_one": "{{count}} open",
+      "totalOpen_other": "{{count}} open",
+      "totalBlocked_one": "{{count}} geblokkeerd",
+      "totalBlocked_other": "{{count}} geblokkeerd",
+      "hours": "{{value}} u",
+      "days": "{{value}} dagen"
+    },
+    "errors": {
+      "ADMIN_TASK_NOT_FOUND": "Deze taak bestaat niet meer of hoort niet bij uw team.",
+      "ADMIN_TASK_NOT_ALLOWED": "U mag dat niet doen met deze taak.",
+      "ADMIN_TASK_NOT_A_MEMBER": "U maakt geen deel uit van een beheerdersteam dat taken kan gebruiken.",
+      "ADMIN_TASK_INVALID_TRANSITION": "De taak kan vanuit de huidige status niet naar die status.",
+      "ADMIN_TASK_LIMIT": "Er is een limiet bereikt voor deze taak, zoals het aantal checklistpunten.",
+      "ADMIN_TASK_INVALID": "Een deel van uw invoer is ongeldig. Controleer de velden en probeer het opnieuw.",
+      "ADMIN_TASK_UNAVAILABLE": "Taken zijn tijdelijk niet beschikbaar. Probeer het zo meteen opnieuw.",
+      "GENERIC": "Er ging iets mis. Probeer het opnieuw."
     }
   }
 }

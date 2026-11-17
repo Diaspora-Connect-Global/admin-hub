@@ -53,6 +53,8 @@ const CirclePlans = lazy(() => import("./pages/CirclePlans"));
 // Escrow Wallet / Ledger / Payout (escrow-service)
 const WalletLedger = lazy(() => import("./pages/WalletLedger"));
 const Payouts = lazy(() => import("./pages/Payouts"));
+// Admin tasks (platform team, admin-service AdminTaskService).
+const Tasks = lazy(() => import("./pages/Tasks"));
 
 const queryClient = new QueryClient();
 
@@ -110,6 +112,7 @@ const App = () => (
                   <Route path="/circles" element={<CircleManagement />} />
                   <Route path="/circles/plans" element={<CirclePlans />} />
                   <Route path="/circles/:id" element={<CircleDetail />} />
+                  <Route path="/tasks" element={<Tasks />} />
                   <Route path="/vendors" element={<VendorManagement />} />
                   <Route path="/roles" element={<RolesPermissions />} />
                   <Route path="/health" element={<SystemHealth />} />

@@ -77,7 +77,8 @@
     "expandSidebar": "Développer la barre latérale",
     "posts": "Gestion des publications",
     "circles": "Cercles",
-    "circlePlans": "Forfaits de cercle"
+    "circlePlans": "Forfaits de cercle",
+    "tasks": "Tâches"
   },
   "dashboard": {
     "title": "Tableau de bord admin",
@@ -1722,6 +1723,174 @@
       "CHAT_HISTORY_DAYS": "Historique de discussion (jours)",
       "STORAGE_MB": "Stockage (Mo)",
       "CUSTOM_BRANDING": "Personnalisation de marque"
+    }
+  },
+  "tasks": {
+    "title": "Tâches",
+    "subtitle": "Confiez des tâches aux autres administrateurs et suivez leur avancement.",
+    "newTask": "Nouvelle tâche",
+    "tabs": {
+      "mine": "Mes tâches",
+      "team": "Tableau d'équipe",
+      "createdByMe": "Assignées par moi",
+      "progress": "Avancement de l'équipe"
+    },
+    "showFinished": "Afficher les tâches terminées",
+    "loadMore": "Charger plus",
+    "loading": "Chargement…",
+    "empty": "Aucune tâche ici.",
+    "retry": "Réessayer",
+    "cancelDialog": "Annuler",
+    "filter": {
+      "person": "Filtrer par personne",
+      "everyone": "Tout le monde"
+    },
+    "status": {
+      "TODO": "À faire",
+      "IN_PROGRESS": "En cours",
+      "BLOCKED": "Bloquée",
+      "DONE": "Terminée",
+      "CANCELLED": "Annulée"
+    },
+    "priority": {
+      "LOW": "Basse",
+      "MEDIUM": "Moyenne",
+      "HIGH": "Haute",
+      "URGENT": "Urgente"
+    },
+    "card": {
+      "overdue": "En retard",
+      "due": "Échéance : {{date}}",
+      "noDue": "Aucune échéance",
+      "assignee": "Assignée à",
+      "comments_one": "{{count}} commentaire",
+      "comments_other": "{{count}} commentaires"
+    },
+    "badge": {
+      "open_one": "{{count}} tâche ouverte",
+      "open_other": "{{count}} tâches ouvertes",
+      "overdue_one": "{{count}} en retard",
+      "overdue_other": "{{count}} en retard",
+      "withOverdue": "{{open}}, {{overdue}}"
+    },
+    "field": {
+      "title": "Titre",
+      "description": "Description",
+      "assignee": "Assignée à",
+      "priority": "Priorité",
+      "dueDate": "Échéance",
+      "checklist": "Liste de contrôle"
+    },
+    "new": {
+      "title": "Nouvelle tâche",
+      "description": "Décrivez ce qu'il faut faire et qui doit s'en charger.",
+      "myself": "Moi-même",
+      "selfNote": "Cette tâche vous sera assignée.",
+      "addItem": "Ajouter un élément",
+      "itemN": "Élément {{n}}",
+      "removeItemN": "Supprimer l'élément {{n}}",
+      "create": "Créer la tâche",
+      "creating": "Création…"
+    },
+    "validation": {
+      "titleRequired": "Saisissez un titre.",
+      "titleTooLong": "Le titre ne peut pas dépasser {{max}} caractères.",
+      "descriptionTooLong": "La description ne peut pas dépasser {{max}} caractères.",
+      "itemTooLong": "Chaque élément peut contenir au plus {{max}} caractères.",
+      "tooManyItems": "Une tâche peut avoir au plus {{max}} éléments.",
+      "dueInvalid": "Saisissez une échéance valide dans les 5 prochaines années.",
+      "reasonTooLong": "Le motif ne peut pas dépasser {{max}} caractères.",
+      "commentTooLong": "Un commentaire ne peut pas dépasser {{max}} caractères."
+    },
+    "toast": {
+      "created": "Tâche créée.",
+      "updated": "Tâche mise à jour.",
+      "reassigned": "Tâche réassignée.",
+      "status": "Statut mis à jour.",
+      "commented": "Commentaire ajouté."
+    },
+    "drawer": {
+      "fallbackTitle": "Tâche",
+      "description": "Détails de la tâche, liste de contrôle, commentaires et historique.",
+      "summary": "Résumé",
+      "details": "Détails",
+      "noDescription": "Aucune description.",
+      "createdBy": "Créée par {{email}}",
+      "edit": "Modifier le titre et la description",
+      "save": "Enregistrer",
+      "clearDue": "Supprimer l'échéance",
+      "statusHeading": "Statut",
+      "moveTo": "Passer à « {{status}} »",
+      "reopenAs": "Rouvrir comme « {{status}} »",
+      "cancelTask": "Annuler la tâche",
+      "restoreTask": "Restaurer la tâche",
+      "blockedReasonLabel": "Pourquoi est-elle bloquée ? (obligatoire)",
+      "confirmBlocked": "Marquer comme bloquée",
+      "blockedBecause": "Bloquée : {{reason}}"
+    },
+    "checklist": {
+      "heading": "Liste de contrôle",
+      "progress": "{{done}} sur {{total}} terminés",
+      "none": "Aucun élément.",
+      "addLabel": "Ajouter un élément",
+      "add": "Ajouter",
+      "remove": "Supprimer « {{text}} »"
+    },
+    "comments": {
+      "heading": "Commentaires",
+      "none": "Aucun commentaire pour le moment.",
+      "addLabel": "Ajouter un commentaire",
+      "post": "Publier le commentaire"
+    },
+    "history": {
+      "heading": "Historique",
+      "system": "Le système",
+      "note": "Motif : {{note}}",
+      "CREATED": "{{actor}} a créé la tâche",
+      "REASSIGNED": "{{actor}} l'a réassignée de {{from}} à {{to}}",
+      "REASSIGNED_TO": "{{actor}} l'a assignée à {{to}}",
+      "STATUS_CHANGED": "{{actor}} a changé le statut de « {{from}} » à « {{to}} »",
+      "PRIORITY_CHANGED": "{{actor}} a changé la priorité de « {{from}} » à « {{to}} »",
+      "DUE_CHANGED": "{{actor}} a changé l'échéance du {{from}} au {{to}}",
+      "DUE_SET": "{{actor}} a fixé l'échéance au {{to}}",
+      "DUE_CLEARED": "{{actor}} a supprimé l'échéance",
+      "EDITED": "{{actor}} a modifié la tâche",
+      "CHECKLIST_ITEM_ADDED": "{{actor}} a ajouté l'élément « {{item}} »",
+      "CHECKLIST_ITEM_CHECKED": "{{actor}} a coché « {{item}} »",
+      "CHECKLIST_ITEM_UNCHECKED": "{{actor}} a décoché « {{item}} »",
+      "CHECKLIST_ITEM_REMOVED": "{{actor}} a supprimé l'élément « {{item}} »",
+      "COMMENTED": "{{actor}} a commenté",
+      "OTHER": "{{actor}} a mis à jour la tâche"
+    },
+    "openLinked": {
+      "USER": "Ouvrir l'utilisateur lié",
+      "COMMUNITY": "Ouvrir la communauté liée",
+      "ASSOCIATION": "Ouvrir l'association liée",
+      "CIRCLE": "Ouvrir le cercle lié"
+    },
+    "progress": {
+      "caption": "Avancement par membre de l'équipe",
+      "person": "Personne",
+      "overdue": "En retard",
+      "doneWeek": "Terminées ces 7 derniers jours",
+      "avg": "Durée moyenne",
+      "totals": "Total de l'équipe",
+      "totalOpen_one": "{{count}} ouverte",
+      "totalOpen_other": "{{count}} ouvertes",
+      "totalBlocked_one": "{{count}} bloquée",
+      "totalBlocked_other": "{{count}} bloquées",
+      "hours": "{{value}} h",
+      "days": "{{value}} jours"
+    },
+    "errors": {
+      "ADMIN_TASK_NOT_FOUND": "Cette tâche n'existe plus ou ne fait pas partie de votre équipe.",
+      "ADMIN_TASK_NOT_ALLOWED": "Vous ne pouvez pas faire cela sur cette tâche.",
+      "ADMIN_TASK_NOT_A_MEMBER": "Vous ne faites partie d'aucune équipe d'administration pouvant utiliser les tâches.",
+      "ADMIN_TASK_INVALID_TRANSITION": "La tâche ne peut pas passer à ce statut depuis son état actuel.",
+      "ADMIN_TASK_LIMIT": "Une limite est atteinte pour cette tâche, par exemple le nombre d'éléments de la liste.",
+      "ADMIN_TASK_INVALID": "Certaines informations saisies ne sont pas valides. Vérifiez les champs et réessayez.",
+      "ADMIN_TASK_UNAVAILABLE": "Les tâches sont temporairement indisponibles. Réessayez dans un instant.",
+      "GENERIC": "Une erreur s'est produite. Veuillez réessayer."
     }
   }
 }
