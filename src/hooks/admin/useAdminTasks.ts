@@ -141,7 +141,7 @@ export function useMyTaskCounts() {
       const now = Date.now();
       if (!force && now - lastFetch.current < FOCUS_REFETCH_MIN_GAP_MS) return;
       lastFetch.current = now;
-      void Promise.resolve(refetch()).catch(() => undefined);
+      void Promise.resolve(refetch()).catch((): undefined => undefined);
     };
     const onFocus = () => refresh(false);
     const timer = window.setInterval(() => {
@@ -184,7 +184,7 @@ export function useAdminTaskActions() {
         // The drawer will simply refetch; a failed cache write must not turn a success into a failure.
       }
       try {
-        void Promise.resolve(client.refetchQueries({ include: REFRESH_AFTER_MUTATION })).catch(() => undefined);
+        void Promise.resolve(client.refetchQueries({ include: REFRESH_AFTER_MUTATION })).catch((): undefined => undefined);
       } catch {
         // Refresh is best effort; the 60 s poll and the next focus will catch up.
       }

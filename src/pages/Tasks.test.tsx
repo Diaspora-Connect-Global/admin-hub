@@ -3,7 +3,8 @@ import type { ReactNode } from "react";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
-import { MockedProvider, type MockedResponse } from "@apollo/client/testing";
+import { MockedProvider } from "@apollo/client/testing/react";
+import type { MockedResponse } from "@apollo/client/testing";
 import { GraphQLError } from "graphql";
 import i18n from "@/i18n";
 import Tasks from "./Tasks";
@@ -45,10 +46,11 @@ beforeAll(() => {
   } as unknown as typeof ResizeObserver;
 });
 
-const me = { id: ME_ID, email: "lead@example.org", role: "SYSTEM_ADMIN" };
-const ama = { id: AMA_ID, email: "ama@example.org", role: "MODERATOR" };
+const me = { __typename: "AdminTaskPerson", id: ME_ID, email: "lead@example.org", role: "SYSTEM_ADMIN" };
+const ama = { __typename: "AdminTaskPerson", id: AMA_ID, email: "ama@example.org", role: "MODERATOR" };
 
 const allPerms = {
+  __typename: "AdminTaskPermissions",
   canEdit: true,
   canReassign: true,
   canChangeStatus: true,
@@ -60,6 +62,7 @@ const noPerms = { ...Object.fromEntries(Object.keys(allPerms).map((k) => [k, fal
 
 function mkTask(over: Record<string, unknown> = {}) {
   return {
+    __typename: "AdminTask",
     id: TASK_1,
     title: "Prepare the gala newsletter",
     description: "Draft and schedule it",
@@ -68,16 +71,16 @@ function mkTask(over: Record<string, unknown> = {}) {
     assignee: ama,
     createdBy: me,
     dueAt: "2030-01-20T17:00:00.000Z",
-    blockedReason: null,
-    linkType: null,
-    linkId: null,
+    blockedReason: null as string | null,
+    linkType: null as string | null,
+    linkId: null as string | null,
     checklistTotal: 0,
     checklistDone: 0,
     commentCount: 0,
     overdue: false,
-    startedAt: null,
-    completedAt: null,
-    cancelledAt: null,
+    startedAt: null as string | null,
+    completedAt: null as string | null,
+    cancelledAt: null as string | null,
     createdAt: "2026-11-01T10:00:00.000Z",
     updatedAt: "2026-11-01T10:00:00.000Z",
     permissions: allPerms,
@@ -87,17 +90,19 @@ function mkTask(over: Record<string, unknown> = {}) {
 
 function mkDetail(taskOver: Record<string, unknown> = {}) {
   return {
+    __typename: "AdminTaskDetail",
     task: mkTask(taskOver),
-    checklist: [{ id: ITEM_1, text: "Write intro", done: false, doneAt: null, doneBy: null, position: 0 }],
-    comments: [],
+    checklist: [{ __typename: "AdminTaskChecklistItem", id: ITEM_1, text: "Write intro", done: false, doneAt: null as string | null, doneBy: null as { id: string; email: string; role: string | null } | null, position: 0 }],
+    comments: [] as unknown[],
     events: [
       {
+        __typename: "AdminTaskEvent",
         id: EVENT_1,
         type: "STATUS_CHANGED",
         actor: ama,
         fromLabel: "TODO",
         toLabel: "IN_PROGRESS",
-        note: null,
+        note: null as string | null,
         createdAt: "2026-11-02T10:00:00.000Z",
       },
     ],
@@ -110,10 +115,11 @@ const teamMock = (viewerCanAssignOthers = true): MockedResponse => ({
   result: {
     data: {
       adminTaskTeam: {
+        __typename: "AdminTaskTeam",
         viewerCanAssignOthers,
         members: [
-          { admin: me, canAssignOthers: true, isViewer: true },
-          { admin: ama, canAssignOthers: false, isViewer: false },
+          { __typename: "AdminTaskTeamMember", admin: me, canAssignOthers: true, isViewer: true },
+          { __typename: "AdminTaskTeamMember", admin: ama, canAssignOthers: false, isViewer: false },
         ],
       },
     },
@@ -122,7 +128,7 @@ const teamMock = (viewerCanAssignOthers = true): MockedResponse => ({
 });
 const listMock = (input: Record<string, unknown>, tasks: unknown[]): MockedResponse => ({
   request: { query: ADMIN_TASKS, variables: { input } },
-  result: { data: { adminTasks: { nextCursor: null, tasks } } },
+  result: { data: { adminTasks: { __typename: "AdminTaskPage", nextCursor: null, tasks } } },
   ...forever,
 });
 const MINE = {
@@ -141,7 +147,7 @@ const detailMock = (detail: unknown, id = TASK_1): MockedResponse => ({
 
 function renderPage(mocks: MockedResponse[], route = "/tasks") {
   return render(
-    <MockedProvider mocks={mocks} addTypename={false} defaultOptions={{ mutate: { errorPolicy: "all" } }}>
+    <MockedProvider mocks={mocks} defaultOptions={{ mutate: { errorPolicy: "all" } }}>
       <MemoryRouter initialEntries={[route]}>
         <Tasks />
       </MemoryRouter>
@@ -317,11 +323,11 @@ describe("Tasks — nav badge", () => {
   it("announces open and overdue counts in its accessible text", async () => {
     render(
       <MockedProvider
-        addTypename={false}
+       
         mocks={[
           {
             request: { query: MY_ADMIN_TASK_COUNTS },
-            result: { data: { myAdminTaskCounts: { open: 3, overdue: 1 } } },
+            result: { data: { myAdminTaskCounts: { __typename: "AdminTaskMyCounts", open: 3, overdue: 1 } } },
           },
         ]}
       >

@@ -183,8 +183,8 @@ export function TeamBoardTab({ onOpen }: { onOpen: (id: string) => void }) {
           const source = status === "DONE" ? done : open;
           return (
             <section key={status} aria-labelledby={`tasks-col-${status}`} className="min-w-0 rounded-lg bg-muted/40 p-3">
-              <h3 id={`tasks-col-${status}`} className="mb-3 flex items-center justify-between text-sm font-semibold">
-                <span>{t(`tasks.status.${status}`)}</span>
+              <h3 className="mb-3 flex items-center justify-between text-sm font-semibold">
+                <span id={`tasks-col-${status}`}>{t(`tasks.status.${status}`)}</span>
                 <span className="text-xs font-normal text-muted-foreground">{column.length}</span>
               </h3>
               <ul className="space-y-2">
