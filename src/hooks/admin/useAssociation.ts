@@ -121,17 +121,19 @@ interface GetPendingRequestsResult {
   };
 }
 
+// Matches the gateway's CommunityUploadUrlResponse (uploadUrl + fileUrl) and the
+// documents in operations.ts; there is no fileKey on this type.
 interface AvatarUploadUrlResult {
   getAssociationAvatarUploadUrl: {
     uploadUrl: string;
-    fileKey: string;
+    fileUrl: string;
   };
 }
 
 interface CoverUploadUrlResult {
   getAssociationCoverUploadUrl: {
     uploadUrl: string;
-    fileKey: string;
+    fileUrl: string;
   };
 }
 

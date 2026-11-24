@@ -7,10 +7,15 @@ import "@/i18n";
 
 const viewer = vi.hoisted(() => ({ isSystemAdmin: true, scopedRole: null as null | "COMMUNITY_ADMIN" }));
 vi.mock("@/hooks/auth/useAdminAuth", () => ({
-  useAdminAuth: () => ({ ...viewer, userEmail: "admin@example.test", adminProfile: null, logout: vi.fn() }),
-  getPortalRoleTranslationKey: () => "roles.admin",
+  useAdminAuth: () => ({
+    ...viewer,
+    userEmail: "admin@example.test",
+    adminProfile: undefined as unknown,
+    logout: vi.fn(),
+  }),
+  getPortalRoleTranslationKey: (): string => "roles.admin",
 }));
-vi.mock("@/components/tasks/TasksNavBadge", () => ({ TasksNavBadge: () => null }));
+vi.mock("@/components/tasks/TasksNavBadge", () => ({ TasksNavBadge: (): null => null }));
 
 import { AdminSidebarMobile } from "./AdminSidebar";
 import { activeNavItemId, resolveNavGroups } from "./navGroups";

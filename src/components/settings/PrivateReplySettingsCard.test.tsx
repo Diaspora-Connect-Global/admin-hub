@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from "vitest";
 import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MockedProvider } from "@apollo/client/testing/react";
+import type { MockedResponse } from "@apollo/client/testing";
 import { PrivateReplySettingsCard } from "./PrivateReplySettingsCard";
 import {
   GET_ADMIN_PRIVATE_REPLY_SETTINGS,
@@ -24,7 +25,7 @@ function settingsMock(overrides: Partial<typeof loadedSettings> = {}) {
   };
 }
 
-function renderCard(mocks: ReadonlyArray<Record<string, unknown>>) {
+function renderCard(mocks: ReadonlyArray<MockedResponse>) {
   return render(
     <MockedProvider mocks={mocks} defaultOptions={{ mutate: { errorPolicy: "all" } }}>
       <PrivateReplySettingsCard />

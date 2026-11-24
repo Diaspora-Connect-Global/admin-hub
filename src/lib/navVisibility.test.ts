@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isNavItemVisible, type NavVisibilityRules } from "./navVisibility";
+import { isNavItemVisible, type NavViewer, type NavVisibilityRules } from "./navVisibility";
 
 const systemOnly: NavVisibilityRules = {};
 const systemAdminOnly: NavVisibilityRules = { systemAdminOnly: true };
@@ -8,14 +8,14 @@ const associationPage: NavVisibilityRules = { scopedRoles: ["ASSOCIATION_ADMIN"]
 
 describe("isNavItemVisible", () => {
   it("shows everything to system admins", () => {
-    const viewer = { isSystemAdmin: true, scopedRole: null };
+    const viewer: NavViewer = { isSystemAdmin: true, scopedRole: null };
     expect(isNavItemVisible(systemOnly, viewer)).toBe(true);
     expect(isNavItemVisible(systemAdminOnly, viewer)).toBe(true);
     expect(isNavItemVisible(communityPage, viewer)).toBe(true);
   });
 
   it("shows everything to a scoped-named role with system-level access (e.g. wildcard permission)", () => {
-    const viewer = { isSystemAdmin: true, scopedRole: "COMMUNITY_ADMIN" as const };
+    const viewer: NavViewer = { isSystemAdmin: true, scopedRole: "COMMUNITY_ADMIN" as const };
     expect(isNavItemVisible(systemAdminOnly, viewer)).toBe(true);
     expect(isNavItemVisible(associationPage, viewer)).toBe(true);
   });
@@ -33,7 +33,7 @@ describe("isNavItemVisible", () => {
   });
 
   it("keeps legacy behavior for sessions without a recognizable role", () => {
-    const viewer = { isSystemAdmin: false, scopedRole: null };
+    const viewer: NavViewer = { isSystemAdmin: false, scopedRole: null };
     expect(isNavItemVisible(systemOnly, viewer)).toBe(true);
     expect(isNavItemVisible(communityPage, viewer)).toBe(true);
     expect(isNavItemVisible(systemAdminOnly, viewer)).toBe(false);

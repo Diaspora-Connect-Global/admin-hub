@@ -1,9 +1,10 @@
 import { describe, it, expect } from "vitest";
 import { SECTION_TABS, activeTabPath, pathMatches, sectionPaths, visibleSectionTabs } from "./navSections";
+import type { NavViewer } from "./navVisibility";
 
-const SYSTEM = { isSystemAdmin: true, scopedRole: null };
-const LEGACY = { isSystemAdmin: false, scopedRole: null };
-const COMMUNITY = { isSystemAdmin: false, scopedRole: "COMMUNITY_ADMIN" as const };
+const SYSTEM: NavViewer = { isSystemAdmin: true, scopedRole: null };
+const LEGACY: NavViewer = { isSystemAdmin: false, scopedRole: null };
+const COMMUNITY: NavViewer = { isSystemAdmin: false, scopedRole: "COMMUNITY_ADMIN" };
 
 describe("pathMatches / activeTabPath", () => {
   it("matches a route and the pages below it, not a look-alike", () => {

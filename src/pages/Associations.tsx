@@ -143,6 +143,14 @@ const initialFormData: CreateFormData = {
   enabledServices: [...ALL_SERVICE_KEYS],
 };
 
+const FREE_JOIN_POLICIES = ["OPEN", "APPROVAL", "INVITE_ONLY"] as const;
+type FreeJoinPolicy = (typeof FREE_JOIN_POLICIES)[number];
+
+/** OPEN / APPROVAL / INVITE_ONLY: the policies an admin can pick without a price. */
+function isFreeJoinPolicy(value: string): value is FreeJoinPolicy {
+  return (FREE_JOIN_POLICIES as readonly string[]).includes(value);
+}
+
 export default function Associations() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -422,8 +430,10 @@ export default function Associations() {
     // and APPROVAL). Otherwise the chosen access policy stands: OPEN / APPROVAL /
     // INVITE_ONLY — all valid backend values (the old "REQUEST" was rejected).
     const effectiveJoinPolicy = formData.isPaid
-      ? "PAID"
-      : (["OPEN", "APPROVAL", "INVITE_ONLY"].includes(formData.joinPolicy) ? formData.joinPolicy : "OPEN");
+      ? ("PAID" as const)
+      : isFreeJoinPolicy(formData.joinPolicy)
+        ? formData.joinPolicy
+        : ("OPEN" as const);
     const paymentType = formData.isPaid ? mapUiPaymentTypeToApi(formData.paymentType) : "NONE";
     const paymentAmount = formData.isPaid ? Number(formData.paymentAmount) : undefined;
     const paymentCurrency = formData.isPaid ? formData.paymentCurrency : undefined;

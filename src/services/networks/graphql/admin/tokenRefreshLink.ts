@@ -69,7 +69,7 @@ export function createTokenRefreshErrorLink(): ErrorLink {
 
       refreshOnce()
         .then((result) => {
-          if (!result.ok) {
+          if (result.ok === false) {
             // Only kick the admin out for a genuinely dead/revoked refresh
             // token. Transient failures (5xx, network, INTERNAL_SERVER_ERROR)
             // surface the original error without clearing the session.

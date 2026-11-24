@@ -94,7 +94,7 @@ export function useTokenExpiry() {
   // blip never kicks the admin out — the next tick or activity retries.
   const refreshOrLogoutIfDefinitive = useCallback(async () => {
     const result = await maybeRefreshAccessTokenSoon();
-    if (!result.ok && isDefinitiveAuthFailure(result.error)) {
+    if (result.ok === false && isDefinitiveAuthFailure(result.error)) {
       logoutExpired();
     }
   }, [maybeRefreshAccessTokenSoon, logoutExpired]);
