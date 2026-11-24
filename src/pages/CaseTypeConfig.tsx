@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AdminLayout } from "@/components/layout/AdminLayout";
+import { SectionTabs } from "@/components/layout/SectionTabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -202,6 +203,8 @@ export default function CaseTypeConfig() {
             {t("caseTypes.create")}
           </Button>
         </div>
+
+        <SectionTabs section="support" labelKey="nav.supportCases" />
 
         {/* Table */}
         <div className="rounded-lg border bg-card overflow-x-auto">

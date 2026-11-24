@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { AdminLayout } from "@/components/layout/AdminLayout";
+import { SectionTabs } from "@/components/layout/SectionTabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -155,6 +156,8 @@ export default function CircleManagement() {
           <h1 className="text-2xl font-semibold tracking-tight">{t("circles.title")}</h1>
           <p className="text-sm text-muted-foreground">{t("circles.subtitle")}</p>
         </div>
+
+        <SectionTabs section="circles" labelKey="nav.circles" />
 
         <Card>
           <CardHeader className="pb-3">

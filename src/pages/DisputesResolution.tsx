@@ -3,6 +3,7 @@ import { useAdminListDisputes, useAdminResolveDispute, useGetAuditLogs, useListA
 import { useTranslation } from "react-i18next";
 import { useUserLabels } from "@/hooks/useUserLabels";
 import { AdminLayout } from "@/components/layout/AdminLayout";
+import { SectionTabs } from "@/components/layout/SectionTabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -289,6 +290,8 @@ export default function DisputesResolution() {
             {t('disputes.searchPlaceholder')}
           </p>
         </div>
+
+        <SectionTabs section="payments" labelKey="nav.payments" />
 
         {/* Top Bar */}
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">

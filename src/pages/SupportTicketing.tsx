@@ -1,6 +1,7 @@
 import { useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AdminLayout } from "@/components/layout/AdminLayout";
+import { SectionTabs } from "@/components/layout/SectionTabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -366,6 +367,8 @@ export default function SupportTicketing() {
           <h1 className="text-3xl font-bold tracking-tight">{t("supportCases.title")}</h1>
           <p className="text-muted-foreground">{t("supportCases.subtitle")}</p>
         </div>
+
+        <SectionTabs section="support" labelKey="nav.supportCases" />
 
         {/* Top bar */}
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">

@@ -47,7 +47,7 @@
   },
   "nav": {
     "dashboard": "Dashboard",
-    "users": "User Management",
+    "users": "Users",
     "deletionRequests": "Deletion Requests",
     "kycVerifications": "KYC Verifications",
     "vendors": "Vendor Management",
@@ -78,7 +78,47 @@
     "posts": "Post Management",
     "circles": "Circles",
     "circlePlans": "Circle Plans",
-    "tasks": "Tasks"
+    "tasks": "Tasks",
+    "moderation": "Moderation",
+    "payments": "Payments"
+  },
+  "navSection": {
+    "menu": "Main menu",
+    "people": "People",
+    "communities": "Communities",
+    "content": "Content & safety",
+    "commerce": "Commerce",
+    "support": "Support & messaging",
+    "platform": "Platform"
+  },
+  "sectionTabs": {
+    "dashboard": {
+      "overview": "Overview",
+      "analytics": "Analytics"
+    },
+    "users": {
+      "all": "All users",
+      "deletionRequests": "Deletion requests",
+      "verifications": "Verifications"
+    },
+    "circles": {
+      "circles": "Circles",
+      "plans": "Plans"
+    },
+    "moderation": {
+      "reported": "Reported content",
+      "posts": "Posts & comments"
+    },
+    "payments": {
+      "escrows": "Escrows",
+      "disputes": "Disputes",
+      "payouts": "Payouts",
+      "wallets": "Wallets & ledger"
+    },
+    "support": {
+      "cases": "Cases",
+      "caseTypes": "Case types"
+    }
   },
   "dashboard": {
     "title": "Admin Dashboard",
@@ -1123,7 +1163,7 @@
     "templates": "Templates"
   },
   "reports": {
-    "title": "Reports & Analytics",
+    "title": "Analytics",
     "generateReport": "Generate Report",
     "exportReport": "Export Report",
     "dateRange": "Date Range",

@@ -9,6 +9,7 @@ import {
   useBulkRemoveContent,
 } from "@/hooks/admin";
 import { AdminLayout } from "@/components/layout/AdminLayout";
+import { SectionTabs } from "@/components/layout/SectionTabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -279,6 +280,8 @@ export default function ContentModeration() {
             {t('content.searchPlaceholder')}
           </p>
         </div>
+
+        <SectionTabs section="moderation" labelKey="nav.moderation" />
 
         {/* Top Bar */}
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">

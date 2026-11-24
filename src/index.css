@@ -469,10 +469,11 @@
     @apply flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200;
   }
 
+  /* Active entry: tinted background + bold label (no coloured left border). */
   .sidebar-item-active {
     background-color: color-mix(in oklch, var(--primary) 10%, transparent);
     color: var(--primary);
-    border-left: 2px solid var(--primary);
+    font-weight: 600;
   }
 
   .sidebar-item-inactive {

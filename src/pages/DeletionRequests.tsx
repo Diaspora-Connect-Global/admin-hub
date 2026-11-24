@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AdminLayout } from "@/components/layout/AdminLayout";
+import { SectionTabs } from "@/components/layout/SectionTabs";
 import { useAdminListDeletionRequests, type DeletionRequestItem } from "@/hooks/admin";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -44,6 +45,8 @@ export default function DeletionRequests() {
             <p className="text-muted-foreground">{t("deletionRequests.subtitle")}</p>
           </div>
         </div>
+
+        <SectionTabs section="users" labelKey="nav.users" />
 
         {/* Main Table */}
         <Card className="glass">

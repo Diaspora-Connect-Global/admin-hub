@@ -1,63 +1,11 @@
 import { Link, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { LayoutDashboard, Users, Wallet, AlertTriangle, BarChart3, Settings, Bell, FileText, HeadphonesIcon, Shield, Store, Key, Activity, ChevronLeft, ChevronRight, LogOut, MessageSquare, Calendar, Briefcase, Landmark, ClipboardList, WalletCards, Banknote, UserX, BadgeCheck, FileStack, CircleDot, Layers, ListChecks } from "lucide-react";
+import { ChevronLeft, ChevronRight, LogOut } from "lucide-react";
 import { TasksNavBadge } from "@/components/tasks/TasksNavBadge";
 import { cn } from "@/lib/utils";
-import { isNavItemVisible, type NavVisibilityRules } from "@/lib/navVisibility";
+import { activeNavItemId, resolveNavGroups } from "./navGroups";
 import logo from "@/assets/logo.svg";
 import { useAdminAuth, getPortalRoleTranslationKey } from "@/hooks/auth/useAdminAuth";
-
-/**
- * Sidebar entries. Visibility follows the backend role guards: pages whose
- * admin APIs are `@Roles('SUPER_ADMIN','SYSTEM_ADMIN')` declare no
- * `scopedRoles` and are hidden from community / association admins and
- * moderators (see `isNavItemVisible`).
- */
-const navItems: Array<{
-  id: string;
-  titleKey: string;
-  icon: typeof LayoutDashboard;
-  path: string;
-} & NavVisibilityRules> = [
-  // Dashboard stats/health/analytics APIs are system-admin-only; scoped
-  // admins are redirected from "/" to their home page (see pages/Index.tsx).
-  { id: "dashboard", titleKey: "nav.dashboard", icon: LayoutDashboard, path: "/" },
-  { id: "user_management", titleKey: "nav.users", icon: Users, path: "/users" },
-  { id: "deletion_requests", titleKey: "nav.deletionRequests", icon: UserX, path: "/deletion-requests", systemAdminOnly: true },
-  // KYC/KYB review queue — every kyc review op is @Roles('SUPER_ADMIN','SYSTEM_ADMIN').
-  { id: "kyc_verifications", titleKey: "nav.kycVerifications", icon: BadgeCheck, path: "/kyc", systemAdminOnly: true },
-  { id: "chat_management", titleKey: "nav.chat", icon: MessageSquare, path: "/chats" },
-  { id: "escrow_management", titleKey: "nav.escrow", icon: Wallet, path: "/escrow" },
-  // Escrow Wallet / Ledger / Payout (escrow-service) — admin-only.
-  { id: "wallet_ledger", titleKey: "nav.wallet", icon: WalletCards, path: "/wallet", systemAdminOnly: true },
-  { id: "payouts", titleKey: "nav.payouts", icon: Banknote, path: "/payouts", systemAdminOnly: true },
-  { id: "disputes", titleKey: "nav.disputes", icon: AlertTriangle, path: "/disputes" },
-  { id: "communities", titleKey: "nav.communities", icon: Users, path: "/communities", scopedRoles: ["COMMUNITY_ADMIN", "MODERATOR"] },
-  { id: "associations", titleKey: "nav.associations", icon: Landmark, path: "/associations", scopedRoles: ["ASSOCIATION_ADMIN"] },
-  { id: "events", titleKey: "nav.events", icon: Calendar, path: "/events", scopedRoles: ["COMMUNITY_ADMIN", "ASSOCIATION_ADMIN", "MODERATOR"] },
-  { id: "opportunities", titleKey: "nav.opportunities", icon: Briefcase, path: "/opportunities", scopedRoles: ["COMMUNITY_ADMIN", "ASSOCIATION_ADMIN", "MODERATOR"] },
-  { id: "reports_analytics", titleKey: "nav.reports", icon: BarChart3, path: "/reports" },
-  { id: "system_settings", titleKey: "nav.settings", icon: Settings, path: "/settings" },
-  { id: "notifications", titleKey: "nav.notifications", icon: Bell, path: "/notifications" },
-  { id: "audit_logs", titleKey: "nav.audit", icon: FileText, path: "/audit" },
-  { id: "support_cases", titleKey: "nav.supportCases", icon: HeadphonesIcon, path: "/support" },
-  { id: "case_types", titleKey: "nav.caseTypes", icon: ClipboardList, path: "/support/case-types" },
-  { id: "content_moderation", titleKey: "nav.content", icon: Shield, path: "/moderation" },
-  // Platform-wide post/comment moderation. `adminListPosts` is
-  // @Roles('SUPER_ADMIN','SYSTEM_ADMIN') and returns posts at EVERY visibility,
-  // so no `scopedRoles` — community/association admins must not see it.
-  { id: "post_management", titleKey: "nav.posts", icon: FileStack, path: "/moderation/posts", systemAdminOnly: true },
-  // Circles. The whole CircleAdminService tier is
-  // @Roles('SUPER_ADMIN','SYSTEM_ADMIN'), and `adminCircles` returns suspended
-  // and non-discoverable circles — so no `scopedRoles`.
-  { id: "circles", titleKey: "nav.circles", icon: CircleDot, path: "/circles", systemAdminOnly: true },
-  { id: "circle_plans", titleKey: "nav.circlePlans", icon: Layers, path: "/circles/plans", systemAdminOnly: true },
-  // Admin tasks live in the platform team's scope; the route sits behind RequireSystemAdmin.
-  { id: "tasks", titleKey: "nav.tasks", icon: ListChecks, path: "/tasks", systemAdminOnly: true },
-  { id: "vendor_management", titleKey: "nav.vendors", icon: Store, path: "/vendors" },
-  { id: "roles_permissions", titleKey: "nav.roles", icon: Key, path: "/roles" },
-  { id: "system_health", titleKey: "nav.systemHealth", icon: Activity, path: "/health" },
-];
 
 interface SidebarContentProps {
   /** When true, render the narrow icon-only rail (desktop only). */
@@ -78,18 +26,8 @@ function SidebarContent({ collapsed = false, onToggleCollapse, onNavigate }: Sid
   const { userEmail, adminProfile, isSystemAdmin, scopedRole, logout } = useAdminAuth();
   const roleTitleKey = getPortalRoleTranslationKey(adminProfile?.role?.name);
 
-  const visibleNavItems = navItems.filter((item) => isNavItemVisible(item, { isSystemAdmin, scopedRole }));
-
-  const isActive = (path: string) => {
-    if (path === "/") return location.pathname === "/";
-    // Prefer the most specific match so a nested route highlights its own
-    // item rather than a parent (e.g. /vendors/123 over /vendors).
-    const candidates = visibleNavItems
-      .map((it) => it.path)
-      .filter((p) => p !== "/" && location.pathname.startsWith(p))
-      .sort((a, b) => b.length - a.length);
-    return candidates[0] === path;
-  };
+  const visibleNavGroups = resolveNavGroups({ isSystemAdmin, scopedRole });
+  const activeId = activeNavItemId(visibleNavGroups, location.pathname);
 
   return (
     <div className="h-full bg-sidebar flex flex-col">
@@ -114,25 +52,39 @@ function SidebarContent({ collapsed = false, onToggleCollapse, onNavigate }: Sid
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 py-4 px-2 overflow-y-auto scrollbar-thin">
-        <ul className="space-y-1">
-          {visibleNavItems.map((item) => {
-            const active = isActive(item.path);
-            return (
-              <li key={item.id}>
-                <Link
-                  to={item.path}
-                  onClick={onNavigate}
-                  className={cn("sidebar-item", active ? "sidebar-item-active" : "sidebar-item-inactive", item.id === "tasks" && collapsed && "relative")}
-                >
-                  <item.icon className={cn("w-5 h-5 flex-shrink-0", collapsed && "mx-auto")} />
-                  {!collapsed && <span>{t(item.titleKey)}</span>}
-                  {item.id === "tasks" && <TasksNavBadge collapsed={collapsed} />}
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
+      <nav className="flex-1 py-4 px-2 overflow-y-auto scrollbar-thin" aria-label={t("navSection.menu")}>
+        {visibleNavGroups.map((group, groupIndex) => (
+          <div key={group.id} className={cn(groupIndex > 0 && "mt-4")}>
+            {group.headingKey &&
+              (collapsed ? (
+                <div className="mx-3 mb-2 border-t border-sidebar-border" aria-hidden="true" />
+              ) : (
+                <p className="px-3 mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  {t(group.headingKey)}
+                </p>
+              ))}
+            <ul className="space-y-1">
+              {group.items.map((item) => {
+                const active = item.id === activeId;
+                return (
+                  <li key={item.id}>
+                    <Link
+                      to={item.path}
+                      onClick={onNavigate}
+                      aria-current={active ? "page" : undefined}
+                      aria-label={collapsed ? t(item.titleKey) : undefined}
+                      className={cn("sidebar-item", active ? "sidebar-item-active" : "sidebar-item-inactive", item.id === "tasks" && collapsed && "relative")}
+                    >
+                      <item.icon className={cn("w-5 h-5 flex-shrink-0", collapsed && "mx-auto")} />
+                      {!collapsed && <span>{t(item.titleKey)}</span>}
+                      {item.id === "tasks" && <TasksNavBadge collapsed={collapsed} />}
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        ))}
       </nav>
 
       {/* User Section */}

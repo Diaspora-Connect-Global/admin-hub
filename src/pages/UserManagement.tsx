@@ -2,6 +2,7 @@ import { useState, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { AdminLayout } from "@/components/layout/AdminLayout";
+import { SectionTabs } from "@/components/layout/SectionTabs";
 import { useGetUsers } from "@/hooks/user";
 import { useDiscoverAssociations, useListCommunities } from "@/hooks/admin";
 import { useApolloClient } from "@apollo/client/react";
@@ -193,6 +194,8 @@ export default function UserManagement() {
             </Button>
           </div>
         </div>
+
+        <SectionTabs section="users" labelKey="nav.users" />
 
         <div className="space-y-4">
           {/* Filters Panel */}

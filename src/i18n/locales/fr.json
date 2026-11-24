@@ -47,7 +47,7 @@
   },
   "nav": {
     "dashboard": "Tableau de bord",
-    "users": "Gestion des utilisateurs",
+    "users": "Utilisateurs",
     "deletionRequests": "Demandes de suppression",
     "kycVerifications": "Vérifications KYC",
     "vendors": "Gestion des vendeurs",
@@ -78,7 +78,47 @@
     "posts": "Gestion des publications",
     "circles": "Cercles",
     "circlePlans": "Forfaits de cercle",
-    "tasks": "Tâches"
+    "tasks": "Tâches",
+    "moderation": "Modération",
+    "payments": "Paiements"
+  },
+  "navSection": {
+    "menu": "Menu principal",
+    "people": "Personnes",
+    "communities": "Communautés",
+    "content": "Contenu et sécurité",
+    "commerce": "Commerce",
+    "support": "Assistance et messagerie",
+    "platform": "Plateforme"
+  },
+  "sectionTabs": {
+    "dashboard": {
+      "overview": "Vue d'ensemble",
+      "analytics": "Analyses"
+    },
+    "users": {
+      "all": "Tous les utilisateurs",
+      "deletionRequests": "Demandes de suppression",
+      "verifications": "Vérifications"
+    },
+    "circles": {
+      "circles": "Cercles",
+      "plans": "Forfaits"
+    },
+    "moderation": {
+      "reported": "Contenu signalé",
+      "posts": "Publications et commentaires"
+    },
+    "payments": {
+      "escrows": "Séquestres",
+      "disputes": "Litiges",
+      "payouts": "Versements",
+      "wallets": "Portefeuilles et grand livre"
+    },
+    "support": {
+      "cases": "Dossiers",
+      "caseTypes": "Types de dossier"
+    }
   },
   "dashboard": {
     "title": "Tableau de bord admin",
@@ -1123,7 +1163,7 @@
     "templates": "Modèles"
   },
   "reports": {
-    "title": "Rapports et analyses",
+    "title": "Analyses",
     "generateReport": "Générer rapport",
     "exportReport": "Exporter rapport",
     "dateRange": "Période",

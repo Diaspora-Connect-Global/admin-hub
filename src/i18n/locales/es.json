@@ -47,7 +47,7 @@
   },
   "nav": {
     "dashboard": "Panel de control",
-    "users": "Gestión de usuarios",
+    "users": "Usuarios",
     "deletionRequests": "Solicitudes de eliminación",
     "kycVerifications": "Verificaciones KYC",
     "vendors": "Gestión de vendedores",
@@ -78,7 +78,47 @@
     "posts": "Gestión de publicaciones",
     "circles": "Círculos",
     "circlePlans": "Planes de círculo",
-    "tasks": "Tareas"
+    "tasks": "Tareas",
+    "moderation": "Moderación",
+    "payments": "Pagos"
+  },
+  "navSection": {
+    "menu": "Menú principal",
+    "people": "Personas",
+    "communities": "Comunidades",
+    "content": "Contenido y seguridad",
+    "commerce": "Comercio",
+    "support": "Soporte y mensajería",
+    "platform": "Plataforma"
+  },
+  "sectionTabs": {
+    "dashboard": {
+      "overview": "Resumen",
+      "analytics": "Análisis"
+    },
+    "users": {
+      "all": "Todos los usuarios",
+      "deletionRequests": "Solicitudes de eliminación",
+      "verifications": "Verificaciones"
+    },
+    "circles": {
+      "circles": "Círculos",
+      "plans": "Planes"
+    },
+    "moderation": {
+      "reported": "Contenido reportado",
+      "posts": "Publicaciones y comentarios"
+    },
+    "payments": {
+      "escrows": "Depósitos en garantía",
+      "disputes": "Disputas",
+      "payouts": "Pagos a vendedores",
+      "wallets": "Billeteras y libro mayor"
+    },
+    "support": {
+      "cases": "Casos",
+      "caseTypes": "Tipos de caso"
+    }
   },
   "dashboard": {
     "title": "Panel de administración",
@@ -1123,7 +1163,7 @@
     "templates": "Plantillas"
   },
   "reports": {
-    "title": "Informes y análisis",
+    "title": "Análisis",
     "generateReport": "Generar informe",
     "exportReport": "Exportar informe",
     "dateRange": "Rango de fechas",

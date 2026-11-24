@@ -47,7 +47,7 @@
   },
   "nav": {
     "dashboard": "Dashboard",
-    "users": "Gebruikersbeheer",
+    "users": "Gebruikers",
     "deletionRequests": "Verwijderingsverzoeken",
     "kycVerifications": "KYC-verificaties",
     "vendors": "Verkopersbeheer",
@@ -78,7 +78,47 @@
     "posts": "Berichtenbeheer",
     "circles": "Circles",
     "circlePlans": "Circle-abonnementen",
-    "tasks": "Taken"
+    "tasks": "Taken",
+    "moderation": "Moderatie",
+    "payments": "Betalingen"
+  },
+  "navSection": {
+    "menu": "Hoofdmenu",
+    "people": "Mensen",
+    "communities": "Gemeenschappen",
+    "content": "Inhoud & veiligheid",
+    "commerce": "Handel",
+    "support": "Support & berichten",
+    "platform": "Platform"
+  },
+  "sectionTabs": {
+    "dashboard": {
+      "overview": "Overzicht",
+      "analytics": "Analyses"
+    },
+    "users": {
+      "all": "Alle gebruikers",
+      "deletionRequests": "Verwijderingsverzoeken",
+      "verifications": "Verificaties"
+    },
+    "circles": {
+      "circles": "Circles",
+      "plans": "Abonnementen"
+    },
+    "moderation": {
+      "reported": "Gemelde inhoud",
+      "posts": "Berichten & reacties"
+    },
+    "payments": {
+      "escrows": "Escrows",
+      "disputes": "Geschillen",
+      "payouts": "Uitbetalingen",
+      "wallets": "Wallets & grootboek"
+    },
+    "support": {
+      "cases": "Zaken",
+      "caseTypes": "Zaaktypen"
+    }
   },
   "dashboard": {
     "title": "Admin Dashboard",
@@ -1123,7 +1163,7 @@
     "templates": "Sjablonen"
   },
   "reports": {
-    "title": "Rapporten & Analyses",
+    "title": "Analyses",
     "generateReport": "Rapport genereren",
     "exportReport": "Rapport exporteren",
     "dateRange": "Datumbereik",

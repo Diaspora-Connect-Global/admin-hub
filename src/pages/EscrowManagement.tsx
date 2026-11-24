@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AdminLayout } from "@/components/layout/AdminLayout";
+import { SectionTabs } from "@/components/layout/SectionTabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -286,6 +287,8 @@ export default function EscrowManagement() {
           <h1 className="text-2xl font-bold text-foreground">{t('escrow.title')}</h1>
           <p className="text-muted-foreground">{t('escrow.searchPlaceholder')}</p>
         </div>
+
+        <SectionTabs section="payments" labelKey="nav.payments" />
 
         {/* Top Bar */}
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">

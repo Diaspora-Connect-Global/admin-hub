@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AdminLayout } from "@/components/layout/AdminLayout";
+import { SectionTabs } from "@/components/layout/SectionTabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -99,6 +100,8 @@ export default function WalletLedger() {
           <h1 className="text-2xl font-bold text-foreground">{t("walletLedger.title")}</h1>
           <p className="text-muted-foreground">{t("walletLedger.subtitle")}</p>
         </div>
+
+        <SectionTabs section="payments" labelKey="nav.payments" />
 
         {/* Owner lookup form */}
         <div className="glass rounded-xl border border-border p-4">

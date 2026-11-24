@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AdminLayout } from "@/components/layout/AdminLayout";
+import { SectionTabs } from "@/components/layout/SectionTabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -316,6 +317,8 @@ export default function CirclePlans() {
             {t("circlePlans.newPlan")}
           </Button>
         </div>
+
+        <SectionTabs section="circles" labelKey="nav.circles" />
 
         <label className="flex w-fit items-center gap-2 text-sm">
           <Checkbox

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Check, X } from "lucide-react";
 import { AdminLayout } from "@/components/layout/AdminLayout";
+import { SectionTabs } from "@/components/layout/SectionTabs";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { StatusBadge } from "@/components/ui/StatusBadge";
@@ -233,6 +234,8 @@ export default function KycVerifications() {
             </SelectContent>
           </Select>
         </div>
+
+        <SectionTabs section="users" labelKey="nav.users" />
 
         <Tabs
           value={tab}

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AdminLayout } from "@/components/layout/AdminLayout";
+import { SectionTabs } from "@/components/layout/SectionTabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -256,6 +257,8 @@ export default function PostManagement() {
           <h1 className="text-2xl font-semibold tracking-tight">{t("posts.title")}</h1>
           <p className="text-sm text-muted-foreground">{t("posts.subtitle")}</p>
         </div>
+
+        <SectionTabs section="moderation" labelKey="nav.moderation" />
 
         <Card>
           <CardHeader className="pb-3">

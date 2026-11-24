@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { AdminLayout } from "@/components/layout/AdminLayout";
+import { SectionTabs } from "@/components/layout/SectionTabs";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -467,6 +468,8 @@ export default function Reports() {
             </DropdownMenu>
           </div>
         </div>
+
+        <SectionTabs section="dashboard" labelKey="nav.dashboard" />
 
         {/* Top Bar Filters */}
         <div className="glass rounded-xl p-4">

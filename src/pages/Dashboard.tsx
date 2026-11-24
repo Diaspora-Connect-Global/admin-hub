@@ -18,6 +18,7 @@ import {
   MessageSquare,
 } from "lucide-react";
 import { AdminLayout } from "@/components/layout/AdminLayout";
+import { SectionTabs } from "@/components/layout/SectionTabs";
 import { LoadingState, ErrorState } from "@/components/common/StateViews";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -233,6 +234,8 @@ export default function Dashboard() {
             </Button>
           </div>
         </div>
+
+        <SectionTabs section="dashboard" labelKey="nav.dashboard" />
 
         {statsError && !stats && (
           <ErrorState onRetry={() => handleRefresh()} />

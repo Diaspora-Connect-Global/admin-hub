@@ -47,7 +47,7 @@
   },
   "nav": {
     "dashboard": "Dashboard",
-    "users": "Benutzerverwaltung",
+    "users": "Benutzer",
     "deletionRequests": "Löschanfragen",
     "kycVerifications": "KYC-Verifizierungen",
     "vendors": "Verkäuferverwaltung",
@@ -78,7 +78,47 @@
     "posts": "Beitragsverwaltung",
     "circles": "Circles",
     "circlePlans": "Circle-Tarife",
-    "tasks": "Aufgaben"
+    "tasks": "Aufgaben",
+    "moderation": "Moderation",
+    "payments": "Zahlungen"
+  },
+  "navSection": {
+    "menu": "Hauptmenü",
+    "people": "Personen",
+    "communities": "Gemeinschaften",
+    "content": "Inhalte & Sicherheit",
+    "commerce": "Handel",
+    "support": "Support & Kommunikation",
+    "platform": "Plattform"
+  },
+  "sectionTabs": {
+    "dashboard": {
+      "overview": "Übersicht",
+      "analytics": "Analysen"
+    },
+    "users": {
+      "all": "Alle Benutzer",
+      "deletionRequests": "Löschanfragen",
+      "verifications": "Verifizierungen"
+    },
+    "circles": {
+      "circles": "Circles",
+      "plans": "Tarife"
+    },
+    "moderation": {
+      "reported": "Gemeldete Inhalte",
+      "posts": "Beiträge & Kommentare"
+    },
+    "payments": {
+      "escrows": "Treuhandkonten",
+      "disputes": "Streitfälle",
+      "payouts": "Auszahlungen",
+      "wallets": "Wallets & Hauptbuch"
+    },
+    "support": {
+      "cases": "Fälle",
+      "caseTypes": "Falltypen"
+    }
   },
   "dashboard": {
     "title": "Admin-Dashboard",
@@ -1123,7 +1163,7 @@
     "templates": "Vorlagen"
   },
   "reports": {
-    "title": "Berichte & Analysen",
+    "title": "Analysen",
     "generateReport": "Bericht erstellen",
     "exportReport": "Bericht exportieren",
     "dateRange": "Datumsbereich",
