@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dialog";
 import { Mail, Lock, Eye, EyeOff, Loader2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import i18n from "@/i18n";
 import { login as authLogin } from "@/services/networks/graphql/admin";
 import { setAccessToken, setRefreshToken, setUserId, setUserEmail, setAdminProfile } from "@/stores/session";
 import { useSessionStore } from "@/stores/sessionStore";
@@ -38,6 +39,18 @@ export default function Login() {
       next.delete("expired");
       setSearchParams(next, { replace: true });
     }
+  }, [searchParams, setSearchParams]);
+
+  // After the set-password page: confirm once, then drop the flag from the address.
+  useEffect(() => {
+    if (searchParams.get("passwordSet") !== "1") return;
+    toast({
+      title: i18n.t("setPassword.successTitle"),
+      description: i18n.t("setPassword.successBody"),
+    });
+    const next = new URLSearchParams(searchParams);
+    next.delete("passwordSet");
+    setSearchParams(next, { replace: true });
   }, [searchParams, setSearchParams]);
 
   // If already authenticated, redirect to intended page or home (after persist rehydration)

@@ -13,6 +13,7 @@ import { TokenExpiryMonitor } from "@/components/auth/TokenExpiryMonitor";
 import "@/i18n";
 // Eager: small, needed immediately
 import Login from "./pages/Login";
+import SetPassword from "./pages/SetPassword";
 import NotFound from "./pages/NotFound";
 
 // Lazy-loaded authenticated pages (code-split into separate chunks)
@@ -76,6 +77,10 @@ const App = () => (
             <Suspense fallback={<PageFallback />}>
               <Routes>
               <Route path="/login" element={<Login />} />
+              {/* Public: reached from the new-admin welcome email (and the older /reset link). */}
+              <Route path="/set-password" element={<SetPassword />} />
+              <Route path="/reset" element={<SetPassword />} />
+              <Route path="/reset-password" element={<SetPassword />} />
               <Route element={<ProtectedRoute />}>
                 <Route path="/" element={<Index />} />
                 {/* Pages scoped portal admins can use (per backend role guards) */}
