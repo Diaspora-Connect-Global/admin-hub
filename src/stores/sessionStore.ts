@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
+import { onLocalSignOut } from "@/lib/idleSessionChannel";
 
 export const SESSION_STORAGE_KEY = "admin-hub-session";
 
@@ -55,8 +56,10 @@ export const useSessionStore = create<SessionState>()(
       setDevUserId: (userId) => set({ devUserId: userId ?? null }),
       setUserEmail: (email) => set({ userEmail: email ?? null }),
       setAdminProfile: (adminProfile) => set({ adminProfile: adminProfile ?? null }),
-      clearSession: () =>
-        set({ adminProfile: null, accessToken: null, sessionId: null, refreshToken: null, userId: null, devUserId: null, userEmail: null }),
+      clearSession: () => {
+        set({ adminProfile: null, accessToken: null, sessionId: null, refreshToken: null, userId: null, devUserId: null, userEmail: null });
+        onLocalSignOut();
+      },
     }),
     {
       name: SESSION_STORAGE_KEY,

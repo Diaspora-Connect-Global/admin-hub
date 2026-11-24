@@ -1,157 +1,178 @@
 /**
- * Inactivity-based session timeout
- * Logs the user out only after 15 consecutive minutes of NO interaction.
- * As long as the user is clicking, typing, scrolling or touching, the
- * countdown is reset and the session stays alive.
+ * Sliding idle session for the super-admin console.
+ *
+ * While the admin is ACTIVE the access token is refreshed silently (no prompt). After
+ * IDLE_CONFIG.idleTimeoutMs (15 min, this console's existing value) without activity a
+ * countdown dialog shows for the last minute, then the session is signed out. Activity (and
+ * sign-out) sync across tabs; only timestamps/events are broadcast, never tokens.
  */
 
-import { useEffect, useRef, useCallback } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getAccessToken, clearSession } from "@/stores/session";
 import { useSessionStore } from "@/stores/sessionStore";
 import {
   exchangeRefreshTokenForSession,
   isDefinitiveAuthFailure,
-  type RefreshResult,
 } from "@/services/networks/graphql/admin/refreshAccessToken";
-import { toast } from "@/hooks/use-toast";
 import { getJwtExpiry } from "@/lib/jwt";
+import {
+  IDLE_CONFIG,
+  applyRemoteMessage,
+  evaluateIdleSession,
+  isStoredActivityStale,
+  shouldRecordActivity,
+  type SignOutReason,
+} from "@/lib/idleSession";
+import {
+  listenRemote,
+  markSignOutReason,
+  postRemote,
+  readStoredActivity,
+  rememberSignOutReason,
+  withoutBroadcast,
+  writeStoredActivity,
+} from "@/lib/idleSessionChannel";
 
-const INACTIVITY_TIMEOUT_MS = 15 * 60 * 1000; // 15 minutes of no interaction
-const WARN_BEFORE_MS = 60 * 1000;              // warn 60 s before that
-/** Refresh access token this long before JWT exp to avoid bursts of 401s. */
-const PROACTIVE_REFRESH_BEFORE_EXP_MS = 120_000;
+const TICK_MS = 1000;
+const REFRESH_RETRY_MS = 30_000;
+const ACTIVITY_EVENTS = ["pointerdown", "keydown", "touchstart", "scroll", "wheel", "mousemove"] as const;
 
-const ACTIVITY_EVENTS = ["mousedown", "mousemove", "keydown", "scroll", "touchstart", "click"] as const;
-
-/** Resolved value used when no refresh is needed (no token / not near expiry). */
-const NOOP_OK: RefreshResult = {
-  ok: true,
-  data: { accessToken: "", refreshToken: "" },
-};
-
-function getTokenExpMs(token: string): number | null {
-  const expiry = getJwtExpiry(token);
-  return expiry !== null ? expiry.getTime() : null;
+let expiryCache: { token: string; exp: number | null } | null = null;
+/** Access-token expiry (epoch ms), memoised per token so the 1 s tick never re-decodes it. */
+function accessExpiryMs(): number | null {
+  const token = getAccessToken();
+  if (!token) return null;
+  if (expiryCache?.token !== token) {
+    expiryCache = { token, exp: getJwtExpiry(token)?.getTime() ?? null };
+  }
+  return expiryCache.exp;
 }
 
-export function useTokenExpiry() {
+export function useIdleSession() {
   const navigate = useNavigate();
   const sessionId = useSessionStore((s) => s.sessionId);
-  const expiryTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const warningTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const warningToastShown = useRef(false);
+  const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
+  const stayRef = useRef<() => void>(() => {});
 
-  const clearTimers = useCallback(() => {
-    if (expiryTimer.current) { clearTimeout(expiryTimer.current); expiryTimer.current = null; }
-    if (warningTimer.current) { clearTimeout(warningTimer.current); warningTimer.current = null; }
-  }, []);
-
-  const logout = useCallback(() => {
-    clearTimers();
-    clearSession();
-    navigate("/login", { replace: true });
-    toast({
-      title: "Session Expired",
-      description: "You were logged out due to inactivity.",
-      variant: "destructive",
-    });
-  }, [navigate, clearTimers]);
-
-  const logoutExpired = useCallback(() => {
-    clearTimers();
-    clearSession();
-    navigate("/login?expired=1", { replace: true });
-    toast({
-      title: "Session Expired",
-      description: "Your session expired and could not be refreshed. Please log in again.",
-      variant: "destructive",
-    });
-  }, [navigate, clearTimers]);
-
-  // Returns a RefreshResult so callers can distinguish a definitive auth
-  // failure (genuinely dead/revoked refresh token -> log out) from a transient
-  // one (5xx, network, INTERNAL_SERVER_ERROR -> stay logged in, retry later).
-  // When no refresh is needed (no token / not near expiry) it resolves ok.
-  const maybeRefreshAccessTokenSoon = useCallback(async (): Promise<RefreshResult> => {
-    const token = getAccessToken();
-    if (!token) return NOOP_OK;
-
-    const expMs = getTokenExpMs(token);
-    if (!expMs) return NOOP_OK;
-
-    const msLeft = expMs - Date.now();
-    const shouldRefresh = msLeft <= 0 || msLeft <= PROACTIVE_REFRESH_BEFORE_EXP_MS;
-    if (!shouldRefresh) return NOOP_OK;
-
-    // Network refresh is deduplicated at the module level (single-flight), so a
-    // concurrent caller will simply receive the same in-flight promise.
-    return exchangeRefreshTokenForSession();
-  }, []);
-
-  // Refresh, and only log out when the refresh failed definitively (dead/revoked
-  // refresh token). Transient failures are swallowed so a one-off 5xx/network
-  // blip never kicks the admin out — the next tick or activity retries.
-  const refreshOrLogoutIfDefinitive = useCallback(async () => {
-    const result = await maybeRefreshAccessTokenSoon();
-    if (result.ok === false && isDefinitiveAuthFailure(result.error)) {
-      logoutExpired();
+  useEffect(() => {
+    if (!sessionId) {
+      setSecondsLeft(null);
+      return;
     }
-  }, [maybeRefreshAccessTokenSoon, logoutExpired]);
+    const cfg = IDLE_CONFIG;
+    let disposed = false;
+    let signedOut = false;
+    let warningOpen = false;
+    let refreshing = false;
+    let nextRefreshAt = 0;
+    let lastRecorded = 0;
 
-  // Called on every user interaction — resets the countdown from scratch
-  const resetInactivityTimer = useCallback(() => {
-    if (!getAccessToken()) return; // already logged out
+    const stored = readStoredActivity();
+    let lastActivity = Date.now();
 
-    clearTimers();
-    warningToastShown.current = false;
+    const signOut = (reason: SignOutReason, fromRemote = false) => {
+      if (signedOut) return;
+      signedOut = true;
+      rememberSignOutReason(reason);
+      const doLogout = () => {
+        markSignOutReason(reason);
+        clearSession();
+      };
+      if (fromRemote) withoutBroadcast(doLogout);
+      else doLogout();
+      setSecondsLeft(null);
+      navigate("/login", { replace: true });
+    };
 
-    // Warn 60 s before the inactivity timeout fires
-    warningTimer.current = setTimeout(() => {
-      if (!warningToastShown.current) {
-        warningToastShown.current = true;
-        toast({
-          title: "Still there?",
-          description: "You'll be logged out in 1 minute due to inactivity.",
-          variant: "destructive",
-        });
+    // A previous page load / closed tab that has been idle past the timeout must not revive.
+    if (isStoredActivityStale(stored, lastActivity, cfg)) {
+      signOut("idle");
+      return;
+    }
+    writeStoredActivity(lastActivity);
+
+    const silentRefresh = async () => {
+      if (refreshing || Date.now() < nextRefreshAt) return;
+      refreshing = true;
+      try {
+        // Single-flight at module level: shared with the Apollo error link, so the rotating
+        // refresh token is never spent twice.
+        const result = await exchangeRefreshTokenForSession();
+        if (result.ok === false) {
+          if (isDefinitiveAuthFailure(result.error)) {
+            if (!disposed) signOut("expired");
+          } else {
+            nextRefreshAt = Date.now() + REFRESH_RETRY_MS; // transient: keep the session
+          }
+        }
+      } catch {
+        nextRefreshAt = Date.now() + REFRESH_RETRY_MS;
+      } finally {
+        refreshing = false;
       }
-    }, INACTIVITY_TIMEOUT_MS - WARN_BEFORE_MS);
+    };
 
-    // Log out after full inactivity window
-    expiryTimer.current = setTimeout(logout, INACTIVITY_TIMEOUT_MS);
+    const tick = () => {
+      if (disposed || signedOut) return;
+      const e = evaluateIdleSession(
+        { now: Date.now(), lastActivity, accessExpiresAt: accessExpiryMs() },
+        cfg,
+      );
+      if (e.phase === "expired") return signOut("idle");
+      if (e.phase === "warning") {
+        warningOpen = true;
+        setSecondsLeft(e.secondsLeft);
+      } else if (warningOpen) {
+        warningOpen = false;
+        setSecondsLeft(null);
+      }
+      if (e.phase === "refreshDue") void silentRefresh();
+    };
 
-    void refreshOrLogoutIfDefinitive();
-  }, [clearTimers, logout, refreshOrLogoutIfDefinitive]);
+    const record = () => {
+      if (disposed || signedOut) return;
+      const now = Date.now();
+      // Check expiry BEFORE counting this event, so waking a sleeping tab cannot revive it.
+      if (evaluateIdleSession({ now, lastActivity, accessExpiresAt: null }, cfg).phase === "expired") {
+        return signOut("idle");
+      }
+      if (!shouldRecordActivity({ now, lastRecorded, warningOpen }, cfg)) return;
+      lastRecorded = now;
+      lastActivity = now;
+      writeStoredActivity(now);
+      postRemote({ type: "activity", at: now });
+      tick();
+    };
 
-  useEffect(() => {
-    if (!sessionId) return;
-    const id = setInterval(() => {
-      void refreshOrLogoutIfDefinitive();
-    }, 60_000);
-    void refreshOrLogoutIfDefinitive();
-    return () => clearInterval(id);
-  }, [sessionId, refreshOrLogoutIfDefinitive]);
+    stayRef.current = record;
 
-  useEffect(() => {
-    if (!getAccessToken()) return;
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") record();
+    };
 
-    // Kick off the initial countdown
-    resetInactivityTimer();
-
-    // Attach activity listeners — each interaction resets the clock
-    ACTIVITY_EVENTS.forEach((event) => {
-      document.addEventListener(event, resetInactivityTimer, { passive: true });
+    ACTIVITY_EVENTS.forEach((ev) => window.addEventListener(ev, record, { passive: true, capture: true }));
+    document.addEventListener("visibilitychange", onVisibility);
+    const stopRemote = listenRemote((msg) => {
+      const r = applyRemoteMessage({ lastActivity }, msg, Date.now());
+      if (r.signOut) return signOut(r.signOut, true);
+      lastActivity = r.lastActivity;
+      tick();
     });
+    const timer = window.setInterval(tick, TICK_MS);
+    tick();
 
     return () => {
-      ACTIVITY_EVENTS.forEach((event) => {
-        document.removeEventListener(event, resetInactivityTimer);
-      });
-      clearTimers();
+      disposed = true;
+      window.clearInterval(timer);
+      stopRemote();
+      ACTIVITY_EVENTS.forEach((ev) => window.removeEventListener(ev, record, { capture: true }));
+      document.removeEventListener("visibilitychange", onVisibility);
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [sessionId, navigate]);
+
+  const stay = useCallback(() => stayRef.current(), []);
+  return { secondsLeft, stay };
 }
 
 /**
@@ -162,7 +183,7 @@ export function isTokenExpired(): boolean {
   const token = getAccessToken();
   if (!token) return true;
 
-  const expMs = getTokenExpMs(token);
+  const expMs = accessExpiryMs();
   if (!expMs) return false; // Can't determine, assume valid
 
   return Date.now() >= expMs;

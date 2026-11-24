@@ -15,6 +15,7 @@ import {
 import { Mail, Lock, Eye, EyeOff, Loader2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import i18n from "@/i18n";
+import { consumeSignOutReason, writeStoredActivity } from "@/lib/idleSessionChannel";
 import { login as authLogin } from "@/services/networks/graphql/admin";
 import { setAccessToken, setRefreshToken, setUserId, setUserEmail, setAdminProfile } from "@/stores/session";
 import { useSessionStore } from "@/stores/sessionStore";
@@ -40,6 +41,14 @@ export default function Login() {
       setSearchParams(next, { replace: true });
     }
   }, [searchParams, setSearchParams]);
+
+  // After an inactivity / expired sign-out: say why, once.
+  useEffect(() => {
+    const reason = consumeSignOutReason();
+    if (!reason) return;
+    const k = reason === "idle" ? "signedOutIdle" : "signedOutExpired";
+    toast({ title: i18n.t(`idleSession.${k}Title`), description: i18n.t(`idleSession.${k}Body`) });
+  }, []);
 
   // After the set-password page: confirm once, then drop the flag from the address.
   useEffect(() => {
@@ -106,6 +115,7 @@ export default function Login() {
     const result = await authLogin(email, password);
     
     if (result.ok) {
+      writeStoredActivity(Date.now()); // a fresh sign-in is activity (a stale value must not sign it straight out)
       setAccessToken(result.data.accessToken);
       setRefreshToken(result.data.refreshToken ?? null);
       setUserId(result.data.admin?.userId ?? null);
