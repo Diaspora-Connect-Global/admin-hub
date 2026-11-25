@@ -1,18 +1,12 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Mail, Lock, Eye, EyeOff, Loader2 } from "lucide-react";
+import { forgotPasswordNavigation } from "@/lib/setPassword";
 import { toast } from "@/hooks/use-toast";
 import i18n from "@/i18n";
 import { consumeSignOutReason, writeStoredActivity } from "@/lib/idleSessionChannel";
@@ -75,16 +69,6 @@ export default function Login() {
   const [rememberMe, setRememberMe] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
-  const [forgotPasswordOpen, setForgotPasswordOpen] = useState(false);
-  const [resetEmail, setResetEmail] = useState("");
-  const [isResetting, setIsResetting] = useState(false);
-  const resetTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => {
-    return () => {
-      if (resetTimeoutRef.current !== null) clearTimeout(resetTimeoutRef.current);
-    };
-  }, []);
 
   const validateForm = () => {
     const newErrors: { email?: string; password?: string } = {};
@@ -144,29 +128,11 @@ export default function Login() {
     return <SessionHydrationFallback />;
   }
 
-  const handleForgotPassword = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!resetEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(resetEmail)) {
-      toast({
-        title: "Invalid Email",
-        description: "Please enter a valid email address.",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    setIsResetting(true);
-
-    resetTimeoutRef.current = setTimeout(() => {
-      setIsResetting(false);
-      setForgotPasswordOpen(false);
-      setResetEmail("");
-      toast({
-        title: "Reset Link Sent",
-        description: "Password reset instructions have been sent to your email.",
-      });
-    }, 1500);
+  // "Forgot password?" is the real one-time-code flow on /set-password. The typed email is
+  // handed over in router state (never in the URL, which gets logged).
+  const handleForgotPassword = () => {
+    const { to, state } = forgotPasswordNavigation(email);
+    navigate(to, { state });
   };
 
   return (
@@ -271,7 +237,7 @@ export default function Login() {
                   </div>
                   <button
                     type="button"
-                    onClick={() => setForgotPasswordOpen(true)}
+                    onClick={handleForgotPassword}
                     className="text-sm text-primary hover:underline"
                   >
                     Forgot password?
@@ -332,58 +298,6 @@ export default function Login() {
           </div>
         </div>
       </div>
-
-      {/* Forgot Password Modal */}
-      <Dialog open={forgotPasswordOpen} onOpenChange={setForgotPasswordOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Forgot Password</DialogTitle>
-            <DialogDescription>
-              Enter your registered email to receive password reset instructions.
-            </DialogDescription>
-          </DialogHeader>
-
-          <form onSubmit={handleForgotPassword} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="reset-email">Email</Label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="reset-email"
-                  type="email"
-                  placeholder="Enter your admin email"
-                  value={resetEmail}
-                  onChange={(e) => setResetEmail(e.target.value)}
-                  className="pl-10"
-                  disabled={isResetting}
-                />
-              </div>
-            </div>
-
-            <div className="flex gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                className="flex-1"
-                onClick={() => setForgotPasswordOpen(false)}
-                disabled={isResetting}
-              >
-                Cancel
-              </Button>
-              <Button type="submit" className="flex-1" disabled={isResetting}>
-                {isResetting ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Sending...
-                  </>
-                ) : (
-                  "Send Reset Link"
-                )}
-              </Button>
-            </div>
-          </form>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

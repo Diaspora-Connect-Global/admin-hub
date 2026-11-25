@@ -111,3 +111,17 @@ export async function submitNewPassword(
     return { ok: false, error: "errGeneric" };
   }
 }
+
+/** Where the sign-in page's "Forgot password?" goes: the real one-time-code flow. The typed
+ *  email travels in router state, never in the URL (URLs are logged). */
+export const FORGOT_PASSWORD_PATH = "/set-password";
+
+export function forgotPasswordNavigation(email: string): { to: string; state: { email: string } } {
+  return { to: FORGOT_PASSWORD_PATH, state: { email: email.trim().slice(0, 254) } };
+}
+
+/** Reads the email handed over by {@link forgotPasswordNavigation}; anything else is ignored. */
+export function emailFromNavState(state: unknown): string {
+  const email = (state as { email?: unknown } | null)?.email;
+  return typeof email === "string" ? email.trim().slice(0, 254) : "";
+}

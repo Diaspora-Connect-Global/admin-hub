@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Eye, EyeOff, KeyRound, Loader2, Lock, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,6 +9,7 @@ import { useTranslation } from "react-i18next";
 import { forgotPasswordRequest, resetPasswordRequest } from "@/services/networks/graphql/admin/setPassword";
 import {
   PASSWORD_MAX_LENGTH,
+  emailFromNavState,
   readSetPasswordParams,
   requestCode,
   submitNewPassword,
@@ -31,7 +32,12 @@ type Step = "request" | "reset";
 export default function SetPassword() {
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const [initial] = useState(() => readSetPasswordParams(window.location.search));
+  const location = useLocation();
+  const [initial] = useState(() => {
+    const fromLink = readSetPasswordParams(window.location.search);
+    // The sign-in page's "Forgot password?" passes the typed email in router state.
+    return { ...fromLink, email: fromLink.email || emailFromNavState(location.state) };
+  });
   const [step, setStep] = useState<Step>(initial.email && initial.code ? "reset" : "request");
   const [email, setEmail] = useState(initial.email);
   const [code, setCode] = useState(initial.code);
