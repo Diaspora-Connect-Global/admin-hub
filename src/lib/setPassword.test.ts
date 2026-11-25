@@ -1,5 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import {
+  emailFromNavState,
+  forgotPasswordNavigation,
   passwordIssue,
   readSetPasswordParams,
   requestCode,
@@ -74,5 +76,28 @@ describe("submitNewPassword", () => {
     expect(await submitNewPassword(input, fail("Internal server error"))).toEqual({ ok: false, error: "errGeneric" });
     const thrown = api({ resetPassword: vi.fn().mockRejectedValue(new Error("net")) });
     expect(await submitNewPassword(input, thrown)).toEqual({ ok: false, error: "errGeneric" });
+  });
+});
+
+describe("Forgot password? hand-off", () => {
+  it("goes to the real set-password flow with the email in router state, not the URL", () => {
+    const nav = forgotPasswordNavigation("  admin@example.org ");
+    expect(nav.to).toBe("/set-password");
+    expect(nav.to).not.toContain("admin");
+    expect(nav.state).toEqual({ email: "admin@example.org" });
+    expect(emailFromNavState(nav.state)).toBe("admin@example.org");
+  });
+
+  it("ignores missing or non-string state", () => {
+    expect(emailFromNavState(null)).toBe("");
+    expect(emailFromNavState({ email: 42 })).toBe("");
+  });
+});
+
+describe("Login 'Forgot password?' is not a fake", () => {
+  it("has no fake-success dialog or timer in Login.tsx", async () => {
+    const src = (await import("../pages/Login.tsx?raw")).default;
+    expect(src).not.toMatch(/Reset Link Sent|setTimeout|DialogTitle/);
+    expect(src).toContain("forgotPasswordNavigation");
   });
 });
