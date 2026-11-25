@@ -1,4 +1,5 @@
-import { lazy, Suspense } from "react";
+import { Suspense } from "react";
+import { lazyRoute } from "@/lib/lazyRoute";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -17,45 +18,45 @@ import SetPassword from "./pages/SetPassword";
 import NotFound from "./pages/NotFound";
 
 // Lazy-loaded authenticated pages (code-split into separate chunks)
-const Index = lazy(() => import("./pages/Index"));
-const EscrowManagement = lazy(() => import("./pages/EscrowManagement"));
-const NotificationsBroadcasts = lazy(() => import("./pages/NotificationsBroadcasts"));
-const Communities = lazy(() => import("./pages/Communities"));
-const CommunityDetail = lazy(() => import("./pages/CommunityDetail"));
-const Events = lazy(() => import("./pages/Events"));
-const Opportunities = lazy(() => import("./pages/Opportunities"));
-const UserManagement = lazy(() => import("./pages/UserManagement"));
-const UserDetail = lazy(() => import("./pages/UserDetail"));
-const DeletionRequests = lazy(() => import("./pages/DeletionRequests"));
-const KycVerifications = lazy(() => import("./pages/KycVerifications"));
-const Associations = lazy(() => import("./pages/Associations"));
-const AssociationDetail = lazy(() => import("./pages/AssociationDetail"));
-const VendorManagement = lazy(() => import("./pages/VendorManagement"));
-const SupportTicketing = lazy(() => import("./pages/SupportTicketing"));
-const CaseTypeConfig = lazy(() => import("./pages/CaseTypeConfig"));
-const SystemHealth = lazy(() => import("./pages/SystemHealth"));
-const ContentModeration = lazy(() => import("./pages/ContentModeration"));
-const PostManagement = lazy(() => import("./pages/PostManagement"));
-const DisputesResolution = lazy(() => import("./pages/DisputesResolution"));
-const SystemSettings = lazy(() => import("./pages/SystemSettings"));
-const AuditLogs = lazy(() => import("./pages/AuditLogs"));
-const RolesPermissions = lazy(() => import("./pages/RolesPermissions"));
-const Reports = lazy(() => import("./pages/Reports"));
-const ChatManagement = lazy(() => import("./pages/ChatManagement"));
-const AiConfiguration = lazy(() => import("./pages/AiConfiguration"));
-const OtpDeliverySettings = lazy(() => import("./pages/OtpDeliverySettings"));
+const Index = lazyRoute(() => import("./pages/Index"));
+const EscrowManagement = lazyRoute(() => import("./pages/EscrowManagement"));
+const NotificationsBroadcasts = lazyRoute(() => import("./pages/NotificationsBroadcasts"));
+const Communities = lazyRoute(() => import("./pages/Communities"));
+const CommunityDetail = lazyRoute(() => import("./pages/CommunityDetail"));
+const Events = lazyRoute(() => import("./pages/Events"));
+const Opportunities = lazyRoute(() => import("./pages/Opportunities"));
+const UserManagement = lazyRoute(() => import("./pages/UserManagement"));
+const UserDetail = lazyRoute(() => import("./pages/UserDetail"));
+const DeletionRequests = lazyRoute(() => import("./pages/DeletionRequests"));
+const KycVerifications = lazyRoute(() => import("./pages/KycVerifications"));
+const Associations = lazyRoute(() => import("./pages/Associations"));
+const AssociationDetail = lazyRoute(() => import("./pages/AssociationDetail"));
+const VendorManagement = lazyRoute(() => import("./pages/VendorManagement"));
+const SupportTicketing = lazyRoute(() => import("./pages/SupportTicketing"));
+const CaseTypeConfig = lazyRoute(() => import("./pages/CaseTypeConfig"));
+const SystemHealth = lazyRoute(() => import("./pages/SystemHealth"));
+const ContentModeration = lazyRoute(() => import("./pages/ContentModeration"));
+const PostManagement = lazyRoute(() => import("./pages/PostManagement"));
+const DisputesResolution = lazyRoute(() => import("./pages/DisputesResolution"));
+const SystemSettings = lazyRoute(() => import("./pages/SystemSettings"));
+const AuditLogs = lazyRoute(() => import("./pages/AuditLogs"));
+const RolesPermissions = lazyRoute(() => import("./pages/RolesPermissions"));
+const Reports = lazyRoute(() => import("./pages/Reports"));
+const ChatManagement = lazyRoute(() => import("./pages/ChatManagement"));
+const AiConfiguration = lazyRoute(() => import("./pages/AiConfiguration"));
+const OtpDeliverySettings = lazyRoute(() => import("./pages/OtpDeliverySettings"));
 // Circles oversight + plan catalogue (circle-service). System-admin-only:
 // `adminCircles` is the only read that returns suspended and non-discoverable
 // circles, and the whole CircleAdminService tier is
 // @Roles('SYSTEM_ADMIN','SUPER_ADMIN').
-const CircleManagement = lazy(() => import("./pages/CircleManagement"));
-const CircleDetail = lazy(() => import("./pages/CircleDetail"));
-const CirclePlans = lazy(() => import("./pages/CirclePlans"));
+const CircleManagement = lazyRoute(() => import("./pages/CircleManagement"));
+const CircleDetail = lazyRoute(() => import("./pages/CircleDetail"));
+const CirclePlans = lazyRoute(() => import("./pages/CirclePlans"));
 // Escrow Wallet / Ledger / Payout (escrow-service)
-const WalletLedger = lazy(() => import("./pages/WalletLedger"));
-const Payouts = lazy(() => import("./pages/Payouts"));
+const WalletLedger = lazyRoute(() => import("./pages/WalletLedger"));
+const Payouts = lazyRoute(() => import("./pages/Payouts"));
 // Admin tasks (platform team, admin-service AdminTaskService).
-const Tasks = lazy(() => import("./pages/Tasks"));
+const Tasks = lazyRoute(() => import("./pages/Tasks"));
 
 const queryClient = new QueryClient();
 
