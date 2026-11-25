@@ -1,5 +1,6 @@
 import { Component, type ErrorInfo, type ReactNode } from "react";
 import { logger } from "@/lib/logger";
+import { isChunkLoadError } from "@/lib/lazyRoute";
 
 const log = logger.child("RootErrorBoundary");
 
@@ -25,6 +26,19 @@ export class RootErrorBoundary extends Component<Props, State> {
   }
 
   render(): ReactNode {
+    if (this.state.error && isChunkLoadError(this.state.error)) {
+      return (
+        <div className="min-h-screen bg-background p-6 text-foreground">
+          <h1 className="text-lg font-semibold">Something went wrong</h1>
+          <p className="mt-2 text-sm text-muted-foreground">
+            A new version of the console is available. Reload the page.
+          </p>
+          <button className="mt-4 text-sm underline text-primary" onClick={() => window.location.reload()}>
+            Reload page
+          </button>
+        </div>
+      );
+    }
     if (this.state.error) {
       return (
         <div className="min-h-screen bg-background p-6 text-foreground">

@@ -2,11 +2,13 @@ import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
 import { logger } from "@/lib/logger";
+import { installPreloadErrorHandler } from "@/lib/lazyRoute";
 import { RootErrorBoundary } from "@/components/RootErrorBoundary";
 
 const log = logger.child("App");
 
 if (typeof window !== "undefined") {
+  installPreloadErrorHandler();
   window.addEventListener("error", (event) => {
     log.error("Unhandled error", { message: event.message, filename: event.filename, lineno: event.lineno });
   });
